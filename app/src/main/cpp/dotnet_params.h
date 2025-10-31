@@ -26,6 +26,17 @@ extern char* g_dotnetPath;
 extern char* g_frameworkVersion;
 
 /**
+ * @brief 是否启用详细日志模式（0 = 禁用，1 = 启用）
+ * 
+ * 启用后，CoreCLR 会输出详细的运行时日志，包括：
+ * - 程序集加载信息
+ * - JIT 编译信息
+ * - 垃圾回收信息
+ * - 异常堆栈跟踪
+ */
+extern int g_verboseLogging;
+
+/**
  * @brief 清理所有全局内存分配
  * 
  * 释放 g_appPath、g_dotnetPath 和 g_frameworkVersion 的内存，

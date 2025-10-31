@@ -20,6 +20,9 @@ char* g_dotnetPath = NULL;
 /** 全局框架版本 */
 char* g_frameworkVersion = NULL;
 
+/** 全局详细日志标志 */
+int g_verboseLogging = 0;
+
 /**
  * @brief 清理所有全局内存分配
  * 

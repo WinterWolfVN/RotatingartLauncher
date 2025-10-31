@@ -12,7 +12,9 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.Fragment;
 
 import com.app.ralaunch.R;
@@ -39,6 +41,7 @@ public class SettingsFragment extends Fragment {
     private RadioGroup themeRadioGroup;
     private RadioGroup languageRadioGroup;
     private RadioGroup architectureRadioGroup;
+    private SwitchCompat switchVerboseLogging;
 
     // 设置键值
     private static final String PREFS_NAME = "AppSettings";
@@ -84,6 +87,7 @@ public class SettingsFragment extends Fragment {
         themeRadioGroup = view.findViewById(R.id.themeRadioGroup);
         languageRadioGroup = view.findViewById(R.id.languageRadioGroup);
         architectureRadioGroup = view.findViewById(R.id.architectureRadioGroup);
+        switchVerboseLogging = view.findViewById(R.id.switchVerboseLogging);
 
         // 主题选择监听
         themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -124,6 +128,15 @@ public class SettingsFragment extends Fragment {
                 architecture = RuntimePreference.ARCH_X86_64;
             }
             RuntimePreference.setArchitecture(requireContext(), architecture);
+        });
+
+        // 详细日志开关监听
+        switchVerboseLogging.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            RuntimePreference.setVerboseLogging(requireContext(), isChecked);
+            String message = isChecked ? 
+                "已启用详细日志，重启应用后生效" : 
+                "已禁用详细日志";
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -174,6 +187,10 @@ public class SettingsFragment extends Fragment {
                 architectureRadioGroup.check(R.id.archArm64); // 默认 ARM64
                 break;
         }
+
+        // 加载详细日志设置
+        boolean verboseLogging = RuntimePreference.isVerboseLogging(requireContext());
+        switchVerboseLogging.setChecked(verboseLogging);
     }
 
     private void saveThemeSetting(int themeMode) {

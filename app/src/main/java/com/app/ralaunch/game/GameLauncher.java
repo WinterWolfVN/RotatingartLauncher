@@ -3,6 +3,8 @@ package com.app.ralaunch.game;
 import android.content.Context;
 import android.util.Log;
 
+import com.app.ralaunch.utils.RuntimePreference;
+
 import java.io.File;
 
 /**
@@ -48,6 +50,13 @@ public class GameLauncher {
     private static native void setLaunchParamsWithRuntime(String appPath, String dotnetPath, String frameworkVersion);
     
     /**
+     * 设置详细日志模式（Native 方法）
+     * 
+     * @param enabled 是否启用详细日志（true = 启用，false = 禁用）
+     */
+    private static native void setVerboseLogging(boolean enabled);
+    
+    /**
      * 设置完整启动参数（Native 方法，用于 CoreCLR 直接启动）
      * 
      * @param appPath .NET 程序集路径
@@ -86,6 +95,11 @@ public class GameLauncher {
     public static int launchDotnetAppHost(Context context, String assemblyPath,String assemblyName) {
         try {
             Log.d(TAG, "Preparing to launch app in host mode: " + assemblyPath);
+            
+            // 设置详细日志模式
+            boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
+            setVerboseLogging(verboseLogging);
+            Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
 
             // 检查传入的是否是完整路径
             File potentialAssembly = new File(assemblyPath);
@@ -162,6 +176,11 @@ public class GameLauncher {
     public static int launchAssemblyDirect(Context context, String assemblyPath) {
         try {
             Log.d(TAG, "Preparing to launch assembly directly: " + assemblyPath);
+            
+            // 设置详细日志模式
+            boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
+            setVerboseLogging(verboseLogging);
+            Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
 
             File assemblyFile = new File(assemblyPath);
             if (!assemblyFile.exists()) {
@@ -213,6 +232,11 @@ public class GameLauncher {
     public static int launchDotnetAppHostWithGameBody(Context context, String assemblyPath, String gameBodyPath, String assemblyName) {
         try {
             Log.d(TAG, "Preparing to launch app with game body: " + assemblyPath);
+            
+            // 设置详细日志模式
+            boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
+            setVerboseLogging(verboseLogging);
+            Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
             Log.d(TAG, "Game body path: " + gameBodyPath);
 
             File assemblyFile = new File(assemblyPath);

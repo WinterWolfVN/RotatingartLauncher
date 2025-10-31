@@ -97,6 +97,20 @@ int launch_with_coreclr_passthrough() {
     // 2. 设置原生库搜索路径环境变量
     if (g_nativeSearchPaths && *g_nativeSearchPaths)
         setenv("LD_LIBRARY_PATH", g_nativeSearchPaths, 1);
+    
+    // 2.5 设置详细日志环境变量（如果启用）
+    if (g_verboseLogging) {
+        setenv("COREHOST_TRACE", "1", 1);
+        setenv("COREHOST_TRACEFILE", "/data/local/tmp/corehost_trace.log", 1);
+        setenv("COMPlus_LogEnable", "1", 1);
+        setenv("COMPlus_LogLevel", "10", 1);
+        setenv("COMPlus_LogToConsole", "1", 1);
+        setenv("COMPlus_StressLog", "1", 1);
+        setenv("COMPlus_StressLogSize", "65536", 1);
+        LOGI("✓ Verbose logging ENABLED - CoreCLR will output detailed diagnostic info");
+    } else {
+        LOGI("Verbose logging disabled (use Settings to enable for debugging)");
+    }
 
     // 3. 从原生搜索路径的第一个目录推导 libcoreclr.so 路径
     char firstPath[1024] = {0};

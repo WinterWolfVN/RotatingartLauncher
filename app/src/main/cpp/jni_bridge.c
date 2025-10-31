@@ -167,4 +167,22 @@ Java_com_app_ralaunch_game_GameLauncher_setLaunchParamsWithRuntime(
     if (fx_ver) (*env)->ReleaseStringUTFChars(env, frameworkVersion, fx_ver);
 }
 
+/**
+ * @brief JNI 函数：设置详细日志模式
+ * 
+ * @param env JNI 环境指针
+ * @param clazz Java 类引用
+ * @param enabled 是否启用详细日志（true/false）
+ * 
+ * 从 Java 层接收日志设置并更新全局标志。启用后，CoreCLR 会输出详细的调试信息。
+ */
+JNIEXPORT void JNICALL
+Java_com_app_ralaunch_game_GameLauncher_setVerboseLogging(
+    JNIEnv *env, jclass clazz, jboolean enabled) {
+    (void)env;
+    (void)clazz;
+    g_verboseLogging = enabled ? 1 : 0;
+    LOGI("Verbose logging set to: %s", g_verboseLogging ? "enabled" : "disabled");
+}
+
 

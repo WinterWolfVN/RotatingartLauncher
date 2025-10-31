@@ -18,6 +18,7 @@ public final class RuntimePreference {
     private static final String PREFS = "app_prefs";
     private static final String KEY_DOTNET = "dotnet_framework";
     private static final String KEY_ARCHITECTURE = "runtime_architecture";
+    private static final String KEY_VERBOSE_LOGGING = "runtime_verbose_logging";
     
     // CPU 架构常量
     public static final String ARCH_ARM64 = "arm64";
@@ -106,6 +107,30 @@ public final class RuntimePreference {
             return getDeviceArchitecture();
         }
         return arch;
+    }
+
+    /**
+     * 设置运行时详细日志开关
+     * 
+     * @param context Android 上下文
+     * @param enabled 是否启用详细日志
+     */
+    public static void setVerboseLogging(Context context, boolean enabled) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_VERBOSE_LOGGING, enabled)
+                .apply();
+    }
+
+    /**
+     * 获取运行时详细日志开关
+     * 
+     * @param context Android 上下文
+     * @return 是否启用详细日志，默认为 false
+     */
+    public static boolean isVerboseLogging(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        return sp.getBoolean(KEY_VERBOSE_LOGGING, false);
     }
 }
 
