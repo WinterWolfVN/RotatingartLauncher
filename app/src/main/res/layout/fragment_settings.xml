@@ -1,316 +1,302 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@color/background_primary">
 
-    <!-- 顶部标题栏 -->
-    <LinearLayout
+    <!-- 顶部应用栏 -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="24dp">
+        android:background="@color/background_primary"
+        android:elevation="0dp"
+        app:elevation="0dp">
 
-        <ImageButton
-            android:id="@+id/backButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_arrow_back"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="返回"
-            app:tint="@color/text_primary" />
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/transparent"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="@color/text_primary"
+            app:title="设置"
+            app:titleTextColor="@color/text_primary"
+            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/settings"
-            android:textColor="@color/text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center" />
+    </com.google.android.material.appbar.AppBarLayout>
 
-        <View
-            android:layout_width="48dp"
-            android:layout_height="48dp" />
-
-    </LinearLayout>
-
-    <!-- 设置内容区域 -->
-    <ScrollView
+    <!-- 设置内容 -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="32dp">
 
-            <!-- 主题设置 -->
-            <androidx.cardview.widget.CardView
+            <!-- 外观设置分组 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="外观"
+                android:textColor="@color/accent_green"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <!-- 主题设置卡片 -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
                 app:cardBackgroundColor="@color/background_card">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:paddingVertical="8dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/theme_settings"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- 主题选择 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <RadioGroup
-                            android:id="@+id/themeRadioGroup"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <RadioButton
-                                android:id="@+id/themeSystem"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/theme_system"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                            <RadioButton
-                                android:id="@+id/themeDark"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/theme_dark"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                            <RadioButton
-                                android:id="@+id/themeLight"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/theme_light"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                        </RadioGroup>
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- 语言设置 -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/background_card">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/language_settings"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- 语言选择 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <RadioGroup
-                            android:id="@+id/languageRadioGroup"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <RadioButton
-                                android:id="@+id/languageSystem"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/language_system"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                            <RadioButton
-                                android:id="@+id/languageEnglish"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/language_english"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                            <RadioButton
-                                android:id="@+id/languageChinese"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/language_chinese"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                        </RadioGroup>
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- 运行时架构设置 -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/background_card">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="运行时架构"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="4dp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="选择 .NET 运行时的 CPU 架构"
-                        android:textColor="@color/text_hint"
-                        android:textSize="12sp"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- 架构选择 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <RadioGroup
-                            android:id="@+id/architectureRadioGroup"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <RadioButton
-                                android:id="@+id/archAuto"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="自动检测（推荐）"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                            <RadioButton
-                                android:id="@+id/archArm64"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="ARM64（适用于大多数 Android 设备）"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                            <RadioButton
-                                android:id="@+id/archX86_64"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="x86_64（适用于模拟器和 x86 设备）"
-                                android:textColor="@color/text_primary"
-                                android:buttonTint="@color/accent_green"
-                                android:paddingVertical="12dp" />
-
-                        </RadioGroup>
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- 运行时调试设置 -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="@color/background_card">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="运行时调试"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="4dp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="启用详细日志以调试游戏启动问题"
-                        android:textColor="@color/text_hint"
-                        android:textSize="12sp"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- 详细日志开关 -->
+                    <!-- 主题标题 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:paddingVertical="8dp">
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="12dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_settings"
+                            app:tint="@color/text_primary"
+                            android:layout_marginEnd="16dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/theme_settings"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- 分隔线 -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="20dp"
+                        android:background="@color/text_hint"
+                        android:alpha="0.1" />
+
+                    <!-- 主题选项 -->
+                    <RadioGroup
+                        android:id="@+id/themeRadioGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="8dp">
+
+                        <RadioButton
+                            android:id="@+id/themeSystem"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/theme_system"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/themeDark"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/theme_dark"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/themeLight"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/theme_light"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                    </RadioGroup>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 语言设置卡片 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/background_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="8dp">
+
+                    <!-- 语言标题 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="12dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_language"
+                            app:tint="@color/text_primary"
+                            android:layout_marginEnd="16dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/language_settings"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- 分隔线 -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="20dp"
+                        android:background="@color/text_hint"
+                        android:alpha="0.1" />
+
+                    <!-- 语言选项 -->
+                    <RadioGroup
+                        android:id="@+id/languageRadioGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="8dp">
+
+                        <RadioButton
+                            android:id="@+id/languageSystem"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/language_system"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/languageEnglish"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/language_english"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/languageChinese"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="@string/language_chinese"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                    </RadioGroup>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 运行时设置分组 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="运行时"
+                android:textColor="@color/accent_green"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <!-- 运行时架构卡片 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/background_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="8dp">
+
+                    <!-- 架构标题 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="12dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_game"
+                            app:tint="@color/text_primary"
+                            android:layout_marginEnd="16dp" />
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -321,80 +307,236 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="详细日志"
+                                android:text="CPU 架构"
                                 android:textColor="@color/text_primary"
-                                android:textSize="14sp"
+                                android:textSize="15sp"
                                 android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="输出 CoreCLR 和游戏的详细调试信息"
+                                android:text="选择 .NET 运行时架构"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp"
                                 android:layout_marginTop="2dp" />
 
                         </LinearLayout>
 
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/switchVerboseLogging"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            app:thumbTint="@color/accent_green"
-                            app:trackTint="@color/text_hint" />
-
                     </LinearLayout>
+
+                    <!-- 分隔线 -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="20dp"
+                        android:background="@color/text_hint"
+                        android:alpha="0.1" />
+
+                    <!-- 架构选项 -->
+                    <RadioGroup
+                        android:id="@+id/architectureRadioGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="8dp">
+
+                        <RadioButton
+                            android:id="@+id/archAuto"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="自动检测（推荐）"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/archArm64"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="ARM64"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/archX86_64"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="x86_64"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                    </RadioGroup>
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
-            <!-- 应用信息 -->
-            <androidx.cardview.widget.CardView
+            <!-- 调试设置分组 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="开发者"
+                android:textColor="@color/accent_green"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <!-- 详细日志卡片 -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/background_card">
+
+                <LinearLayout
+                    android:id="@+id/verboseLoggingContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="16dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_bug"
+                        app:tint="@color/text_primary"
+                        android:layout_marginEnd="16dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="详细日志"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="输出 CoreCLR 详细调试信息"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+
+                    </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchVerboseLogging"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        app:thumbTint="@android:color/white"
+                        app:trackTint="@color/accent_green"
+                        app:trackDecorationTint="@color/text_hint" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 关于分组 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="关于"
+                android:textColor="@color/accent_green"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="4dp" />
+
+            <!-- 应用信息卡片 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
                 app:cardBackgroundColor="@color/background_card">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
-                    <TextView
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/app_info"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_info"
+                            app:tint="@color/text_primary"
+                            android:layout_marginEnd="16dp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/app_info"
+                            android:textColor="@color/text_primary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/app_version"
                         android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
+                        android:layout_marginStart="40dp"
                         android:layout_marginBottom="4dp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/app_description"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="@color/text_hint"
                         android:textSize="12sp"
-                        android:lineSpacingExtra="4dp" />
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginStart="40dp" />
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
 
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 
-</LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

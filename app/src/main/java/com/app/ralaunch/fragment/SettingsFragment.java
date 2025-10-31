@@ -9,7 +9,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
@@ -19,6 +18,7 @@ import androidx.fragment.app.Fragment;
 
 import com.app.ralaunch.R;
 import com.app.ralaunch.utils.RuntimePreference;
+import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.Locale;
 
@@ -75,9 +75,9 @@ public class SettingsFragment extends Fragment {
     }
 
     private void setupUI(View view) {
-        // 返回按钮
-        ImageButton backButton = view.findViewById(R.id.backButton);
-        backButton.setOnClickListener(v -> {
+        // 工具栏返回按钮
+        MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> {
             if (backListener != null) {
                 backListener.onSettingsBack();
             }
@@ -88,6 +88,7 @@ public class SettingsFragment extends Fragment {
         languageRadioGroup = view.findViewById(R.id.languageRadioGroup);
         architectureRadioGroup = view.findViewById(R.id.architectureRadioGroup);
         switchVerboseLogging = view.findViewById(R.id.switchVerboseLogging);
+        View verboseLoggingContainer = view.findViewById(R.id.verboseLoggingContainer);
 
         // 主题选择监听
         themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -137,6 +138,11 @@ public class SettingsFragment extends Fragment {
                 "已启用详细日志，重启应用后生效" : 
                 "已禁用详细日志";
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+        });
+        
+        // 点击整个容器时切换开关
+        verboseLoggingContainer.setOnClickListener(v -> {
+            switchVerboseLogging.setChecked(!switchVerboseLogging.isChecked());
         });
     }
 
