@@ -12,6 +12,16 @@ import com.app.ralaunch.model.FileItem;
 
 import java.util.List;
 
+/**
+ * 文件浏览器适配器
+ * 
+ * 用于文件浏览器界面显示文件和文件夹列表，提供：
+ * - 文件和文件夹显示（带图标）
+ * - 文件点击和长按事件
+ * - 选中状态高亮显示
+ * 
+ * 支持文件和文件夹选择回调
+ */
 public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.ViewHolder> {
 
     private List<FileItem> fileList;

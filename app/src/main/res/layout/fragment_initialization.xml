@@ -1,180 +1,322 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212"
-    android:padding="16dp">
+    android:orientation="horizontal"
+    android:background="@color/background_primary"
+    android:padding="24dp">
 
-    <!-- 应用标题 -->
+    <!-- 左侧信息面板 -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:gravity="center"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="5"
         android:orientation="vertical"
-        android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp">
+        android:paddingEnd="24dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/titlePrimary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rotating art Launcher"
+            android:textColor="@color/text_primary"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.04" />
+
+        <TextView
+            android:id="@+id/titleSecondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="游戏启动器"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:layout_marginTop="10dp" />
+
+        <View
+            android:layout_width="120dp"
+            android:layout_height="2dp"
+            android:layout_marginVertical="20dp"
+            android:background="@color/accent_green" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Rotating art Launcher"
-            android:textColor="#FFFFFF"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.02" />
-
-    </LinearLayout>
-
-    <!-- 法律声明布局 -->
-    <LinearLayout
-        android:id="@+id/legalLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:orientation="vertical"
-        android:background="@drawable/bg_rounded_corner"
-        android:backgroundTint="#1E1E1E"
-        android:padding="32dp"
-        android:elevation="8dp"
-        android:visibility="visible">  <!-- 改为 visible -->
+            android:text="一步完成首次配置"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="法律声明"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="24dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="本启动器是第三方工具，需要原始游戏文件才能运行。您必须拥有合法授权的游戏副本才能使用本软件。本启动器开发者与原游戏创作者无关联，对因使用本软件而产生的任何法律后果不承担责任。"
-            android:textColor="#CCCCCC"
-            android:textSize="16sp"
+            android:text="· 同意法律条款后即可开始安装\n· 内置 .NET 运行时，免手动下载\n· 实时显示安装进度和状态"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp"
             android:lineSpacingExtra="6dp"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginTop="18dp" />
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:weightSum="2"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="28dp"
+            android:gravity="center_vertical">
 
-            <Button
-                android:id="@+id/secondaryButtonLegal"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="12dp"
-                android:background="@drawable/secondary_button"
-                android:text="退出应用"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:contentDescription="退出应用按钮" />
-
-            <Button
-                android:id="@+id/primaryButtonLegal"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:background="@drawable/selector_button"
-                android:text="接受并继续"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:contentDescription="接受法律声明并继续按钮" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- 组件解压布局 -->
-    <LinearLayout
-        android:id="@+id/extractionLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:orientation="vertical"
-        android:background="@drawable/bg_rounded_corner"
-        android:backgroundTint="#1E1E1E"
-        android:padding="32dp"
-        android:elevation="8dp"
-        android:visibility="gone">  <!-- 保持 gone -->
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Rotating art Launcher"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="启动器需要安装这些内容，才能够确保游戏能够正常启动。这些内容已经包含在应用中，需要解压之后才能正常使用，点击下方按钮，开始解压并更新这些内容。"
-            android:textColor="#CCCCCC"
-            android:textSize="16sp"
-            android:lineSpacingExtra="6dp"
-            android:layout_marginBottom="24dp"
-            android:gravity="center" />
-
-        <!-- 总体进度 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="20dp">
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_check_circle"
+                android:tint="@color/accent_green" />
 
             <TextView
-                android:id="@+id/overallProgressText"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="准备安装..."
-                android:textColor="#4CAF50"
+                android:text="针对横屏设备优化的初始化体验"
+                android:textColor="@color/text_secondary"
                 android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-
-            <ProgressBar
-                android:id="@+id/overallProgressBar"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="12dp"
-                android:progressTint="#4CAF50"
-                android:progressBackgroundTint="#252525" />
+                android:layout_marginStart="12dp" />
 
         </LinearLayout>
 
-        <!-- 组件列表 -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/componentsRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:layout_marginBottom="24dp"
-            android:contentDescription="需要安装的组件列表" />
-
-        <Button
-            android:id="@+id/primaryButtonExtraction"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:background="@drawable/selector_button"
-            android:text="同意并安装"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:contentDescription="同意并安装组件按钮" />
-
     </LinearLayout>
 
-</FrameLayout>
+    <!-- 右侧内容面板 -->
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="7"
+        android:clipToPadding="false">
+
+        <!-- 法律声明界面 -->
+        <LinearLayout
+            android:id="@+id/legalLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@drawable/bg_rounded_corner"
+            android:backgroundTint="@color/background_card"
+            android:padding="32dp"
+            android:elevation="12dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:text="⚖️"
+                    android:textSize="36sp"
+                    android:gravity="center"
+                    android:layout_marginEnd="18dp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="法律声明"
+                    android:textColor="@color/text_primary"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="本启动器是第三方工具，需要原始游戏文件才能运行。您必须拥有合法授权的游戏副本才能使用本软件。\n\n本启动器开发者与原游戏创作者无关联，对因使用本软件而产生的任何法律后果不承担责任。\n\n使用本软件即表示您已阅读、理解并同意遵守上述条款。"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp"
+                    android:lineSpacingExtra="8dp" />
+
+            </ScrollView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <Button
+                    android:id="@+id/btnDeclineLegal"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/secondary_button"
+                    android:text="退出应用"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:contentDescription="退出应用按钮" />
+
+                <Button
+                    android:id="@+id/btnAcceptLegal"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/selector_button"
+                    android:text="接受并继续"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:contentDescription="接受法律声明并继续按钮" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 组件解压界面 -->
+        <LinearLayout
+            android:id="@+id/extractionLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@drawable/bg_rounded_corner"
+            android:backgroundTint="@color/background_card"
+            android:padding="32dp"
+            android:elevation="12dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:text="📦"
+                    android:textSize="36sp"
+                    android:gravity="center"
+                    android:layout_marginEnd="18dp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="安装必要组件"
+                    android:textColor="@color/text_primary"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="启动器需要安装这些组件才能确保游戏正常运行。这些组件已包含在应用中，需要解压后才能使用。"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:lineSpacingExtra="6dp"
+                android:layout_marginBottom="24dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_rounded_corner"
+                android:backgroundTint="@color/background_secondary"
+                android:padding="18dp"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:id="@+id/overallProgressText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="准备安装..."
+                        android:textColor="@color/accent_green"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/overallProgressPercent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0%"
+                        android:textColor="@color/accent_green"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="10dp" />
+
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/overallProgressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="10dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressTint="@color/accent_green"
+                    android:progressBackgroundTint="@color/background_dark" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="组件列表"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/componentsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:paddingBottom="12dp"
+                    android:contentDescription="需要安装的组件列表" />
+
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnStartExtraction"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/selector_button"
+                android:text="开始安装"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:contentDescription="开始安装组件按钮" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+</LinearLayout>

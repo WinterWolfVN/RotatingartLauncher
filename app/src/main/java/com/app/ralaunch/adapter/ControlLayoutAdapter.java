@@ -12,6 +12,17 @@ import com.app.ralaunch.model.ControlLayout;
 import com.app.ralaunch.utils.ControlLayoutManager;
 import java.util.List;
 
+/**
+ * 控制布局列表适配器
+ * 
+ * 用于控制布局管理界面显示布局列表，提供：
+ * - 布局名称显示
+ * - 布局点击编辑
+ * - 设置默认布局
+ * - 删除布局
+ * 
+ * 支持多种布局操作回调接口
+ */
 public class ControlLayoutAdapter extends RecyclerView.Adapter<ControlLayoutAdapter.ViewHolder> {
 
     private List<ControlLayout> layouts;

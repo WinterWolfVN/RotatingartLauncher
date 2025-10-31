@@ -1,4 +1,3 @@
-// ControlEditorView.java
 package com.app.ralaunch.view;
 
 import android.content.Context;
@@ -11,6 +10,17 @@ import com.app.ralaunch.fragment.ControlEditorFragment;
 import com.app.ralaunch.model.ControlLayout;
 import com.app.ralaunch.model.ControlElement;
 
+/**
+ * 控制编辑器视图
+ * 
+ * 用于编辑游戏控制布局的可视化编辑器，提供：
+ * - 控制元素的显示和预览
+ * - 元素选择和拖动
+ * - 长按元素触发编辑
+ * - 实时布局调整
+ * 
+ * 在控制布局编辑界面使用
+ */
 public class ControlEditorView extends View {
     private ControlLayout controlLayout;
     private ControlElement selectedElement;

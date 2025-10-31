@@ -1,9 +1,17 @@
-// ControlLayout.java
 package com.app.ralaunch.model;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 控制布局数据模型
+ * 
+ * 表示一个完整的游戏控制布局，包含：
+ * - 布局名称
+ * - 控制元素列表（按钮、摇杆、十字键等）
+ * 
+ * 用于保存和加载游戏的自定义控制方案
+ */
 public class ControlLayout {
     private String name;
     private List<ControlElement> elements;

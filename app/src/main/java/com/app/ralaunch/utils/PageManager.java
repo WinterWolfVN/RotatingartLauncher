@@ -4,6 +4,16 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+/**
+ * 页面管理器
+ * 
+ * 统一管理 Fragment 页面切换，提供：
+ * - Fragment 页面切换和回退
+ * - 页面变化监听回调
+ * - Fragment 生命周期管理
+ * 
+ * 简化多页面应用的Fragment管理逻辑
+ */
 public class PageManager {
     private FragmentManager fragmentManager;
     private int containerId;

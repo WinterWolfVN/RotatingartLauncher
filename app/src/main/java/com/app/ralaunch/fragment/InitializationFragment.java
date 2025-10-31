@@ -9,6 +9,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -29,227 +31,321 @@ import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+/**
+ * 初始化Fragment - 处理法律声明和组件安装
+ * 
+ * 主要功能：
+ * 1. 显示法律声明并获取用户同意
+ * 2. 从assets解压必要的组件到应用目录
+ * 3. 显示安装进度和状态
+ */
 public class InitializationFragment extends Fragment {
 
+    private static final String TAG = "InitializationFragment";
+    
+    // SharedPreferences keys
     private static final String PREFS_NAME = "app_prefs";
     private static final String KEY_LEGAL_AGREED = "legal_agreed";
     private static final String KEY_COMPONENTS_EXTRACTED = "components_extracted";
-    private static final String TAG = "InitializationFragment";
-
-    // 界面状态
-    private static final int STATE_LEGAL = 0;
-    private static final int STATE_EXTRACTION = 1;
-
-    private int currentState = STATE_LEGAL;
-
-    // 界面控件
+    
+    // 界面状态枚举
+    private enum State {
+        LEGAL_AGREEMENT,    // 法律声明界面
+        EXTRACTION          // 组件解压界面
+    }
+    
+    private State currentState = State.LEGAL_AGREEMENT;
+    
+    // UI组件
     private LinearLayout legalLayout;
     private LinearLayout extractionLayout;
     private RecyclerView componentsRecyclerView;
-    private Button primaryButtonLegal;
-    private Button secondaryButtonLegal;
-    private Button primaryButtonExtraction;
+    private Button btnAcceptLegal;
+    private Button btnDeclineLegal;
+    private Button btnStartExtraction;
     private ProgressBar overallProgressBar;
     private TextView overallProgressText;
-
-    // 数据
+    private TextView overallProgressPercent;
+    
+    // 数据和适配器
     private List<ComponentItem> components;
     private ComponentAdapter componentAdapter;
-
+    
+    // 线程管理
+    private ExecutorService executorService;
+    private Handler mainHandler;
+    private AtomicBoolean isExtracting = new AtomicBoolean(false);
+    
     // 回调接口
     public interface OnInitializationCompleteListener {
         void onInitializationComplete();
     }
-
+    
     private OnInitializationCompleteListener listener;
-
+    
     public void setOnInitializationCompleteListener(OnInitializationCompleteListener listener) {
         this.listener = listener;
     }
 
-    @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_initialization, container, false);
-        initViews(view);
-        setupComponentsList();
-
-        // 检查当前应该显示哪个状态
-        SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
-        boolean legalAgreed = prefs.getBoolean(KEY_LEGAL_AGREED, false);
-        boolean componentsExtracted = prefs.getBoolean(KEY_COMPONENTS_EXTRACTED, false);
-
-        Log.d(TAG, "legalAgreed: " + legalAgreed + ", componentsExtracted: " + componentsExtracted);
-
-        if (componentsExtracted) {
-            // 如果已经完成初始化，直接回调
-            if (listener != null) {
-                listener.onInitializationComplete();
-            }
-        } else if (legalAgreed) {
-            // 如果已经同意协议但未解压，直接显示解压界面并开始解压
-            showExtractionState();
-            startComponentsExtraction();
-        } else {
-            // 第一次进入，显示法律声明
-            showLegalState();
-        }
-
-        return view;
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        executorService = Executors.newSingleThreadExecutor();
+        mainHandler = new Handler(Looper.getMainLooper());
     }
 
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, 
+                             @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_initialization, container, false);
+        
+        initViews(view);
+        setupComponentsList();
+        checkInitializationStatus();
+        
+        return view;
+    }
+    
+    /**
+     * 初始化视图组件
+     */
     private void initViews(View view) {
         legalLayout = view.findViewById(R.id.legalLayout);
         extractionLayout = view.findViewById(R.id.extractionLayout);
         componentsRecyclerView = view.findViewById(R.id.componentsRecyclerView);
-
-        // 分别获取不同布局的按钮
-        primaryButtonLegal = view.findViewById(R.id.primaryButtonLegal);
-        secondaryButtonLegal = view.findViewById(R.id.secondaryButtonLegal);
-        primaryButtonExtraction = view.findViewById(R.id.primaryButtonExtraction);
-
+        
+        btnAcceptLegal = view.findViewById(R.id.btnAcceptLegal);
+        btnDeclineLegal = view.findViewById(R.id.btnDeclineLegal);
+        btnStartExtraction = view.findViewById(R.id.btnStartExtraction);
+        
         overallProgressBar = view.findViewById(R.id.overallProgressBar);
         overallProgressText = view.findViewById(R.id.overallProgressText);
-
+        overallProgressPercent = view.findViewById(R.id.overallProgressPercent);
+        
         // 设置按钮点击监听
-        primaryButtonLegal.setOnClickListener(v -> handlePrimaryButtonClick());
-        secondaryButtonLegal.setOnClickListener(v -> handleSecondaryButtonClick());
-        primaryButtonExtraction.setOnClickListener(v -> handlePrimaryButtonClick());
-
-        Log.d(TAG, "Views initialized");
+        btnAcceptLegal.setOnClickListener(v -> handleAcceptLegal());
+        btnDeclineLegal.setOnClickListener(v -> handleDeclineLegal());
+        btnStartExtraction.setOnClickListener(v -> handleStartExtraction());
     }
-
+    
+    /**
+     * 设置组件列表
+     */
     private void setupComponentsList() {
         components = createComponentList();
         componentAdapter = new ComponentAdapter(components);
         componentsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         componentsRecyclerView.setAdapter(componentAdapter);
     }
-
+    
+    /**
+     * 创建需要安装的组件列表（根据架构选择）
+     */
     private List<ComponentItem> createComponentList() {
-        List<ComponentItem> components = new ArrayList<>();
-        components.add(new ComponentItem("dotnet8", "dotnet环境", "dotnet.zip"));
-        return components;
+        List<ComponentItem> componentList = new ArrayList<>();
+        
+        // 获取当前架构设置
+        String arch = com.app.ralaunch.utils.RuntimePreference.getEffectiveArchitecture(requireContext());
+        Log.d(TAG, "Creating component list for architecture: " + arch);
+        
+        // 根据架构选择对应的 zip 文件
+        String zipFileName;
+        String componentName;
+        String componentDesc;
+        
+        if ("arm64".equals(arch)) {
+            zipFileName = "dotnet-arm64.zip";
+            componentName = "dotnet-arm64";
+            componentDesc = ".NET 7/8/9/10 运行时（ARM64）";
+        } else {
+            zipFileName = "dotnet-x64.zip";
+            componentName = "dotnet-x64";
+            componentDesc = ".NET 7/8/9/10 运行时（x86_64）";
+        }
+        
+        componentList.add(new ComponentItem(
+            componentName,
+            componentDesc,
+            zipFileName
+        ));
+        
+        return componentList;
     }
-
+    
+    /**
+     * 检查初始化状态
+     */
+    private void checkInitializationStatus() {
+        SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
+        boolean legalAgreed = prefs.getBoolean(KEY_LEGAL_AGREED, false);
+        boolean componentsExtracted = prefs.getBoolean(KEY_COMPONENTS_EXTRACTED, false);
+        
+        Log.d(TAG, "Initialization status - Legal agreed: " + legalAgreed + 
+                   ", Components extracted: " + componentsExtracted);
+        
+        if (componentsExtracted) {
+            // 已经完成初始化，直接回调
+            completeInitialization();
+        } else if (legalAgreed) {
+            // 已同意协议但未解压，显示解压界面
+            showExtractionState();
+        } else {
+            // 第一次进入，显示法律声明
+            showLegalState();
+        }
+    }
+    
+    /**
+     * 显示法律声明界面
+     */
     private void showLegalState() {
-        currentState = STATE_LEGAL;
+        currentState = State.LEGAL_AGREEMENT;
         legalLayout.setVisibility(View.VISIBLE);
         extractionLayout.setVisibility(View.GONE);
-
-        // 设置法律声明页面的按钮
-        primaryButtonLegal.setText("接受并继续");
-        secondaryButtonLegal.setText("退出应用");
-        secondaryButtonLegal.setVisibility(View.VISIBLE);
-
-        Log.d(TAG, "Showing legal state");
-
-        // 添加动画效果
+        
         animateViewEntrance(legalLayout);
+        Log.d(TAG, "Showing legal agreement state");
     }
-
+    
+    /**
+     * 显示组件解压界面
+     */
     private void showExtractionState() {
-        currentState = STATE_EXTRACTION;
+        currentState = State.EXTRACTION;
         legalLayout.setVisibility(View.GONE);
         extractionLayout.setVisibility(View.VISIBLE);
-
-        // 设置解压页面的按钮
-        primaryButtonExtraction.setText("同意并安装");
-        primaryButtonExtraction.setEnabled(true);
-
+        
         // 重置组件状态
+        resetComponentsState();
+        
+        // 重置进度
+        updateOverallProgress(0, "准备安装...");
+        
+        animateViewEntrance(extractionLayout);
+        Log.d(TAG, "Showing extraction state");
+    }
+    
+    /**
+     * 重置所有组件状态
+     */
+    private void resetComponentsState() {
         for (ComponentItem component : components) {
             component.setInstalled(false);
             component.setProgress(0);
         }
         componentAdapter.notifyDataSetChanged();
-
-        // 重置进度
-        overallProgressBar.setProgress(0);
-        overallProgressText.setText("准备安装...");
-
-        Log.d(TAG, "Showing extraction state");
-
-        animateViewEntrance(extractionLayout);
     }
-
-    private void handlePrimaryButtonClick() {
-        Log.d(TAG, "Primary button clicked, current state: " + currentState);
-        switch (currentState) {
-            case STATE_LEGAL:
-                acceptLegalAgreement();
-                break;
-            case STATE_EXTRACTION:
-                startComponentsExtraction();
-                break;
-        }
-    }
-
-    private void handleSecondaryButtonClick() {
-        Log.d(TAG, "Secondary button clicked");
-        if (currentState == STATE_LEGAL) {
-            // 退出应用
-            requireActivity().finish();
-        }
-    }
-
-    private void acceptLegalAgreement() {
-        Log.d(TAG, "Accepting legal agreement");
+    
+    /**
+     * 处理接受法律声明
+     */
+    private void handleAcceptLegal() {
+        Log.d(TAG, "Legal agreement accepted");
         SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
         prefs.edit().putBoolean(KEY_LEGAL_AGREED, true).apply();
+        
         showExtractionState();
-        // 同意协议后自动开始解压
-        startComponentsExtraction();
+        // 自动开始解压
+        startExtraction();
     }
-
-    private void startComponentsExtraction() {
+    
+    /**
+     * 处理拒绝法律声明
+     */
+    private void handleDeclineLegal() {
+        Log.d(TAG, "Legal agreement declined");
+        if (getActivity() != null) {
+            getActivity().finish();
+        }
+    }
+    
+    /**
+     * 处理开始解压
+     */
+    private void handleStartExtraction() {
+        if (!isExtracting.get()) {
+            startExtraction();
+        }
+    }
+    
+    /**
+     * 开始组件解压
+     */
+    private void startExtraction() {
+        if (isExtracting.getAndSet(true)) {
+            Log.w(TAG, "Extraction already in progress");
+            return;
+        }
+        
         Log.d(TAG, "Starting components extraction");
-        primaryButtonExtraction.setEnabled(false);
-        primaryButtonExtraction.setText("安装中...");
-
-        new Thread(() -> {
+        
+        // 更新按钮状态
+        btnStartExtraction.setEnabled(false);
+        btnStartExtraction.setText("安装中...");
+        
+        // 在后台线程执行解压
+        executorService.execute(() -> {
             try {
-                extractComponents();
-
-                // 在主线程中完成初始化
-                new Handler(Looper.getMainLooper()).post(() -> {
+                extractAllComponents();
+                
+                // 在主线程完成初始化
+                mainHandler.post(() -> {
                     completeInitialization();
                 });
             } catch (Exception e) {
                 Log.e(TAG, "Extraction failed", e);
-                // 恢复按钮状态
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    primaryButtonExtraction.setEnabled(true);
-                    primaryButtonExtraction.setText("重试安装");
-                    Toast.makeText(getActivity(), "解压失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                
+                // 在主线程恢复按钮状态并显示错误
+                mainHandler.post(() -> {
+                    handleExtractionError(e);
                 });
+            } finally {
+                isExtracting.set(false);
             }
-        }).start();
+        });
     }
-
+    
     /**
-     * 从assets解压zip文件到应用私有目录
+     * 解压所有组件（根据架构解压到对应目录）
      */
-    private void extractComponents() throws Exception {
-        Log.d(TAG, "Extracting components");
+    private void extractAllComponents() throws Exception {
+        Log.d(TAG, "Extracting all components, count: " + components.size());
+        
         int totalComponents = components.size();
-
+        
+        // 获取架构特定的目标目录
+        String arch = com.app.ralaunch.utils.RuntimePreference.getEffectiveArchitecture(requireContext());
+        String dirName = "dotnet-" + arch;
+        File outputDir = new File(requireActivity().getFilesDir(), dirName);
+        
+        Log.d(TAG, "Target directory: " + outputDir.getAbsolutePath());
+        
+        // 在开始解压前先清理目标目录
+        if (outputDir.exists()) {
+            Log.d(TAG, "Cleaning existing directory: " + dirName);
+            deleteDirectory(outputDir);
+        }
+        outputDir.mkdirs();
+        
         for (int i = 0; i < totalComponents; i++) {
-            final int componentIndex = i;
             ComponentItem component = components.get(i);
-
-            // 更新进度为开始解压
-            updateComponentProgress(component, componentIndex, 10, "开始解压...");
-
-            // 实际解压操作
-            boolean success = extractZipFromAssets(component.getFileName(), component, componentIndex);
-
+            
+            // 更新组件状态为开始解压
+            updateComponentStatus(i, 10, "开始解压...");
+            
+            // 执行解压
+            boolean success = extractComponent(component, i);
+            
             if (success) {
                 // 标记为已安装
-                updateComponentProgress(component, componentIndex, 100, "解压完成");
+                updateComponentStatus(i, 100, "解压完成");
                 component.setInstalled(true);
                 Log.d(TAG, "Component extraction successful: " + component.getName());
             } else {
@@ -257,126 +353,180 @@ public class InitializationFragment extends Fragment {
             }
         }
     }
-
+    
     /**
-     * 使用SevenZipJBinding从assets解压zip文件
+     * 解压单个组件
      */
-    private boolean extractZipFromAssets(String zipFileName, ComponentItem component, int componentIndex) {
-        Log.d(TAG, "Extracting from assets using SevenZipJBinding: " + zipFileName);
+    private boolean extractComponent(ComponentItem component, int componentIndex) {
+        Log.d(TAG, "Extracting component: " + component.getName() + 
+                   " from file: " + component.getFileName());
+        
         AssetManager assetManager = requireActivity().getAssets();
-
         File tempZipFile = null;
+        
         try {
-            // 1. 将assets中的zip文件复制到临时文件
-            tempZipFile = new File(requireActivity().getCacheDir(), "temp_" + zipFileName);
-            updateComponentProgress(component, componentIndex, 20, "准备解压文件...");
-
-            // 复制assets文件到临时文件
-            try (InputStream inputStream = assetManager.open(zipFileName);
-                 FileOutputStream outputStream = new FileOutputStream(tempZipFile)) {
-                byte[] buffer = new byte[8192];
-                int length;
-                while ((length = inputStream.read(buffer)) > 0) {
-                    outputStream.write(buffer, 0, length);
-                }
+            // 1. 创建临时文件
+            tempZipFile = new File(requireActivity().getCacheDir(), 
+                                 "temp_" + component.getFileName());
+            updateComponentStatus(componentIndex, 20, "准备文件...");
+            
+            // 2. 从assets复制到临时文件
+            copyAssetToFile(assetManager, component.getFileName(), tempZipFile);
+            updateComponentStatus(componentIndex, 30, "文件准备完成");
+            
+            // 3. 获取架构特定的目标目录
+            String arch = com.app.ralaunch.utils.RuntimePreference.getEffectiveArchitecture(requireContext());
+            String dirName = "dotnet-" + arch;
+            File outputDir = new File(requireActivity().getFilesDir(), dirName);
+            if (!outputDir.exists()) {
+                outputDir.mkdirs();
             }
-
-            updateComponentProgress(component, componentIndex, 30, "文件准备完成");
-
-            // 2. 创建目标目录
-            File outputDir = new File(requireActivity().getFilesDir(), "dotnet");
-            if (outputDir.exists()) {
-                deleteDirectory(outputDir);
-            }
-            outputDir.mkdirs();
-
-            // 3. 使用SevenZipJBinding解压
-            return extractWithSevenZipJBinding(tempZipFile, outputDir, component, componentIndex);
-
+            
+            // 4. 解压文件到架构特定目录
+            boolean success = extractZipFile(tempZipFile, outputDir, component, componentIndex);
+            
+            return success;
+            
         } catch (Exception e) {
-            Log.e(TAG, "SevenZipJBinding extraction error", e);
+            Log.e(TAG, "Error extracting component: " + component.getName(), e);
             return false;
         } finally {
             // 清理临时文件
             if (tempZipFile != null && tempZipFile.exists()) {
-                tempZipFile.delete();
+                boolean deleted = tempZipFile.delete();
+                if (!deleted) {
+                    Log.w(TAG, "Failed to delete temp file: " + tempZipFile.getAbsolutePath());
+                }
             }
         }
     }
-
+    
     /**
-     * 使用SevenZipJBinding解压文件
+     * 从assets复制文件到临时文件
+     */
+    private void copyAssetToFile(AssetManager assetManager, String assetFileName, 
+                                  File targetFile) throws IOException {
+        try (InputStream inputStream = assetManager.open(assetFileName);
+             FileOutputStream outputStream = new FileOutputStream(targetFile)) {
+            
+            byte[] buffer = new byte[8192];
+            int length;
+            long totalRead = 0;
+            
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+                totalRead += length;
+            }
+            
+            Log.d(TAG, "Copied " + totalRead + " bytes from assets");
+        }
+    }
+    
+    /**
+     * 解压ZIP文件（优先使用SevenZipJBinding，失败则回退到ZipInputStream）
+     */
+    private boolean extractZipFile(File zipFile, File targetDir, 
+                                    ComponentItem component, int componentIndex) {
+        // 先尝试使用SevenZipJBinding
+        boolean success = extractWithSevenZipJBinding(zipFile, targetDir, component, componentIndex);
+        
+        if (!success) {
+            // 回退到标准ZipInputStream
+            Log.d(TAG, "Falling back to ZipInputStream extraction");
+            success = extractWithZipInputStream(zipFile, targetDir, component, componentIndex);
+        }
+        
+        return success;
+    }
+    
+    /**
+     * 使用SevenZipJBinding解压
      */
     private boolean extractWithSevenZipJBinding(File zipFile, File targetDir,
                                                 ComponentItem component, int componentIndex) {
+        RandomAccessFile randomAccessFile = null;
+        RandomAccessFileInStream inStream = null;
+        IInArchive inArchive = null;
+        
         try {
-            RandomAccessFile randomAccessFile = new RandomAccessFile(zipFile, "r");
-            RandomAccessFileInStream inStream = new RandomAccessFileInStream(randomAccessFile);
-
-            try {
-                IInArchive inArchive = SevenZip.openInArchive(null, inStream);
-
-                try {
-                    int totalItems = inArchive.getNumberOfItems();
-                    Log.d(TAG, "Archive contains " + totalItems + " items");
-
-                    // 创建自定义回调
-                    AssetsExtractCallback callback = new AssetsExtractCallback(
-                            inArchive, targetDir, component, componentIndex, totalItems);
-
-                    // 提取所有文件
-                    inArchive.extract(null, false, callback);
-
-                    Log.d(TAG, "SevenZipJBinding extraction completed successfully");
-                    return true;
-
-                } finally {
-                    inArchive.close();
-                }
-            } finally {
-                inStream.close();
-                randomAccessFile.close();
-            }
-
+            randomAccessFile = new RandomAccessFile(zipFile, "r");
+            inStream = new RandomAccessFileInStream(randomAccessFile);
+            inArchive = SevenZip.openInArchive(null, inStream);
+            
+            int totalItems = inArchive.getNumberOfItems();
+            Log.d(TAG, "Archive contains " + totalItems + " items");
+            
+            // 创建解压回调
+            ExtractCallback callback = new ExtractCallback(
+                inArchive, targetDir, component, componentIndex, totalItems);
+            
+            // 执行解压
+            inArchive.extract(null, false, callback);
+            
+            Log.d(TAG, "SevenZipJBinding extraction completed successfully");
+            return true;
+            
         } catch (Exception e) {
             Log.e(TAG, "SevenZipJBinding extraction failed", e);
-            // 如果SevenZipJBinding解压失败，回退到原来的ZipInputStream方法
-            Log.d(TAG, "Falling back to standard ZipInputStream extraction");
-            return extractWithZipInputStream(zipFile, targetDir, component, componentIndex);
+            return false;
+        } finally {
+            // 关闭资源
+            try {
+                if (inArchive != null) inArchive.close();
+                if (inStream != null) inStream.close();
+                if (randomAccessFile != null) randomAccessFile.close();
+            } catch (Exception e) {
+                Log.e(TAG, "Error closing archive resources", e);
+            }
         }
     }
-
+    
     /**
-     * SevenZipJBinding 解压回调类
+     * SevenZipJBinding解压回调
      */
-    private class AssetsExtractCallback implements IArchiveExtractCallback {
+    private class ExtractCallback implements IArchiveExtractCallback {
         private final IInArchive inArchive;
         private final File targetDir;
         private final ComponentItem component;
         private final int componentIndex;
         private final int totalItems;
         private int processedItems = 0;
-
-        public AssetsExtractCallback(IInArchive inArchive, File targetDir,
-                                     ComponentItem component, int componentIndex, int totalItems) {
+        
+        public ExtractCallback(IInArchive inArchive, File targetDir,
+                              ComponentItem component, int componentIndex, int totalItems) {
             this.inArchive = inArchive;
             this.targetDir = targetDir;
             this.component = component;
             this.componentIndex = componentIndex;
             this.totalItems = totalItems;
         }
-
+        
         @Override
-        public ISequentialOutStream getStream(int index, ExtractAskMode extractAskMode) throws SevenZipException {
+        public ISequentialOutStream getStream(int index, ExtractAskMode extractAskMode) 
+                throws SevenZipException {
             try {
-                // 获取文件信息
                 String filePath = inArchive.getStringProperty(index, PropID.PATH);
-                boolean isFolder = (Boolean) inArchive.getProperty(index, PropID.IS_FOLDER);
-
-                Log.d(TAG, "Processing item: " + filePath + " (isFolder: " + isFolder + ")");
-
-                // 跳过文件夹，我们会在需要时创建
-                if (isFolder) {
+                Boolean isFolder = (Boolean) inArchive.getProperty(index, PropID.IS_FOLDER);
+                
+                // 跳过 zip 内部的顶层 "dotnet*/" 目录（避免双层目录）
+                // 支持: dotnet/, dotnet-arm64/, dotnet-x64/ 等
+                if (filePath.contains("/") || filePath.contains("\\")) {
+                    int slashIndex = Math.max(filePath.indexOf('/'), filePath.indexOf('\\'));
+                    String topLevel = filePath.substring(0, slashIndex);
+                    if (topLevel.startsWith("dotnet")) {
+                        filePath = filePath.substring(slashIndex + 1);
+                        if (!filePath.isEmpty()) {
+                            Log.d(TAG, "Stripped dotnet prefix, new path: " + filePath);
+                        }
+                    }
+                }
+                
+                // 如果路径为空或只是分隔符，跳过
+                if (filePath.isEmpty() || filePath.equals("/") || filePath.equals("\\")) {
+                    return null;
+                }
+                
+                if (Boolean.TRUE.equals(isFolder)) {
                     // 创建目录
                     File dir = new File(targetDir, filePath);
                     if (!dir.exists()) {
@@ -384,74 +534,74 @@ public class InitializationFragment extends Fragment {
                     }
                     return null;
                 }
-
+                
                 // 处理文件
                 File targetFile = new File(targetDir, filePath);
-
-                // 安全检查：确保目标文件在目标目录内
+                
+                // 安全检查
                 String canonicalDestPath = targetDir.getCanonicalPath();
                 String canonicalEntryPath = targetFile.getCanonicalPath();
-
+                
                 if (!canonicalEntryPath.startsWith(canonicalDestPath + File.separator)) {
                     throw new SevenZipException("ZIP条目在目标目录之外: " + filePath);
                 }
-
+                
                 // 创建父目录
                 File parent = targetFile.getParentFile();
-                if (!parent.exists()) {
+                if (parent != null && !parent.exists()) {
                     parent.mkdirs();
                 }
-
-                // 返回输出流
-                return new AssetsSequentialOutStream(targetFile);
-
+                
+                return new SequentialOutStream(targetFile);
+                
             } catch (Exception e) {
                 throw new SevenZipException("Error getting stream for index " + index, e);
             }
         }
-
+        
         @Override
         public void prepareOperation(ExtractAskMode extractAskMode) throws SevenZipException {
             // 准备操作
         }
-
+        
         @Override
-        public void setOperationResult(ExtractOperationResult extractOperationResult) throws SevenZipException {
+        public void setOperationResult(ExtractOperationResult extractOperationResult) 
+                throws SevenZipException {
             processedItems++;
-
+            
             // 更新进度
             if (totalItems > 0) {
                 int progress = 30 + (int) ((processedItems * 60.0) / totalItems);
-                updateComponentProgress(component, componentIndex, progress,
-                        "解压中 (" + processedItems + "/" + totalItems + ")");
+                String status = "解压中 (" + processedItems + "/" + totalItems + ")";
+                updateComponentStatus(componentIndex, progress, status);
             }
-
+            
             if (extractOperationResult != ExtractOperationResult.OK) {
                 Log.w(TAG, "Extraction operation result: " + extractOperationResult);
             }
         }
-
+        
         @Override
         public void setTotal(long total) throws SevenZipException {
-            Log.d(TAG, "Total bytes to extract: " + total);
+            // 可以在这里更新基于字节的进度
         }
-
+        
         @Override
         public void setCompleted(long complete) throws SevenZipException {
             // 可以在这里更新基于字节的进度
         }
     }
-
+    
     /**
-     * SevenZipJBinding 输出流实现
+     * SevenZipJBinding输出流实现
      */
-    private class AssetsSequentialOutStream implements ISequentialOutStream {
+    private class SequentialOutStream implements ISequentialOutStream {
         private final FileOutputStream outputStream;
-
-        public AssetsSequentialOutStream(File targetFile) throws FileNotFoundException {
+        
+        public SequentialOutStream(File targetFile) throws FileNotFoundException {
             this.outputStream = new FileOutputStream(targetFile);
         }
-
+        
         @Override
         public int write(byte[] data) throws SevenZipException {
             try {
@@ -459,39 +609,57 @@ public class InitializationFragment extends Fragment {
                 return data.length;
             } catch (IOException e) {
                 throw new SevenZipException("Error writing to output stream", e);
-            } finally {
-                try {
-                    outputStream.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error closing output stream", e);
-                }
             }
         }
+        
+        public void close() throws IOException {
+            outputStream.close();
+        }
     }
-
+    
     /**
-     * 回退方法：使用标准的ZipInputStream解压
+     * 使用ZipInputStream解压（备用方法）
      */
     private boolean extractWithZipInputStream(File zipFile, File targetDir,
                                               ComponentItem component, int componentIndex) {
         try {
-            updateComponentProgress(component, componentIndex, 40, "使用备用方法解压...");
-
+            updateComponentStatus(componentIndex, 40, "使用备用方法解压...");
+            
             FileInputStream fis = new FileInputStream(zipFile);
             ZipInputStream zis = new ZipInputStream(fis);
-
+            
             // 统计总条目数
-            int totalEntries = countZipEntriesFromFile(zipFile);
+            int totalEntries = countZipEntries(zipFile);
             if (totalEntries == 0) totalEntries = 1;
-
+            
             ZipEntry entry;
             int entriesProcessed = 0;
             byte[] buffer = new byte[8192];
-
+            
             while ((entry = zis.getNextEntry()) != null) {
                 String fileName = entry.getName();
+                
+                // 跳过 zip 内部的顶层 "dotnet*/" 目录（避免双层目录）
+                // 支持: dotnet/, dotnet-arm64/, dotnet-x64/ 等
+                if (fileName.contains("/") || fileName.contains("\\")) {
+                    int slashIndex = Math.max(fileName.indexOf('/'), fileName.indexOf('\\'));
+                    String topLevel = fileName.substring(0, slashIndex);
+                    if (topLevel.startsWith("dotnet")) {
+                        fileName = fileName.substring(slashIndex + 1);
+                        if (!fileName.isEmpty()) {
+                            Log.d(TAG, "Stripped dotnet prefix, new path: " + fileName);
+                        }
+                    }
+                }
+                
+                // 如果路径为空或只是分隔符，跳过
+                if (fileName.isEmpty() || fileName.equals("/") || fileName.equals("\\")) {
+                    zis.closeEntry();
+                    continue;
+                }
+                
                 File outputFile = new File(targetDir, fileName);
-
+                
                 if (entry.isDirectory()) {
                     outputFile.mkdirs();
                 } else {
@@ -499,7 +667,7 @@ public class InitializationFragment extends Fragment {
                     if (parent != null && !parent.exists()) {
                         parent.mkdirs();
                     }
-
+                    
                     try (FileOutputStream fos = new FileOutputStream(outputFile)) {
                         int length;
                         while ((length = zis.read(buffer)) > 0) {
@@ -507,45 +675,45 @@ public class InitializationFragment extends Fragment {
                         }
                     }
                 }
-
+                
                 zis.closeEntry();
                 entriesProcessed++;
-
+                
                 // 更新进度
                 int progress = 40 + (int) ((entriesProcessed * 50.0) / totalEntries);
-                updateComponentProgress(component, componentIndex, progress,
-                        "解压中 (" + entriesProcessed + "/" + totalEntries + ")");
+                String status = "解压中 (" + entriesProcessed + "/" + totalEntries + ")";
+                updateComponentStatus(componentIndex, progress, status);
             }
-
+            
             zis.close();
             return true;
-
+            
         } catch (Exception e) {
-            Log.e(TAG, "Fallback extraction failed", e);
+            Log.e(TAG, "ZipInputStream extraction failed", e);
             return false;
         }
     }
-
+    
     /**
-     * 从文件统计zip条目数量
+     * 统计ZIP文件中的条目数
      */
-    private int countZipEntriesFromFile(File zipFile) {
+    private int countZipEntries(File zipFile) {
         int count = 0;
         try (FileInputStream fis = new FileInputStream(zipFile);
              ZipInputStream zis = new ZipInputStream(fis)) {
-
+            
             while (zis.getNextEntry() != null) {
                 count++;
                 zis.closeEntry();
             }
         } catch (IOException e) {
-            Log.e(TAG, "Error counting zip entries from file", e);
+            Log.e(TAG, "Error counting zip entries", e);
         }
         return count;
     }
-
+    
     /**
-     * 删除目录及其内容
+     * 删除目录及其所有内容
      */
     private void deleteDirectory(File directory) {
         if (directory.exists()) {
@@ -562,71 +730,118 @@ public class InitializationFragment extends Fragment {
             directory.delete();
         }
     }
-
+    
     /**
-     * 更新组件进度
+     * 更新组件状态
      */
-    private void updateComponentProgress(ComponentItem component, int componentIndex, int progress, String status) {
-        new Handler(Looper.getMainLooper()).post(() -> {
+    private void updateComponentStatus(int componentIndex, int progress, String status) {
+        mainHandler.post(() -> {
+            ComponentItem component = components.get(componentIndex);
             component.setProgress(progress);
             componentAdapter.notifyItemChanged(componentIndex);
-
+            
             // 更新总体进度
             int overallProgress = calculateOverallProgress();
-            overallProgressBar.setProgress(overallProgress);
-            overallProgressText.setText(String.format("%s (%d%%)", status, overallProgress));
-
-            Log.d(TAG, "updateComponentProgress: progress=" + progress + ", overallProgress=" + overallProgress + ", status=" + status);
+            updateOverallProgress(overallProgress, status);
+            
+            Log.d(TAG, String.format("Component [%d] progress: %d%%, Overall: %d%%", 
+                   componentIndex, progress, overallProgress));
         });
     }
-
+    
+    /**
+     * 更新总体进度
+     */
+    private void updateOverallProgress(int progress, String status) {
+        overallProgressBar.setProgress(progress);
+        overallProgressText.setText(status);
+        overallProgressPercent.setText(progress + "%");
+    }
+    
+    /**
+     * 计算总体进度
+     */
     private int calculateOverallProgress() {
         if (components.isEmpty()) return 0;
-
+        
         int totalProgress = 0;
         for (ComponentItem component : components) {
             totalProgress += component.getProgress();
         }
-        int overall = totalProgress / components.size();
-        Log.d(TAG, "calculateOverallProgress: totalProgress=" + totalProgress + ", components.size()=" + components.size() + ", overall=" + overall);
-        return overall;
+        return totalProgress / components.size();
     }
-
+    
+    /**
+     * 处理解压错误
+     */
+    private void handleExtractionError(Exception error) {
+        btnStartExtraction.setEnabled(true);
+        btnStartExtraction.setText("重试安装");
+        
+        String errorMessage = "解压失败: " + error.getMessage();
+        Toast.makeText(requireActivity(), errorMessage, Toast.LENGTH_LONG).show();
+        
+        Log.e(TAG, "Extraction error handled", error);
+    }
+    
+    /**
+     * 完成初始化
+     */
     private void completeInitialization() {
-        Log.d(TAG, "Initialization complete");
+        Log.d(TAG, "Initialization completed");
+        
         SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
         prefs.edit().putBoolean(KEY_COMPONENTS_EXTRACTED, true).apply();
-
-        // 显示成功消息
-        Toast.makeText(getActivity(), "dotnet环境安装成功！", Toast.LENGTH_LONG).show();
-
-        // 延迟一段时间后自动返回主界面
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        
+        // 更新UI显示成功状态
+        updateOverallProgress(100, "安装完成");
+        
+        // 显示安装的运行时版本信息
+        try {
+            java.util.List<String> versions = com.app.ralaunch.utils.RuntimeManager.listInstalledVersions(requireActivity());
+            if (!versions.isEmpty()) {
+                String versionInfo = "已安装 .NET 运行时版本：" + String.join(", ", versions);
+                Toast.makeText(requireActivity(), versionInfo, Toast.LENGTH_LONG).show();
+                Log.d(TAG, versionInfo);
+            } else {
+                Toast.makeText(requireActivity(), ".NET 环境安装成功！", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(requireActivity(), ".NET 环境安装成功！", Toast.LENGTH_SHORT).show();
+            Log.w(TAG, "Failed to get installed versions", e);
+        }
+        
+        // 延迟后回调，给用户看到成功状态的时间
+        mainHandler.postDelayed(() -> {
             if (listener != null) {
                 listener.onInitializationComplete();
             }
-        }, 1500); // 1.5秒后返回
+        }, 2000); // 2秒后返回，给用户足够时间看到版本信息
     }
-
+    
+    /**
+     * 视图入场动画
+     */
     private void animateViewEntrance(View view) {
         view.setAlpha(0f);
-        view.setScaleX(0.9f);
-        view.setScaleY(0.9f);
-
+        view.setScaleX(0.95f);
+        view.setScaleY(0.95f);
+        
         view.animate()
                 .alpha(1f)
                 .scaleX(1f)
                 .scaleY(1f)
-                .setDuration(600)
+                .setDuration(300)
                 .start();
     }
-
+    
     @Override
     public void onResume() {
         super.onResume();
         // 确保全屏显示
         if (getActivity() != null) {
-            getActivity().getWindow().getDecorView().setSystemUiVisibility(
+            View decorView = getActivity().getWindow().getDecorView();
+            decorView.setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                             | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                             | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -634,6 +849,15 @@ public class InitializationFragment extends Fragment {
                             | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                             | View.SYSTEM_UI_FLAG_FULLSCREEN
             );
+        }
+    }
+    
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // 关闭线程池
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdownNow();
         }
     }
 }

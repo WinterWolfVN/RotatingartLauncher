@@ -1,4 +1,3 @@
-// ComponentAdapter.java
 package com.app.ralaunch.adapter;
 
 import android.view.LayoutInflater;
@@ -13,6 +12,16 @@ import com.app.ralaunch.R;
 import com.app.ralaunch.model.ComponentItem;
 import java.util.List;
 
+/**
+ * 组件安装列表适配器
+ * 
+ * 用于在初始化界面显示需要安装的组件列表，包括：
+ * - 组件名称和描述
+ * - 安装进度条
+ * - 安装状态图标
+ * 
+ * 支持实时更新组件安装进度和状态
+ */
 public class ComponentAdapter extends RecyclerView.Adapter<ComponentAdapter.ViewHolder> {
     private List<ComponentItem> componentList;
 
@@ -37,15 +46,21 @@ public class ComponentAdapter extends RecyclerView.Adapter<ComponentAdapter.View
         holder.progressBar.setProgress(component.getProgress());
 
         if (component.isInstalled()) {
+            // 已安装状态 - 显示绿色勾选图标
             holder.statusIcon.setImageResource(R.drawable.ic_check_circle);
             holder.statusIcon.setColorFilter(holder.itemView.getContext()
-                    .getResources().getColor(R.color.card_background));
+                    .getResources().getColor(R.color.accent_green));
             holder.progressText.setText("已完成");
+            holder.progressText.setTextColor(holder.itemView.getContext()
+                    .getResources().getColor(R.color.accent_green));
         } else {
+            // 未安装状态 - 显示灰色图标
             holder.statusIcon.setImageResource(R.drawable.ic_check_circle);
             holder.statusIcon.setColorFilter(holder.itemView.getContext()
-                    .getResources().getColor(R.color.text_secondary));
+                    .getResources().getColor(R.color.text_hint));
             holder.progressText.setText(component.getProgress() + "%");
+            holder.progressText.setTextColor(holder.itemView.getContext()
+                    .getResources().getColor(R.color.accent_green));
         }
     }
 

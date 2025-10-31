@@ -179,17 +179,7 @@
                             android:maxLines="1"
                             android:ellipsize="end" />
 
-                        <!-- 游戏引擎信息 -->
-                        <TextView
-                            android:id="@+id/selectedGameEngine"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:gravity="center"
-                            android:text="引擎信息"
-                            android:textColor="#4CAF50"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
+
 
                         <!-- 游戏描述 -->
                         <TextView
@@ -204,21 +194,124 @@
                             android:maxLines="2"
                             android:ellipsize="end" />
 
-                        <!-- 游戏路径 -->
-                        <TextView
-                            android:id="@+id/selectedGamePath"
+                        <!-- 游戏程序集路径编辑区域 -->
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:gravity="center"
-                            android:text="游戏路径"
-                            android:textColor="#666666"
-                            android:textSize="10sp"
-                            android:maxLines="2"
-                            android:ellipsize="middle"
-                            android:padding="8dp"
+                            android:orientation="vertical"
+                            android:padding="12dp"
                             android:background="@drawable/bg_rounded_corner"
-                            android:backgroundTint="#2A2A2A" />
+                            android:backgroundTint="#2A2A2A">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="程序集路径"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="8dp" />
+
+                            <EditText
+                                android:id="@+id/selectedGamePath"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="游戏路径"
+                                android:textColor="#FFFFFF"
+                                android:textSize="11sp"
+                                android:background="@drawable/bg_rounded_corner"
+                                android:backgroundTint="#333333"
+                                android:padding="10dp"
+                                android:maxLines="3"
+                                android:ellipsize="end"
+                                android:inputType="textMultiLine"
+                                android:textCursorDrawable="@null"
+                                android:layout_marginBottom="8dp" />
+
+                            <Button
+                                android:id="@+id/saveGamePathButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="36dp"
+                                android:text="保存路径"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:background="@drawable/bg_rounded_corner"
+                                android:backgroundTint="#4CAF50" />
+
+                        </LinearLayout>
+
+                        <!-- ModLoader 开关 -->
+                        <LinearLayout
+                            android:id="@+id/modLoaderSwitchContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="12dp"
+                            android:background="@drawable/bg_rounded_corner"
+                            android:backgroundTint="#2A2A2A"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="启用 ModLoader"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/modLoaderSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                app:thumbTint="#FFFFFF"
+                                app:trackTint="#666666" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <!-- 运行时版本选择 -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/runtimeSelectContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="4dp"
+                    app:cardBackgroundColor="#1E1E1E"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔧 .NET 运行时版本"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp" />
+
+                        <Spinner
+                            android:id="@+id/spinnerRuntimeVersion"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:background="@drawable/bg_rounded_corner"
+                            android:backgroundTint="#2A2A2A"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp" />
 
                     </LinearLayout>
 

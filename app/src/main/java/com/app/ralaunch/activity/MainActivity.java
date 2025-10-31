@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -43,7 +44,10 @@ import com.app.ralaunch.fragment.SettingsFragment;
 import com.app.ralaunch.utils.GameDataManager;
 import com.app.ralaunch.utils.PageManager;
 import com.daimajia.androidanimations.library.Techniques;
+import com.app.ralaunch.utils.PermissionHelper;
+import com.app.ralaunch.utils.UiUtils;
 import com.daimajia.androidanimations.library.YoYo;
+import com.app.ralaunch.utils.RuntimeManager;
 
 import java.io.File;
 import java.util.List;
@@ -73,10 +77,14 @@ public class MainActivity extends AppCompatActivity implements
     private ImageView selectedGameImage;
     private TextView selectedGameName;
     private TextView selectedGameDescription;
-    private TextView selectedGamePath;
+    private android.widget.EditText selectedGamePath;
     private Button launchGameButton;
     private CardView emptySelectionText;
     private LinearLayout mainLayout;
+    private LinearLayout modLoaderSwitchContainer;
+    private androidx.appcompat.widget.SwitchCompat modLoaderSwitch;
+    private View runtimeSelectContainer;
+    private android.widget.Spinner spinnerRuntimeVersion;
     private ImageButton settingsButton;
     private ImageButton addGameButton;
     private ImageButton refreshButton;
@@ -100,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         setContentView(R.layout.activity_main);
+
 
         // 初始化权限请求
         initializePermissionLaunchers();
@@ -154,6 +163,9 @@ public class MainActivity extends AppCompatActivity implements
             gameAdapter.updateGameList(gameList);
         }
 
+        // 初始化完成后重新设置运行时选择器
+        setupRuntimeSpinner();
+
         SettingsFragment.applySavedSettings(this);
     }
 
@@ -161,68 +173,20 @@ public class MainActivity extends AppCompatActivity implements
      * 初始化权限请求
      */
     private void initializePermissionLaunchers() {
-        // 初始化存储权限请求
-        requestPermissionLauncher = registerForActivityResult(
-                new ActivityResultContracts.RequestMultiplePermissions(),
-                permissions -> {
-                    boolean allGranted = true;
-                    for (Boolean granted : permissions.values()) {
-                        if (!granted) {
-                            allGranted = false;
-                            break;
-                        }
-                    }
-
-                    if (allGranted) {
-                        // 权限已授予
-                        if (currentPermissionCallback != null) {
-                            currentPermissionCallback.onPermissionsGranted();
-                        }
-                    } else {
-                        // 权限被拒绝
-                        if (currentPermissionCallback != null) {
-                            currentPermissionCallback.onPermissionsDenied();
-                        }
-                    }
-                    currentPermissionCallback = null;
-                }
-        );
-
-        // 初始化所有文件访问权限请求
-        manageAllFilesLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        if (Environment.isExternalStorageManager()) {
-                            // 所有文件访问权限已授予
-                            if (currentPermissionCallback != null) {
-                                currentPermissionCallback.onPermissionsGranted();
-                            }
-                        } else {
-                            // 所有文件访问权限被拒绝
-                            if (currentPermissionCallback != null) {
-                                currentPermissionCallback.onPermissionsDenied();
-                            }
-                        }
-                        currentPermissionCallback = null;
-                    }
-                }
-        );
+        requestPermissionLauncher = PermissionHelper.registerStoragePermissions(this, new PermissionHelper.Callback() {
+            @Override public void onGranted() { if (currentPermissionCallback != null) currentPermissionCallback.onPermissionsGranted(); currentPermissionCallback = null; }
+            @Override public void onDenied() { if (currentPermissionCallback != null) currentPermissionCallback.onPermissionsDenied(); currentPermissionCallback = null; }
+        });
+        manageAllFilesLauncher = PermissionHelper.registerAllFilesAccess(this, new PermissionHelper.Callback() {
+            @Override public void onGranted() { if (currentPermissionCallback != null) currentPermissionCallback.onPermissionsGranted(); currentPermissionCallback = null; }
+            @Override public void onDenied() { if (currentPermissionCallback != null) currentPermissionCallback.onPermissionsDenied(); currentPermissionCallback = null; }
+        });
     }
 
     /**
      * 检查是否具有必要的权限
      */
-    public boolean hasRequiredPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ 需要所有文件访问权限
-            return Environment.isExternalStorageManager();
-        } else {
-            // Android 10 及以下需要读写权限
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
-                    ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-    }
+    public boolean hasRequiredPermissions() { return PermissionHelper.hasStorageAccess(this); }
 
     /**
      * 请求必要的权限
@@ -231,22 +195,9 @@ public class MainActivity extends AppCompatActivity implements
         this.currentPermissionCallback = callback;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ 请求所有文件访问权限
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                manageAllFilesLauncher.launch(intent);
-            } catch (Exception e) {
-                // 如果上面的Intent失败，使用备用方案
-                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                manageAllFilesLauncher.launch(intent);
-            }
+            PermissionHelper.requestStorage(this, requestPermissionLauncher, manageAllFilesLauncher);
         } else {
-            // Android 10 及以下请求读写权限
-            requestPermissionLauncher.launch(new String[]{
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-            });
+            PermissionHelper.requestStorage(this, requestPermissionLauncher, manageAllFilesLauncher);
         }
     }
 
@@ -274,6 +225,11 @@ public class MainActivity extends AppCompatActivity implements
         selectedGamePath = findViewById(R.id.selectedGamePath);
         launchGameButton = findViewById(R.id.launchGameButton);
         emptySelectionText = findViewById(R.id.emptySelectionText);
+        modLoaderSwitchContainer = findViewById(R.id.modLoaderSwitchContainer);
+        modLoaderSwitch = findViewById(R.id.modLoaderSwitch);
+        runtimeSelectContainer = findViewById(R.id.runtimeSelectContainer);
+        spinnerRuntimeVersion = findViewById(R.id.spinnerRuntimeVersion);
+        Button saveGamePathButton = findViewById(R.id.saveGamePathButton);
 
         // 初始化RecyclerView
         gameRecyclerView = findViewById(R.id.gameRecyclerView);
@@ -317,6 +273,43 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
+        // ModLoader 开关监听
+        modLoaderSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (selectedGame != null) {
+                selectedGame.setModLoaderEnabled(isChecked);
+                // 保存状态到配置文件
+                gameDataManager.saveGameList(gameList);
+                showToast(isChecked ? "已启用 ModLoader" : "已禁用 ModLoader");
+            }
+        });
+
+        // 保存游戏路径按钮
+        saveGamePathButton.setOnClickListener(v -> {
+            if (selectedGame != null) {
+                String newPath = selectedGamePath.getText().toString().trim();
+                if (newPath.isEmpty()) {
+                    showToast("程序集路径不能为空");
+                    return;
+                }
+                
+                // 验证文件是否存在
+                File assemblyFile = new File(newPath);
+                if (!assemblyFile.exists()) {
+                    showToast("警告: 文件不存在，但已保存路径");
+                }
+                
+                // 更新游戏路径
+                selectedGame.setGamePath(newPath);
+                // 保存到配置文件
+                gameDataManager.saveGameList(gameList);
+                showToast("程序集路径已保存");
+                
+                Log.d("MainActivity", "Updated game path: " + newPath);
+            } else {
+                showToast("请先选择一个游戏");
+            }
+        });
+
         // 控制布局按钮
         ImageButton controlLayoutButton = findViewById(R.id.controlLayoutButton);
         controlLayoutButton.setOnClickListener(v -> {
@@ -328,6 +321,97 @@ public class MainActivity extends AppCompatActivity implements
 
         // 默认显示主界面
         showMainLayout();
+
+        // 初始化运行时版本选择
+        setupRuntimeSpinner();
+    }
+
+    /**
+     * 设置运行时版本选择器
+     */
+    private void setupRuntimeSpinner() {
+        // 检查控件是否已初始化
+        if (spinnerRuntimeVersion == null || runtimeSelectContainer == null) {
+            Log.w("MainActivity", "Runtime spinner widgets not initialized yet");
+            return;
+        }
+        
+        // 输出运行时目录信息
+        File dotnetRoot = RuntimeManager.getDotnetRoot(this);
+        File sharedRoot = RuntimeManager.getSharedRoot(this);
+        Log.d("MainActivity", "Dotnet root: " + dotnetRoot.getAbsolutePath() + " (exists: " + dotnetRoot.exists() + ")");
+        Log.d("MainActivity", "Shared root: " + sharedRoot.getAbsolutePath() + " (exists: " + sharedRoot.exists() + ")");
+        
+        if (sharedRoot.exists()) {
+            File[] files = sharedRoot.listFiles();
+            if (files != null) {
+                Log.d("MainActivity", "Shared root contains " + files.length + " items:");
+                for (File f : files) {
+                    Log.d("MainActivity", "  - " + f.getName() + " (isDirectory: " + f.isDirectory() + ")");
+                }
+            } else {
+                Log.d("MainActivity", "Shared root listFiles returned null");
+            }
+        }
+        
+        java.util.List<String> versions = RuntimeManager.listInstalledVersions(this);
+        
+        Log.d("MainActivity", "setupRuntimeSpinner called, found " + versions.size() + " versions");
+        
+        if (versions.isEmpty()) {
+            runtimeSelectContainer.setVisibility(View.GONE);
+            Log.w("MainActivity", "Runtime selector hidden - no versions found");
+            // 显示提示信息
+            showToast("未检测到 .NET 运行时，请先完成初始化");
+            return;
+        }
+        
+        runtimeSelectContainer.setVisibility(View.VISIBLE);
+        Log.i("MainActivity", "Runtime selector visible - " + versions.size() + " versions found");
+        showToast("已检测到 " + versions.size() + " 个 .NET 运行时版本");
+        
+        // 创建显示名称列表（.NET 7.0.0, .NET 8.0.1 等）
+        java.util.List<String> displayNames = new java.util.ArrayList<>();
+        for (String version : versions) {
+            displayNames.add(".NET " + version);
+        }
+        
+        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, displayNames);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerRuntimeVersion.setAdapter(adapter);
+        
+        // 选中当前版本
+        String selectedVersion = RuntimeManager.getSelectedVersion(this);
+        if (selectedVersion != null) {
+            int idx = versions.indexOf(selectedVersion);
+            if (idx >= 0) {
+                spinnerRuntimeVersion.setSelection(idx);
+                Log.d("MainActivity", "Selected runtime version: " + selectedVersion);
+            }
+        }
+        
+        // 设置选择监听器
+        spinnerRuntimeVersion.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override 
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (position >= 0 && position < versions.size()) {
+                    String version = versions.get(position);
+                    RuntimeManager.setSelectedVersion(MainActivity.this, version);
+                    Toast.makeText(MainActivity.this, 
+                                 "已切换到 .NET " + version, 
+                                 Toast.LENGTH_SHORT).show();
+                    Log.d("MainActivity", "Runtime version changed to: " + version);
+                }
+            }
+            
+            @Override 
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                // 不需要处理
+            }
+        });
+        
+        Log.d("MainActivity", "Runtime spinner setup complete with " + versions.size() + " versions");
     }
 
     private void showControlLayoutFragment() {
@@ -393,9 +477,9 @@ public class MainActivity extends AppCompatActivity implements
 
     // 实现 OnImportCompleteListener
     @Override
-    public void onImportComplete(String gameType, String gameName, String gamePath, String engineType) {
+    public void onImportComplete(String gameType, String gameName, String gamePath, String gameBodyPath, String engineType, String iconPath) {
         // 导入完成后直接添加游戏到列表
-        addGameToList(gameType, gameName, gamePath, engineType);
+        addGameToList(gameType, gameName, gamePath, gameBodyPath, engineType, iconPath);
     }
 
     private void onBackFromLocalImport() {
@@ -417,12 +501,13 @@ public class MainActivity extends AppCompatActivity implements
         getSupportFragmentManager().popBackStack("add_game", FragmentManager.POP_BACK_STACK_INCLUSIVE);
     }
 
-    private void addGameToList(String gameType, String gameName, String gamePath, String engineType) {
+    private void addGameToList(String gameType, String gameName, String gamePath, String gameBodyPath, String engineType, String iconPath) {
         int iconResId = R.drawable.ic_game_default;
 
         switch (gameType) {
-            case "tmodloader":
-                iconResId = R.drawable.ic_tmodloader;
+            case "modloader":
+                // 使用动态图标，不再使用硬编码资源
+                iconResId = R.drawable.ic_game_default;
                 break;
             case "stardew":
                 iconResId = R.drawable.ic_stardew_valley;
@@ -436,6 +521,18 @@ public class MainActivity extends AppCompatActivity implements
 
         GameItem newGame = new GameItem(gameName, gamePath, iconResId);
         newGame.setEngineType(engineType);
+        
+        // 如果有自定义图标路径，设置它
+        if (iconPath != null && new File(iconPath).exists()) {
+            newGame.setIconPath(iconPath);
+            Log.d("MainActivity", "Set custom icon path: " + iconPath);
+        }
+        
+        // 对于 modloader，保存游戏本体路径
+        if (gameBodyPath != null) {
+            newGame.setGameBodyPath(gameBodyPath);
+            Log.d("MainActivity", "Set game body path: " + gameBodyPath);
+        }
 
         gameList.add(0, newGame);
         gameAdapter.updateGameList(gameList);
@@ -488,17 +585,47 @@ public class MainActivity extends AppCompatActivity implements
         selectedGameDescription.setText(game.getGameDescription());
         selectedGamePath.setText(game.getGamePath());
 
-        TextView selectedGameEngine = findViewById(R.id.selectedGameEngine);
-        if (game.getEngineType() != null) {
-            selectedGameEngine.setText(game.getEngineType() + " 引擎");
-            selectedGameEngine.setVisibility(View.VISIBLE);
+        // 加载游戏图标 - 优先使用自定义图标路径，否则使用资源ID
+        if (game.getIconPath() != null && !game.getIconPath().isEmpty()) {
+            // 从文件加载图标
+            File iconFile = new File(game.getIconPath());
+            if (iconFile.exists()) {
+                android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeFile(game.getIconPath());
+                if (bitmap != null) {
+                    selectedGameImage.setImageBitmap(bitmap);
+                } else {
+                    // 如果加载失败，使用资源ID或默认图标
+                    if (game.getIconResId() != 0) {
+                        selectedGameImage.setImageResource(game.getIconResId());
+                    } else {
+                        selectedGameImage.setImageResource(R.drawable.ic_game_default);
+                    }
+                }
+            } else {
+                // 文件不存在，使用资源ID或默认图标
+                if (game.getIconResId() != 0) {
+                    selectedGameImage.setImageResource(game.getIconResId());
+                } else {
+                    selectedGameImage.setImageResource(R.drawable.ic_game_default);
+                }
+            }
+        } else if (game.getIconResId() != 0) {
+            selectedGameImage.setImageResource(game.getIconResId());
         } else {
-            selectedGameEngine.setVisibility(View.GONE);
+            // 没有任何图标信息，使用默认图标
+            selectedGameImage.setImageResource(R.drawable.ic_game_default);
         }
 
-        if (game.getIconResId() != 0) {
-            selectedGameImage.setImageResource(game.getIconResId());
+        // 检查是否是 modloader 类型游戏，如果是则显示开关
+        if (game.getGameBodyPath() != null && !game.getGameBodyPath().isEmpty()) {
+            // 有 gameBodyPath 说明是 modloader 游戏
+            modLoaderSwitchContainer.setVisibility(View.VISIBLE);
+            modLoaderSwitch.setChecked(game.isModLoaderEnabled());
+        } else {
+            modLoaderSwitchContainer.setVisibility(View.GONE);
         }
+
+        
 
         YoYo.with(Techniques.Tada)
                 .duration(800)
@@ -523,15 +650,15 @@ public class MainActivity extends AppCompatActivity implements
         Intent intent = new Intent(MainActivity.this, GameActivity.class);
         intent.putExtra("GAME_NAME", game.getGameName());
         intent.putExtra("GAME_PATH", game.getGamePath());
-        intent.putExtra("ENGINE_TYPE", game.getEngineType());
+        intent.putExtra("GAME_BODY_PATH", game.getGameBodyPath()); // 添加游戏本体路径
+        intent.putExtra("MOD_LOADER_ENABLED", game.isModLoaderEnabled()); // 添加 ModLoader 开关状态
+        // 不再传递引擎类型，避免误导性的日志或行为
 
         startActivity(intent);
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
-    public void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-    }
+    public void showToast(String message) { UiUtils.toast(this, message); }
 
     private void showSettingsFragment() {
         mainLayout.setVisibility(View.GONE);

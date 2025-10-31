@@ -1,64 +1,92 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:background="@drawable/bg_rounded_corner"
-    android:backgroundTint="#252525"
-    android:layout_marginBottom="8dp">
-
-    <ImageView
-        android:id="@+id/statusIcon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginEnd="12dp"
-        android:src="@drawable/ic_check_circle"
-        android:tint="#666666" />
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/background_secondary"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/componentName"
-            android:layout_width="match_parent"
+        <!-- 状态图标 -->
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="16dp">
+
+            <ImageView
+                android:id="@+id/statusIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_check_circle"
+                android:tint="@color/text_hint"
+                android:contentDescription="组件状态图标" />
+
+        </FrameLayout>
+
+        <!-- 组件信息区域 -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="组件名称"
-            android:textColor="#FFFFFF"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- 组件名称 -->
+            <TextView
+                android:id="@+id/componentName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="组件名称"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <!-- 组件描述 -->
+            <TextView
+                android:id="@+id/componentDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="组件描述"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 进度条 -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:progressTint="@color/accent_green"
+                android:progressBackgroundTint="@color/background_dark"
+                android:max="100"
+                android:progress="0" />
+
+        </LinearLayout>
+
+        <!-- 进度百分比 -->
+        <TextView
+            android:id="@+id/progressText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="0%"
+            android:textColor="@color/accent_green"
             android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/componentDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="组件描述"
-            android:textColor="#666666"
-            android:textSize="12sp"
-            android:layout_marginTop="2dp" />
-
-        <ProgressBar
-            android:id="@+id/progressBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:layout_marginTop="6dp"
-            android:progressTint="#4CAF50"
-            android:progressBackgroundTint="#1E1E1E" />
+            android:textStyle="bold"
+            android:minWidth="48dp"
+            android:gravity="end"
+            android:contentDescription="组件安装进度百分比" />
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/progressText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="0%"
-        android:textColor="#4CAF50"
-        android:textSize="12sp"
-        android:textStyle="bold" />
-
-</LinearLayout>
+</androidx.cardview.widget.CardView>

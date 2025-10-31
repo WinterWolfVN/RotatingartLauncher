@@ -9,6 +9,18 @@ import java.util.zip.ZipFile;
 import net.sf.sevenzipjbinding.*;
 import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream;
 
+/**
+ * 游戏解压器
+ * 
+ * 提供完整的游戏包解压功能，支持：
+ * - ZIP 压缩包解压
+ * - 7-Zip (7z) 压缩包解压
+ * - 自动识别并提取游戏文件和 ModLoader
+ * - 进度回调和错误处理
+ * - 游戏信息提取和配置生成
+ * 
+ * 使用 SevenZipJBinding 库处理复杂压缩格式
+ */
 public class GameExtractor {
     private static final String TAG = "GameExtractor";
 
@@ -25,16 +37,21 @@ public class GameExtractor {
 
     public interface ExtractionListener {
         void onProgress(String message, int progress);
-        void onComplete(String gamePath, String tmodloaderPath);
+        void onComplete(String gamePath, String modLoaderPath);
         void onError(String error);
     }
 
-    public static void installCompleteGame(String shFilePath, String tmodloaderZipPath,
+    public static void installCompleteGame(String shFilePath, String modLoaderZipPath,
                                            String outputDir, ExtractionListener listener) {
         new Thread(() -> {
             try {
+                // 先读取游戏信息
+                GameInfoParser.GameInfo gameInfo = GameInfoParser.extractGameInfo(shFilePath);
+                String gameName = (gameInfo != null && gameInfo.name != null) ? gameInfo.name : "Unknown";
+                Log.d(TAG, "Installing game: " + gameName);
+
                 // 步骤1: 解压GOG的sh文件
-                extractGogGame(shFilePath, outputDir, new ExtractionListener() {
+                extractGogGame(shFilePath, outputDir, gameName, new ExtractionListener() {
                     @Override
                     public void onProgress(String message, int progress) {
                         if (listener != null) {
@@ -43,9 +60,9 @@ public class GameExtractor {
                     }
 
                     @Override
-                    public void onComplete(String gamePath, String tmodloaderPath) {
-                        // 步骤2: 解压tmodloader
-                        extractTmodloader(tmodloaderZipPath, outputDir, new ExtractionListener() {
+                    public void onComplete(String gamePath, String modLoaderPath) {
+                        // 步骤2: 解压ModLoader
+                        extractModLoader(modLoaderZipPath, outputDir, gameName, new ExtractionListener() {
                             @Override
                             public void onProgress(String message, int progress) {
                                 if (listener != null) {
@@ -54,12 +71,10 @@ public class GameExtractor {
                             }
 
                             @Override
-                            public void onComplete(String gamePath, String tmodPath) {
+                            public void onComplete(String gamePath, String modPath) {
                                 if (listener != null) {
-                                    File gogGamesDir = new File(outputDir, "GoG Games");
-                                    String finalGamePath = new File(gogGamesDir, "Terraria").getAbsolutePath();
-                                    String finalTmodPath = new File(gogGamesDir, "tModLoader").getAbsolutePath();
-                                    listener.onComplete(finalGamePath, finalTmodPath);
+                                    // modPath已经是正确的路径，直接传递
+                                    listener.onComplete(gamePath, modPath);
                                 }
                             }
 
@@ -90,12 +105,57 @@ public class GameExtractor {
     }
 
     /**
-     * 解压GOG的sh游戏文件
+     * 只安装纯游戏（不安装 ModLoader）
      */
-    public static void extractGogGame(String inputPath, String outputDir, ExtractionListener listener) {
+    public static void installGameOnly(String shFilePath, String outputDir, ExtractionListener listener) {
         new Thread(() -> {
             try {
-                extractGogGameInternal(inputPath, outputDir, listener);
+                // 读取游戏信息
+                GameInfoParser.GameInfo gameInfo = GameInfoParser.extractGameInfo(shFilePath);
+                String gameName = (gameInfo != null && gameInfo.name != null) ? gameInfo.name : "Unknown";
+                Log.d(TAG, "Installing game only: " + gameName);
+
+                // 只解压 GOG 的 sh 文件
+                extractGogGame(shFilePath, outputDir, gameName, new ExtractionListener() {
+                    @Override
+                    public void onProgress(String message, int progress) {
+                        if (listener != null) {
+                            listener.onProgress(message, progress);
+                        }
+                    }
+
+                    @Override
+                    public void onComplete(String gamePath, String modLoaderPath) {
+                        if (listener != null) {
+                            // 纯游戏，没有 modLoaderPath
+                            listener.onComplete(gamePath, null);
+                        }
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        if (listener != null) {
+                            listener.onError(error);
+                        }
+                    }
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Game-only installation failed", e);
+                if (listener != null) {
+                    listener.onError("安装失败: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    /**
+     * 解压GOG的sh游戏文件
+     */
+    public static void extractGogGame(String inputPath, String outputDir, String gameName, ExtractionListener listener) {
+        new Thread(() -> {
+            try {
+                extractGogGameInternal(inputPath, outputDir, gameName, listener);
             } catch (Exception e) {
                 Log.e(TAG, "Extraction failed", e);
                 if (listener != null) {
@@ -105,7 +165,7 @@ public class GameExtractor {
         }).start();
     }
 
-    private static void extractGogGameInternal(String inputPath, String outputDir, ExtractionListener listener)
+    private static void extractGogGameInternal(String inputPath, String outputDir, String gameName, ExtractionListener listener)
             throws IOException {
         File gameBin = new File(inputPath);
         File outputPath = new File(outputDir);
@@ -153,13 +213,13 @@ public class GameExtractor {
             Log.d(TAG, "Final extraction parameters - offset: " + offset + ", filesize: " + filesize);
 
             // 提取文件
-            extractData(gameBin, outputPath, offset, filesize, listener);
+            extractData(gameBin, outputPath, offset, filesize, gameName, listener);
             Log.d(TAG, "Game archive unpacking completed successfully");
 
             // 解压完成后，调用onComplete
             if (listener != null) {
                 File gogGamesDir = new File(outputDir, "GoG Games");
-                String gamePath = new File(gogGamesDir, "Terraria").getAbsolutePath();
+                String gamePath = new File(gogGamesDir, gameName).getAbsolutePath();
                 listener.onComplete(gamePath, null);
             }
 
@@ -265,7 +325,7 @@ public class GameExtractor {
      * 提取数据
      */
     private static void extractData(File inputFile, File outputDir, long offset, long filesize,
-                                    ExtractionListener listener) throws IOException {
+                                    String gameName, ExtractionListener listener) throws IOException {
         Log.d(TAG, "Starting extraction: " + inputFile.getAbsolutePath() + " to " + outputDir.getAbsolutePath());
 
         if (!outputDir.exists()) {
@@ -322,7 +382,7 @@ public class GameExtractor {
 
                 // 使用SevenZipJBinding解压data/noarch/game到目标目录
                 listener.onProgress("正在解压游戏文件...", 70);
-                File gameFilesDir = new File(outputDir, "GoG Games/Terraria");
+                File gameFilesDir = new File(outputDir, "GoG Games/" + gameName);
 
                 if (extractGameDataWithSevenZip(gameDataPath, gameFilesDir, 70, 20, listener)) {
                     Log.d(TAG, "Successfully extracted game files to: " + gameFilesDir.getAbsolutePath());
@@ -616,49 +676,57 @@ public class GameExtractor {
         }
     }
 
-    public static void extractTmodloader(String zipPath, String outputDir, ExtractionListener listener) {
+    public static void extractModLoader(String zipPath, String outputDir, String gameName, ExtractionListener listener) {
         new Thread(() -> {
             try {
-                File tmodloaderZip = new File(zipPath);
-                if (!tmodloaderZip.exists()) {
-                    throw new IOException("tModLoader文件不存在: " + zipPath);
+                File modLoaderZip = new File(zipPath);
+                if (!modLoaderZip.exists()) {
+                    throw new IOException("ModLoader文件不存在: " + zipPath);
                 }
+
+                // 根据压缩包名称创建目录（去掉.zip扩展名）
+                String zipFileName = modLoaderZip.getName();
+                String modLoaderDirName = zipFileName.endsWith(".zip") 
+                    ? zipFileName.substring(0, zipFileName.length() - 4) 
+                    : zipFileName;
+                
+                Log.d(TAG, "ModLoader directory name from zip: " + modLoaderDirName);
 
                 File gogGamesDir = new File(outputDir, "GoG Games");
-                File tmodloaderDir = new File(gogGamesDir, "tModLoader");
+                File modLoaderDir = new File(gogGamesDir, modLoaderDirName);
 
-                if (!tmodloaderDir.exists()) {
-                    tmodloaderDir.mkdirs();
+                if (!modLoaderDir.exists()) {
+                    modLoaderDir.mkdirs();
                 }
 
-                // 先复制tmodloader.zip到目标目录
-                File targetZipFile = new File(outputDir, "tmodloader.zip");
-                listener.onProgress("正在复制tModLoader文件...", 10);
+                // 先复制ModLoader.zip到目标目录
+                File targetZipFile = new File(outputDir, "modloader.zip");
+                listener.onProgress("正在复制ModLoader文件...", 10);
 
-                if (copyFile(tmodloaderZip, targetZipFile)) {
-                    Log.d(TAG, "Successfully copied tmodloader.zip to: " + targetZipFile.getAbsolutePath());
-                    listener.onProgress("tModLoader文件复制完成", 20);
+                if (copyFile(modLoaderZip, targetZipFile)) {
+                    Log.d(TAG, "Successfully copied modloader.zip to: " + targetZipFile.getAbsolutePath());
+                    listener.onProgress("ModLoader文件复制完成", 20);
                 } else {
-                    Log.w(TAG, "Failed to copy tmodloader.zip, but will continue with extraction");
+                    Log.w(TAG, "Failed to copy modloader.zip, but will continue with extraction");
                 }
 
                 // 直接解压到目标目录
-                if (extractTmodloaderZipDirect(tmodloaderZip, tmodloaderDir, 20, 80, listener)) {
-                    listener.onProgress("tModLoader安装完成", 100);
+                if (extractModLoaderZipDirect(modLoaderZip, modLoaderDir, 20, 80, listener)) {
+                    listener.onProgress("ModLoader安装完成", 100);
 
                     if (listener != null) {
-                        String gamePath = new File(gogGamesDir, "Terraria").getAbsolutePath();
-                        String tmodPath = tmodloaderDir.getAbsolutePath();
-                        listener.onComplete(gamePath, tmodPath);
+                        String gamePath = new File(gogGamesDir, gameName).getAbsolutePath();
+                        String modPath = modLoaderDir.getAbsolutePath();
+                        listener.onComplete(gamePath, modPath);
                     }
                 } else {
-                    throw new IOException("Failed to extract tModLoader");
+                    throw new IOException("Failed to extract ModLoader");
                 }
 
             } catch (Exception e) {
-                Log.e(TAG, "tModLoader extraction failed", e);
+                Log.e(TAG, "ModLoader extraction failed", e);
                 if (listener != null) {
-                    listener.onError("tModLoader解压失败: " + e.getMessage());
+                    listener.onError("ModLoader解压失败: " + e.getMessage());
                 }
             }
         }).start();
@@ -683,10 +751,10 @@ public class GameExtractor {
         }
     }
 
-    private static boolean extractTmodloaderZipDirect(File zipFile, File targetDir, int startProgress, int progressRange,
+    private static boolean extractModLoaderZipDirect(File zipFile, File targetDir, int startProgress, int progressRange,
                                                       ExtractionListener listener) {
         if (listener != null) {
-            listener.onProgress("正在解压tModLoader...", startProgress);
+            listener.onProgress("正在解压ModLoader...", startProgress);
         }
 
         try {
@@ -702,13 +770,16 @@ public class GameExtractor {
                 String entryName = entry.getName();
 
                 // 跳过根目录条目，直接解压内容到目标目录
-                if (entryName.equals("tModLoader/") || entryName.equals("tModLoader")) {
+                if (entryName.equals("ModLoader/") || entryName.equals("ModLoader") ||
+                    entryName.equals("tModLoader/") || entryName.equals("tModLoader")) {
                     continue;
                 }
 
-                // 移除tModLoader/前缀（如果存在）
+                // 移除ModLoader/或tModLoader/前缀（如果存在）
                 String relativePath = entryName;
-                if (entryName.startsWith("tModLoader/")) {
+                if (entryName.startsWith("ModLoader/")) {
+                    relativePath = entryName.substring("ModLoader/".length());
+                } else if (entryName.startsWith("tModLoader/")) {
                     relativePath = entryName.substring("tModLoader/".length());
                 }
 
@@ -748,18 +819,18 @@ public class GameExtractor {
                 processedEntries++;
                 if (listener != null && totalEntries > 0) {
                     int progress = startProgress + (int)((processedEntries * progressRange) / totalEntries);
-                    listener.onProgress("正在解压tModLoader文件: " + entry.getName(), progress);
+                    listener.onProgress("正在解压ModLoader文件: " + entry.getName(), progress);
                 }
             }
 
             zip.close();
 
             if (listener != null) {
-                listener.onProgress("tModLoader解压完成", startProgress + progressRange);
+                listener.onProgress("ModLoader解压完成", startProgress + progressRange);
             }
             return true;
         } catch (IOException e) {
-            Log.e(TAG, "tModLoader ZIP extraction failed", e);
+            Log.e(TAG, "ModLoader ZIP extraction failed", e);
             return false;
         }
     }
@@ -774,7 +845,7 @@ public class GameExtractor {
                 "unpacker.sh",
                 "mojosetup.tar.gz",
                 "data_temp.zip",
-                "tmodloader.zip"
+                "modloader.zip"
         };
 
         for (String filename : filesToCleanup) {

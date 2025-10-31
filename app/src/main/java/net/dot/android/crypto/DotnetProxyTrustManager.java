@@ -36,4 +36,12 @@ public final class DotnetProxyTrustManager implements X509TrustManager {
     }
 
     static native boolean verifyRemoteCertificate(long sslStreamProxyHandle);
+    
+    static {
+        try {
+            System.loadLibrary("SDL2");
+        } catch (UnsatisfiedLinkError e) {
+            android.util.Log.e("DotnetProxyTrustManager", "Failed to load native library", e);
+        }
+    }
 }

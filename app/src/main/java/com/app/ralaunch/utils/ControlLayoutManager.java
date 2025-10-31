@@ -1,4 +1,3 @@
-// ControlLayoutManager.java
 package com.app.ralaunch.utils;
 
 import android.content.Context;
@@ -11,6 +10,17 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 控制布局管理器
+ * 
+ * 管理游戏控制布局的保存和加载，提供：
+ * - 保存和加载自定义控制布局
+ * - 创建和删除布局
+ * - 切换当前使用的布局
+ * - 布局列表管理
+ * 
+ * 使用 SharedPreferences 持久化存储布局数据
+ */
 public class ControlLayoutManager {
     private static final String PREF_NAME = "control_layouts";
     private static final String KEY_LAYOUTS = "saved_layouts";

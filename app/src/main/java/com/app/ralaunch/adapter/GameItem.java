@@ -1,12 +1,25 @@
 package com.app.ralaunch.adapter;
 
+/**
+ * 游戏项数据模型
+ * 
+ * 表示游戏列表中的一个游戏项，包含：
+ * - 游戏基本信息（名称、描述、图标）
+ * - 游戏路径（主程序集和游戏本体）
+ * - ModLoader 启用状态
+ * - 引擎类型
+ * 
+ * 支持序列化和反序列化（Gson）
+ */
 public class GameItem {
     private String gameName;
     private String gameDescription;
-    private String gamePath;
+    private String gamePath; // 主程序集路径（对于 modloader 就是 ModLoader.dll）
+    private String gameBodyPath; // 游戏本体路径（对于 modloader 就是 Terraria.exe）
     private String iconPath; // 图标路径（从exe提取）
     private String engineType; // 引擎类型
     private int iconResId; // 图标资源ID
+    private boolean modLoaderEnabled = true; // ModLoader 是否启用（默认启用）
 
     // 默认构造函数（Gson需要）
     public GameItem() {
@@ -73,5 +86,21 @@ public class GameItem {
 
     public void setIconResId(int iconResId) {
         this.iconResId = iconResId;
+    }
+
+    public String getGameBodyPath() {
+        return gameBodyPath;
+    }
+
+    public void setGameBodyPath(String gameBodyPath) {
+        this.gameBodyPath = gameBodyPath;
+    }
+
+    public boolean isModLoaderEnabled() {
+        return modLoaderEnabled;
+    }
+
+    public void setModLoaderEnabled(boolean modLoaderEnabled) {
+        this.modLoaderEnabled = modLoaderEnabled;
     }
 }

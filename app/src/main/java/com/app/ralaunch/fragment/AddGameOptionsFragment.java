@@ -11,6 +11,15 @@ import androidx.fragment.app.Fragment;
 
 import com.app.ralaunch.R;
 
+/**
+ * 添加游戏选项Fragment
+ * 
+ * 提供添加游戏的方式选择界面：
+ * - 从本地导入游戏压缩包
+ * - 从网络下载游戏（预留功能）
+ * 
+ * 用户选择后跳转到相应的导入界面
+ */
 public class AddGameOptionsFragment extends Fragment {
 
     private OnGameSourceSelectedListener gameSourceSelectedListener;

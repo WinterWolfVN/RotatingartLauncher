@@ -16,9 +16,21 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.app.ralaunch.R;
+import com.app.ralaunch.utils.RuntimePreference;
 
 import java.util.Locale;
 
+/**
+ * 设置Fragment
+ * 
+ * 提供应用设置功能：
+ * - 主题切换（浅色/深色/跟随系统）
+ * - 语言切换（中文/英文）
+ * - 设置持久化保存
+ * - 实时应用设置更改
+ * 
+ * 设置保存在 SharedPreferences 中
+ */
 public class SettingsFragment extends Fragment {
 
     private OnSettingsBackListener backListener;
@@ -26,6 +38,7 @@ public class SettingsFragment extends Fragment {
     // 界面控件
     private RadioGroup themeRadioGroup;
     private RadioGroup languageRadioGroup;
+    private RadioGroup architectureRadioGroup;
 
     // 设置键值
     private static final String PREFS_NAME = "AppSettings";
@@ -70,6 +83,7 @@ public class SettingsFragment extends Fragment {
         // 初始化控件
         themeRadioGroup = view.findViewById(R.id.themeRadioGroup);
         languageRadioGroup = view.findViewById(R.id.languageRadioGroup);
+        architectureRadioGroup = view.findViewById(R.id.architectureRadioGroup);
 
         // 主题选择监听
         themeRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
@@ -97,6 +111,19 @@ public class SettingsFragment extends Fragment {
             }
             saveLanguageSetting(languageMode);
             applyLanguage(languageMode);
+        });
+
+        // 架构选择监听
+        architectureRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            String architecture;
+            if (checkedId == R.id.archAuto) {
+                architecture = RuntimePreference.ARCH_AUTO;
+            } else if (checkedId == R.id.archArm64) {
+                architecture = RuntimePreference.ARCH_ARM64;
+            } else {
+                architecture = RuntimePreference.ARCH_X86_64;
+            }
+            RuntimePreference.setArchitecture(requireContext(), architecture);
         });
     }
 
@@ -128,6 +155,23 @@ public class SettingsFragment extends Fragment {
                 break;
             case LANGUAGE_CHINESE:
                 languageRadioGroup.check(R.id.languageChinese);
+                break;
+        }
+
+        // 加载架构设置
+        String architecture = RuntimePreference.getArchitecture(requireContext());
+        switch (architecture) {
+            case RuntimePreference.ARCH_AUTO:
+                architectureRadioGroup.check(R.id.archAuto);
+                break;
+            case RuntimePreference.ARCH_ARM64:
+                architectureRadioGroup.check(R.id.archArm64);
+                break;
+            case RuntimePreference.ARCH_X86_64:
+                architectureRadioGroup.check(R.id.archX86_64);
+                break;
+            default:
+                architectureRadioGroup.check(R.id.archArm64); // 默认 ARM64
                 break;
         }
     }

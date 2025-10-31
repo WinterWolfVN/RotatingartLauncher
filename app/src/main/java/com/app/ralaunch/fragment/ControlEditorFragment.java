@@ -1,4 +1,3 @@
-// ControlEditorFragment.java
 package com.app.ralaunch.fragment;
 
 import android.content.Context;
@@ -23,6 +22,18 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+/**
+ * 控制编辑器Fragment
+ * 
+ * 提供可视化的控制布局编辑功能：
+ * - 添加各种控制元素（按钮、摇杆、十字键等）
+ * - 拖动和调整元素位置
+ * - 编辑元素属性（大小、透明度、按键映射等）
+ * - 长按元素弹出编辑对话框
+ * - 保存和应用布局
+ * 
+ * 使用 ControlEditorView 进行可视化编辑
+ */
 public class ControlEditorFragment extends Fragment {
 
     private ControlLayout controlLayout;

@@ -35,6 +35,16 @@ android {
     buildFeatures {
         viewBinding true
     }
+
+    // 生成分 ABI 构建产物，便于在模拟器/真机上分别安装
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'arm64-v8a', 'x86_64'
+            universalApk false
+        }
+    }
 }
 
 dependencies {
@@ -56,6 +66,7 @@ dependencies {
 
     implementation 'com.google.code.gson:gson:2.13.2'
     implementation 'com.github.omicronapps:7-Zip-JBinding-4Android:Release-16.02-2.03'
+    implementation 'org.apache.commons:commons-compress:1.24.0'
 
     implementation project(path: ':lfilepickerlibrary')
 

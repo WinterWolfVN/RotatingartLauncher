@@ -24,6 +24,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 文件浏览器Fragment
+ * 
+ * 提供文件系统浏览功能，用于选择游戏文件：
+ * - 浏览文件夹和文件
+ * - 上级目录导航
+ * - 文件选择和确认
+ * - 权限请求处理
+ * - 当前路径显示
+ * 
+ * 支持选择 .zip 等游戏压缩包文件
+ */
 public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.OnFileClickListener {
 
     private OnFileSelectedListener fileSelectedListener;
@@ -120,7 +132,16 @@ public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.
 
         // 权限拒绝状态的授权按钮
         Button grantPermissionButton = view.findViewById(R.id.grantPermissionButton);
-        grantPermissionButton.setOnClickListener(v -> checkPermissionsAndLoadFiles());
+        grantPermissionButton.setOnClickListener(v -> {
+            if (getActivity() instanceof OnPermissionRequestListener) {
+                ((OnPermissionRequestListener) getActivity()).onPermissionRequest(new MainActivity.PermissionCallback() {
+                    @Override public void onPermissionsGranted() { loadInitialDirectory(); hidePermissionDeniedState(); }
+                    @Override public void onPermissionsDenied() { showPermissionDeniedState(); }
+                });
+            } else {
+                checkPermissionsAndLoadFiles();
+            }
+        });
 
         // 初始状态
         updateConfirmButton();
@@ -130,8 +151,8 @@ public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.
         switch (fileType) {
             case "game":
                 return "选择游戏文件";
-            case "tmodloader":
-                return "选择 tModLoader 文件";
+            case "modloader":
+                return "选择 ModLoader 文件";
             default:
                 return "选择文件";
         }

@@ -15,8 +15,13 @@ add_subdirectory(${GL4ES_SOURCE_DIR})
 
 # 添加你的主程序源码
 add_library(${CMAKE_PROJECT_NAME} SHARED
-        SDL_android_main.c
-        And64InlineHook.cpp
+        sdl_entry.c
+        dotnet_params.c
+        dotnet_framework.c
+        dotnet_paths.c
+        dotnet_trust.c
+        dotnet_host.c
+        jni_bridge.c
 
 )
 

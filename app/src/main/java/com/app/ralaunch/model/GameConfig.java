@@ -1,9 +1,19 @@
-// GameConfig.java
 package com.app.ralaunch.model;
 
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
+/**
+ * 游戏配置数据模型
+ * 
+ * 从 assets/games.json 加载的游戏配置信息，包含：
+ * - 游戏ID和名称
+ * - 引擎类型（MonoGame、Unity等）
+ * - 图标和描述信息
+ * - 支持的平台
+ * 
+ * 使用 Gson 序列化和反序列化
+ */
 public class GameConfig {
     @SerializedName("id")
     private String id;

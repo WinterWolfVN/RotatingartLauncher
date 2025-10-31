@@ -11,6 +11,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
 
+/**
+ * 游戏数据管理器
+ * 
+ * 管理用户添加的游戏列表，提供：
+ * - 从 SharedPreferences 加载和保存游戏列表
+ * - 添加、删除和更新游戏项
+ * - 自动补全游戏配置信息
+ * - 路径有效性验证
+ * 
+ * 游戏数据持久化存储，应用重启后保留
+ */
 public class GameDataManager {
     private static final String TAG = "GameDataManager";
     private static final String PREF_NAME = "game_launcher_prefs";

@@ -1,4 +1,3 @@
-// GameConfigManager.java
 package com.app.ralaunch.utils;
 
 import android.content.Context;
@@ -15,6 +14,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 游戏配置管理器
+ * 
+ * 从 assets 加载并管理游戏配置信息，提供：
+ * - 从 games.json 读取游戏配置
+ * - 按游戏ID或名称查询配置
+ * - 获取可用游戏列表
+ * 
+ * 配置信息包括游戏的引擎类型、图标、描述等
+ */
 public class GameConfigManager {
     private static final String TAG = "GameConfigManager";
     private static final String CONFIG_FILE = "games.json";

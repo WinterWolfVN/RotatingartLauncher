@@ -2,6 +2,16 @@ package com.app.ralaunch.model;
 
 import com.app.ralaunch.R;
 
+/**
+ * 文件项数据模型
+ * 
+ * 表示文件浏览器中的一个文件或文件夹项，包含：
+ * - 文件名和路径
+ * - 文件类型（文件/文件夹/上级目录）
+ * - 根据文件类型返回对应图标
+ * 
+ * 用于文件浏览器界面显示文件列表
+ */
 public class FileItem {
     private String name;
     private String path;

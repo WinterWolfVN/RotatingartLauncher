@@ -164,7 +164,7 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- tModLoader 文件卡片 -->
+            <!-- ModLoader 文件卡片 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -213,7 +213,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="tModLoader"
+                                android:text="ModLoader (可选)"
                                 android:textColor="#FFFFFF"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
@@ -232,7 +232,7 @@
 
                     <!-- 已选择的文件名 -->
                     <TextView
-                        android:id="@+id/tmodloaderFileText"
+                        android:id="@+id/modLoaderFileText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="未选择"
@@ -246,7 +246,7 @@
                         android:maxLines="1" />
 
                     <Button
-                        android:id="@+id/selectTmodloaderButton"
+                        android:id="@+id/selectModLoaderButton"
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:text="选择文件"

@@ -1,4 +1,3 @@
-// ControlLayoutFragment.java
 package com.app.ralaunch.fragment;
 
 import android.graphics.Color;
@@ -23,6 +22,18 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 控制布局管理Fragment
+ * 
+ * 提供控制布局的管理界面：
+ * - 显示所有保存的控制布局
+ * - 创建新的控制布局
+ * - 编辑和删除布局
+ * - 设置默认布局
+ * - 跳转到布局编辑器
+ * 
+ * 使用 ControlLayoutManager 管理布局数据
+ */
 public class ControlLayoutFragment extends Fragment implements ControlLayoutAdapter.OnLayoutClickListener {
 
     private ControlLayoutManager layoutManager;

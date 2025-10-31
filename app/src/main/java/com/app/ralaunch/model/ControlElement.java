@@ -4,6 +4,18 @@ import android.graphics.Color;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * 控制元素数据模型
+ * 
+ * 表示游戏控制布局中的单个控制元素，支持：
+ * - 多种元素类型（按钮、摇杆、十字键、触摸板等）
+ * - 位置和大小设置
+ * - 按键映射和宏配置
+ * - 可见性和透明度
+ * - JSON 序列化和反序列化
+ * 
+ * 用于创建和编辑自定义游戏控制方案
+ */
 public class ControlElement {
     public enum ElementType {
         BUTTON,          // 普通按钮
