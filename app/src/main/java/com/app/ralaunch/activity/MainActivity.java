@@ -564,14 +564,103 @@ public class MainActivity extends AppCompatActivity implements
 
         new AlertDialog.Builder(this)
                 .setTitle("删除游戏")
-                .setMessage("确定要删除 " + game.getGameName() + " 吗？")
+                .setMessage("确定要删除 " + game.getGameName() + " 吗？\n\n注意：这将同时删除游戏文件")
                 .setPositiveButton("删除", (dialog, which) -> {
+                    // 删除游戏文件夹
+                    boolean filesDeleted = deleteGameFiles(game);
+                    
+                    // 从列表中删除
                     gameAdapter.removeGame(position);
                     gameDataManager.removeGame(position);
-                    showToast("游戏已删除");
+                    
+                    if (filesDeleted) {
+                        showToast("游戏及文件已删除");
+                    } else {
+                        showToast("游戏已从列表删除，但部分文件可能未删除");
+                    }
                 })
                 .setNegativeButton("取消", null)
                 .show();
+    }
+    
+    /**
+     * 删除游戏文件夹
+     * @param game 要删除的游戏项
+     * @return 是否成功删除
+     */
+    private boolean deleteGameFiles(GameItem game) {
+        try {
+            // 从游戏路径获取游戏根目录
+            String gamePath = game.getGamePath();
+            if (gamePath == null || gamePath.isEmpty()) {
+                Log.w("MainActivity", "游戏路径为空，无法删除文件");
+                return false;
+            }
+            
+            // 获取游戏根目录 (假设路径类似: /data/.../files/games/GameName/game.dll)
+            File gameFile = new File(gamePath);
+            File gameDir = gameFile.getParentFile(); // 获取游戏目录
+            
+            if (gameDir == null || !gameDir.exists()) {
+                Log.w("MainActivity", "游戏目录不存在: " + (gameDir != null ? gameDir.getAbsolutePath() : "null"));
+                return false;
+            }
+            
+            // 确认这是一个游戏目录（在 files/games/ 下）
+            String dirPath = gameDir.getAbsolutePath();
+            if (!dirPath.contains("/files/games/") && !dirPath.contains("/files/imported_games/")) {
+                Log.w("MainActivity", "路径不在游戏目录中，跳过删除: " + dirPath);
+                return false;
+            }
+            
+            Log.d("MainActivity", "删除游戏目录: " + gameDir.getAbsolutePath());
+            
+            // 递归删除目录
+            boolean success = deleteDirectory(gameDir);
+            
+            if (success) {
+                Log.i("MainActivity", "成功删除游戏目录: " + gameDir.getName());
+            } else {
+                Log.w("MainActivity", "删除游戏目录失败: " + gameDir.getName());
+            }
+            
+            return success;
+            
+        } catch (Exception e) {
+            Log.e("MainActivity", "删除游戏文件时发生错误: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * 递归删除目录及其内容
+     * @param dir 要删除的目录
+     * @return 是否成功删除
+     */
+    private boolean deleteDirectory(File dir) {
+        if (dir == null || !dir.exists()) {
+            return false;
+        }
+        
+        if (dir.isDirectory()) {
+            File[] children = dir.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    boolean success = deleteDirectory(child);
+                    if (!success) {
+                        Log.w("MainActivity", "无法删除: " + child.getAbsolutePath());
+                    }
+                }
+            }
+        }
+        
+        // 删除文件或空目录
+        boolean deleted = dir.delete();
+        if (deleted) {
+            Log.d("MainActivity", "已删除: " + dir.getName());
+        }
+        return deleted;
     }
 
     private void showSelectedGame(GameItem game) {

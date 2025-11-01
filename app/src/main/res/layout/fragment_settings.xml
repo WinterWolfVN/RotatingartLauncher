@@ -380,6 +380,131 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- FNA 渲染器卡片 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="@color/background_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="8dp">
+
+                    <!-- 渲染器标题 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="12dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_game"
+                            app:tint="@color/text_primary"
+                            android:layout_marginEnd="16dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="FNA 渲染器"
+                                android:textColor="@color/text_primary"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="选择图形渲染后端"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp"
+                                android:layout_marginTop="2dp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- 分隔线 -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="20dp"
+                        android:background="@color/text_hint"
+                        android:alpha="0.1" />
+
+                    <!-- 渲染器选项 -->
+                    <RadioGroup
+                        android:id="@+id/rendererRadioGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="8dp">
+
+                        <RadioButton
+                            android:id="@+id/rendererAuto"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="自动选择（推荐）"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/rendererOpenGLES3"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="OpenGL ES 3（原生）"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/rendererOpenGL"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="OpenGL (gl4es)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                        <RadioButton
+                            android:id="@+id/rendererVulkan"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:text="Vulkan（实验性）"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:buttonTint="@color/accent_green"
+                            android:paddingStart="8dp"
+                            android:background="?attr/selectableItemBackground" />
+
+                    </RadioGroup>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 调试设置分组 -->
             <TextView
                 android:layout_width="wrap_content"

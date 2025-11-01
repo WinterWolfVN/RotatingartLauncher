@@ -23,6 +23,9 @@ char* g_frameworkVersion = NULL;
 /** 全局详细日志标志 */
 int g_verboseLogging = 0;
 
+/** 全局渲染器类型 */
+char* g_renderer = NULL;
+
 /**
  * @brief 清理所有全局内存分配
  * 
@@ -33,7 +36,8 @@ void CleanupGlobalMemory() {
     free(g_appPath);
     free(g_dotnetPath);
     free(g_frameworkVersion);
-    g_appPath = g_dotnetPath = g_frameworkVersion = NULL;
+    free(g_renderer);
+    g_appPath = g_dotnetPath = g_frameworkVersion = g_renderer = NULL;
 }
 
 /**

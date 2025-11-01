@@ -37,6 +37,16 @@ extern char* g_frameworkVersion;
 extern int g_verboseLogging;
 
 /**
+ * @brief FNA 渲染器类型（字符串）
+ * 
+ * 支持的渲染器：
+ * - "opengl_gl4es": OpenGL 通过 gl4es 翻译到 OpenGL ES（推荐）
+ * - "opengl_native": 原生 OpenGL（可能不支持）
+ * - "vulkan": Vulkan 渲染器（未来支持）
+ */
+extern char* g_renderer;
+
+/**
  * @brief 清理所有全局内存分配
  * 
  * 释放 g_appPath、g_dotnetPath 和 g_frameworkVersion 的内存，

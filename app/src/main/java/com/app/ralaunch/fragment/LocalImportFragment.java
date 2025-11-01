@@ -142,11 +142,22 @@ public class LocalImportFragment extends Fragment {
         });
     }
 
+    // 保存模组加载器的文件名（不含扩展名），用于推断程序集名称
+    private String modLoaderBaseName = null;
+    
     private void selectModLoaderFile() {
         openFileBrowser("modloader", new String[]{".zip"}, filePath -> {
             modLoaderFilePath = filePath;
             File file = new File(modLoaderFilePath);
-            modLoaderFileText.setText("已选择: " + file.getName());
+            
+            // 提取文件名（不含扩展名）
+            String fileName = file.getName();
+            if (fileName.toLowerCase().endsWith(".zip")) {
+                modLoaderBaseName = fileName.substring(0, fileName.length() - 4);
+                Log.d("LocalImportFragment", "ModLoader base name: " + modLoaderBaseName);
+            }
+            
+            modLoaderFileText.setText("已选择: " + fileName);
             updateImportButtonState();
         });
     }
@@ -289,36 +300,75 @@ public class LocalImportFragment extends Fragment {
                                     importStatus.setText("导入完成！");
                                     importProgress.setProgress(100);
 
-                                    // 构建 ModLoader.dll 的完整路径
-                                File modLoaderDir = new File(modLoaderPath);
-                                File assemblyFile = new File(modLoaderDir, "ModLoader.dll");
-                                String finalGamePath = assemblyFile.getAbsolutePath();
-
-                                // 验证程序集文件是否存在
-                                if (!assemblyFile.exists()) {
-                                    Log.w("LocalImportFragment", "ModLoader.dll not found at: " + finalGamePath);
-                                    finalGamePath = modLoaderPath;
-                                }
+                                    // 根据模组zip文件名推断程序集名称
+                                    File modLoaderDir = new File(modLoaderPath);
+                                    File assemblyFile = null;
+                                    
+                                    if (modLoaderBaseName != null && !modLoaderBaseName.isEmpty()) {
+                                        // 优先使用 zip 文件名推断的程序集名称
+                                        String expectedDllName = modLoaderBaseName + ".dll";
+                                        File expectedDll = new File(modLoaderDir, expectedDllName);
+                                        
+                                        if (expectedDll.exists()) {
+                                            assemblyFile = expectedDll;
+                                            Log.d("LocalImportFragment", "Found ModLoader assembly based on zip name: " + expectedDllName);
+                                        } else {
+                                            Log.w("LocalImportFragment", "Expected DLL not found: " + expectedDllName);
+                                        }
+                                    }
+                                    
+                                    // 如果基于zip名称没找到，尝试常见名称
+                                    if (assemblyFile == null || !assemblyFile.exists()) {
+                                        String[] possibleNames = {
+                                            "tModLoader.dll",
+                                            "ModLoader.dll",
+                                            "Terraria.dll"
+                                        };
+                                        
+                                        for (String name : possibleNames) {
+                                            File candidate = new File(modLoaderDir, name);
+                                            if (candidate.exists()) {
+                                                assemblyFile = candidate;
+                                                Log.d("LocalImportFragment", "Found ModLoader assembly by fallback: " + name);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // 最后尝试查找目录中第一个 .dll 文件
+                                    if (assemblyFile == null || !assemblyFile.exists()) {
+                                        File[] dllFiles = modLoaderDir.listFiles((dir, name) -> name.endsWith(".dll"));
+                                        if (dllFiles != null && dllFiles.length > 0) {
+                                            assemblyFile = dllFiles[0];
+                                            Log.d("LocalImportFragment", "Using first DLL found: " + assemblyFile.getName());
+                                        }
+                                    }
+                                    
+                                    String finalGamePath = (assemblyFile != null && assemblyFile.exists()) 
+                                        ? assemblyFile.getAbsolutePath() 
+                                        : modLoaderPath;
+                                    
+                                    if (assemblyFile == null || !assemblyFile.exists()) {
+                                        Log.w("LocalImportFragment", "No valid ModLoader DLL found, using directory path: " + modLoaderPath);
+                                    }
                                 
-                                // 保存游戏本体路径（Terraria.exe）
-                                String gameBodyPath = null;
-                                File gameBodyFile = new File(gamePath, "Terraria.exe");
-                                if (gameBodyFile.exists()) {
-                                    gameBodyPath = gameBodyFile.getAbsolutePath();
-                                    Log.d("LocalImportFragment", "Game body path: " + gameBodyPath);
-                                } else {
-                                    Log.w("LocalImportFragment", "Terraria.exe not found at: " + gameBodyFile.getAbsolutePath());
-                                }
+                                    // 保存游戏本体路径（根据gameinfo的游戏名称查找）
+                                    String gameBodyPath = findGameBodyPath(gamePath);
+                                    if (gameBodyPath != null) {
+                                        Log.d("LocalImportFragment", "Game body path: " + gameBodyPath);
+                                    } else {
+                                        Log.w("LocalImportFragment", "Game body not found in: " + gamePath);
+                                    }
 
-                                Log.d("LocalImportFragment", "Final game path: " + finalGamePath);
-                                Log.d("LocalImportFragment", "GameExtractor returned gamePath: " + gamePath);
-                                Log.d("LocalImportFragment", "GameExtractor returned modLoaderPath: " + modLoaderPath);
+                                    Log.d("LocalImportFragment", "Final game path: " + finalGamePath);
+                                    Log.d("LocalImportFragment", "GameExtractor returned gamePath: " + gamePath);
+                                    Log.d("LocalImportFragment", "GameExtractor returned modLoaderPath: " + modLoaderPath);
 
-                                // 导入完成，返回结果
-                                if (importCompleteListener != null) {
-                                    importCompleteListener.onImportComplete(gameType, gameName, finalGamePath, gameBodyPath, engineType, gameIconPath);
-                                }
-                            });
+                                    // 导入完成，返回结果
+                                    if (importCompleteListener != null) {
+                                        importCompleteListener.onImportComplete(gameType, gameName, finalGamePath, gameBodyPath, engineType, gameIconPath);
+                                    }
+                                });
                             }
                         }
 
@@ -356,22 +406,21 @@ public class LocalImportFragment extends Fragment {
                                     importStatus.setText("导入完成！");
                                     importProgress.setProgress(100);
 
-                                    // 纯游戏，构建 Terraria.exe 的路径
-                                File gameFile = new File(gamePath, "Terraria.exe");
-                                String finalGamePath = gameFile.getAbsolutePath();
-                                
-                                if (!gameFile.exists()) {
-                                    Log.w("LocalImportFragment", "Terraria.exe not found at: " + finalGamePath);
-                                    finalGamePath = gamePath;
-                                }
+                                    // 纯游戏，根据 gameinfo 中的游戏名称查找程序集
+                                    String finalGamePath = findGameBodyPath(gamePath);
+                                    
+                                    if (finalGamePath == null) {
+                                        Log.w("LocalImportFragment", "Game executable not found, using directory path");
+                                        finalGamePath = gamePath;
+                                    }
 
-                                Log.d("LocalImportFragment", "Pure game path: " + finalGamePath);
+                                    Log.d("LocalImportFragment", "Pure game path: " + finalGamePath);
 
-                                // 导入完成，返回结果（纯游戏没有 gameBodyPath）
-                                if (importCompleteListener != null) {
-                                    importCompleteListener.onImportComplete(gameType, gameName, finalGamePath, null, engineType, gameIconPath);
-                                }
-                            });
+                                    // 导入完成，返回结果（纯游戏没有 gameBodyPath）
+                                    if (importCompleteListener != null) {
+                                        importCompleteListener.onImportComplete(gameType, gameName, finalGamePath, null, engineType, gameIconPath);
+                                    }
+                                });
                             }
                         }
 
@@ -389,6 +438,81 @@ public class LocalImportFragment extends Fragment {
                         }
                     });
         }
+    }
+
+    /**
+     * 根据 gameinfo 中的游戏名称查找游戏本体路径
+     * 支持 .exe 和 .dll 两种格式
+     * 
+     * @param gamePath 游戏目录路径
+     * @return 游戏本体的完整路径，如果找不到则返回 null
+     */
+    private String findGameBodyPath(String gamePath) {
+        if (gamePath == null || gameName == null) {
+            return null;
+        }
+        
+        File gameDir = new File(gamePath);
+        if (!gameDir.exists() || !gameDir.isDirectory()) {
+            return null;
+        }
+        
+        // 尝试的文件扩展名
+        String[] extensions = {".exe", ".dll"};
+        
+        // 1. 优先使用游戏名称精确匹配
+        for (String ext : extensions) {
+            File gameFile = new File(gameDir, gameName + ext);
+            if (gameFile.exists()) {
+                Log.d("LocalImportFragment", "Found game body by exact name: " + gameFile.getName());
+                return gameFile.getAbsolutePath();
+            }
+        }
+        
+        // 2. 尝试游戏名称的常见变体（去除空格、转小写等）
+        String normalizedName = gameName.replaceAll("\\s+", ""); // 去除所有空格
+        for (String ext : extensions) {
+            File gameFile = new File(gameDir, normalizedName + ext);
+            if (gameFile.exists()) {
+                Log.d("LocalImportFragment", "Found game body by normalized name: " + gameFile.getName());
+                return gameFile.getAbsolutePath();
+            }
+        }
+        
+        // 3. 尝试常见的游戏本体名称
+        String[] commonNames = {
+            "Terraria",      // Terraria
+            "Stardew Valley", // Stardew Valley
+            "Game",          // 通用名称
+            gameName         // 原始游戏名称
+        };
+        
+        for (String name : commonNames) {
+            for (String ext : extensions) {
+                File gameFile = new File(gameDir, name + ext);
+                if (gameFile.exists()) {
+                    Log.d("LocalImportFragment", "Found game body by common name: " + gameFile.getName());
+                    return gameFile.getAbsolutePath();
+                }
+            }
+        }
+        
+        // 4. 查找目录中第一个 .exe 文件
+        File[] exeFiles = gameDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".exe"));
+        if (exeFiles != null && exeFiles.length > 0) {
+            Log.d("LocalImportFragment", "Found game body by first .exe: " + exeFiles[0].getName());
+            return exeFiles[0].getAbsolutePath();
+        }
+        
+        // 5. 查找目录中第一个 .dll 文件
+        File[] dllFiles = gameDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".dll"));
+        if (dllFiles != null && dllFiles.length > 0) {
+            Log.d("LocalImportFragment", "Found game body by first .dll: " + dllFiles[0].getName());
+            return dllFiles[0].getAbsolutePath();
+        }
+        
+        Log.w("LocalImportFragment", "Could not find game body in: " + gamePath);
+        return null;
     }
 
     private File createGameDirectory() {

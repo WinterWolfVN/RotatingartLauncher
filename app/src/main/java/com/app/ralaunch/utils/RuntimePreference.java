@@ -19,11 +19,18 @@ public final class RuntimePreference {
     private static final String KEY_DOTNET = "dotnet_framework";
     private static final String KEY_ARCHITECTURE = "runtime_architecture";
     private static final String KEY_VERBOSE_LOGGING = "runtime_verbose_logging";
+    private static final String KEY_RENDERER = "fna_renderer";
     
     // CPU 架构常量
     public static final String ARCH_ARM64 = "arm64";
     public static final String ARCH_X86_64 = "x86_64";
     public static final String ARCH_AUTO = "auto";
+    
+    // 渲染器常量
+    public static final String RENDERER_OPENGLES3 = "opengles3";        // 原生 OpenGL ES 3（Android 原生支持，推荐）
+    public static final String RENDERER_OPENGL_GL4ES = "opengl_gl4es";  // 桌面 OpenGL 通过 gl4es 翻译到 GLES
+    public static final String RENDERER_VULKAN = "vulkan";               // Vulkan（实验性）
+    public static final String RENDERER_AUTO = "auto";                   // 自动选择（默认 OpenGL ES 3）
 
     private RuntimePreference() {}
 
@@ -70,11 +77,11 @@ public final class RuntimePreference {
      * 获取运行时 CPU 架构偏好
      * 
      * @param context Android 上下文
-     * @return 架构，默认为 "arm64"
+     * @return 架构，默认为 "auto"（自动检测设备架构）
      */
     public static String getArchitecture(Context context) {
         SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return sp.getString(KEY_ARCHITECTURE, ARCH_ARM64); // 默认 ARM64
+        return sp.getString(KEY_ARCHITECTURE, ARCH_AUTO); // 默认自动检测
     }
 
     /**
@@ -131,6 +138,46 @@ public final class RuntimePreference {
     public static boolean isVerboseLogging(Context context) {
         SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         return sp.getBoolean(KEY_VERBOSE_LOGGING, false);
+    }
+
+    /**
+     * 设置 FNA 渲染器偏好
+     * 
+     * @param context Android 上下文
+     * @param renderer 渲染器（opengl_gl4es/opengl_native/vulkan/auto）
+     */
+    public static void setRenderer(Context context, String renderer) {
+        if (renderer == null) return;
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_RENDERER, renderer)
+                .apply();
+    }
+
+    /**
+     * 获取 FNA 渲染器偏好
+     * 
+     * @param context Android 上下文
+     * @return 渲染器，默认为 "auto"（自动选择 gl4es）
+     */
+    public static String getRenderer(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        return sp.getString(KEY_RENDERER, RENDERER_AUTO);
+    }
+
+    /**
+     * 获取实际应该使用的渲染器（考虑 auto 模式）
+     * 
+     * @param context Android 上下文
+     * @return 实际的渲染器
+     */
+    public static String getEffectiveRenderer(Context context) {
+        String renderer = getRenderer(context);
+        if (RENDERER_AUTO.equals(renderer)) {
+            // 默认使用原生 OpenGL ES 3（Android 原生支持，性能最佳）
+            return RENDERER_OPENGLES3;
+        }
+        return renderer;
     }
 }
 

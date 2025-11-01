@@ -33,6 +33,8 @@
 #include "SDL_androidwindow.h"
 #include "SDL_hints.h"
 
+#include <android/log.h>
+
 /* Currently only one window */
 SDL_Window *Android_Window = NULL;
 
@@ -41,17 +43,23 @@ int Android_CreateWindow(_THIS, SDL_Window *window)
     SDL_WindowData *data;
     int retval = 0;
 
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "🪟 Android_CreateWindow called, window=%p", window);
+
     Android_ActivityMutex_Lock_Running();
 
     if (Android_Window) {
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_Window", "❌ Already have a window!");
         retval = SDL_SetError("Android only supports one window");
         goto endfunction;
     }
 
     /* Set orientation */
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Setting orientation...");
     Android_JNI_SetOrientation(window->w, window->h, window->flags & SDL_WINDOW_RESIZABLE, SDL_GetHint(SDL_HINT_ORIENTATIONS));
 
     /* Adjust the window data to match the screen */
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Adjusting window size from %dx%d to %dx%d", 
+        window->w, window->h, Android_SurfaceWidth, Android_SurfaceHeight);
     window->x = 0;
     window->y = 0;
     window->w = Android_SurfaceWidth;
@@ -64,42 +72,61 @@ int Android_CreateWindow(_THIS, SDL_Window *window)
     SDL_SetMouseFocus(window);
     SDL_SetKeyboardFocus(window);
 
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Allocating window data...");
     data = (SDL_WindowData *)SDL_calloc(1, sizeof(*data));
     if (!data) {
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_Window", "❌ Out of memory!");
         retval = SDL_OutOfMemory();
         goto endfunction;
     }
 
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Getting native window...");
     data->native_window = Android_JNI_GetNativeWindow();
 
     if (!data->native_window) {
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_Window", "❌ Could not fetch native window!");
         SDL_free(data);
         retval = SDL_SetError("Could not fetch native window");
         goto endfunction;
     }
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "✅ Native window obtained: %p", data->native_window);
 
     /* Do not create EGLSurface for Vulkan window since it will then make the window
-       incompatible with vkCreateAndroidSurfaceKHR */
+       incompatible with vkCreateAndroidSurfaceKHR 
+       Also skip EGL surface creation if using gl4es renderer */
 #ifdef SDL_VIDEO_OPENGL_EGL
-    if (window->flags & SDL_WINDOW_OPENGL) {
-        data->egl_surface = SDL_EGL_CreateSurface(_this, (NativeWindowType)data->native_window);
+    const char* gl_driver = SDL_getenv("FNA3D_OPENGL_DRIVER");
+    SDL_bool use_gl4es = (gl_driver && SDL_strcasecmp(gl_driver, "gl4es") == 0);
+    
+    if (use_gl4es) {
+        __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Using gl4es renderer, skipping EGL surface (gl4es manages it)");
+    } else {
+        __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "SDL_VIDEO_OPENGL_EGL is defined, creating EGL surface...");
+        if (window->flags & SDL_WINDOW_OPENGL) {
+            data->egl_surface = SDL_EGL_CreateSurface(_this, (NativeWindowType)data->native_window);
 
-        if (data->egl_surface == EGL_NO_SURFACE) {
-            ANativeWindow_release(data->native_window);
-            SDL_free(data);
-            retval = -1;
-            goto endfunction;
+            if (data->egl_surface == EGL_NO_SURFACE) {
+                __android_log_print(ANDROID_LOG_ERROR, "SDL_Window", "❌ Failed to create EGL surface!");
+                ANativeWindow_release(data->native_window);
+                SDL_free(data);
+                retval = -1;
+                goto endfunction;
+            }
         }
     }
+#else
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "SDL_VIDEO_OPENGL_EGL is NOT defined, skipping EGL surface creation");
 #endif
 
     window->driverdata = data;
     Android_Window = window;
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "✅ Android_CreateWindow succeeded!");
 
 endfunction:
 
     SDL_UnlockMutex(Android_ActivityMutex);
 
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Android_CreateWindow returning %d", retval);
     return retval;
 }
 

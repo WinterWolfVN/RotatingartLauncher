@@ -41,6 +41,7 @@ public class SettingsFragment extends Fragment {
     private RadioGroup themeRadioGroup;
     private RadioGroup languageRadioGroup;
     private RadioGroup architectureRadioGroup;
+    private RadioGroup rendererRadioGroup;
     private SwitchCompat switchVerboseLogging;
 
     // 设置键值
@@ -87,6 +88,7 @@ public class SettingsFragment extends Fragment {
         themeRadioGroup = view.findViewById(R.id.themeRadioGroup);
         languageRadioGroup = view.findViewById(R.id.languageRadioGroup);
         architectureRadioGroup = view.findViewById(R.id.architectureRadioGroup);
+        rendererRadioGroup = view.findViewById(R.id.rendererRadioGroup);
         switchVerboseLogging = view.findViewById(R.id.switchVerboseLogging);
         View verboseLoggingContainer = view.findViewById(R.id.verboseLoggingContainer);
 
@@ -129,6 +131,29 @@ public class SettingsFragment extends Fragment {
                 architecture = RuntimePreference.ARCH_X86_64;
             }
             RuntimePreference.setArchitecture(requireContext(), architecture);
+            Toast.makeText(requireContext(), "CPU 架构已设置为：" + getArchitectureName(architecture), Toast.LENGTH_SHORT).show();
+        });
+
+        // 渲染器选择监听
+        rendererRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            String renderer;
+            if (checkedId == R.id.rendererAuto) {
+                renderer = RuntimePreference.RENDERER_AUTO;
+            } else if (checkedId == R.id.rendererOpenGLES3) {
+                renderer = RuntimePreference.RENDERER_OPENGLES3;
+            } else if (checkedId == R.id.rendererOpenGL) {
+                renderer = RuntimePreference.RENDERER_OPENGL_GL4ES;
+            } else {
+                renderer = RuntimePreference.RENDERER_VULKAN;
+            }
+            RuntimePreference.setRenderer(requireContext(), renderer);
+            
+            String effectiveRenderer = RuntimePreference.getEffectiveRenderer(requireContext());
+            String message = "FNA 渲染器：" + getRendererName(renderer);
+            if (!renderer.equals(effectiveRenderer)) {
+                message += " (实际: " + getRendererName(effectiveRenderer) + ")";
+            }
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
         });
 
         // 详细日志开关监听
@@ -191,6 +216,26 @@ public class SettingsFragment extends Fragment {
                 break;
             default:
                 architectureRadioGroup.check(R.id.archArm64); // 默认 ARM64
+                break;
+        }
+
+        // 加载渲染器设置
+        String renderer = RuntimePreference.getRenderer(requireContext());
+        switch (renderer) {
+            case RuntimePreference.RENDERER_AUTO:
+                rendererRadioGroup.check(R.id.rendererAuto);
+                break;
+            case RuntimePreference.RENDERER_OPENGLES3:
+                rendererRadioGroup.check(R.id.rendererOpenGLES3);
+                break;
+            case RuntimePreference.RENDERER_OPENGL_GL4ES:
+                rendererRadioGroup.check(R.id.rendererOpenGL);
+                break;
+            case RuntimePreference.RENDERER_VULKAN:
+                rendererRadioGroup.check(R.id.rendererVulkan);
+                break;
+            default:
+                rendererRadioGroup.check(R.id.rendererAuto); // 默认自动
                 break;
         }
 
@@ -302,5 +347,39 @@ public class SettingsFragment extends Fragment {
         }
 
         resources.updateConfiguration(configuration, resources.getDisplayMetrics());
+    }
+    
+    /**
+     * 获取架构名称
+     */
+    private String getArchitectureName(String architecture) {
+        switch (architecture) {
+            case RuntimePreference.ARCH_AUTO:
+                return "自动检测";
+            case RuntimePreference.ARCH_ARM64:
+                return "ARM64";
+            case RuntimePreference.ARCH_X86_64:
+                return "x86_64";
+            default:
+                return "未知";
+        }
+    }
+    
+    /**
+     * 获取渲染器名称
+     */
+    private String getRendererName(String renderer) {
+        switch (renderer) {
+            case RuntimePreference.RENDERER_AUTO:
+                return "自动选择";
+            case RuntimePreference.RENDERER_OPENGLES3:
+                return "OpenGL ES 3（原生）";
+            case RuntimePreference.RENDERER_OPENGL_GL4ES:
+                return "OpenGL (gl4es)";
+            case RuntimePreference.RENDERER_VULKAN:
+                return "Vulkan";
+            default:
+                return "未知";
+        }
     }
 }

@@ -57,6 +57,13 @@ public class GameLauncher {
     private static native void setVerboseLogging(boolean enabled);
     
     /**
+     * 设置 FNA 渲染器（Native 方法）
+     * 
+     * @param renderer 渲染器类型（opengl_gl4es/opengl_native/vulkan）
+     */
+    private static native void setRenderer(String renderer);
+    
+    /**
      * 设置完整启动参数（Native 方法，用于 CoreCLR 直接启动）
      * 
      * @param appPath .NET 程序集路径
@@ -100,6 +107,11 @@ public class GameLauncher {
             boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
             setVerboseLogging(verboseLogging);
             Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
+            
+            // 设置渲染器
+            String renderer = RuntimePreference.getEffectiveRenderer(context);
+            setRenderer(renderer);
+            Log.d(TAG, "Renderer set to: " + renderer);
 
             // 检查传入的是否是完整路径
             File potentialAssembly = new File(assemblyPath);
@@ -181,6 +193,11 @@ public class GameLauncher {
             boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
             setVerboseLogging(verboseLogging);
             Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
+            
+            // 设置渲染器
+            String renderer = RuntimePreference.getEffectiveRenderer(context);
+            setRenderer(renderer);
+            Log.d(TAG, "Renderer set to: " + renderer);
 
             File assemblyFile = new File(assemblyPath);
             if (!assemblyFile.exists()) {

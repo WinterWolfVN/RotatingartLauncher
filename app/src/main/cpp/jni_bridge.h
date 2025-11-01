@@ -50,6 +50,15 @@ JNIEnv* Bridge_GetJNIEnv();
 void Bridge_SafeDetachJNIEnv();
 
 /**
+ * @brief 获取全局 JavaVM 指针
+ * 
+ * @return JavaVM 指针，如果未初始化则返回 NULL
+ * 
+ * 用于其他模块（如 .NET 加密库）获取 JavaVM 以初始化 JNI 环境。
+ */
+JavaVM* Bridge_GetJavaVM();
+
+/**
  * @brief 通知 Java 层游戏已退出
  * 
  * @param exitCode 游戏退出码

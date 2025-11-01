@@ -41,8 +41,9 @@ public class GameActivity extends SDLActivity {
     public static GameActivity mainActivity;
     
 
-    // 不再在 Java 层显式加载任何 jnilibs，改为完全依赖 NATIVE_DLL_SEARCH_DIRECTORIES
-    static { }
+    // gl4es加载：已禁用静态预加载以避免EGL冲突
+    // 现在由SDL通过SDL_VIDEO_GL_DRIVER环境变量在需要时延迟加载
+    // 原因：过早加载会导致gl4es和SDL的EGL同时初始化，引发pthread_mutex_lock错误
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

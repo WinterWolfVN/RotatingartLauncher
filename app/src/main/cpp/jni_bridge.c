@@ -5,6 +5,7 @@
 
 #include <android/log.h>
 #include <string.h>
+#include <stdlib.h>
 #include "jni_bridge.h"
 #include "dotnet_params.h"
 
@@ -98,6 +99,17 @@ void Bridge_SafeDetachJNIEnv() {
 }
 
 /**
+ * @brief 获取全局 JavaVM 指针
+ * 
+ * @return JavaVM 指针，如果未初始化则返回 NULL
+ * 
+ * 用于其他模块（如 .NET 加密库）获取 JavaVM 以初始化 JNI 环境。
+ */
+JavaVM* Bridge_GetJavaVM() {
+    return g_jvm;
+}
+
+/**
  * @brief 通知 Java 层游戏已退出
  * 
  * @param exitCode 游戏退出码
@@ -183,6 +195,38 @@ Java_com_app_ralaunch_game_GameLauncher_setVerboseLogging(
     (void)clazz;
     g_verboseLogging = enabled ? 1 : 0;
     LOGI("Verbose logging set to: %s", g_verboseLogging ? "enabled" : "disabled");
+}
+
+/**
+ * @brief JNI 函数：设置 FNA 渲染器类型
+ * 
+ * @param env JNI 环境指针
+ * @param clazz Java 类引用
+ * @param renderer 渲染器类型字符串（opengl_gl4es/opengl_native/vulkan）
+ * 
+ * 从 Java 层接收渲染器设置并保存到全局变量。
+ * FNA3D 会根据环境变量选择相应的渲染后端。
+ */
+JNIEXPORT void JNICALL
+Java_com_app_ralaunch_game_GameLauncher_setRenderer(
+    JNIEnv *env, jclass clazz, jstring renderer) {
+    (void)clazz;
+    
+    // 释放旧的渲染器字符串
+    if (g_renderer) {
+        free(g_renderer);
+        g_renderer = NULL;
+    }
+    
+    // 复制新的渲染器字符串
+    if (renderer) {
+        const char* rendererStr = (*env)->GetStringUTFChars(env, renderer, NULL);
+        if (rendererStr) {
+            g_renderer = strdup(rendererStr);
+            LOGI("Renderer set to: %s", g_renderer);
+            (*env)->ReleaseStringUTFChars(env, renderer, rendererStr);
+        }
+    }
 }
 
 
