@@ -278,11 +278,11 @@ int launch_with_coreclr_passthrough() {
             
             LOGI("✓ FNA renderer: Native OpenGL ES 3 (best performance)");
         } else if (strcmp(g_renderer, "opengl_gl4es") == 0) {
-            // 使用 gl4es 作为 OpenGL 翻译层（AmigaOS AGL 接口方案）
+            // 使用 gl4es 作为 OpenGL 翻译层（Android AGL 接口方案）
             // 
-            // ⚠️ 新架构说明（参考 AmigaOS SDL2+gl4es 实现）：
+            // ⚠️ 架构说明（基于 gl4es AGL 接口）：
             // 
-            // AmigaOS 实现原理（D:\Downloads\sdl2_2p28p\src\video\amigaos4）：
+            // Android 实现原理：
             // 1. gl4es 静态链接，提供 AGL 接口（不是 EGL）
             // 2. SDL 使用自定义的 OpenGL 后端（不是 EGL）
             // 3. AGL 接口函数：
@@ -293,13 +293,13 @@ int launch_with_coreclr_passthrough() {
             //    - aglDestroyContext：销毁 context
             // 4. gl4es 在 AGL 层内部管理 EGL/GLES
             // 
-            // Android 适配（app/src/main/cpp/SDL/src/video/android/SDL_androidgl4es.c）：
+            // SDL 适配（app/src/main/cpp/SDL/src/video/android/SDL_androidgl4es.c）：
             // 1. SDL 编译时定义 SDL_VIDEO_OPENGL_GL4ES
             // 2. SDL 使用 Android_GL4ES_* 函数而不是标准 EGL 函数
             // 3. gl4es 的 AGL 接口在底层管理 EGL 和 GLES
             // 4. SDL 认为自己在使用 OpenGL（兼容性 profile）
             // 
-            LOGI("🔧 Configuring OpenGL via gl4es AGL interface (AmigaOS method)...");
+            LOGI("🔧 Configuring OpenGL via gl4es AGL interface for Android...");
             
             // ⚠️ 关键：告诉 SDL 使用 gl4es 渲染器
             setenv("FNA3D_OPENGL_DRIVER", "gl4es", 1);
@@ -322,7 +322,7 @@ int launch_with_coreclr_passthrough() {
             setenv("LIBGL_LOGERR", "1", 1);  // 记录错误
             setenv("LIBGL_DEBUG", "1", 1);   // 调试信息
             
-            LOGI("✓ FNA renderer: OpenGL + gl4es AGL (AmigaOS-style, static-linked)");
+            LOGI("✓ FNA renderer: OpenGL + gl4es AGL (Android, static-linked)");
         } else if (strcmp(g_renderer, "vulkan") == 0) {
             // Vulkan 渲染器（实验性）
             setenv("FNA3D_FORCE_DRIVER", "Vulkan", 1);
