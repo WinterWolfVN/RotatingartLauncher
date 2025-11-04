@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/side_dialog_layout"
+    android:layout_width="320dp"
+    android:layout_height="match_parent"
+    android:layout_gravity="end"
+    android:orientation="vertical"
+    android:background="#2D2D30"
+    android:elevation="20dp">
+
+    <!-- 标题栏 -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="#3C3C3C"
+        android:paddingHorizontal="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="编辑控件"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/btn_close_panel"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="#FFFFFF"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:contentDescription="关闭" />
+    </RelativeLayout>
+
+    <!-- 内容滚动区 -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 名称 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="名称"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp" />
+
+            <EditText
+                android:id="@+id/et_name"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="#3C3C3C"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:padding="12dp"
+                android:layout_marginTop="4dp"
+                android:importantForAutofill="no"
+                android:inputType="text" />
+
+            <!-- X坐标 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="X 坐标"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <SeekBar
+                    android:id="@+id/seekbar_x"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="100" />
+
+                <TextView
+                    android:id="@+id/tv_x_value"
+                    android:layout_width="60dp"
+                    android:layout_height="wrap_content"
+                    android:text="0%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:layout_marginStart="12dp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- Y坐标 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Y 坐标"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <SeekBar
+                    android:id="@+id/seekbar_y"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="100" />
+
+                <TextView
+                    android:id="@+id/tv_y_value"
+                    android:layout_width="60dp"
+                    android:layout_height="wrap_content"
+                    android:text="0%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:layout_marginStart="12dp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- 尺寸 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="尺寸"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <SeekBar
+                    android:id="@+id/seekbar_size"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="100" />
+
+                <TextView
+                    android:id="@+id/tv_size_value"
+                    android:layout_width="60dp"
+                    android:layout_height="wrap_content"
+                    android:text="0%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:layout_marginStart="12dp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- 不透明度 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="不透明度"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <SeekBar
+                    android:id="@+id/seekbar_opacity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="100"
+                    android:progress="70" />
+
+                <TextView
+                    android:id="@+id/tv_opacity_value"
+                    android:layout_width="60dp"
+                    android:layout_height="wrap_content"
+                    android:text="70%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:layout_marginStart="12dp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+            <!-- 可见性 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="游戏内可见"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_visible"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true" />
+            </LinearLayout>
+
+            <!-- 摇杆模式（仅摇杆显示） -->
+            <TextView
+                android:id="@+id/tv_joystick_mode_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="摇杆模式"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+
+            <android.widget.RadioGroup
+                android:id="@+id/rg_joystick_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:visibility="gone"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/rb_keyboard_mode"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="🎮 键盘模式（映射WASD等按键）"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp" />
+
+                <RadioButton
+                    android:id="@+id/rb_mouse_mode"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="🎯 鼠标模式（控制瞄准方向）"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp" />
+            </android.widget.RadioGroup>
+
+            <!-- 摇杆按键映射（仅键盘模式显示） -->
+            <TextView
+                android:id="@+id/tv_joystick_keys_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="方向键映射"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_edit_joystick_keys"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="编辑摇杆映射 (上/右/下/左)"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textAlignment="textStart"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:backgroundTint="#3C3C3C"
+                android:layout_marginTop="4dp"
+                android:visibility="gone"
+                android:drawableEnd="@android:drawable/arrow_down_float" />
+
+            <!-- 按键映射（仅按钮显示） -->
+            <TextView
+                android:id="@+id/tv_keymap_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="按键映射"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btn_select_key"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="未绑定"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textAlignment="textStart"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:backgroundTint="#3C3C3C"
+                android:layout_marginTop="4dp"
+                android:visibility="gone"
+                android:drawableEnd="@android:drawable/arrow_down_float" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- 底部按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#3C3C3C">
+
+        <Button
+            android:id="@+id/btn_apply"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="应用更改"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:backgroundTint="#4CAF50" />
+    </LinearLayout>
+
+</LinearLayout>
+
