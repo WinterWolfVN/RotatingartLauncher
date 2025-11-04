@@ -39,18 +39,17 @@
         <!-- 设置分类 -->
         <ListView
             android:id="@+id/settingsCategoryListView"
-            android:layout_width="0dp"
+            android:layout_width="200dp"
             android:layout_height="match_parent"
-            app:layout_constraintWidth_default="percent"
-            app:layout_constraintWidth_percent="0.25"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             android:fillViewport="true"
             android:divider="@android:color/transparent"
             android:dividerHeight="8dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
             android:paddingStart="8dp"
-            android:paddingEnd="8dp"
+            android:paddingEnd="0dp"
             android:scrollbars="vertical"
             android:scrollbarStyle="outsideOverlay"/>
 
@@ -58,9 +57,9 @@
         <androidx.core.widget.NestedScrollView
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            app:layout_constraintWidth_default="percent"
-            app:layout_constraintWidth_percent="0.75"
+            app:layout_constraintStart_toEndOf="@id/settingsCategoryListView"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             android:fillViewport="true">
 
             <!-- Fragment容器 -->
