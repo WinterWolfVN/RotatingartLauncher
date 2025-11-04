@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 从右侧滑入的编辑面板 -->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/edit_panel"
+    android:layout_width="380dp"
+    android:layout_height="match_parent"
+    android:layout_gravity="end"
+    android:background="#2D2D30"
+    android:elevation="16dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- 顶部标题栏 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingBottom="16dp">
+
+            <TextView
+                android:id="@+id/panel_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="编辑控制布局"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btn_close_panel"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#FFFFFF"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="关闭" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 显示的文本 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="显示的文本"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginTop="8dp" />
+
+        <EditText
+            android:id="@+id/et_name"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#3C3C3C"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:hint="Input"
+            android:textColorHint="#666666"
+            android:layout_marginTop="4dp"
+            android:importantForAutofill="no"
+            android:inputType="text" />
+
+        <!-- X 坐标 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="X 坐标"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <SeekBar
+                android:id="@+id/seekbar_x"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100"
+                android:progress="10" />
+
+            <TextView
+                android:id="@+id/tv_x_value"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:text="10.0%"
+                android:textColor="#4FC3F7"
+                android:textSize="14sp"
+                android:gravity="end"
+                android:layout_marginStart="12dp" />
+
+        </LinearLayout>
+
+        <!-- Y 坐标 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Y 坐标"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <SeekBar
+                android:id="@+id/seekbar_y"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100"
+                android:progress="80" />
+
+            <TextView
+                android:id="@+id/tv_y_value"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:text="80.0%"
+                android:textColor="#4FC3F7"
+                android:textSize="14sp"
+                android:gravity="end"
+                android:layout_marginStart="12dp" />
+
+        </LinearLayout>
+
+        <!-- 尺寸 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="尺寸"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <SeekBar
+                android:id="@+id/seekbar_size"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100"
+                android:progress="45" />
+
+            <TextView
+                android:id="@+id/tv_size_value"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:text="45.0%"
+                android:textColor="#4FC3F7"
+                android:textSize="14sp"
+                android:gravity="end"
+                android:layout_marginStart="12dp" />
+
+        </LinearLayout>
+
+        <!-- 不透明度 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="按键不透明度"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginTop="16dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <SeekBar
+                android:id="@+id/seekbar_opacity"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="100"
+                android:progress="70" />
+
+            <TextView
+                android:id="@+id/tv_opacity_value"
+                android:layout_width="70dp"
+                android:layout_height="wrap_content"
+                android:text="70%"
+                android:textColor="#4FC3F7"
+                android:textSize="14sp"
+                android:gravity="end"
+                android:layout_marginStart="12dp" />
+
+        </LinearLayout>
+
+        <!-- 可见性 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="16dp"
+            android:background="#3C3C3C"
+            android:padding="12dp">
+
+            <TextView
+                android:text="游戏内可见"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <CheckBox
+                android:id="@+id/checkbox_visible"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true" />
+
+        </LinearLayout>
+
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 底部操作按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btn_apply"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="应用更改"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:background="#4CAF50"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btn_copy_control"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="复制控件"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:background="#2196F3"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btn_delete_control"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="删除控件"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:background="#FF5252" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
+
