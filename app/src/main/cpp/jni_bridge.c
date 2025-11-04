@@ -408,7 +408,12 @@ Java_com_app_ralaunch_utils_PerformanceMonitor_getGCStatsNative(
  * @param gen1 GC Gen1计数
  * @param gen2 GC Gen2计数
  */
-JNIEXPORT void UpdateGamePerformance(
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+__attribute__((visibility("default")))
+JNIEXPORT void JNICALL UpdateGamePerformance(
     float fps, float managedMemoryMB,
     int gen0, int gen1, int gen2) {
     // 更新全局变量
@@ -424,5 +429,9 @@ JNIEXPORT void UpdateGamePerformance(
              fps, managedMemoryMB, gen0, gen1, gen2);
     }
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 
