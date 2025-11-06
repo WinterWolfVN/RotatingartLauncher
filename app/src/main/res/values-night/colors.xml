@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色主题颜色（参考 FNALaunch 黑灰紫配色） -->
+    <!-- 背景色 -->
+    <color name="background_primary">#000000</color>
+    <color name="background_secondary">#121212</color>
+    <color name="background_card">#1D1D1D</color>
+    <color name="background_sidebar">#0D0D0D</color>
+    <color name="background_dark">#000000</color>
+    
+    <!-- 文本颜色 -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B0B0</color>
+    <color name="text_hint">#707070</color>
+    
+    <!-- 分隔线 -->
+    <color name="divider">#2A2A2A</color>
+    
+    <!-- 按钮颜色 -->
+    <color name="button_secondary">#2A2A2A</color>
+    <color name="button_disabled">#404040</color>
+    
+    <!-- 选中状态（带紫色） -->
+    <color name="selected_item_background">#30BB86FC</color>
+    
+    <!-- 强调色（紫色系 - 参考 FNALaunch） -->
+    <color name="accent_primary">#BB86FC</color>
+    <color name="accent_secondary">#9965F4</color>
+    
+    <!-- 渐变色（用于背景） -->
+    <color name="gradient_dark_start">#000000</color>
+    <color name="gradient_dark_end">#1A1A1A</color>
+    
+    <!-- Snackbar 颜色 - 深色主题 -->
+    <color name="snackbar_success">#1B5E20</color>
+    <color name="snackbar_success_stroke">#4CAF50</color>
+    <color name="snackbar_error">#B71C1C</color>
+    <color name="snackbar_error_stroke">#F44336</color>
+    <color name="snackbar_info">#0D47A1</color>
+    <color name="snackbar_info_stroke">#2196F3</color>
+    
+    <!-- 按钮颜色 -->
+    <color name="delete_button_bg">#D32F2F</color>
+    <color name="ripple_error">#80D32F2F</color>
+</resources>

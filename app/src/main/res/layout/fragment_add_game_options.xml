@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212"
+    android:background="?attr/backgroundPrimary"
     android:orientation="vertical">
 
     <!-- 顶部标题栏 -->
@@ -21,7 +21,7 @@
             android:src="@drawable/ic_arrow_back"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="返回"
-            app:tint="#FFFFFF" />
+            app:tint="?attr/textPrimary" />
 
         <TextView
             android:id="@+id/pageTitle"
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="添加游戏"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/textPrimary"
             android:textSize="24sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -47,7 +47,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#2A2A2A"
+        android:background="@color/divider"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp" />
 
@@ -82,7 +82,7 @@
                     android:layout_marginEnd="8dp"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="8dp"
-                    app:cardBackgroundColor="#1E1E1E">
+                    app:cardBackgroundColor="?attr/backgroundCard">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -97,7 +97,7 @@
                             android:layout_width="64dp"
                             android:layout_height="64dp"
                             android:background="@drawable/bg_circle"
-                            android:backgroundTint="#1565C0"
+                            android:backgroundTint="@color/accent_primary"
                             android:elevation="4dp">
 
                             <ImageView
@@ -105,7 +105,7 @@
                                 android:layout_height="40dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_download"
-                                app:tint="#FFFFFF" />
+                                app:tint="?attr/textPrimary" />
 
                         </FrameLayout>
 
@@ -113,7 +113,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="在线下载"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="18sp"
                             android:textStyle="bold"
                             android:gravity="center"
@@ -123,7 +123,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="从GOG下载游戏文件"
-                            android:textColor="#BBBBBB"
+                            android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:gravity="center"
                             android:layout_marginTop="6dp"
@@ -134,11 +134,11 @@
                             android:layout_width="match_parent"
                             android:layout_height="44dp"
                             android:text="开始下载"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:background="@drawable/bg_rounded_corner"
-                            android:backgroundTint="#2196F3"
+                            android:background="@drawable/bg_card_8dp"
+                            android:backgroundTint="@color/accent_primary"
                             android:elevation="2dp" />
 
                     </LinearLayout>
@@ -154,7 +154,7 @@
                     android:layout_marginStart="8dp"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="8dp"
-                    app:cardBackgroundColor="#1E1E1E">
+                    app:cardBackgroundColor="?attr/backgroundCard">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -169,7 +169,7 @@
                             android:layout_width="64dp"
                             android:layout_height="64dp"
                             android:background="@drawable/bg_circle"
-                            android:backgroundTint="#E65100"
+                            android:backgroundTint="@color/accent_secondary"
                             android:elevation="4dp">
 
                             <ImageView
@@ -177,7 +177,7 @@
                                 android:layout_height="40dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_folder"
-                                app:tint="#FFFFFF" />
+                                app:tint="?attr/textPrimary" />
 
                         </FrameLayout>
 
@@ -185,7 +185,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="本地导入"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="18sp"
                             android:textStyle="bold"
                             android:gravity="center"
@@ -195,7 +195,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="从本地选择安装文件"
-                            android:textColor="#BBBBBB"
+                            android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:gravity="center"
                             android:layout_marginTop="6dp"
@@ -206,11 +206,11 @@
                             android:layout_width="match_parent"
                             android:layout_height="44dp"
                             android:text="选择文件"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:background="@drawable/bg_rounded_corner"
-                            android:backgroundTint="#FF9800"
+                            android:background="@drawable/bg_card_8dp"
+                            android:backgroundTint="@color/accent_secondary"
                             android:elevation="2dp" />
 
                     </LinearLayout>

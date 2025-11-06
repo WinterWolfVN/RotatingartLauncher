@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 图标光晕效果 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:gradientRadius="70dp"
+        android:centerColor="@color/accent_primary"
+        android:endColor="#00000000"
+        android:type="radial" />
+</shape>
+

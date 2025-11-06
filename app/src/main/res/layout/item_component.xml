@@ -66,7 +66,7 @@
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="6dp"
-                android:progressTint="@color/accent_green"
+                android:progressTint="@color/accent_primary"
                 android:progressBackgroundTint="@color/background_dark"
                 android:max="100"
                 android:progress="0" />
@@ -80,7 +80,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="0%"
-            android:textColor="@color/accent_green"
+            android:textColor="@color/accent_primary"
             android:textSize="14sp"
             android:textStyle="bold"
             android:minWidth="48dp"

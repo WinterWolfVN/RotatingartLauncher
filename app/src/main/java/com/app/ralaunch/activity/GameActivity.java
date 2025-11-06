@@ -240,9 +240,21 @@ public class GameActivity extends SDLActivity {
                 return;
             }
 
-            // 使用Bootstrap模式启动所有游戏
-            Log.d(TAG, "Using Bootstrap mode to launch game");
-            int result = GameLauncher.launchWithBootstrap(this, finalAssemblyPath);
+            // 根据设置选择启动方式
+            com.app.ralaunch.utils.SettingsManager settingsManager = 
+                com.app.ralaunch.utils.SettingsManager.getInstance(this);
+            int launchMode = settingsManager.getLaunchMode();
+            
+            int result;
+            if (launchMode == 1) {
+                // 直接启动模式
+                Log.d(TAG, "Using Direct Launch mode");
+                result = GameLauncher.launchAssemblyDirect(this, finalAssemblyPath);
+            } else {
+                // Bootstrap模式（默认）
+                Log.d(TAG, "Using Bootstrap mode to launch game");
+                result = GameLauncher.launchWithBootstrap(this, finalAssemblyPath);
+            }
 
             if (result == 0) {
                 Log.d(TAG, "Launch parameters set successfully, SDL_main will handle the execution");

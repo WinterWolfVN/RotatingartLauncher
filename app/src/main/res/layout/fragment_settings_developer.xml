@@ -22,40 +22,28 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="32dp">
 
-            <!-- 调试设置分组 -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="开发者"
-                android:textColor="@color/accent_green"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.05"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
-                android:layout_marginStart="4dp" />
-
             <!-- 详细日志卡片 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/verboseLoggingCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
                 app:cardBackgroundColor="@color/background_card">
 
                 <LinearLayout
-                    android:id="@+id/verboseLoggingContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingHorizontal="20dp"
-                    android:paddingVertical="16dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true">
+                    android:paddingVertical="16dp">
 
                     <ImageView
                         android:layout_width="24dp"
@@ -88,14 +76,15 @@
 
                     </LinearLayout>
 
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchVerboseLogging"
+                    <TextView
+                        android:id="@+id/tvVerboseLoggingValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        app:thumbTint="@android:color/white"
-                        app:trackTint="@color/accent_green"
-                        app:trackDecorationTint="@color/text_hint" />
+                        android:text="关闭"
+                        android:textColor="@color/accent_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
                 </LinearLayout>
 
@@ -103,25 +92,25 @@
 
             <!-- 性能监控卡片 -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/performanceMonitorCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
                 app:cardBackgroundColor="@color/background_card">
 
                 <LinearLayout
-                    android:id="@+id/performanceMonitorContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:paddingHorizontal="20dp"
                     android:paddingVertical="16dp"
-                    android:gravity="center_vertical"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true">
+                    android:gravity="center_vertical">
 
                     <ImageView
                         android:layout_width="24dp"
@@ -154,14 +143,15 @@
 
                     </LinearLayout>
 
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchPerformanceMonitor"
+                    <TextView
+                        android:id="@+id/tvPerformanceMonitorValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        app:thumbTint="@android:color/white"
-                        app:trackTint="@color/accent_green"
-                        app:trackDecorationTint="@color/text_hint" />
+                        android:text="关闭"
+                        android:textColor="@color/accent_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
 
                 </LinearLayout>
 
@@ -209,7 +199,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="进入调试页面"
-                            android:backgroundTint="@color/accent_green"
+                            android:backgroundTint="@color/accent_primary"
                             android:paddingVertical="12dp" />
 
                     </LinearLayout>

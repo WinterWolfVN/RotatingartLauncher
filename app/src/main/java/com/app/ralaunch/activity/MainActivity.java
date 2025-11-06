@@ -34,11 +34,10 @@ import com.app.ralaunch.fragment.LocalImportFragment;
 import com.app.ralaunch.adapter.GameAdapter;
 import com.app.ralaunch.adapter.GameItem;
 import com.app.ralaunch.fragment.SettingsFragment;
-import com.app.ralaunch.fragment.SettingsMiscFragment;
+import com.app.ralaunch.fragment.SettingsDialogFragment;
 import com.app.ralaunch.utils.PageManager;
 import com.daimajia.androidanimations.library.Techniques;
 import com.app.ralaunch.utils.PermissionHelper;
-import com.app.ralaunch.utils.UiUtils;
 import com.daimajia.androidanimations.library.YoYo;
 import com.app.ralaunch.utils.RuntimeManager;
 
@@ -74,7 +73,8 @@ public class MainActivity extends AppCompatActivity implements
     private LinearLayout modLoaderSwitchContainer;
     private androidx.appcompat.widget.SwitchCompat modLoaderSwitch;
     private View runtimeSelectContainer;
-    private android.widget.Spinner spinnerRuntimeVersion;
+    private View btnRuntimeSelector;
+    private TextView tvCurrentRuntime;
     private ImageButton settingsButton;
     private ImageButton addGameButton;
     private ImageButton refreshButton;
@@ -88,6 +88,9 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 应用保存的主题设置（必须在 super.onCreate 之前）
+        applyThemeFromSettings();
+        
         super.onCreate(savedInstanceState);
         mainActivity = this;
 
@@ -114,7 +117,6 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             initializeApp();
         }
-        SettingsMiscFragment.applySavedSettings(this);
     }
 
     private void showInitializationFragment() {
@@ -149,9 +151,7 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         // 初始化完成后重新设置运行时选择器
-        setupRuntimeSpinner();
-
-        SettingsMiscFragment.applySavedSettings(this);
+        setupRuntimeSelector();
     }
 
     /**
@@ -213,7 +213,8 @@ public class MainActivity extends AppCompatActivity implements
         modLoaderSwitchContainer = findViewById(R.id.modLoaderSwitchContainer);
         modLoaderSwitch = findViewById(R.id.modLoaderSwitch);
         runtimeSelectContainer = findViewById(R.id.runtimeSelectContainer);
-        spinnerRuntimeVersion = findViewById(R.id.spinnerRuntimeVersion);
+        btnRuntimeSelector = findViewById(R.id.btnRuntimeSelector);
+        tvCurrentRuntime = findViewById(R.id.tvCurrentRuntime);
         Button saveGamePathButton = findViewById(R.id.saveGamePathButton);
 
         // 初始化RecyclerView
@@ -308,95 +309,127 @@ public class MainActivity extends AppCompatActivity implements
         showMainLayout();
 
         // 初始化运行时版本选择
-        setupRuntimeSpinner();
+        setupRuntimeSelector();
     }
 
     /**
      * 设置运行时版本选择器
      */
-    private void setupRuntimeSpinner() {
-        // 检查控件是否已初始化
-        if (spinnerRuntimeVersion == null || runtimeSelectContainer == null) {
-            Log.w("MainActivity", "Runtime spinner widgets not initialized yet");
+    private void setupRuntimeSelector() {
+        if (btnRuntimeSelector == null || runtimeSelectContainer == null || tvCurrentRuntime == null) {
+            Log.w("MainActivity", "Runtime selector widgets not initialized yet");
             return;
         }
         
-        // 输出运行时目录信息
-        File dotnetRoot = RuntimeManager.getDotnetRoot(this);
-        File sharedRoot = RuntimeManager.getSharedRoot(this);
-        Log.d("MainActivity", "Dotnet root: " + dotnetRoot.getAbsolutePath() + " (exists: " + dotnetRoot.exists() + ")");
-        Log.d("MainActivity", "Shared root: " + sharedRoot.getAbsolutePath() + " (exists: " + sharedRoot.exists() + ")");
-        
-        if (sharedRoot.exists()) {
-            File[] files = sharedRoot.listFiles();
-            if (files != null) {
-                Log.d("MainActivity", "Shared root contains " + files.length + " items:");
-                for (File f : files) {
-                    Log.d("MainActivity", "  - " + f.getName() + " (isDirectory: " + f.isDirectory() + ")");
-                }
-            } else {
-                Log.d("MainActivity", "Shared root listFiles returned null");
-            }
-        }
-        
         java.util.List<String> versions = RuntimeManager.listInstalledVersions(this);
-        
-        Log.d("MainActivity", "setupRuntimeSpinner called, found " + versions.size() + " versions");
+        Log.d("MainActivity", "setupRuntimeSelector called, found " + versions.size() + " versions");
         
         if (versions.isEmpty()) {
             runtimeSelectContainer.setVisibility(View.GONE);
             Log.w("MainActivity", "Runtime selector hidden - no versions found");
-            // 显示提示信息
-            showToast("未检测到 .NET 运行时，请先完成初始化");
             return;
         }
         
         runtimeSelectContainer.setVisibility(View.VISIBLE);
         Log.i("MainActivity", "Runtime selector visible - " + versions.size() + " versions found");
-        showToast("已检测到 " + versions.size() + " 个 .NET 运行时版本");
         
-        // 创建显示名称列表（.NET 7.0.0, .NET 8.0.1 等）
-        java.util.List<String> displayNames = new java.util.ArrayList<>();
-        for (String version : versions) {
-            displayNames.add(".NET " + version);
-        }
-        
-        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, displayNames);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerRuntimeVersion.setAdapter(adapter);
-        
-        // 选中当前版本
+        // 显示当前版本
         String selectedVersion = RuntimeManager.getSelectedVersion(this);
         if (selectedVersion != null) {
-            int idx = versions.indexOf(selectedVersion);
-            if (idx >= 0) {
-                spinnerRuntimeVersion.setSelection(idx);
-                Log.d("MainActivity", "Selected runtime version: " + selectedVersion);
-            }
+            tvCurrentRuntime.setText(".NET " + selectedVersion);
         }
         
-        // 设置选择监听器
-        spinnerRuntimeVersion.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override 
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                if (position >= 0 && position < versions.size()) {
-                    String version = versions.get(position);
-                    RuntimeManager.setSelectedVersion(MainActivity.this, version);
-                    Toast.makeText(MainActivity.this, 
-                                 "已切换到 .NET " + version, 
-                                 Toast.LENGTH_SHORT).show();
-                    Log.d("MainActivity", "Runtime version changed to: " + version);
-                }
-            }
+        // 设置点击事件
+        btnRuntimeSelector.setOnClickListener(v -> {
+            // 添加点击动画
+            com.daimajia.androidanimations.library.YoYo.with(com.daimajia.androidanimations.library.Techniques.Pulse)
+                    .duration(300)
+                    .playOn(v);
             
-            @Override 
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
-                // 不需要处理
-            }
+            // 显示运行时选择对话框
+            showRuntimeSelectorDialog();
         });
         
-        Log.d("MainActivity", "Runtime spinner setup complete with " + versions.size() + " versions");
+        Log.d("MainActivity", "Runtime selector setup complete");
+    }
+    
+    /**
+     * 显示运行时选择对话框 - 使用通用选择器
+     */
+    private void showRuntimeSelectorDialog() {
+        // 获取可用的运行时版本
+        java.util.List<String> versions = RuntimeManager.listInstalledVersions(this);
+        String currentVersion = RuntimeManager.getSelectedVersion(this);
+        
+        // 构建选项列表
+        java.util.List<com.app.ralib.dialog.OptionSelectorDialog.Option> options = new java.util.ArrayList<>();
+        for (String version : versions) {
+            String description = getVersionDescription(version);
+            options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
+                version,
+                ".NET " + version,
+                description
+            ));
+        }
+        
+        // 创建并配置对话框
+        com.app.ralib.dialog.OptionSelectorDialog dialog = new com.app.ralib.dialog.OptionSelectorDialog()
+            .setTitle(".NET 运行时版本")
+            .setIcon(R.drawable.ic_settings)
+            .setOptions(options)
+            .setCurrentValue(currentVersion)
+            .setShowCurrentValue(true)
+            .setAutoCloseOnSelect(true)
+            .setAutoCloseDelay(300)
+            .setOnOptionSelectedListener(version -> {
+                Log.d("MainActivity", "Runtime version changed callback: " + version);
+                
+                // 保存选择
+                RuntimeManager.setSelectedVersion(this, version);
+                
+                // 更新显示的版本
+                tvCurrentRuntime.setText(".NET " + version);
+                Log.d("MainActivity", "Updated UI to show: .NET " + version);
+                
+                // 验证保存的版本
+                String savedVersion = RuntimeManager.getSelectedVersion(this);
+                Log.d("MainActivity", "Verified saved version: " + savedVersion);
+                
+                // 显示提示 - 使用 Snackbar
+                showSuccessSnackbar("已切换到 .NET " + version);
+                
+                // 添加更新动画
+                tvCurrentRuntime.animate()
+                        .scaleX(1.2f)
+                        .scaleY(1.2f)
+                        .setDuration(150)
+                        .withEndAction(() -> {
+                            tvCurrentRuntime.animate()
+                                    .scaleX(1f)
+                                    .scaleY(1f)
+                                    .setDuration(150)
+                                    .start();
+                        })
+                        .start();
+            });
+        
+        dialog.show(getSupportFragmentManager(), "RuntimeSelectorDialog");
+    }
+    
+    /**
+     * 获取运行时版本的描述
+     */
+    private String getVersionDescription(String version) {
+        if (version.startsWith("10.")) {
+            return "最新版本 - 推荐使用";
+        } else if (version.startsWith("9.")) {
+            return "稳定版本 - 推荐使用";
+        } else if (version.startsWith("8.")) {
+            return "长期支持版本 (LTS)";
+        } else if (version.startsWith("7.")) {
+            return "长期支持版本 (LTS)";
+        }
+        return "稳定版本";
     }
 
     private void showControlLayoutFragment() {
@@ -427,6 +460,30 @@ public class MainActivity extends AppCompatActivity implements
     private void showMainLayout() {
         mainLayout.setVisibility(View.VISIBLE);
         showNoGameSelected();
+    }
+
+    /**
+     * 显示成功提示 Snackbar
+     */
+    private void showSuccessSnackbar(String message) {
+        View rootView = findViewById(android.R.id.content);
+        com.app.ralib.ui.SnackbarHelper.showSuccess(rootView, message);
+    }
+
+    /**
+     * 显示错误提示 Snackbar
+     */
+    private void showErrorSnackbar(String message) {
+        View rootView = findViewById(android.R.id.content);
+        com.app.ralib.ui.SnackbarHelper.showError(rootView, message);
+    }
+
+    /**
+     * 显示信息提示 Snackbar
+     */
+    private void showInfoSnackbar(String message) {
+        View rootView = findViewById(android.R.id.content);
+        com.app.ralib.ui.SnackbarHelper.showInfo(rootView, message);
     }
 
     private void showAddGameFragment() {
@@ -540,25 +597,52 @@ public class MainActivity extends AppCompatActivity implements
             showNoGameSelected();
         }
 
-        new AlertDialog.Builder(this)
-                .setTitle("删除游戏")
-                .setMessage("确定要删除 " + game.getGameName() + " 吗？\n\n注意：这将同时删除游戏文件")
-                .setPositiveButton("删除", (dialog, which) -> {
-                    // 删除游戏文件夹
-                    boolean filesDeleted = deleteGameFiles(game);
+        // 使用通用对话框确认删除
+        com.app.ralib.dialog.OptionSelectorDialog dialog = 
+            new com.app.ralib.dialog.OptionSelectorDialog();
+        
+        // 创建选项列表
+        java.util.List<com.app.ralib.dialog.OptionSelectorDialog.Option> options = new java.util.ArrayList<>();
+        options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
+            "confirm", 
+            "删除", 
+            "确定要删除 " + game.getGameName() + " 吗？\n\n注意：这将同时删除游戏文件"
+        ));
+        options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
+            "cancel", 
+            "取消", 
+            ""
+        ));
+        
+        dialog.setTitle("删除游戏")
+              .setIcon(R.drawable.ic_close)
+              .setOptions(options)
+              .setCurrentValue("cancel")
+              .setShowCurrentValue(false)
+              .setAutoCloseOnSelect(false); // 手动控制关闭
+        
+        dialog.setOnOptionSelectedListener(optionValue -> {
+            if ("confirm".equals(optionValue)) {
+                // 删除游戏文件夹
+                boolean filesDeleted = deleteGameFiles(game);
 
-                    // 从列表中删除
-                    gameAdapter.removeGame(position);
-                    RaLaunchApplication.getGameDataManager().removeGame(position);
+                // 从列表中删除
+                gameAdapter.removeGame(position);
+                RaLaunchApplication.getGameDataManager().removeGame(position);
 
-                    if (filesDeleted) {
-                        showToast("游戏及文件已删除");
-                    } else {
-                        showToast("游戏已从列表删除，但部分文件可能未删除");
-                    }
-                })
-                .setNegativeButton("取消", null)
-                .show();
+                if (filesDeleted) {
+                    showSuccessSnackbar("游戏及文件已删除");
+                } else {
+                    showInfoSnackbar("游戏已从列表删除，但部分文件可能未删除");
+                }
+                dialog.dismiss();
+            } else {
+                // 取消
+                dialog.dismiss();
+            }
+        });
+        
+        dialog.show(getSupportFragmentManager(), "DeleteGameDialog");
     }
 
     /**
@@ -725,17 +809,13 @@ public class MainActivity extends AppCompatActivity implements
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
-    public void showToast(String message) { UiUtils.toast(this, message); }
+    public void showToast(String message) { 
+        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show();
+    }
 
     private void showSettingsFragment() {
-        mainLayout.setVisibility(View.GONE);
-        View fragmentContainer = findViewById(R.id.fragmentContainer);
-        fragmentContainer.setVisibility(View.VISIBLE);
-
-        SettingsFragment settingsFragment = new SettingsFragment();
-        settingsFragment.setOnSettingsBackListener(this);
-
-        pageManager.showPage(settingsFragment, "settings");
+        SettingsDialogFragment dialog = SettingsDialogFragment.newInstance();
+        dialog.show(getSupportFragmentManager(), "settings_dialog");
     }
 
     @Override
@@ -787,6 +867,63 @@ public class MainActivity extends AppCompatActivity implements
             }
         } else {
             super.onBackPressed();
+        }
+    }
+    
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        
+        // 检查是否是 UI 模式改变（深色/浅色模式）
+        int currentNightMode = newConfig.uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        
+        android.util.Log.d("MainActivity", "配置改变: nightMode=" + currentNightMode);
+        
+        // 检查设置
+        com.app.ralaunch.utils.SettingsManager settingsManager = 
+            com.app.ralaunch.utils.SettingsManager.getInstance(this);
+        
+        // 如果设置为"跟随系统"，立即重建Activity以应用主题
+        if (settingsManager.getThemeMode() == 0) {
+            android.util.Log.d("MainActivity", "跟随系统模式，重建Activity");
+            
+            // 先关闭所有对话框，防止recreate后被恢复
+            androidx.fragment.app.FragmentManager fm = getSupportFragmentManager();
+            for (androidx.fragment.app.Fragment fragment : fm.getFragments()) {
+                if (fragment instanceof androidx.fragment.app.DialogFragment) {
+                    ((androidx.fragment.app.DialogFragment) fragment).dismissAllowingStateLoss();
+                }
+            }
+            
+            // 延迟一点点，确保对话框关闭
+            new android.os.Handler().postDelayed(() -> {
+                // 重建Activity以应用新主题
+                recreate();
+            }, 50);
+        }
+    }
+
+    /**
+     * 从设置中应用主题
+     */
+    private void applyThemeFromSettings() {
+        com.app.ralaunch.utils.SettingsManager settingsManager = 
+            com.app.ralaunch.utils.SettingsManager.getInstance(this);
+        int themeMode = settingsManager.getThemeMode(); // 0=跟随系统, 1=深色, 2=浅色（默认浅色）
+        
+        switch (themeMode) {
+            case 0: // 跟随系统
+                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                break;
+            case 1: // 深色模式
+                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
+                break;
+            case 2: // 浅色模式
+                androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
+                break;
         }
     }
 

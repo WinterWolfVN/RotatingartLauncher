@@ -60,7 +60,7 @@
             android:label="控制布局编辑器"
             android:screenOrientation="landscape"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.AppCompat.NoActionBar" />
+            android:theme="@style/Theme.raLaunch" />
 
         <!-- 文件提供者 -->
         <provider

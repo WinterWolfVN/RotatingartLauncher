@@ -25,7 +25,7 @@
             android:elevation="15dp"
             android:src="@android:drawable/arrow_down_float"
             android:background="@android:color/transparent"
-            android:tint="#FFFFFF"
+            android:tint="?attr/textPrimary"
             android:contentDescription="游戏菜单"
             android:visibility="gone" />
 

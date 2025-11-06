@@ -20,6 +20,7 @@ import com.app.ralaunch.game.Bootstrapper;
 import com.app.ralaunch.game.BootstrapperManifest;
 import com.app.ralaunch.utils.GameExtractor;
 import com.app.ralaunch.utils.GameInfoParser;
+import com.app.ralaunch.utils.IconExtractorHelper;
 
 import java.io.File;
 import java.io.IOException;
@@ -370,12 +371,27 @@ public class LocalImportFragment extends Fragment {
                                         Log.w(TAG, "No valid ModLoader DLL found, using directory path: " + modLoaderPath);
                                     }
                                 
-                                    // 保存游戏本体路径（根据gameinfo的游戏名称查找）
-                                    String gameBodyPath = findGameBodyPath(gamePath);
-                                    if (gameBodyPath != null) {
-                                        Log.d(TAG, "Game body path: " + gameBodyPath);
+                                    // 🔍 检测 SMAPI（星露谷物语模组加载器）
+                                    String[] smapiPaths = GameExtractor.detectAndConfigureSMAPI(requireContext(), modLoaderDir);
+                                    
+                                    String gameBodyPath;
+                                    if (smapiPaths != null) {
+                                        // ✅ 检测到 SMAPI，使用检测到的路径
+                                        finalGamePath = smapiPaths[0];  // SMAPI 启动器路径
+                                        gameBodyPath = smapiPaths[1];   // 游戏本体路径
+                                        
+                                        Log.d(TAG, "✅ SMAPI 已自动配置:");
+                                        Log.d(TAG, "  - SMAPI 启动器: " + finalGamePath);
+                                        Log.d(TAG, "  - 游戏本体: " + gameBodyPath);
+                                        Log.d(TAG, "  - 提示: 游戏将通过 SMAPI 启动，支持模组功能");
                                     } else {
-                                        Log.w(TAG, "Game body not found in: " + gamePath);
+                                        // 不是 SMAPI，使用常规逻辑查找游戏本体
+                                        gameBodyPath = findGameBodyPath(gamePath);
+                                        if (gameBodyPath != null) {
+                                            Log.d(TAG, "Game body path: " + gameBodyPath);
+                                        } else {
+                                            Log.w(TAG, "Game body not found in: " + gamePath);
+                                        }
                                     }
 
                                     Log.d(TAG, "Final game path: " + finalGamePath);
@@ -392,7 +408,10 @@ public class LocalImportFragment extends Fragment {
                                     newGame.setGamePath(finalGamePath);
                                     newGame.setGameBodyPath(gameBodyPath);
                                     newGame.setEngineType(engineType);
-                                    newGame.setIconPath(gameIconPath);
+                                    
+                                    // 尝试从游戏程序集中提取图标
+                                    String extractedIconPath = extractIconFromExecutable(gameBodyPath, gameIconPath);
+                                    newGame.setIconPath(extractedIconPath);
 
                                     tryToImportBootstrapper(newGame);
 
@@ -438,30 +457,59 @@ public class LocalImportFragment extends Fragment {
                                     importStatus.setText("导入完成！");
                                     importProgress.setProgress(100);
 
-                                    // 纯游戏，根据 gameinfo 中的游戏名称查找程序集
-                                    String finalGamePath = findGameBodyPath(gamePath);
-
-                                    if (finalGamePath == null) {
-                                        Log.w("LocalImportFragment", "Game executable not found, using directory path");
-                                        finalGamePath = gamePath;
+                                    // 🔍 检测是否为 SMAPI（星露谷物语模组加载器）
+                                    File currentGameDir = new File(gamePath);
+                                    String[] smapiPaths = GameExtractor.detectAndConfigureSMAPI(requireContext(), currentGameDir);
+                                    
+                                    String finalGamePath;
+                                    String gameBodyPath = null;
+                                    
+                                    if (smapiPaths != null) {
+                                        // ✅ 检测到 SMAPI
+                                        finalGamePath = smapiPaths[0];  // SMAPI 启动器
+                                        gameBodyPath = smapiPaths[1];   // 游戏本体
+                                        
+                                        Log.d(TAG, "✅ SMAPI 已自动配置（纯游戏导入）:");
+                                        Log.d(TAG, "  - SMAPI 启动器: " + finalGamePath);
+                                        Log.d(TAG, "  - 游戏本体: " + gameBodyPath);
+                                        Log.d(TAG, "  - 提示: 游戏将通过 SMAPI 启动，支持模组功能");
+                                    } else {
+                                        // 纯游戏，根据 gameinfo 中的游戏名称查找程序集
+                                        finalGamePath = findGameBodyPath(gamePath);
+                                        
+                                        if (finalGamePath == null) {
+                                            Log.w("LocalImportFragment", "Game executable not found, using directory path");
+                                            finalGamePath = gamePath;
+                                        }
+                                        
+                                        Log.d(TAG, "Pure game path: " + finalGamePath);
                                     }
-
-                                    Log.d(TAG, "Pure game path: " + finalGamePath);
 
                                     var newGame = new GameItem();
                                     newGame.setGameName(gameName);
                                     try {
-                                        newGame.setGameBasePath(gameDir.getCanonicalPath());
+                                        newGame.setGameBasePath(currentGameDir.getCanonicalPath());
                                     } catch (IOException e) {
                                         throw new RuntimeException(e);
                                     }
                                     newGame.setGamePath(finalGamePath);
+                                    
+                                    // 如果检测到 SMAPI，设置游戏本体路径
+                                    if (gameBodyPath != null) {
+                                        newGame.setGameBodyPath(gameBodyPath);
+                                        Log.d(TAG, "SMAPI game body path set: " + gameBodyPath);
+                                    }
+                                    
                                     newGame.setEngineType(engineType);
-                                    newGame.setIconPath(gameIconPath);
+                                    
+                                    // 尝试从游戏程序集中提取图标（优先使用游戏本体）
+                                    String iconSourcePath = (gameBodyPath != null) ? gameBodyPath : finalGamePath;
+                                    String extractedIconPath = extractIconFromExecutable(iconSourcePath, gameIconPath);
+                                    newGame.setIconPath(extractedIconPath);
 
                                     tryToImportBootstrapper(newGame);
 
-                                    // 导入完成，返回结果（纯游戏没有 gameBodyPath）
+                                    // 导入完成，返回结果
                                     if (importCompleteListener != null) {
                                         importCompleteListener.onImportComplete(gameType, newGame);
                                     }
@@ -610,5 +658,175 @@ public class LocalImportFragment extends Fragment {
         }
 
         return gameDir;
+    }
+
+    /**
+     * 高清化小图标（使用双三次插值+锐化）
+     * 
+     * @param iconPath 原始图标路径
+     * @return 高清化后的图标路径，失败返回null
+     */
+    private String upscaleIcon(String iconPath) {
+        try {
+            // 读取原始图标
+            android.graphics.Bitmap original = android.graphics.BitmapFactory.decodeFile(iconPath);
+            if (original == null) {
+                Log.e(TAG, "Failed to decode original icon");
+                return null;
+            }
+            
+            int originalWidth = original.getWidth();
+            int originalHeight = original.getHeight();
+            
+            Log.i(TAG, String.format("Original icon size: %dx%d", originalWidth, originalHeight));
+            
+            // 目标尺寸：256x256（或原尺寸的8倍，取较小值）
+            int targetSize = Math.min(256, Math.max(originalWidth, originalHeight) * 8);
+            
+            // 使用双三次插值放大
+            android.graphics.Bitmap upscaled = android.graphics.Bitmap.createScaledBitmap(
+                original, targetSize, targetSize, true);
+            
+            // 应用锐化滤镜提升清晰度
+            android.graphics.Bitmap sharpened = applySharpen(upscaled);
+            
+            // 保存高清化后的图标
+            String upscaledPath = iconPath.replace(".png", "_upscaled.png");
+            java.io.FileOutputStream out = new java.io.FileOutputStream(upscaledPath);
+            sharpened.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+            out.close();
+            
+            // 清理
+            original.recycle();
+            upscaled.recycle();
+            sharpened.recycle();
+            
+            Log.i(TAG, String.format("Icon upscaled from %dx%d to %dx%d", 
+                originalWidth, originalHeight, targetSize, targetSize));
+            
+            return upscaledPath;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to upscale icon: " + e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * 应用锐化滤镜
+     */
+    private android.graphics.Bitmap applySharpen(android.graphics.Bitmap src) {
+        // 锐化卷积核
+        float[] sharpenKernel = {
+            0, -1, 0,
+            -1, 5, -1,
+            0, -1, 0
+        };
+        
+        android.graphics.Bitmap result = android.graphics.Bitmap.createBitmap(
+            src.getWidth(), src.getHeight(), src.getConfig());
+        
+        android.renderscript.RenderScript rs = null;
+        try {
+            rs = android.renderscript.RenderScript.create(getContext());
+            android.renderscript.Allocation input = android.renderscript.Allocation.createFromBitmap(rs, src);
+            android.renderscript.Allocation output = android.renderscript.Allocation.createFromBitmap(rs, result);
+            
+            android.renderscript.ScriptIntrinsicConvolve3x3 convolution = 
+                android.renderscript.ScriptIntrinsicConvolve3x3.create(rs, android.renderscript.Element.U8_4(rs));
+            
+            convolution.setInput(input);
+            convolution.setCoefficients(sharpenKernel);
+            convolution.forEach(output);
+            
+            output.copyTo(result);
+            
+            input.destroy();
+            output.destroy();
+            convolution.destroy();
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to apply sharpen filter, using original: " + e.getMessage());
+            return src;
+        } finally {
+            if (rs != null) {
+                rs.destroy();
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 尝试从游戏程序集中提取图标
+     * 
+     * @param exePath 游戏可执行文件路径（.exe或.dll）
+     * @param fallbackIconPath 回退的图标路径（GOG的icon.png）
+     * @return 提取的图标路径，如果提取失败则返回fallbackIconPath
+     */
+    private String extractIconFromExecutable(String exePath, String fallbackIconPath) {
+        if (exePath == null || exePath.isEmpty()) {
+            Log.w(TAG, "EXE path is null or empty, using fallback icon");
+            return fallbackIconPath;
+        }
+
+        File exeFile = new File(exePath);
+        if (!exeFile.exists()) {
+            Log.w(TAG, "EXE file not found: " + exePath + ", using fallback icon");
+            return fallbackIconPath;
+        }
+
+        // 如果是 .dll 文件，尝试查找 .exe 文件（只支持Windows PE格式）
+        String tryPath = exePath;
+        if (exePath.toLowerCase().endsWith(".dll")) {
+            File gameDir = exeFile.getParentFile();
+            String baseName = exeFile.getName().substring(0, exeFile.getName().length() - 4);
+            
+            // 尝试 .exe (Windows)
+            File winExe = new File(gameDir, baseName + ".exe");
+            if (winExe.exists()) {
+                Log.i(TAG, "Found Windows .exe file: " + winExe.getName());
+                tryPath = winExe.getAbsolutePath();
+            } else {
+                Log.i(TAG, "No .exe file found, will try .dll (may have small icons)");
+            }
+        }
+        
+        try {
+            Log.i(TAG, "Attempting to extract icon from: " + tryPath);
+            
+            // 使用IconExtractorHelper提取图标
+            String extractedIconPath = IconExtractorHelper.extractGameIcon(getContext(), tryPath);
+            
+            if (extractedIconPath != null && new File(extractedIconPath).exists()) {
+                // 检查提取的图标大小，如果太小则高清化
+                File iconFile = new File(extractedIconPath);
+                long fileSize = iconFile.length();
+                
+                // 如果图标文件小于5KB，可能是16x16或32x32的小图标，需要高清化
+                if (fileSize < 5 * 1024) {
+                    Log.w(TAG, String.format("Extracted icon is small (%d bytes), applying upscaling...", fileSize));
+                    
+                    // 尝试高清化图标
+                    String upscaledPath = upscaleIcon(extractedIconPath);
+                    if (upscaledPath != null) {
+                        Log.i(TAG, "✅ Icon upscaled successfully: " + upscaledPath);
+                        return upscaledPath;
+                    } else if (fallbackIconPath != null) {
+                        Log.w(TAG, "Upscaling failed, using fallback GOG icon");
+                        return fallbackIconPath;
+                    }
+                }
+                
+                Log.i(TAG, "✅ Successfully extracted icon to: " + extractedIconPath);
+                return extractedIconPath;
+            } else {
+                Log.w(TAG, "Icon extraction returned null or file doesn't exist, using fallback");
+                return fallbackIconPath;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to extract icon from executable: " + e.getMessage(), e);
+            return fallbackIconPath;
+        }
     }
 }

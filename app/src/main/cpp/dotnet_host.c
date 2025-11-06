@@ -274,26 +274,48 @@ int launch_with_coreclr_passthrough() {
     LOGI("CoreCLR GC and optimization settings configured for stability");
     
     // 设置详细日志环境变量（如果启用）
+    LOGI("🔍 [DotnetHost] Checking g_verboseLogging: %d", g_verboseLogging);
     if (g_verboseLogging) {
-        // CoreCLR 详细日志环境变量
+        // CoreCLR 详细日志环境变量（输出到 logcat）
         setenv("COREHOST_TRACE", "1", 1);
-        setenv("COREHOST_TRACEFILE", "/data/local/tmp/corehost_trace.log", 1);
+        // ❌ 不使用文件输出，让日志直接输出到 stderr（会被 logcat 捕获）
+        // setenv("COREHOST_TRACEFILE", "/data/local/tmp/corehost_trace.log", 1);
+        
+        // CoreCLR 运行时日志（会输出到 logcat）
         setenv("COMPlus_LogEnable", "1", 1);
-        setenv("COMPlus_LogLevel", "10", 1);
-        setenv("COMPlus_LogToConsole", "1", 1);
-        setenv("COMPlus_LogFacility", "0", 1);    // 输出到 stderr
-        setenv("COMPlus_StressLog", "1", 1);
-        setenv("COMPlus_StressLogSize", "65536", 1);
+        setenv("COMPlus_LogLevel", "10", 1);           // 最详细级别
+        setenv("COMPlus_LogToConsole", "1", 1);        // 输出到控制台（stderr）
+        setenv("COMPlus_LogFacility", "0xFFFFFFFF", 1); // 所有设施
+        
+        // CoreCLR 加载器和类型系统日志
+        setenv("COMPlus_LogToDebugger", "1", 1);
+        setenv("COMPlus_LogWithPid", "0", 1);
+        setenv("COMPlus_LogFile", "", 1);              // 不输出到文件
+        
+        // CoreCLR GC 日志
+        setenv("COMPlus_GCLogEnabled", "1", 1);
+        setenv("COMPlus_GCLogFile", "", 1);            // GC 日志也输出到 stderr
+        
+        // 程序集加载日志
+        setenv("COMPlus_LoaderOptimization", "0", 1);
+        setenv("DOTNET_MULTILEVEL_LOOKUP", "0", 1);
+        
+        // ⚠️ JIT 反汇编日志会产生海量输出，已禁用
+        // setenv("COMPlus_JitDisasm", "*", 1);
+        // setenv("COMPlus_JitDump", "*", 1);
         
         // Mono 详细日志环境变量（兼容性）
         setenv("MONO_LOG_LEVEL", "debug", 1);
         setenv("MONO_LOG_MASK", "all", 1);
+        setenv("XUNIT_VERBOSE", "true", 1);
         setenv("MONO_VERBOSE_METHOD", "1", 1);
         setenv("MONO_DEBUG", "1", 1);
         setenv("MONO_TRACE_ASSEMBLY", "1", 1);
         setenv("MONO_TRACE", "all", 1);
-        
-        LOGI("✓ Verbose logging ENABLED - CoreCLR/Mono will output detailed diagnostic info");
+       
+   
+        LOGI("✓ Verbose logging ENABLED - CoreCLR/Mono logs will output to Logcat (tag: stderr)");
+        LOGI("   Use 'adb logcat | grep -E \"CoreCLR|COREHOST|Mono\"' to filter runtime logs");
     } else {
         LOGI("Verbose logging disabled (use Settings to enable for debugging)");
     }

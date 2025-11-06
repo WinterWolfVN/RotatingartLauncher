@@ -22,6 +22,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Rotating art Launcher"
-include ':app', ':lfilepickerlibrary'
+include ':app', ':ralib'
 
 

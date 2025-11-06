@@ -1,30 +1,42 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.raLaunch" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- 主要颜色 -->
+    <!-- 深色主题 -->
+    <style name="Theme.raLaunch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Material 主要颜色 -->
         <item name="colorPrimary">@color/background_primary</item>
-        <item name="colorPrimaryVariant">@color/background_dark</item>
+        <item name="colorPrimaryVariant">@color/background_secondary</item>
         <item name="colorOnPrimary">@color/text_primary</item>
 
-        <!-- 次要颜色 -->
-        <item name="colorSecondary">@color/accent_green</item>
-        <item name="colorSecondaryVariant">@color/accent_green</item>
-        <item name="colorOnSecondary">@color/text_primary</item>
+        <!-- Material 次要颜色 -->
+        <item name="colorSecondary">@color/accent_primary</item>
+        <item name="colorSecondaryVariant">@color/accent_secondary</item>
+        <item name="colorOnSecondary">@color/background_primary</item>
 
-        <!-- 背景色 -->
+        <!-- Material 背景色 -->
         <item name="android:colorBackground">@color/background_primary</item>
-        <item name="android:windowBackground">@color/background_primary</item>
+        <item name="android:windowBackground">@drawable/bg_main</item>
 
-        <!-- 状态栏颜色 -->
-        <item name="android:statusBarColor">@color/background_dark</item>
-        <item name="android:navigationBarColor">@color/background_dark</item>
+        <!-- 状态栏和导航栏 -->
+        <item name="android:statusBarColor">@color/background_secondary</item>
+        <item name="android:navigationBarColor">@color/background_primary</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
 
-        <!-- 文本颜色 -->
+        <!-- Material 文本颜色 -->
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
 
-        <!-- 强调色（移除紫色） -->
-        <item name="colorAccent">@color/accent_green</item>
+        <!-- Material 强调色 -->
+        <item name="colorAccent">@color/accent_primary</item>
+        
+        <!-- 自定义主题属性 -->
+        <item name="backgroundPrimary">@color/background_primary</item>
+        <item name="backgroundSecondary">@color/background_secondary</item>
+        <item name="backgroundCard">@color/background_card</item>
+        <item name="backgroundSidebar">@color/background_sidebar</item>
+        <item name="textPrimary">@color/text_primary</item>
+        <item name="textSecondary">@color/text_secondary</item>
+        <item name="textHint">@color/text_hint</item>
+        <item name="dividerColor">@color/divider</item>
     </style>
 
     <!-- 全屏主题 -->
@@ -33,7 +45,7 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="android:windowBackground">?android:colorBackground</item>
         <!-- 忽略刘海屏设置 -->
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <!-- 隐藏状态栏 -->

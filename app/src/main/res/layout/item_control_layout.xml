@@ -6,7 +6,7 @@
     android:layout_margin="8dp"
     app:cardCornerRadius="12dp"
     app:cardElevation="2dp"
-    app:cardBackgroundColor="#1E1E1E">
+    app:cardBackgroundColor="?attr/backgroundCard">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,7 +18,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_controller"
-            app:tint="#4CAF50"
+            app:tint="@color/accent_primary"
             android:layout_marginEnd="16dp" />
 
         <LinearLayout
@@ -32,7 +32,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="布局名称"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/textPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -41,7 +41,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="5个控件"
-                android:textColor="#666666"
+                android:textColor="?attr/textHint"
                 android:textSize="12sp"
                 android:layout_marginTop="2dp" />
 
@@ -56,22 +56,22 @@
                 android:id="@+id/btn_set_default"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:background="@drawable/bg_rounded_corner"
-                android:backgroundTint="#4CAF50"
+                android:background="@drawable/bg_card_8dp"
+                android:backgroundTint="@color/accent_primary"
                 android:contentDescription="设为默认"
                 android:src="@drawable/ic_star"
-                app:tint="#FFFFFF"
+                app:tint="?attr/textPrimary"
                 android:layout_marginEnd="8dp" />
 
             <ImageButton
                 android:id="@+id/btn_delete"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:background="@drawable/bg_rounded_corner"
-                android:backgroundTint="#F44336"
+                android:background="@drawable/bg_card_8dp"
+                android:backgroundTint="@color/delete_button_bg"
                 android:contentDescription="删除"
                 android:src="@drawable/ic_delete"
-                app:tint="#FFFFFF" />
+                app:tint="?attr/textPrimary" />
 
         </LinearLayout>
 

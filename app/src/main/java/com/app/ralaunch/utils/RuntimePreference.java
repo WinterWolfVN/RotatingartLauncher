@@ -78,10 +78,7 @@ public final class RuntimePreference {
      */
     public static void setArchitecture(Context context, String architecture) {
         if (architecture == null) return;
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putString(KEY_ARCHITECTURE, architecture)
-                .apply();
+        SettingsManager.getInstance(context).setRuntimeArchitecture(architecture);
     }
 
     /**
@@ -91,8 +88,7 @@ public final class RuntimePreference {
      * @return 架构，默认为 "auto"（自动检测设备架构）
      */
     public static String getArchitecture(Context context) {
-        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return sp.getString(KEY_ARCHITECTURE, ARCH_AUTO); // 默认自动检测
+        return SettingsManager.getInstance(context).getRuntimeArchitecture();
     }
 
     /**
@@ -157,10 +153,7 @@ public final class RuntimePreference {
      * @param enabled 是否启用详细日志
      */
     public static void setVerboseLogging(Context context, boolean enabled) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean(KEY_VERBOSE_LOGGING, enabled)
-                .apply();
+        SettingsManager.getInstance(context).setVerboseLogging(enabled);
     }
 
     /**
@@ -170,8 +163,7 @@ public final class RuntimePreference {
      * @return 是否启用详细日志，默认为 false
      */
     public static boolean isVerboseLogging(Context context) {
-        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return sp.getBoolean(KEY_VERBOSE_LOGGING, false);
+        return SettingsManager.getInstance(context).isVerboseLogging();
     }
 
     /**
@@ -182,10 +174,7 @@ public final class RuntimePreference {
      */
     public static void setRenderer(Context context, String renderer) {
         if (renderer == null) return;
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putString(KEY_RENDERER, renderer)
-                .apply();
+        SettingsManager.getInstance(context).setFnaRenderer(renderer);
     }
 
     /**
@@ -195,8 +184,7 @@ public final class RuntimePreference {
      * @return 渲染器，默认为 "auto"（自动选择 gl4es）
      */
     public static String getRenderer(Context context) {
-        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return sp.getString(KEY_RENDERER, RENDERER_AUTO);
+        return SettingsManager.getInstance(context).getFnaRenderer();
     }
 
     /**
@@ -221,10 +209,7 @@ public final class RuntimePreference {
      * @param enabled 是否启用性能监控
      */
     public static void setPerformanceMonitorEnabled(Context context, boolean enabled) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean(KEY_PERFORMANCE_MONITOR, enabled)
-                .apply();
+        SettingsManager.getInstance(context).setPerformanceMonitorEnabled(enabled);
     }
 
     /**
@@ -234,8 +219,7 @@ public final class RuntimePreference {
      * @return 是否启用性能监控，默认为 false（关闭）
      */
     public static boolean isPerformanceMonitorEnabled(Context context) {
-        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return sp.getBoolean(KEY_PERFORMANCE_MONITOR, false);
+        return SettingsManager.getInstance(context).isPerformanceMonitorEnabled();
     }
 }
 

@@ -1,30 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 暗色弹出菜单主题 -->
-    <style name="PopupMenuDark" parent="ThemeOverlay.AppCompat.Dark">
-        <item name="android:colorBackground">#252525</item>
-        <item name="android:background">@drawable/bg_popup_menu</item>
-        <item name="android:textColor">#FFFFFF</item>
+    <!-- 设置对话框样式 -->
+    <style name="SettingsDialogStyle" parent="Theme.MaterialComponents.DayNight.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowAnimationStyle">@style/DialogAnimation</item>
     </style>
 
-    <!-- 暗色对话框主题 -->
-    <style name="AlertDialogDark" parent="ThemeOverlay.AppCompat.Dark">
-        <item name="colorPrimary">@color/accent_green</item>
-        <item name="colorAccent">@color/accent_green</item>
-        <item name="android:windowBackground">#1E1E1E</item>
-        <item name="android:textColorPrimary">#FFFFFF</item>
-        <item name="android:textColorSecondary">#CCCCCC</item>
-        <item name="buttonBarPositiveButtonStyle">@style/DialogButtonStyle</item>
-        <item name="buttonBarNegativeButtonStyle">@style/DialogButtonStyle.Negative</item>
+    <!-- 运行时选择对话框样式 -->
+    <style name="RuntimeDialogStyle" parent="Theme.MaterialComponents.DayNight.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.6</item>
+        <item name="android:windowAnimationStyle">@style/DialogAnimation</item>
     </style>
 
-    <!-- 对话框按钮样式 -->
-    <style name="DialogButtonStyle" parent="Widget.AppCompat.Button.Borderless">
-        <item name="android:textColor">@color/accent_green</item>
-        <item name="android:padding">8dp</item>
-        <item name="android:minWidth">64dp</item>
+    <!-- 对话框动画样式 -->
+    <style name="DialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/dialog_enter</item>
+        <item name="android:windowExitAnimation">@anim/dialog_exit</item>
     </style>
 
-    <style name="DialogButtonStyle.Negative">
-        <item name="android:textColor">#CCCCCC</item>
+    <!-- 圆角卡片样式 -->
+    <style name="RoundedCardStyle" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="cardBackgroundColor">?attr/backgroundCard</item>
     </style>
+
 </resources>

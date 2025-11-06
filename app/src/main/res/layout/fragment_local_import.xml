@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212"
+    android:background="?attr/backgroundPrimary"
     android:orientation="vertical">
 
     <!-- 顶部标题栏 -->
@@ -21,7 +21,7 @@
             android:src="@drawable/ic_arrow_back"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="返回"
-            app:tint="#FFFFFF" />
+            app:tint="?attr/textPrimary" />
 
         <TextView
             android:id="@+id/pageTitle"
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="本地导入"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/textPrimary"
             android:textSize="24sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -47,7 +47,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#2A2A2A"
+        android:background="@color/divider"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp" />
 
@@ -88,7 +88,7 @@
                 android:layout_marginEnd="8dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="4dp"
-                app:cardBackgroundColor="#1E1E1E">
+                app:cardBackgroundColor="?attr/backgroundCard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -108,14 +108,14 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:background="@drawable/bg_circle"
-                            android:backgroundTint="#1565C0">
+                            android:backgroundTint="@color/accent_primary">
 
                             <ImageView
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_file"
-                                app:tint="#FFFFFF" />
+                                app:tint="?attr/textPrimary" />
 
                         </FrameLayout>
 
@@ -130,7 +130,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="游戏本体"
-                                android:textColor="#FFFFFF"
+                                android:textColor="?attr/textPrimary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
 
@@ -138,7 +138,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Terraria (.sh)"
-                                android:textColor="#BBBBBB"
+                                android:textColor="?attr/textSecondary"
                                 android:textSize="11sp"
                                 android:layout_marginTop="2dp" />
 
@@ -152,11 +152,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="未选择"
-                        android:textColor="#888888"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="12sp"
                         android:padding="10dp"
-                        android:background="@drawable/bg_rounded_corner"
-                        android:backgroundTint="#252525"
+                        android:background="@drawable/bg_card_8dp"
+                        android:backgroundTint="?attr/backgroundCard"
                         android:layout_marginBottom="10dp"
                         android:ellipsize="end"
                         android:maxLines="1" />
@@ -166,11 +166,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:text="选择文件"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/textPrimary"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_rounded_corner"
-                        android:backgroundTint="#2196F3" />
+                        android:background="@drawable/bg_card_8dp"
+                        android:backgroundTint="@color/accent_primary" />
 
                 </LinearLayout>
 
@@ -184,7 +184,7 @@
                 android:layout_marginStart="8dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="4dp"
-                app:cardBackgroundColor="#1E1E1E">
+                app:cardBackgroundColor="?attr/backgroundCard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -204,14 +204,14 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:background="@drawable/bg_circle"
-                            android:backgroundTint="#E65100">
+                            android:backgroundTint="@color/accent_secondary">
 
                             <ImageView
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_zip"
-                                app:tint="#FFFFFF" />
+                                app:tint="?attr/textPrimary" />
 
                         </FrameLayout>
 
@@ -226,7 +226,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="ModLoader (可选)"
-                                android:textColor="#FFFFFF"
+                                android:textColor="?attr/textPrimary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
 
@@ -234,7 +234,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="模组加载器 (.zip)"
-                                android:textColor="#BBBBBB"
+                                android:textColor="?attr/textSecondary"
                                 android:textSize="11sp"
                                 android:layout_marginTop="2dp" />
 
@@ -248,11 +248,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="未选择"
-                        android:textColor="#888888"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="12sp"
                         android:padding="10dp"
-                        android:background="@drawable/bg_rounded_corner"
-                        android:backgroundTint="#252525"
+                        android:background="@drawable/bg_card_8dp"
+                        android:backgroundTint="?attr/backgroundCard"
                         android:layout_marginBottom="10dp"
                         android:ellipsize="end"
                         android:maxLines="1" />
@@ -262,10 +262,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:text="选择文件"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/textPrimary"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_rounded_corner"
+                        android:background="@drawable/bg_card_8dp"
                         android:backgroundTint="#FF9800" />
 
                 </LinearLayout>
@@ -289,7 +289,7 @@
                 android:layout_marginEnd="8dp"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="4dp"
-                app:cardBackgroundColor="#1E1E1E">
+                app:cardBackgroundColor="?attr/backgroundCard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -316,7 +316,7 @@
                                 android:layout_height="24dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_zip"
-                                app:tint="#FFFFFF" />
+                                app:tint="?attr/textPrimary" />
 
                         </FrameLayout>
 
@@ -331,7 +331,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Bootstrapper (可选)"
-                                android:textColor="#FFFFFF"
+                                android:textColor="?attr/textPrimary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
 
@@ -339,7 +339,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="引导程序 (.zip)"
-                                android:textColor="#BBBBBB"
+                                android:textColor="?attr/textSecondary"
                                 android:textSize="11sp"
                                 android:layout_marginTop="2dp" />
 
@@ -353,11 +353,11 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="未选择"
-                        android:textColor="#888888"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="12sp"
                         android:padding="10dp"
-                        android:background="@drawable/bg_rounded_corner"
-                        android:backgroundTint="#252525"
+                        android:background="@drawable/bg_card_8dp"
+                        android:backgroundTint="?attr/backgroundCard"
                         android:layout_marginBottom="10dp"
                         android:ellipsize="end"
                         android:maxLines="1" />
@@ -367,10 +367,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:text="选择文件"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/textPrimary"
                         android:textSize="13sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_rounded_corner"
+                        android:background="@drawable/bg_card_8dp"
                         android:backgroundTint="#9C27B0" />
 
                 </LinearLayout>
@@ -396,11 +396,11 @@
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:text="开始导入"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/textPrimary"
             android:textSize="15sp"
             android:textStyle="bold"
-            android:background="@drawable/bg_rounded_corner"
-            android:backgroundTint="#4CAF50"
+            android:background="@drawable/bg_card_8dp"
+            android:backgroundTint="@color/accent_primary"
             android:elevation="4dp"
             android:enabled="false"
             android:alpha="0.5" />
@@ -414,7 +414,7 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center"
-        android:background="#121212"
+        android:background="?attr/backgroundPrimary"
         android:padding="32dp"
         android:visibility="gone">
 
@@ -424,7 +424,7 @@
             android:layout_width="match_parent"
             android:layout_height="8dp"
             android:progress="0"
-            android:progressTint="#4CAF50"
+            android:progressTint="@color/accent_primary"
             android:backgroundTint="#333333"
             android:layout_marginBottom="16dp" />
 
@@ -433,7 +433,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="准备导入..."
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/textPrimary"
             android:textSize="16sp"
             android:gravity="center" />
 

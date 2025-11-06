@@ -1,36 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 亮色主题颜色 -->
-    <color name="light_background_primary">#FFFFFF</color>
-    <color name="light_background_secondary">#F5F5F5</color>
-    <color name="light_background_card">#FAFAFA</color>
-    <color name="light_text_primary">#212121</color>
-    <color name="light_text_secondary">#757575</color>
-    <color name="light_text_hint">#BDBDBD</color>
-
-    <!-- 基础背景色 -->
-    <color name="background_primary">#121212</color>
-    <color name="background_secondary">#1A1A1A</color>
-    <color name="background_card">#252525</color>
+    <!-- 浅色主题颜色（参考 FNALaunch 蓝紫渐变） -->
+    <!-- 背景色 -->
+    <color name="background_primary">#FFFFFF</color>
+    <color name="background_secondary">#F5F5F5</color>
+    <color name="background_card">#FAFAFA</color>
+    <color name="background_sidebar">#E0E0E0</color>
     <color name="background_dark">#000000</color>
-
+    
     <!-- 文本颜色 -->
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#BBBBBB</color>
-    <color name="text_hint">#666666</color>
-
-    <!-- 强调色 -->
-    <color name="accent_green">#4CAF50</color>
-    <color name="accent_blue">#2196F3</color>
-    <color name="accent_orange">#FF9800</color>
-
-    <!-- 状态色 -->
-    <color name="selected_card_color">#2D3A45</color>
-    <color name="card_background">#252525</color>
-
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#616161</color>
+    <color name="text_hint">#9E9E9E</color>
+    
+    <!-- 分隔线 -->
+    <color name="divider">#A4B4D8</color>
+    
     <!-- 按钮颜色 -->
-    <color name="button_primary">#363636</color>
-    <color name="button_secondary">#2B2B2B</color>
-    <color name="button_disabled">#666666</color>
-    <color name="selected_item_background">#2A4CAF50</color>
+    <color name="button_secondary">#E0E0E0</color>
+    <color name="button_disabled">#BDBDBD</color>
+    
+    <!-- 选中状态 -->
+    <color name="selected_item_background">#20BB86FC</color>
+    
+    <!-- 强调色（紫色系 - 参考 FNALaunch） -->
+    <color name="accent_primary">#BB86FC</color>
+    <color name="accent_secondary">#9965F4</color>
+    <color name="accent_green">#4CAF50</color>
+    
+    <!-- 渐变色（用于背景） -->
+    <color name="gradient_blue_start">#DBE9FD</color>
+    <color name="gradient_purple_end">#DCD9FF</color>
+    
+    <!-- 状态色 -->
+    <color name="transparent">#00000000</color>
+    <color name="semi_transparent_dark">#80000000</color>
+    <color name="semi_transparent_light">#80FFFFFF</color>
+    
+    <!-- Snackbar 颜色 -->
+    <color name="snackbar_success">#E8F5E9</color>
+    <color name="snackbar_success_stroke">#4CAF50</color>
+    <color name="snackbar_error">#FFEBEE</color>
+    <color name="snackbar_error_stroke">#F44336</color>
+    <color name="snackbar_info">#E3F2FD</color>
+    <color name="snackbar_info_stroke">#2196F3</color>
+    
+    <!-- 按钮颜色 -->
+    <color name="delete_button_bg">#F44336</color>
+    <color name="ripple_error">#80F44336</color>
 </resources>

@@ -6,14 +6,14 @@
     android:layout_height="match_parent"
     android:layout_gravity="end"
     android:orientation="vertical"
-    android:background="#2D2D30"
+    android:background="?attr/backgroundSecondary"
     android:elevation="20dp">
 
     <!-- 标题栏 -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="#3C3C3C"
+        android:background="?attr/backgroundCard"
         android:paddingHorizontal="16dp">
 
         <TextView
@@ -21,7 +21,7 @@
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:text="编辑控件"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/textPrimary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -32,7 +32,7 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:tint="#FFFFFF"
+            android:tint="?attr/textPrimary"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:contentDescription="关闭" />
@@ -55,15 +55,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="名称"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp" />
 
             <EditText
                 android:id="@+id/et_name"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:background="#3C3C3C"
-                android:textColor="#FFFFFF"
+                android:background="?attr/backgroundCard"
+                android:textColor="?attr/textPrimary"
                 android:textSize="14sp"
                 android:padding="12dp"
                 android:layout_marginTop="4dp"
@@ -75,7 +75,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="X 坐标"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="16dp" />
 
@@ -98,7 +98,7 @@
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:text="0%"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
                     android:layout_marginStart="12dp"
                     android:gravity="end" />
@@ -109,7 +109,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Y 坐标"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="16dp" />
 
@@ -132,7 +132,7 @@
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:text="0%"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
                     android:layout_marginStart="12dp"
                     android:gravity="end" />
@@ -143,7 +143,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="尺寸"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="16dp" />
 
@@ -166,7 +166,7 @@
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:text="0%"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
                     android:layout_marginStart="12dp"
                     android:gravity="end" />
@@ -177,7 +177,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="不透明度"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="16dp" />
 
@@ -201,7 +201,7 @@
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:text="70%"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
                     android:layout_marginStart="12dp"
                     android:gravity="end" />
@@ -220,7 +220,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="游戏内可见"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="14sp" />
 
                 <CheckBox
@@ -236,7 +236,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="摇杆模式"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="16dp"
                 android:visibility="gone" />
@@ -254,7 +254,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:text="🎮 键盘模式（映射WASD等按键）"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp" />
@@ -264,7 +264,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:text="🎯 鼠标模式（控制瞄准方向）"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp" />
@@ -276,7 +276,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="方向键映射"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="16dp"
                 android:visibility="gone" />
@@ -286,12 +286,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:text="编辑摇杆映射 (上/右/下/左)"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/textPrimary"
                 android:textSize="14sp"
                 android:textAlignment="textStart"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:backgroundTint="#3C3C3C"
+                android:backgroundTint="?attr/backgroundCard"
                 android:layout_marginTop="4dp"
                 android:visibility="gone"
                 android:drawableEnd="@android:drawable/arrow_down_float" />
@@ -302,7 +302,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="按键映射"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="16dp"
                 android:visibility="gone" />
@@ -312,12 +312,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:text="未绑定"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/textPrimary"
                 android:textSize="14sp"
                 android:textAlignment="textStart"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
-                android:backgroundTint="#3C3C3C"
+                android:backgroundTint="?attr/backgroundCard"
                 android:layout_marginTop="4dp"
                 android:visibility="gone"
                 android:drawableEnd="@android:drawable/arrow_down_float" />
@@ -331,16 +331,16 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        android:background="#3C3C3C">
+        android:background="?attr/backgroundCard">
 
         <Button
             android:id="@+id/btn_apply"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:text="应用更改"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/textPrimary"
             android:textSize="14sp"
-            android:backgroundTint="#4CAF50" />
+            android:backgroundTint="@color/accent_primary" />
     </LinearLayout>
 
 </LinearLayout>

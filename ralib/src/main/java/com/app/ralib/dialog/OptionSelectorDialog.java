@@ -1,0 +1,388 @@
+package com.app.ralib.dialog;
+
+import android.os.Bundle;
+import android.os.Handler;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.app.ralib.R;
+import com.google.android.material.card.MaterialCardView;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 通用选择对话框
+ * 可用于任何需要从列表中选择一项的场景
+ */
+public class OptionSelectorDialog extends DialogFragment {
+
+    private RecyclerView rvOptions;
+    private TextView tvCurrentValue;
+    private TextView tvTitle;
+    private TextView tvSubtitle;
+    private ImageView ivIcon;
+    private ImageButton btnClose;
+    
+    private List<Option> options;
+    private String currentValue;
+    private String selectedValue;
+    private OptionAdapter adapter;
+    
+    private OnOptionSelectedListener listener;
+    
+    // 配置参数
+    private String dialogTitle = "选择选项";
+    private String dialogSubtitle = null;
+    private int dialogIconRes = 0;
+    private boolean showCurrentValue = true;
+    private boolean autoCloseOnSelect = true;
+    private int autoCloseDelay = 300;
+    private int dialogStyleRes = 0;
+
+    /**
+     * 选项数据类
+     */
+    public static class Option {
+        private String value;
+        private String label;
+        private String description;
+        private int iconRes;
+        
+        public Option(String value, String label) {
+            this(value, label, null, 0);
+        }
+        
+        public Option(String value, String label, String description) {
+            this(value, label, description, 0);
+        }
+        
+        public Option(String value, String label, String description, int iconRes) {
+            this.value = value;
+            this.label = label;
+            this.description = description;
+            this.iconRes = iconRes;
+        }
+        
+        public String getValue() { return value; }
+        public String getLabel() { return label; }
+        public String getDescription() { return description; }
+        public int getIconRes() { return iconRes; }
+    }
+
+    /**
+     * 选择监听器
+     */
+    public interface OnOptionSelectedListener {
+        void onOptionSelected(String value);
+    }
+
+    public OptionSelectorDialog() {
+        this.options = new ArrayList<>();
+    }
+
+    // Builder 模式配置
+    public OptionSelectorDialog setTitle(String title) {
+        this.dialogTitle = title;
+        return this;
+    }
+    
+    public OptionSelectorDialog setSubtitle(String subtitle) {
+        this.dialogSubtitle = subtitle;
+        return this;
+    }
+    
+    public OptionSelectorDialog setIcon(int iconRes) {
+        this.dialogIconRes = iconRes;
+        return this;
+    }
+    
+    public OptionSelectorDialog setOptions(List<Option> options) {
+        this.options = options;
+        return this;
+    }
+    
+    public OptionSelectorDialog setCurrentValue(String currentValue) {
+        this.currentValue = currentValue;
+        this.selectedValue = currentValue;
+        return this;
+    }
+    
+    public OptionSelectorDialog setShowCurrentValue(boolean show) {
+        this.showCurrentValue = show;
+        return this;
+    }
+    
+    public OptionSelectorDialog setAutoCloseOnSelect(boolean autoClose) {
+        this.autoCloseOnSelect = autoClose;
+        return this;
+    }
+    
+    public OptionSelectorDialog setAutoCloseDelay(int delayMs) {
+        this.autoCloseDelay = delayMs;
+        return this;
+    }
+    
+    public OptionSelectorDialog setDialogStyle(int styleRes) {
+        this.dialogStyleRes = styleRes;
+        return this;
+    }
+    
+    public OptionSelectorDialog setOnOptionSelectedListener(OnOptionSelectedListener listener) {
+        this.listener = listener;
+        return this;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // 如果是状态恢复但没有options数据，直接关闭
+        if (savedInstanceState != null && (options == null || options.isEmpty())) {
+            dismissAllowingStateLoss();
+            return;
+        }
+        
+        // 使用外部提供的样式，或默认样式
+        if (dialogStyleRes != 0) {
+            setStyle(DialogFragment.STYLE_NORMAL, dialogStyleRes);
+        }
+        
+        // 设置对话框可以通过点击外部关闭
+        setCancelable(true);
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (getDialog() != null && getDialog().getWindow() != null) {
+            Window window = getDialog().getWindow();
+            
+            // 设置窗口背景为透明，以显示 MaterialCardView 的圆角
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            
+            window.setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.8),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.dialog_option_selector, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // 如果选项列表为空（可能是状态恢复），直接关闭对话框
+        if (options == null || options.isEmpty()) {
+            dismiss();
+            return;
+        }
+
+        // 初始化视图
+        rvOptions = view.findViewById(R.id.rvOptions);
+        tvCurrentValue = view.findViewById(R.id.tvCurrentValue);
+        tvTitle = view.findViewById(R.id.tvTitle);
+        tvSubtitle = view.findViewById(R.id.tvSubtitle);
+        ivIcon = view.findViewById(R.id.ivIcon);
+        btnClose = view.findViewById(R.id.btnClose);
+        View currentValueContainer = view.findViewById(R.id.currentValueContainer);
+
+        // 设置标题和图标
+        tvTitle.setText(dialogTitle);
+        if (dialogIconRes != 0) {
+            ivIcon.setImageResource(dialogIconRes);
+            ivIcon.setVisibility(View.VISIBLE);
+        } else {
+            ivIcon.setVisibility(View.GONE);
+        }
+        
+        // 设置副标题
+        if (dialogSubtitle != null && !dialogSubtitle.isEmpty()) {
+            tvSubtitle.setVisibility(View.VISIBLE);
+            tvSubtitle.setText(dialogSubtitle);
+        } else {
+            tvSubtitle.setVisibility(View.GONE);
+        }
+        
+        // 设置当前值显示
+        if (showCurrentValue && currentValue != null) {
+            currentValueContainer.setVisibility(View.VISIBLE);
+            // 查找对应的 label
+            String currentLabel = currentValue;
+            for (Option option : options) {
+                if (option.getValue().equals(currentValue)) {
+                    currentLabel = option.getLabel();
+                    break;
+                }
+            }
+            tvCurrentValue.setText(currentLabel);
+        } else {
+            currentValueContainer.setVisibility(View.GONE);
+        }
+
+        // 初始化 RecyclerView
+        rvOptions.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new OptionAdapter();
+        rvOptions.setAdapter(adapter);
+
+        // 关闭按钮 - 使用 dismissAllowingStateLoss 确保总是可以关闭
+        btnClose.setOnClickListener(v -> {
+            if (isAdded() && getDialog() != null) {
+                dismissAllowingStateLoss();
+            }
+        });
+
+        // 添加进入动画
+        animateEnter(view);
+    }
+
+    private void onOptionItemClicked(String value) {
+        selectedValue = value;
+        adapter.setSelectedValue(value);
+        
+        // 通知监听器
+        if (listener != null) {
+            listener.onOptionSelected(value);
+        }
+        
+        // 自动关闭
+        if (autoCloseOnSelect) {
+            new Handler().postDelayed(() -> {
+                if (isAdded() && getDialog() != null && getDialog().isShowing()) {
+                    dismiss();
+                }
+            }, autoCloseDelay);
+        }
+    }
+
+    private void animateEnter(View view) {
+        view.setAlpha(0f);
+        view.setScaleX(0.9f);
+        view.setScaleY(0.9f);
+        view.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(200)
+            .setInterpolator(new android.view.animation.DecelerateInterpolator())
+            .start();
+    }
+
+    /**
+     * RecyclerView 适配器
+     */
+    private class OptionAdapter extends RecyclerView.Adapter<OptionAdapter.ViewHolder> {
+        
+        private String selectedValue;
+        
+        public void setSelectedValue(String value) {
+            this.selectedValue = value;
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_option_selector, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            Option option = options.get(position);
+            holder.bind(option);
+        }
+
+        @Override
+        public int getItemCount() {
+            return options.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            MaterialCardView cardOption;
+            ImageView ivOptionIcon;
+            TextView tvOptionLabel;
+            TextView tvOptionDescription;
+            ImageView ivCheckmark;
+
+            ViewHolder(View itemView) {
+                super(itemView);
+                cardOption = (MaterialCardView) itemView;
+                ivOptionIcon = itemView.findViewById(R.id.ivOptionIcon);
+                tvOptionLabel = itemView.findViewById(R.id.tvOptionLabel);
+                tvOptionDescription = itemView.findViewById(R.id.tvOptionDescription);
+                ivCheckmark = itemView.findViewById(R.id.ivCheckmark);
+            }
+
+            void bind(Option option) {
+                tvOptionLabel.setText(option.getLabel());
+                
+                // 设置描述
+                if (option.getDescription() != null && !option.getDescription().isEmpty()) {
+                    tvOptionDescription.setVisibility(View.VISIBLE);
+                    tvOptionDescription.setText(option.getDescription());
+                } else {
+                    tvOptionDescription.setVisibility(View.GONE);
+                }
+                
+                // 设置图标
+                if (option.getIconRes() > 0) {
+                    ivOptionIcon.setVisibility(View.VISIBLE);
+                    ivOptionIcon.setImageResource(option.getIconRes());
+                } else {
+                    ivOptionIcon.setVisibility(View.GONE);
+                }
+                
+                // 设置选中状态
+                boolean isSelected = option.getValue().equals(selectedValue);
+                ivCheckmark.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+                
+                if (isSelected && getContext() != null) {
+                    cardOption.setStrokeColor(getContext().getColor(R.color.accent_primary));
+                    cardOption.setStrokeWidth(4);
+                } else {
+                    cardOption.setStrokeColor(android.graphics.Color.TRANSPARENT);
+                    cardOption.setStrokeWidth(0);
+                }
+
+                // 点击事件
+                itemView.setOnClickListener(v -> {
+                    // 点击动画
+                    v.animate()
+                        .scaleX(0.95f)
+                        .scaleY(0.95f)
+                        .setDuration(100)
+                        .withEndAction(() -> {
+                            v.animate()
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(100)
+                                .start();
+                        })
+                        .start();
+                    
+                    onOptionItemClicked(option.getValue());
+                });
+            }
+        }
+    }
+}
+

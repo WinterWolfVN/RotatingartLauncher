@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 统一的卡片背景 - 8dp 圆角，无边框 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="8dp" />
+    <solid android:color="?attr/backgroundCard" />
+</shape>
+
+
+

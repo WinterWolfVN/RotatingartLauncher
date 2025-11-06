@@ -94,6 +94,16 @@ public class GameLauncher {
      * @param dotnetPath .NET 运行时根目录路径
      */
     private static native void setBootstrapLaunchParams(String bootstrapDll, String targetGameAssembly, String dotnetPath);
+    
+    /**
+     * JNI 方法：运行任意 .NET 程序集（带命令行参数）
+     * 
+     * @param assemblyPath .NET 程序集路径
+     * @param args 命令行参数数组
+     * @param dotnetPath .NET 运行时根目录路径
+     * @return 0表示成功，非0表示失败
+     */
+    private static native int runDotnetAssembly(String assemblyPath, String[] args, String dotnetPath);
 
     /**
      * 使用应用程序主机模式启动 .NET 应用
@@ -114,8 +124,9 @@ public class GameLauncher {
             
             // 设置详细日志模式
             boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
+            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
             setVerboseLogging(verboseLogging);
-            Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
+            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
             
             // 设置渲染器
             String renderer = RuntimePreference.getEffectiveRenderer(context);
@@ -200,8 +211,9 @@ public class GameLauncher {
             
             // 设置详细日志模式
             boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
+            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
             setVerboseLogging(verboseLogging);
-            Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
+            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
             
             // 设置渲染器
             String renderer = RuntimePreference.getEffectiveRenderer(context);
@@ -261,8 +273,9 @@ public class GameLauncher {
             
             // 设置详细日志模式
             boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
+            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
             setVerboseLogging(verboseLogging);
-            Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
+            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
             Log.d(TAG, "Game body path: " + gameBodyPath);
 
             File assemblyFile = new File(assemblyPath);
@@ -396,8 +409,9 @@ public class GameLauncher {
         try {
             // 设置详细日志模式
             boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
+            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
             setVerboseLogging(verboseLogging);
-            Log.d(TAG, "Verbose logging: " + (verboseLogging ? "enabled" : "disabled"));
+            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
             
             // 设置渲染器
             String renderer = RuntimePreference.getEffectiveRenderer(context);
@@ -531,5 +545,54 @@ public class GameLauncher {
             }
         }
         fileOrDirectory.delete();
+    }
+    
+    /**
+     * 运行任意 .NET 程序集（带命令行参数）
+     * 
+     * <p>此方法用于运行独立的 .NET 程序集，如 SMAPI.Installer.dll
+     * 
+     * @param context Android 上下文
+     * @param assemblyPath .NET 程序集路径
+     * @param args 命令行参数数组
+     * @return 0表示成功，非0表示失败
+     */
+    public static int runAssembly(Context context, String assemblyPath, String[] args) {
+        try {
+            Log.d(TAG, "Running .NET assembly: " + assemblyPath);
+            if (args != null && args.length > 0) {
+                Log.d(TAG, "  Arguments: " + String.join(" ", args));
+            }
+            
+            // 获取 .NET 运行时路径
+            File dotnetRoot = com.app.ralaunch.utils.RuntimeManager.getDotnetRoot(context);
+            if (dotnetRoot == null || !dotnetRoot.exists()) {
+                Log.e(TAG, "Failed to get .NET runtime path");
+                return -1;
+            }
+            
+            String selected = com.app.ralaunch.utils.RuntimeManager.getSelectedVersion(context);
+            if (selected == null) {
+                Log.e(TAG, "No runtime version installed");
+                return -1;
+            }
+            
+            String dotnetPath = dotnetRoot.getAbsolutePath() + "/" + selected;
+            Log.d(TAG, ".NET runtime path: " + dotnetPath);
+            
+            // 调用 native 方法运行程序集
+            int result = runDotnetAssembly(assemblyPath, args, dotnetPath);
+            
+            if (result == 0) {
+                Log.d(TAG, "Assembly executed successfully");
+            } else {
+                Log.e(TAG, "Assembly execution failed with code: " + result);
+            }
+            
+            return result;
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to run assembly", e);
+            return -1;
+        }
     }
 }

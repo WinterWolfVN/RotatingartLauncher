@@ -9,7 +9,11 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.app.ralaunch.R;
 import com.app.ralaunch.model.FileItem;
+import com.app.ralib.ui.AnimationHelper;
+import com.google.android.material.card.MaterialCardView;
 
+import java.io.File;
+import java.text.DecimalFormat;
 import java.util.List;
 
 /**
@@ -63,23 +67,46 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
 
         // 设置文件类型/大小信息
         if (fileItem.isDirectory()) {
-            holder.fileInfo.setText("文件夹");
+            if (fileItem.isParentDirectory()) {
+                holder.fileInfo.setText("返回上级");
+            } else {
+                holder.fileInfo.setText("文件夹");
+            }
+            holder.fileSize.setVisibility(View.GONE);
         } else {
-            // 这里可以添加文件大小信息
-            holder.fileInfo.setText("文件");
+            // 显示文件大小
+            File file = new File(fileItem.getPath());
+            if (file.exists()) {
+                holder.fileInfo.setText(getFileExtension(fileItem.getName()));
+                holder.fileSize.setText(formatFileSize(file.length()));
+                holder.fileSize.setVisibility(View.VISIBLE);
+            } else {
+                holder.fileInfo.setText("文件");
+                holder.fileSize.setVisibility(View.GONE);
+            }
         }
 
         // 设置选中状态
         boolean isSelected = fileItem.getPath().equals(selectedFilePath);
-        holder.itemView.setBackgroundColor(isSelected ?
-                holder.itemView.getContext().getColor(R.color.selected_item_background) :
-                holder.itemView.getContext().getColor(android.R.color.transparent));
+        if (isSelected) {
+            holder.cardView.setStrokeColor(holder.itemView.getContext().getColor(R.color.accent_primary));
+            holder.cardView.setStrokeWidth(4);
+            holder.cardView.setCardElevation(8f);
+        } else {
+            holder.cardView.setStrokeWidth(0);
+            holder.cardView.setCardElevation(2f);
+        }
+
+        // 进入动画
+        AnimationHelper.enterAnimation(holder.itemView, position, 30);
 
         // 点击事件
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onFileClick(fileItem);
-            }
+            AnimationHelper.clickFeedback(v, () -> {
+                if (listener != null) {
+                    listener.onFileClick(fileItem);
+                }
+            });
         });
 
         // 长按事件
@@ -90,6 +117,28 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
             return true;
         });
     }
+    
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(String fileName) {
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot > 0 && lastDot < fileName.length() - 1) {
+            return fileName.substring(lastDot + 1).toUpperCase();
+        }
+        return "文件";
+    }
+    
+    /**
+     * 格式化文件大小
+     */
+    private String formatFileSize(long size) {
+        if (size <= 0) return "0 B";
+        final String[] units = new String[] { "B", "KB", "MB", "GB", "TB" };
+        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+        digitGroups = Math.min(digitGroups, units.length - 1);
+        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
 
     @Override
     public int getItemCount() {
@@ -97,15 +146,19 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
+        MaterialCardView cardView;
         ImageView fileIcon;
         TextView fileName;
         TextView fileInfo;
+        TextView fileSize;
 
         ViewHolder(View itemView) {
             super(itemView);
+            cardView = (MaterialCardView) itemView;
             fileIcon = itemView.findViewById(R.id.fileIcon);
             fileName = itemView.findViewById(R.id.fileName);
             fileInfo = itemView.findViewById(R.id.fileInfo);
+            fileSize = itemView.findViewById(R.id.fileSize);
         }
     }
 }

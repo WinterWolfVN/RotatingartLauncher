@@ -49,10 +49,10 @@ public class ComponentAdapter extends RecyclerView.Adapter<ComponentAdapter.View
             // 已安装状态 - 显示绿色勾选图标
             holder.statusIcon.setImageResource(R.drawable.ic_check_circle);
             holder.statusIcon.setColorFilter(holder.itemView.getContext()
-                    .getResources().getColor(R.color.accent_green));
+                    .getResources().getColor(R.color.accent_primary));
             holder.progressText.setText("已完成");
             holder.progressText.setTextColor(holder.itemView.getContext()
-                    .getResources().getColor(R.color.accent_green));
+                    .getResources().getColor(R.color.accent_primary));
         } else {
             // 未安装状态 - 显示灰色图标
             holder.statusIcon.setImageResource(R.drawable.ic_check_circle);
@@ -60,7 +60,7 @@ public class ComponentAdapter extends RecyclerView.Adapter<ComponentAdapter.View
                     .getResources().getColor(R.color.text_hint));
             holder.progressText.setText(component.getProgress() + "%");
             holder.progressText.setTextColor(holder.itemView.getContext()
-                    .getResources().getColor(R.color.accent_green));
+                    .getResources().getColor(R.color.accent_primary));
         }
     }
 

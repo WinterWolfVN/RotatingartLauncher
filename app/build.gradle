@@ -69,7 +69,7 @@ dependencies {
     implementation 'com.github.omicronapps:7-Zip-JBinding-4Android:Release-16.02-2.03'
     implementation 'org.apache.commons:commons-compress:1.24.0'
 
-    implementation project(path: ':lfilepickerlibrary')
+    implementation project(path: ':ralib')
 
     implementation libs.appcompat
     implementation libs.material

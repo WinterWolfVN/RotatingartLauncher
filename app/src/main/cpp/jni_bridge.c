@@ -8,9 +8,11 @@
 #include <stdlib.h>
 #include "jni_bridge.h"
 #include "dotnet_params.h"
+#include "dotnet_host.h"
 
 #define LOG_TAG "GameLauncher"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 /** 全局 JavaVM 指针 */
@@ -201,6 +203,7 @@ Java_com_app_ralaunch_game_GameLauncher_setVerboseLogging(
     (void)env;
     (void)clazz;
     g_verboseLogging = enabled ? 1 : 0;
+    LOGI("🔧 [JNI] setVerboseLogging called: received=%d, g_verboseLogging=%d", enabled, g_verboseLogging);
     LOGI("Verbose logging set to: %s", g_verboseLogging ? "enabled" : "disabled");
 }
 
@@ -433,5 +436,9 @@ JNIEXPORT void JNICALL UpdateGamePerformance(
 #ifdef __cplusplus
 }
 #endif
+
+// ============================================================================
+// 图标提取器JNI函数
+// ============================================================================
 
 

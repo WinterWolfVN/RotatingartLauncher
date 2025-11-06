@@ -220,10 +220,16 @@ public final class RuntimeManager {
      */
     public static void setSelectedVersion(Context ctx, String version) {
         Log.d(TAG, "Setting selected runtime version: " + version);
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        boolean success = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
            .edit()
            .putString(KEY_RUNTIME_VERSION, version)
-           .apply();
+           .commit(); // 使用 commit() 确保立即保存
+        
+        if (success) {
+            Log.d(TAG, "Runtime version saved successfully: " + version);
+        } else {
+            Log.e(TAG, "Failed to save runtime version: " + version);
+        }
     }
     
     /**

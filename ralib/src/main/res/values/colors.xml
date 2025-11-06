@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- RALib 颜色定义 -->
+    
+    <!-- 文本颜色 -->
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#616161</color>
+    <color name="text_hint">#9E9E9E</color>
+    
+    <!-- 强调色（紫色系） -->
+    <color name="accent_primary">#BB86FC</color>
+    <color name="accent_secondary">#9965F4</color>
+    
+    <!-- Snackbar 颜色 -->
+    <color name="snackbar_success">#E8F5E9</color>
+    <color name="snackbar_success_stroke">#4CAF50</color>
+    <color name="snackbar_error">#FFEBEE</color>
+    <color name="snackbar_error_stroke">#F44336</color>
+    <color name="snackbar_info">#E3F2FD</color>
+    <color name="snackbar_info_stroke">#2196F3</color>
+</resources>
+
+
+

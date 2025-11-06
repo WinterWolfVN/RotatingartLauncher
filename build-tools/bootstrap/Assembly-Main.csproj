@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <AssemblyName>Bootstrap</AssemblyName>
+    <RootNamespace>AssemblyMain</RootNamespace>
+	  <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+	  <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 引用修复版MonoMod程序集（.NET 7.0 兼容） -->
+    <Reference Include="0Harmony">
+      <HintPath>bin\Release\net8.0\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.Core">
+      <HintPath>bin\Release\net8.0\MonoMod.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.Utils">
+      <HintPath>bin\Release\net8.0\MonoMod.Utils.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.RuntimeDetour">
+      <HintPath>bin\Release\net8.0\MonoMod.RuntimeDetour.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.Backports">
+      <HintPath>bin\Release\net8.0\MonoMod.Backports.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.ILHelpers">
+      <HintPath>bin\Release\net8.0\MonoMod.ILHelpers.dll</HintPath>
+    </Reference>
+    <Reference Include="MonoMod.Iced">
+      <HintPath>bin\Release\net8.0\MonoMod.Iced.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>bin\Release\net8.0\Mono.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Mdb">
+      <HintPath>bin\Release\net8.0\Mono.Cecil.Mdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Pdb">
+      <HintPath>bin\Release\net8.0\Mono.Cecil.Pdb.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil.Rocks">
+      <HintPath>bin\Release\net8.0\Mono.Cecil.Rocks.dll</HintPath>
+    </Reference>
+    <!-- Ico.Reader 图标提取库 -->
+    <Reference Include="Ico.Reader">
+      <HintPath>bin\Release\net8.0\Ico.Reader.dll</HintPath>
+    </Reference>
+    <Reference Include="PeDecoder">
+      <HintPath>bin\Release\net8.0\PeDecoder.dll</HintPath>
+    </Reference>
+
+  </ItemGroup>
+  
+  <ItemGroup>
+    <!-- 排除Ico.Reader源代码目录，避免编译器自动包含 -->
+    <Compile Remove="Ico.Reader-main\**" />
+    <EmbeddedResource Remove="Ico.Reader-main\**" />
+    <None Remove="Ico.Reader-main\**" />
+  </ItemGroup>
+
+</Project>

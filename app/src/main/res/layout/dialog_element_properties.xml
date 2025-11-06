@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#1E1E1E">
+    android:background="?attr/backgroundSecondary">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="按键属性"
-            android:textColor="#7E57C2"
+            android:textColor="@color/accent_primary"
             android:textSize="18sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:cardBackgroundColor="#252525"
+            app:cardBackgroundColor="?attr/backgroundCard"
             android:layout_marginBottom="16dp">
 
             <LinearLayout
@@ -41,7 +41,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="基本属性"
-                    android:textColor="#5C6BC0"
+                    android:textColor="@color/accent_primary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -59,7 +59,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="名称"
-                        android:textColor="#CCCCCC"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp" />
 
                     <EditText
@@ -67,11 +67,11 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="2"
-                        android:background="@drawable/bg_edittext"
+                        android:background="@drawable/bg_input"
                         android:hint="输入控件名称"
                         android:padding="12dp"
-                        android:textColor="#FFFFFF"
-                        android:textColorHint="#666666"
+                        android:textColor="?attr/textPrimary"
+                        android:textColorHint="?attr/textHint"
                         android:textSize="14sp" />
 
                 </LinearLayout>
@@ -89,7 +89,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="宽度"
-                        android:textColor="#CCCCCC"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp" />
 
                     <EditText
@@ -97,12 +97,12 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_edittext"
+                        android:background="@drawable/bg_input"
                         android:hint="100"
                         android:inputType="numberDecimal"
                         android:padding="12dp"
-                        android:textColor="#FFFFFF"
-                        android:textColorHint="#666666"
+                        android:textColor="?attr/textPrimary"
+                        android:textColorHint="?attr/textHint"
                         android:textSize="14sp"
                         android:layout_marginEnd="8dp" />
 
@@ -111,7 +111,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="高度"
-                        android:textColor="#CCCCCC"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp"
                         android:gravity="center" />
 
@@ -120,12 +120,12 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_edittext"
+                        android:background="@drawable/bg_input"
                         android:hint="100"
                         android:inputType="numberDecimal"
                         android:padding="12dp"
-                        android:textColor="#FFFFFF"
-                        android:textColorHint="#666666"
+                        android:textColor="?attr/textPrimary"
+                        android:textColorHint="?attr/textHint"
                         android:textSize="14sp" />
 
                 </LinearLayout>
@@ -140,7 +140,7 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:cardBackgroundColor="#252525"
+            app:cardBackgroundColor="?attr/backgroundCard"
             android:layout_marginBottom="16dp">
 
             <LinearLayout
@@ -153,7 +153,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="按键映射"
-                    android:textColor="#5C6BC0"
+                    android:textColor="@color/accent_primary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -171,7 +171,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="主按键"
-                        android:textColor="#CCCCCC"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp" />
 
                     <Spinner
@@ -179,7 +179,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="2"
-                        android:background="@drawable/bg_spinner"
+                        android:background="@drawable/bg_input"
                         android:padding="12dp" />
 
                 </LinearLayout>
@@ -196,7 +196,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="组合键"
-                        android:textColor="#CCCCCC"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp" />
 
                     <Spinner
@@ -204,7 +204,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="2"
-                        android:background="@drawable/bg_spinner"
+                        android:background="@drawable/bg_input"
                         android:padding="12dp" />
 
                 </LinearLayout>
@@ -219,7 +219,7 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:cardBackgroundColor="#252525"
+            app:cardBackgroundColor="?attr/backgroundCard"
             android:layout_marginBottom="16dp">
 
             <LinearLayout
@@ -232,7 +232,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="触发设置"
-                    android:textColor="#5C6BC0"
+                    android:textColor="@color/accent_primary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -250,7 +250,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="切换触发"
-                        android:textColor="#CCCCCC"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp" />
 
                     <Switch
@@ -274,7 +274,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="穿透点击"
-                        android:textColor="#CCCCCC"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="14sp" />
 
                     <Switch
@@ -296,7 +296,7 @@
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="2dp"
-            app:cardBackgroundColor="#252525">
+            app:cardBackgroundColor="?attr/backgroundCard">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -308,7 +308,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="外观设置"
-                    android:textColor="#5C6BC0"
+                    android:textColor="@color/accent_primary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -331,7 +331,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="不透明度"
-                            android:textColor="#CCCCCC"
+                            android:textColor="?attr/textSecondary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -339,7 +339,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="70%"
-                            android:textColor="#7E57C2"
+                            android:textColor="@color/accent_primary"
                             android:textSize="12sp" />
 
                     </LinearLayout>

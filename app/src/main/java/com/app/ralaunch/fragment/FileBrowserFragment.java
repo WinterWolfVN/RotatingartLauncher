@@ -48,6 +48,8 @@ public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.
     private LinearLayout emptyState;
     private TextView emptyText;
     private LinearLayout permissionDeniedState;
+    private android.widget.EditText searchInput;
+    private ImageButton sortButton;
 
     // 文件相关
     private File currentDirectory;
@@ -57,7 +59,11 @@ public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.
 
     // 文件列表
     private List<FileItem> fileList = new ArrayList<>();
+    private List<FileItem> filteredFileList = new ArrayList<>();
     private FileBrowserAdapter fileAdapter;
+    
+    // 排序模式: 0=名称, 1=大小, 2=时间
+    private int sortMode = 0;
 
     // 权限请求监听器
     public interface OnPermissionRequestListener {
@@ -117,11 +123,30 @@ public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.
         emptyState = view.findViewById(R.id.emptyState);
         emptyText = view.findViewById(R.id.emptyText);
         permissionDeniedState = view.findViewById(R.id.permissionDeniedState);
+        searchInput = view.findViewById(R.id.searchInput);
+        sortButton = view.findViewById(R.id.sortButton);
 
         // 设置 RecyclerView
         fileRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        fileAdapter = new FileBrowserAdapter(fileList, this);
+        fileAdapter = new FileBrowserAdapter(filteredFileList, this);
         fileRecyclerView.setAdapter(fileAdapter);
+        
+        // 搜索框监听
+        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterFiles(s.toString());
+            }
+            
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+        
+        // 排序按钮监听
+        sortButton.setOnClickListener(v -> showSortMenu());
 
         // 确认按钮
         confirmButton.setOnClickListener(v -> {
@@ -242,10 +267,14 @@ public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.
             }
         }
 
+        // 排序文件列表
+        sortFileList();
+        
+        // 应用搜索过滤
+        filterFiles(searchInput != null ? searchInput.getText().toString() : "");
+        
         // 更新空状态
         updateEmptyState();
-
-        fileAdapter.notifyDataSetChanged();
     }
 
     private boolean isRootDirectory(File directory) {
@@ -333,5 +362,114 @@ public class FileBrowserFragment extends Fragment implements FileBrowserAdapter.
     @Override
     public void onFileLongClick(FileItem fileItem) {
         // 长按显示文件信息（可选功能）
+    }
+    
+    /**
+     * 排序文件列表
+     */
+    private void sortFileList() {
+        if (fileList.isEmpty()) {
+            return;
+        }
+        
+        // 保存上级目录项
+        FileItem parentItem = null;
+        if (!fileList.isEmpty() && fileList.get(0).isParentDirectory()) {
+            parentItem = fileList.remove(0);
+        }
+        
+        // 分离文件夹和文件
+        List<FileItem> directories = new ArrayList<>();
+        List<FileItem> files = new ArrayList<>();
+        
+        for (FileItem item : fileList) {
+            if (item.isDirectory()) {
+                directories.add(item);
+            } else {
+                files.add(item);
+            }
+        }
+        
+        // 根据排序模式排序
+        java.util.Comparator<FileItem> comparator;
+        switch (sortMode) {
+            case 1: // 按大小排序
+                comparator = (a, b) -> {
+                    File fileA = new File(a.getPath());
+                    File fileB = new File(b.getPath());
+                    return Long.compare(fileB.length(), fileA.length());
+                };
+                break;
+            case 2: // 按时间排序
+                comparator = (a, b) -> {
+                    File fileA = new File(a.getPath());
+                    File fileB = new File(b.getPath());
+                    return Long.compare(fileB.lastModified(), fileA.lastModified());
+                };
+                break;
+            default: // 按名称排序
+                comparator = (a, b) -> a.getName().compareToIgnoreCase(b.getName());
+                break;
+        }
+        
+        java.util.Collections.sort(directories, comparator);
+        java.util.Collections.sort(files, comparator);
+        
+        // 重新组合列表
+        fileList.clear();
+        if (parentItem != null) {
+            fileList.add(parentItem);
+        }
+        fileList.addAll(directories);
+        fileList.addAll(files);
+    }
+    
+    /**
+     * 过滤文件
+     */
+    private void filterFiles(String query) {
+        filteredFileList.clear();
+        
+        if (query == null || query.trim().isEmpty()) {
+            filteredFileList.addAll(fileList);
+        } else {
+            String lowerQuery = query.toLowerCase();
+            for (FileItem item : fileList) {
+                if (item.getName().toLowerCase().contains(lowerQuery)) {
+                    filteredFileList.add(item);
+                }
+            }
+        }
+        
+        fileAdapter.notifyDataSetChanged();
+        updateEmptyState();
+    }
+    
+    /**
+     * 显示排序菜单
+     */
+    private void showSortMenu() {
+        java.util.List<com.app.ralib.dialog.OptionSelectorDialog.Option> options = java.util.Arrays.asList(
+            new com.app.ralib.dialog.OptionSelectorDialog.Option("0", "按名称排序", "A-Z 字母顺序"),
+            new com.app.ralib.dialog.OptionSelectorDialog.Option("1", "按大小排序", "从大到小"),
+            new com.app.ralib.dialog.OptionSelectorDialog.Option("2", "按时间排序", "最新修改的在前")
+        );
+        
+        new com.app.ralib.dialog.OptionSelectorDialog()
+            .setTitle("排序方式")
+            .setIcon(R.drawable.ic_sort)
+            .setOptions(options)
+            .setCurrentValue(String.valueOf(sortMode))
+            .setOnOptionSelectedListener(value -> {
+                sortMode = Integer.parseInt(value);
+                sortFileList();
+                filterFiles(searchInput.getText().toString());
+                
+                String sortName = sortMode == 0 ? "名称" : sortMode == 1 ? "大小" : "时间";
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).showToast("已按" + sortName + "排序");
+                }
+            })
+            .show(getParentFragmentManager(), "sort_options");
     }
 }
