@@ -91,8 +91,8 @@ public class IconExtractor {
                 Log.d(TAG, "First 32 bytes: " + hex.toString());
             }
             
-            // 转换为 PNG
-            Bitmap bitmap = BmpDecoder.decodeBmpIcon(iconData);
+            // 检测图标格式并解码
+            Bitmap bitmap = decodeIconData(iconData);
             if (bitmap == null) {
                 Log.e(TAG, "Failed to decode icon bitmap");
                 return false;
@@ -261,6 +261,31 @@ public class IconExtractor {
         }
         
         return group;
+    }
+    
+    /**
+     * 检测并解码图标数据（支持 PNG 和 BMP）
+     */
+    private static Bitmap decodeIconData(byte[] iconData) {
+        if (iconData == null || iconData.length < 4) {
+            return null;
+        }
+        
+        // 检测 PNG 魔数: 89 50 4E 47 (0x89 'P' 'N' 'G')
+        if (iconData.length >= 4 && 
+            (iconData[0] & 0xFF) == 0x89 && 
+            (iconData[1] & 0xFF) == 0x50 && 
+            (iconData[2] & 0xFF) == 0x4E && 
+            (iconData[3] & 0xFF) == 0x47) {
+            
+            Log.i(TAG, "Detected PNG format icon");
+            // PNG 格式，使用 BitmapFactory 解码
+            return android.graphics.BitmapFactory.decodeByteArray(iconData, 0, iconData.length);
+        }
+        
+        // BMP 格式（BITMAPINFOHEADER 开头应该是 0x28 = 40）
+        Log.i(TAG, "Attempting BMP format decoding");
+        return BmpDecoder.decodeBmpIcon(iconData);
     }
     
     /**
