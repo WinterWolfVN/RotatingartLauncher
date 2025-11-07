@@ -8,6 +8,12 @@ import java.util.HashMap;
 
 public class ExtractorCollection {
     private static final String TAG = "ExtractorCollection";
+
+    // Type: int
+    public static final String STATE_KEY_EXTRACTOR_INDEX = "extractor_index";
+    // Type: ArrayList<IExtractor>
+    public static final String STATE_KEY_EXTRACTORS = "extractors";
+
     public interface ExtractionListener {
         void onProgress(String message, float progress, HashMap<String, Object> state);
         void onComplete(String message, HashMap<String, Object> state);
@@ -58,11 +64,12 @@ public class ExtractorCollection {
     public void extractAllInNewThread() {
         new Thread(() -> {
             try {
-                int count = 0;
-                for (IExtractor extractor : extractors) {
-                    Log.d(TAG, "Starting extraction for extractor: " + extractor.getClass().getSimpleName() + " (" + (++count) + "/" + extractors.size() + ")");
-                    extractor.getState()
-                            .put("extractor_index", count++);
+                for (int i = 0; i < extractors.size(); i++) {
+                    IExtractor extractor = extractors.get(i);
+                    Log.d(TAG, "Starting extraction for extractor: " + extractor.getClass().getSimpleName() + " (" + (i) + "/" + extractors.size() + ")");
+                    var state = extractor.getState();
+                    state.put(STATE_KEY_EXTRACTOR_INDEX, i);
+                    state.put(STATE_KEY_EXTRACTORS, extractors);
                     boolean success = extractor.extract();
                     if (!success) {
                         Log.e(TAG, "Extraction failed for extractor: " + extractor.getClass().getSimpleName());

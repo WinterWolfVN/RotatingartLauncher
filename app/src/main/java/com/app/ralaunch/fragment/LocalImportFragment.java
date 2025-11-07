@@ -19,8 +19,8 @@ import com.app.ralaunch.adapter.GameItem;
 import com.app.ralaunch.game.Bootstrapper;
 import com.app.ralaunch.game.BootstrapperManifest;
 import com.app.ralaunch.utils.GameExtractor;
-import com.app.ralaunch.utils.GameInfoParser;
 import com.app.ralaunch.utils.IconExtractorHelper;
+import com.app.ralib.extractors.GogShFileExtractor;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 
 /**
  * 本地导入Fragment
@@ -134,17 +135,17 @@ public class LocalImportFragment extends Fragment {
             File file = new File(gameFilePath);
             gameFileText.setText("已选择: " + file.getName());
             new Thread(() -> {
-                GameInfoParser.GameInfo gameInfo = GameInfoParser.extractGameInfo(filePath);
+                var gdzf = GogShFileExtractor.GameDataZipFile.parseFromGogShFile(Paths.get(filePath));
                 if (getActivity() != null && isAdded()) {
                     getActivity().runOnUiThread(() -> {
-                        if (gameInfo != null) {
-                            gameName = gameInfo.name;
-                            gameVersion = gameInfo.version;
-                            gameIconPath = gameInfo.iconPath;
+                        if (gdzf != null) {
+                            gameName = gdzf.id;
+                            gameVersion = gdzf.version;
+                            gameIconPath = null; // TODO: 从 gdzf 提取图标路径
                             if (getActivity() != null) {
                                 ((MainActivity) getActivity()).showToast("检测到游戏: " + gameName + " " + gameVersion);
                             }
-                            Log.d(TAG, "Game info: " + gameInfo);
+                            Log.d(TAG, "Game data zip file: " + gdzf);
                             Log.d(TAG, "Icon path: " + gameIconPath);
                         } else {
                             gameName = "未知游戏";
@@ -244,13 +245,13 @@ public class LocalImportFragment extends Fragment {
             importStatus.setText("正在读取游戏信息...");
             
             new Thread(() -> {
-                GameInfoParser.GameInfo gameInfo = GameInfoParser.extractGameInfo(gameFilePath);
+                var gdzf = GogShFileExtractor.GameDataZipFile.parseFromGogShFile(Paths.get(gameFilePath));
                 if (getActivity() != null && isAdded()) {
                     getActivity().runOnUiThread(() -> {
-                        if (gameInfo != null) {
-                            gameName = gameInfo.name;
-                            gameVersion = gameInfo.version;
-                            gameIconPath = gameInfo.iconPath;
+                        if (gdzf != null) {
+                            gameName = gdzf.id;
+                            gameVersion = gdzf.version;
+                            gameIconPath = null;
                             Log.d(TAG, "Re-parsed game info: " + gameName + " " + gameVersion);
                             Log.d(TAG, "Re-parsed icon path: " + gameIconPath);
 

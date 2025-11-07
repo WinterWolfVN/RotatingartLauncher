@@ -2,6 +2,7 @@ package com.app.ralib.extractors;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.app.ralib.utils.TemporaryFileAcquirer;
@@ -25,6 +26,11 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
 
     private static final String EXTRACTED_MOJOSETUP_TAR_GZ_FILENAME = "mojosetup.tar.gz";
     private static final String EXTRACTED_GAME_DATA_ZIP_FILENAME = "game_data.zip";
+
+    // Type: Path
+    public static final String STATE_KEY_GAME_PATH = GogShFileExtractor.class.getSimpleName()+".game_path";
+    // Type: GameDataZipFile
+    public static final String STATE_KEY_GAME_DATA_ZIP_FILE = GogShFileExtractor.class.getSimpleName()+".game_data_zip_file";
 
     public static class MakeSelfShFile {
         long offset = 0; // file offset in bytes where mojosetup.tar.gz starts
@@ -322,6 +328,20 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
             // At minimum, we need the id
             return gameDataZipFile.id != null && !gameDataZipFile.id.isEmpty();
         }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return "GameDataZipFile{" +
+                    "id='" + id + '\'' +
+                    ", version='" + version + '\'' +
+                    ", build='" + build + '\'' +
+                    ", locale='" + locale + '\'' +
+                    ", timestamp1='" + timestamp1 + '\'' +
+                    ", timestamp2='" + timestamp2 + '\'' +
+                    ", gogId='" + gogId + '\'' +
+                    '}';
+        }
     }
 
     // backing fields for setters
@@ -426,10 +446,11 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
 
                 extractionListener.onProgress("正在解压游戏数据...", 0.1f, state);
 
+                var gamePath = destinationPath.resolve(Paths.get("GoG Games", gdzf.id));
                 var zipExtractor = new BasicSevenZipExtractor(
                         gameDataPath,
                         Paths.get("data/noarch/game"),
-                        destinationPath.resolve(Paths.get("GoG Games", gdzf.id)),
+                        gamePath,
                         new ExtractorCollection.ExtractionListener() {
                             @Override
                             public void onProgress(String message, float progress, HashMap<String, Object> state) {
@@ -444,6 +465,7 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
                                 throw new RuntimeException(message, ex);
                             }
                         });
+                zipExtractor.setState(state);
                 var isGameDataExtracted = zipExtractor.extract();
                 if (!isGameDataExtracted) {
                     Log.e(TAG, "[extract] Failed to extract game_data.zip");
@@ -451,6 +473,8 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
                 }
 
                 extractionListener.onProgress("游戏数据提取完成", 1.0f, state);
+                state.put(STATE_KEY_GAME_PATH, gamePath);
+                state.put(STATE_KEY_GAME_DATA_ZIP_FILE, gdzf);
                 extractionListener.onComplete("游戏数据提取完成", state);
 
                 return true;
