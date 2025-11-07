@@ -4,18 +4,19 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
-import com.app.ralib.Shared;
+import com.app.ralib.utils.TemporaryFileAcquirer;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.io.FileInputStream;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Objects;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
@@ -183,14 +184,55 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
                 return null;
             }
             try (var stream = zip.getInputStream(entry)) {
-                final int MAX_SIZE = 20480;
-                byte[] contentBuffer = new byte[MAX_SIZE];
-                int bytesRead = stream.read(contentBuffer);
-                Log.d(TAG, "Read " + bytesRead + " bytes from " + entryPath);
-                return new String(contentBuffer, 0, bytesRead, StandardCharsets.UTF_8);
+                Log.d(TAG, "Reading entry " + entryPath + "...");
+                return getFileContentFromStream(stream);
             }
             catch (IOException e) {
                 Log.w(TAG, "IOException when reading " + entryPath, e);
+                return null;
+            }
+        }
+
+        private static String getFileContentFromStream(InputStream is) throws IOException {
+            final int MAX_SIZE = 20480;
+            byte[] contentBuffer = new byte[MAX_SIZE];
+            int bytesRead = is.read(contentBuffer);
+            Log.d(TAG, "Read " + bytesRead + " bytes!");
+            return new String(contentBuffer, 0, bytesRead, StandardCharsets.UTF_8);
+        }
+
+        public static GameDataZipFile parseFromGogShFile(Path filePath) {
+            var shFile = MakeSelfShFile.parse(filePath);
+            if (shFile == null) {
+                Log.e(TAG, "MakeSelf SH file is null");
+                return null;
+            }
+
+            try (var tfa = new TemporaryFileAcquirer()) {
+                Path tempZipFile = tfa.acquireTempFilePath("temp_game_data.zip");
+
+                // Extract game_data.zip portion to temp file using RandomAccessFile
+                try (RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "r");
+                     java.io.FileOutputStream fos = new java.io.FileOutputStream(tempZipFile.toFile())) {
+
+                    long gameDataStart = shFile.offset + shFile.filesize;
+                    raf.seek(gameDataStart);
+
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = raf.read(buffer)) != -1) {
+                        fos.write(buffer, 0, bytesRead);
+                    }
+                }
+
+                // Use the existing parse method which uses ZipFile (much faster than ZipInputStream)
+                return GameDataZipFile.parse(tempZipFile);
+
+            } catch (FileNotFoundException ex) {
+                Log.e(TAG, "File not found: " + filePath, ex);
+                return null;
+            } catch (IOException ex) {
+                Log.e(TAG, "IOException when reading GOG SH file: " + filePath, ex);
                 return null;
             }
         }
@@ -289,8 +331,6 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
     private ExtractorCollection.ExtractionListener extractionListener;
     private HashMap<String, Object> state;
 
-    private final ArrayList<Path> tmpFilePaths = new ArrayList<>();
-
     public GogShFileExtractor(Path sourcePath, Path destinationPath, ExtractorCollection.ExtractionListener listener) {
         this.setSourcePath(sourcePath);
         this.setDestinationPath(destinationPath);
@@ -322,28 +362,9 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
         return state;
     }
 
-    private Path acquireTempFilePath(String filename) throws IOException {
-        Path tempFilePath = Paths.get(
-                Objects.requireNonNull(Shared.getContext().getExternalCacheDir()).getAbsolutePath(),
-                System.currentTimeMillis() + "_" + filename);
-        tmpFilePaths.add(tempFilePath);
-        return tempFilePath;
-    }
-
-    private void cleanupTempFiles() {
-        for (Path tmpFilePath : tmpFilePaths) {
-            try {
-                Files.deleteIfExists(tmpFilePath);
-            } catch (IOException e) {
-                Log.w(TAG, "Failed to delete temp file: " + tmpFilePath, e);
-            }
-        }
-        tmpFilePaths.clear();
-    }
-
     @Override
     public boolean extract() {
-        try {
+        try (var tfa = new TemporaryFileAcquirer()) {
             // 获取 MakeSelf SH 文件的头部信息
             extractionListener.onProgress("正在提取安装脚本...", 0.01f, state);
             MakeSelfShFile shFile = MakeSelfShFile.parse(this.sourcePath);
@@ -371,7 +392,7 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
                 extractionListener.onProgress("正在提取MojoSetup归档...", 0.02f, state);
 
                 // 提取 mojosetup.tar.gz
-                Path mojosetupPath = acquireTempFilePath(EXTRACTED_MOJOSETUP_TAR_GZ_FILENAME);
+                Path mojosetupPath = tfa.acquireTempFilePath(EXTRACTED_MOJOSETUP_TAR_GZ_FILENAME);
                 try (var mojosetupFos = new java.io.FileOutputStream(mojosetupPath.toFile())) {
                     var mojosetupChannel = mojosetupFos.getChannel();
                     Log.d(TAG, "Extracting mojosetup.tar.gz to " + mojosetupPath);
@@ -381,7 +402,7 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
                 extractionListener.onProgress("正在提取游戏数据...", 0.03f, state);
 
                 // 提取 game_data.zip
-                Path gameDataPath = acquireTempFilePath(EXTRACTED_GAME_DATA_ZIP_FILENAME);
+                Path gameDataPath = tfa.acquireTempFilePath(EXTRACTED_GAME_DATA_ZIP_FILENAME);
                 try (var gameDataFos = new java.io.FileOutputStream(gameDataPath.toFile())) {
                     var gameDataChannel = gameDataFos.getChannel();
                     Log.d(TAG, "Extracting game_data.zip to " + gameDataPath);
@@ -439,9 +460,6 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
             Log.e(TAG, "[extract] Error when extracting source file", ex);
             extractionListener.onError("GoG Sh 文件解压失败", ex, state);
             return false;
-        }
-        finally {
-            cleanupTempFiles();
         }
     }
 }
