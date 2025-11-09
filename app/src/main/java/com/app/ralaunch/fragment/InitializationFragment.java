@@ -153,8 +153,7 @@ public class InitializationFragment extends Fragment {
         
         // 获取当前架构设置
         String arch = com.app.ralaunch.utils.RuntimePreference.getEffectiveArchitecture(requireContext());
-        Log.d(TAG, "Creating component list for architecture: " + arch);
-        
+
         // 根据架构选择对应的 zip 文件
         String zipFileName;
         String componentName;
@@ -186,10 +185,7 @@ public class InitializationFragment extends Fragment {
         SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
         boolean legalAgreed = prefs.getBoolean(KEY_LEGAL_AGREED, false);
         boolean componentsExtracted = prefs.getBoolean(KEY_COMPONENTS_EXTRACTED, false);
-        
-        Log.d(TAG, "Initialization status - Legal agreed: " + legalAgreed + 
-                   ", Components extracted: " + componentsExtracted);
-        
+
         if (componentsExtracted) {
             // 已经完成初始化，直接回调
             completeInitialization();
@@ -211,7 +207,7 @@ public class InitializationFragment extends Fragment {
         extractionLayout.setVisibility(View.GONE);
         
         animateViewEntrance(legalLayout);
-        Log.d(TAG, "Showing legal agreement state");
+
     }
     
     /**
@@ -229,7 +225,7 @@ public class InitializationFragment extends Fragment {
         updateOverallProgress(0, "准备安装...");
         
         animateViewEntrance(extractionLayout);
-        Log.d(TAG, "Showing extraction state");
+
     }
     
     /**
@@ -247,7 +243,7 @@ public class InitializationFragment extends Fragment {
      * 处理接受法律声明
      */
     private void handleAcceptLegal() {
-        Log.d(TAG, "Legal agreement accepted");
+
         SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
         prefs.edit().putBoolean(KEY_LEGAL_AGREED, true).apply();
         
@@ -260,7 +256,7 @@ public class InitializationFragment extends Fragment {
      * 处理拒绝法律声明
      */
     private void handleDeclineLegal() {
-        Log.d(TAG, "Legal agreement declined");
+
         if (getActivity() != null) {
             getActivity().finish();
         }
@@ -283,9 +279,7 @@ public class InitializationFragment extends Fragment {
             Log.w(TAG, "Extraction already in progress");
             return;
         }
-        
-        Log.d(TAG, "Starting components extraction");
-        
+
         // 更新按钮状态
         btnStartExtraction.setEnabled(false);
         btnStartExtraction.setText("安装中...");
@@ -316,20 +310,17 @@ public class InitializationFragment extends Fragment {
      * 解压所有组件（根据架构解压到对应目录）
      */
     private void extractAllComponents() throws Exception {
-        Log.d(TAG, "Extracting all components, count: " + components.size());
-        
+
         int totalComponents = components.size();
         
         // 获取架构特定的目标目录
         String arch = com.app.ralaunch.utils.RuntimePreference.getEffectiveArchitecture(requireContext());
         String dirName = "dotnet-" + arch;
         File outputDir = new File(requireActivity().getFilesDir(), dirName);
-        
-        Log.d(TAG, "Target directory: " + outputDir.getAbsolutePath());
-        
+
         // 在开始解压前先清理目标目录
         if (outputDir.exists()) {
-            Log.d(TAG, "Cleaning existing directory: " + dirName);
+
             deleteDirectory(outputDir);
         }
         outputDir.mkdirs();
@@ -347,7 +338,7 @@ public class InitializationFragment extends Fragment {
                 // 标记为已安装
                 updateComponentStatus(i, 100, "解压完成");
                 component.setInstalled(true);
-                Log.d(TAG, "Component extraction successful: " + component.getName());
+
             } else {
                 throw new Exception("解压 " + component.getName() + " 失败");
             }
@@ -358,9 +349,7 @@ public class InitializationFragment extends Fragment {
      * 解压单个组件
      */
     private boolean extractComponent(ComponentItem component, int componentIndex) {
-        Log.d(TAG, "Extracting component: " + component.getName() + 
-                   " from file: " + component.getFileName());
-        
+
         AssetManager assetManager = requireActivity().getAssets();
         File tempZipFile = null;
         
@@ -410,7 +399,7 @@ public class InitializationFragment extends Fragment {
         try (InputStream inputStream = assetManager.open(assetFileName)) {
             java.nio.file.Files.copy(inputStream, targetFile.toPath(),
                 java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            Log.d(TAG, "Copied asset file to " + targetFile.getAbsolutePath());
+
         }
     }
     
@@ -424,7 +413,7 @@ public class InitializationFragment extends Fragment {
         
         if (!success) {
             // 回退到标准ZipInputStream
-            Log.d(TAG, "Falling back to ZipInputStream extraction");
+
             success = extractWithZipInputStream(zipFile, targetDir, component, componentIndex);
         }
         
@@ -441,16 +430,14 @@ public class InitializationFragment extends Fragment {
              IInArchive inArchive = SevenZip.openInArchive(null, inStream)) {
 
             int totalItems = inArchive.getNumberOfItems();
-            Log.d(TAG, "Archive contains " + totalItems + " items");
-            
+
             // 创建解压回调
             ExtractCallback callback = new ExtractCallback(
                 inArchive, targetDir, component, componentIndex, totalItems);
             
             // 执行解压
             inArchive.extract(null, false, callback);
-            
-            Log.d(TAG, "SevenZipJBinding extraction completed successfully");
+
             return true;
             
         } catch (Exception e) {
@@ -494,7 +481,7 @@ public class InitializationFragment extends Fragment {
                     if (topLevel.startsWith("dotnet")) {
                         filePath = filePath.substring(slashIndex + 1);
                         if (!filePath.isEmpty()) {
-                            Log.d(TAG, "Stripped dotnet prefix, new path: " + filePath);
+
                         }
                     }
                 }
@@ -623,7 +610,7 @@ public class InitializationFragment extends Fragment {
                     if (topLevel.startsWith("dotnet")) {
                         fileName = fileName.substring(slashIndex + 1);
                         if (!fileName.isEmpty()) {
-                            Log.d(TAG, "Stripped dotnet prefix, new path: " + fileName);
+
                         }
                     }
                 }
@@ -714,9 +701,7 @@ public class InitializationFragment extends Fragment {
             // 更新总体进度
             int overallProgress = calculateOverallProgress();
             updateOverallProgress(overallProgress, status);
-            
-            Log.d(TAG, String.format("Component [%d] progress: %d%%, Overall: %d%%", 
-                   componentIndex, progress, overallProgress));
+
         });
     }
     
@@ -759,8 +744,7 @@ public class InitializationFragment extends Fragment {
      * 完成初始化
      */
     private void completeInitialization() {
-        Log.d(TAG, "Initialization completed");
-        
+
         SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
         prefs.edit().putBoolean(KEY_COMPONENTS_EXTRACTED, true).apply();
         
@@ -773,7 +757,7 @@ public class InitializationFragment extends Fragment {
             if (!versions.isEmpty()) {
                 String versionInfo = "已安装 .NET 运行时版本：" + String.join(", ", versions);
                 Toast.makeText(requireActivity(), versionInfo, Toast.LENGTH_LONG).show();
-                Log.d(TAG, versionInfo);
+
             } else {
                 Toast.makeText(requireActivity(), ".NET 环境安装成功！", Toast.LENGTH_SHORT).show();
             }

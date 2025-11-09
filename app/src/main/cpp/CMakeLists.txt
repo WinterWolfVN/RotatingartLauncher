@@ -45,6 +45,10 @@ add_subdirectory(${FAUDIO_SOURCE_DIR})
 # 添加 Theorafile 子项目
 add_subdirectory(${THEORAFILE_SOURCE_DIR})
 
+# 添加 netcorehost 子项目（.NET Core Hosting）
+set(NETCOREHOST_SOURCE_DIR ${CMAKE_SOURCE_DIR}/netcorehost)
+add_subdirectory(${NETCOREHOST_SOURCE_DIR})
+
 # 添加 FNA3D 子项目
 # 配置 FNA3D 使用 SDL2 而不是 SDL3
 set(BUILD_SDL3 OFF CACHE BOOL "Build against SDL 2.0" FORCE)
@@ -65,12 +69,10 @@ set(CMAKE_INSTALL_PREFIX ${_OLD_CMAKE_INSTALL_PREFIX})
 # 添加你的主程序源码
 add_library(${CMAKE_PROJECT_NAME} SHARED
         sdl_entry.c
-        dotnet_params.c
-        dotnet_framework.c
-        dotnet_paths.c
-        dotnet_trust.c
-        dotnet_host.c
+        netcorehost_launcher.cpp
+        framework_utils.cpp
         jni_bridge.c
+        error_handler.c
 )
 
 # 链接库
@@ -91,6 +93,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         SDL2        # SDL2使用OpenGL后端
         dl          # 用于dlopen/dlsym
         FNA3D       # FNA3D图形库
+        netcorehost # .NET Core Hosting库
        # lgogdownloader
 )
 
@@ -100,10 +103,16 @@ target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
         -Wl,--export-dynamic    # 导出所有符号到动态符号表
 )
 
-# 包含 SDL、gl4es 和 FNA3D 头文件
+# 包含 SDL、gl4es、FNA3D 和 netcorehost 头文件
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${SDL_SOURCE_DIR}/include
         ${GL4ES_SOURCE_DIR}/include
         ${FNA3D_SOURCE_DIR}/include
+        ${NETCOREHOST_SOURCE_DIR}/include
         ${LGOG_SOURCE_DIR}/include
 )
+
+# 安装共享库到APK的lib目录
+# 这确保所有动态链接的so文件都被打包到APK中
+install(TARGETS ${CMAKE_PROJECT_NAME} SDL2 FAudio-shared FNA3D DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS mojoshader theorafile DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -125,14 +125,12 @@ public class BootstrapperManifest {
     }
 
     public static @Nullable BootstrapperManifest FromZip(String pathToZip) {
-        Log.i(TAG, "加载 Bootstrapper 压缩包, pathToZip: " + pathToZip);
 
         File file = new File(pathToZip);
         return BootstrapperManifest.FromZip(file);
     }
 
     public static @Nullable BootstrapperManifest FromZip(File file) {
-        Log.i(TAG, "加载 Bootstrapper 压缩包, file: " + file.getAbsolutePath());
         try (ZipFile zip = new ZipFile(file)) {
             @Nullable var manifestEntry = zip.getEntry("manifest.json");
             if (manifestEntry == null) {
@@ -150,7 +148,6 @@ public class BootstrapperManifest {
     }
 
     public static @Nullable BootstrapperManifest FromJson(String pathToJson) {
-        Log.i(TAG, "加载 manifest.json, pathToJson: " + pathToJson);
 
         if (!new File(pathToJson).exists()) {
             Log.w(TAG, "路径不存在 manifest.json 文件");

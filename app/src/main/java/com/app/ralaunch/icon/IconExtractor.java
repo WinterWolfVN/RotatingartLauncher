@@ -70,9 +70,6 @@ public class IconExtractor {
                 return false;
             }
             
-            Log.i(TAG, String.format("Selected icon: %dx%d, %d bits", 
-                bestEntry.width, bestEntry.height, bestEntry.bitCount));
-            
             // 查找并读取图标数据
             byte[] iconData = findIconData(reader, resourceSection, rootDir, bestEntry.id);
             if (iconData == null) {
@@ -80,15 +77,13 @@ public class IconExtractor {
                 return false;
             }
             
-            Log.i(TAG, String.format("Icon data size: %d bytes", iconData.length));
-            
             // 打印前32字节用于调试
             if (iconData.length >= 32) {
                 StringBuilder hex = new StringBuilder();
                 for (int i = 0; i < Math.min(32, iconData.length); i++) {
                     hex.append(String.format("%02X ", iconData[i] & 0xFF));
                 }
-                Log.d(TAG, "First 32 bytes: " + hex.toString());
+
             }
             
             // 检测图标格式并解码
@@ -132,22 +127,15 @@ public class IconExtractor {
         IconGroupEntry best = iconGroup.entries[0];
         int bestScore = calculateIconScore(best);
         
-        Log.i(TAG, String.format("Available icons in group: %d", iconGroup.entries.length));
         for (int i = 0; i < iconGroup.entries.length; i++) {
             IconGroupEntry entry = iconGroup.entries[i];
             int score = calculateIconScore(entry);
-            
-            Log.d(TAG, String.format("  Icon[%d]: %dx%d, %d bits, score=%d", 
-                i, entry.width, entry.height, entry.bitCount, score));
-            
+
             if (score > bestScore) {
                 best = entry;
                 bestScore = score;
             }
         }
-        
-        Log.i(TAG, String.format("Best icon selected: %dx%d, %d bits (score=%d)", 
-            best.width, best.height, best.bitCount, bestScore));
         
         return best;
     }
@@ -278,13 +266,11 @@ public class IconExtractor {
             (iconData[2] & 0xFF) == 0x4E && 
             (iconData[3] & 0xFF) == 0x47) {
             
-            Log.i(TAG, "Detected PNG format icon");
             // PNG 格式，使用 BitmapFactory 解码
             return android.graphics.BitmapFactory.decodeByteArray(iconData, 0, iconData.length);
         }
         
         // BMP 格式（BITMAPINFOHEADER 开头应该是 0x28 = 40）
-        Log.i(TAG, "Attempting BMP format decoding");
         return BmpDecoder.decodeBmpIcon(iconData);
     }
     
@@ -357,4 +343,3 @@ public class IconExtractor {
         int id;
     }
 }
-

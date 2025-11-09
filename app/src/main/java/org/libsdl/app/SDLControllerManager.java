@@ -15,7 +15,6 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
-
 public class SDLControllerManager
 {
 
@@ -105,13 +104,13 @@ public class SDLControllerManager
         /* This is called for every button press, so let's not spam the logs */
         /*
         if ((sources & InputDevice.SOURCE_CLASS_JOYSTICK) != 0) {
-            Log.v(TAG, "Input device " + device.getName() + " has class joystick.");
+
         }
         if ((sources & InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD) {
-            Log.v(TAG, "Input device " + device.getName() + " is a dpad.");
+
         }
         if ((sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
-            Log.v(TAG, "Input device " + device.getName() + " is a gamepad.");
+
         }
         */
 
@@ -176,10 +175,8 @@ class SDLJoystickHandler_API16 extends SDLJoystickHandler {
             // This sorts the axes in the above order, which tends to be correct
             // for Xbox-ish game pads that have the right stick on RX/RY and the
             // triggers on Z/RZ.
-            //
             // Gamepads that don't have AXIS_Z/AXIS_RZ but use
             // AXIS_LTRIGGER/AXIS_RTRIGGER are unaffected by this.
-            //
             // References:
             // - https://developer.android.com/develop/ui/views/touch-and-input/game-controllers/controller-input
             // - https://www.kernel.org/doc/html/latest/input/gamepad.html
@@ -475,7 +472,7 @@ class SDLHapticHandler_API26 extends SDLHapticHandler {
     public void run(int device_id, float intensity, int length) {
         SDLHaptic haptic = getHaptic(device_id);
         if (haptic != null) {
-            Log.d("SDL", "Rtest: Vibe with intensity " + intensity + " for " + length);
+
             if (intensity == 0.0f) {
                 stop(device_id);
                 return;

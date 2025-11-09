@@ -160,7 +160,6 @@ public class PerformanceMonitor {
                 if (file.exists() && file.canRead()) {
                     mGpuPath = path;
                     mGpuSupported = true;
-                    Log.i(TAG, "GPU monitoring supported, using: " + path);
                     return;
                 }
             } catch (Exception e) {
@@ -213,7 +212,6 @@ public class PerformanceMonitor {
             }
         });
         
-        Log.i(TAG, "Performance monitoring started (interval: " + updateIntervalMs + "ms)");
     }
     
     /**
@@ -225,7 +223,6 @@ public class PerformanceMonitor {
         if (mFrameCallback != null) {
             Choreographer.getInstance().removeFrameCallback(mFrameCallback);
         }
-        Log.i(TAG, "Performance monitoring stopped");
     }
     
     /**
@@ -433,7 +430,6 @@ public class PerformanceMonitor {
         mGcCount = 0;
         mPeakMemory = 0;
         mMemoryWarningCount = 0;
-        Log.i(TAG, "Performance stats reset");
     }
     
     /**
@@ -540,4 +536,3 @@ public class PerformanceMonitor {
         }
     }
 }
-

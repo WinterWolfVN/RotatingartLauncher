@@ -78,8 +78,6 @@ public class GameInfoParser {
                     return null;
                 }
 
-                Log.d(TAG, "Found offset(lines): " + info.offset + ", filesize: " + info.filesize);
-
                 // 2. 创建临时目录（使用应用程序cache目录）
                 File tempDir = new File(RaLaunchApplication.getAppContext().getCacheDir(),
                     "temp_extract_" + Thread.currentThread().getId());
@@ -97,12 +95,9 @@ public class GameInfoParser {
                         byteOffset += line.getBytes(StandardCharsets.UTF_8).length + 1;
                     }
                 }
-                
-                Log.d(TAG, "Calculated byte offset: " + byteOffset);
-                
+
                 // 4. 尝试从mojosetup tar.gz中读取gameinfo
-                Log.d(TAG, "First, try reading gameinfo from mojosetup tar.gz at offset: " + byteOffset);
-                
+
                 GameInfo gameInfo = null;
                 
                 try (FileInputStream mojoStream = new FileInputStream(shFile)) {
@@ -113,9 +108,7 @@ public class GameInfoParser {
                         if (s <= 0) break;
                         skipped += s;
                     }
-                    
-                    Log.d(TAG, "Reading mojosetup tar.gz from position: " + skipped);
-                    
+
                     // 创建限制流读取mojosetup
                     LimitedInputStream mojoLimitedStream = new LimitedInputStream(mojoStream, info.filesize);
                     
@@ -125,16 +118,14 @@ public class GameInfoParser {
                 
                 // 如果在mojosetup中找到了，直接返回
                 if (gameInfo != null) {
-                    Log.d(TAG, "Found gameinfo in mojosetup tar.gz");
+
                     return gameInfo;
                 }
                 
                 // 5. 如果mojosetup中没有，尝试从游戏数据ZIP中读取
-                Log.d(TAG, "gameinfo not in mojosetup, trying game data ZIP");
-                
+
                 long gameDataOffset = byteOffset + info.filesize;
-                Log.d(TAG, "Game data offset: " + gameDataOffset);
-                
+
                 // 提取游戏数据ZIP到临时文件（使用唯一文件名）
                 File tempZipFile = new File(tempDir, "game_data_" + Thread.currentThread().getId() + ".zip");
                 try (FileInputStream gameDataStream = new FileInputStream(shFile);
@@ -147,9 +138,7 @@ public class GameInfoParser {
                         if (s <= 0) break;
                         skipped += s;
                     }
-                    
-                    Log.d(TAG, "Extracting game data ZIP from position: " + skipped);
-                    
+
                     // 复制游戏数据ZIP到临时文件
                     byte[] buffer = new byte[8192];
                     long gameDataSize = shFile.length() - gameDataOffset;
@@ -162,8 +151,7 @@ public class GameInfoParser {
                         tempZipOut.write(buffer, 0, read);
                         copied += read;
                     }
-                    
-                    Log.d(TAG, "Extracted " + copied + " bytes to temp ZIP file");
+
                 }
                 
                 // 直接从临时ZIP文件读取gameinfo（硬编码路径）
@@ -221,8 +209,7 @@ public class GameInfoParser {
         
         try (GZIPInputStream gzis = new GZIPInputStream(inputStream);
              TarArchiveInputStream tais = new TarArchiveInputStream(gzis)) {
-            
-            Log.d(TAG, "Reading tar.gz format...");
+
             int entryCount = 0;
             int logCount = 0;
             
@@ -233,36 +220,35 @@ public class GameInfoParser {
                 
                 // 只打印前10个条目
                 if (logCount < 10) {
-                    Log.d(TAG, "  Tar Entry #" + entryCount + ": " + entryName);
+
                     logCount++;
                 }
                 
                 // 查找gameinfo文件
                 if (gameinfoFile == null && entryName.endsWith("gameinfo")) {
-                    Log.d(TAG, "*** Found gameinfo in tar.gz at entry #" + entryCount + ": " + entryName);
+
                     gameinfoFile = extractGameinfoFromTar(tais, entry, outputDir);
                 }
                 
                 // 查找icon文件
                 if (iconPath == null && entryName.endsWith("icon.png") && entryName.contains("support")) {
-                    Log.d(TAG, "*** Found icon in tar.gz at entry #" + entryCount + ": " + entryName);
+
                     iconPath = extractIconFromTar(tais, entry, outputDir);
                 }
                 
                 // 如果都找到了就退出
                 if (gameinfoFile != null && iconPath != null) {
-                    Log.d(TAG, "Found both files in tar.gz, stopping scan at entry #" + entryCount);
+
                     break;
                 }
             }
-            
-            Log.d(TAG, "Total tar entries scanned: " + entryCount);
+
             if (gameinfoFile == null) {
-                Log.d(TAG, "gameinfo not found in tar.gz");
+
             }
             
         } catch (IOException e) {
-            Log.d(TAG, "Failed to read as tar.gz: " + e.getMessage());
+
             return null;
         }
         
@@ -288,21 +274,19 @@ public class GameInfoParser {
         // 硬编码的文件路径
         final String GAMEINFO_PATH = "data/noarch/gameinfo";
         final String ICON_PATH = "data/noarch/support/icon.png";
-        
-        Log.d(TAG, "Reading ZIP file directly with hardcoded paths");
-        
+
         try (ZipFile zf = new ZipFile(zipFile)) {
             // 直接获取gameinfo条目
             ZipEntry gameinfoEntry = zf.getEntry(GAMEINFO_PATH);
             if (gameinfoEntry != null) {
-                Log.d(TAG, "*** Found gameinfo at hardcoded path: " + GAMEINFO_PATH);
+
                 gameinfoFile = new File(outputDir, "gameinfo");
                 
                 try (java.io.InputStream is = zf.getInputStream(gameinfoEntry);
                      java.io.FileOutputStream fos = new java.io.FileOutputStream(gameinfoFile)) {
                     StreamUtils.transferTo(is, fos);
                 }
-                Log.d(TAG, "Gameinfo extracted to: " + gameinfoFile.getAbsolutePath());
+
             } else {
                 Log.w(TAG, "gameinfo not found at path: " + GAMEINFO_PATH);
             }
@@ -310,7 +294,7 @@ public class GameInfoParser {
             // 直接获取icon条目
             ZipEntry iconEntry = zf.getEntry(ICON_PATH);
             if (iconEntry != null) {
-                Log.d(TAG, "*** Found icon at hardcoded path: " + ICON_PATH);
+
                 File iconFile = new File(outputDir, "icon.png");
                 
                 try (java.io.InputStream is = zf.getInputStream(iconEntry);
@@ -318,7 +302,7 @@ public class GameInfoParser {
                     StreamUtils.transferTo(is, fos);
                 }
                 iconPath = iconFile.getAbsolutePath();
-                Log.d(TAG, "Icon extracted to: " + iconPath);
+
             } else {
                 Log.w(TAG, "icon not found at path: " + ICON_PATH);
             }
@@ -347,7 +331,7 @@ public class GameInfoParser {
         
         // 先尝试ZIP格式
         try (ZipInputStream zis = new ZipInputStream(inputStream)) {
-            Log.d(TAG, "Trying to read as ZIP format...");
+
             int entryCount = 0;
             int logCount = 0;
             
@@ -358,41 +342,40 @@ public class GameInfoParser {
                 
                 // 只打印前10个条目，避免日志过多导致卡顿
                 if (logCount < 10) {
-                    Log.d(TAG, "  ZIP Entry #" + entryCount + ": " + entryName);
+
                     logCount++;
                 }
                 
                 // 查找gameinfo文件（可能在data/noarch/下，或者其他位置）
                 if (gameinfoFile == null && entryName.endsWith("gameinfo")) {
-                    Log.d(TAG, "*** Found gameinfo file in ZIP at entry #" + entryCount + ": " + entryName);
+
                     gameinfoFile = extractGameinfoFromZip(zis, entry, outputDir);
                 }
                 
                 // 查找icon.png文件
                 if (iconPath == null && entryName.endsWith("icon.png") && entryName.contains("support")) {
-                    Log.d(TAG, "*** Found icon file in ZIP at entry #" + entryCount + ": " + entryName);
+
                     iconPath = extractIconFromZip(zis, entry, outputDir);
                 }
                 
                 // 如果都找到了就退出
                 if (gameinfoFile != null && iconPath != null) {
-                    Log.d(TAG, "Found both files, stopping scan at entry #" + entryCount);
+
                     break;
                 }
                 
                 zis.closeEntry();
             }
-            
-            Log.d(TAG, "Total ZIP entries scanned: " + entryCount);
+
             if (gameinfoFile == null) {
                 Log.w(TAG, "gameinfo not found in ZIP after scanning " + entryCount + " entries");
                 Log.w(TAG, "This means gameinfo is NOT in the game data ZIP");
                 Log.w(TAG, "We need to extract it from a different location in the .sh file");
             } else {
-                Log.d(TAG, "Successfully found and extracted gameinfo from ZIP");
+
             }
         } catch (IOException e) {
-            Log.d(TAG, "Not a ZIP format, trying tar.gz: " + e.getMessage());
+
             // 如果ZIP失败，这个异常是预期的，不需要处理
             // tar.gz的尝试在下面的代码中
         }
@@ -420,7 +403,7 @@ public class GameInfoParser {
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(gameinfoFile)) {
                 StreamUtils.transferTo(zis, fos);
             }
-            Log.d(TAG, "Gameinfo extracted from ZIP to: " + gameinfoFile.getAbsolutePath());
+
             return gameinfoFile;
         } catch (IOException e) {
             Log.e(TAG, "Failed to extract gameinfo from ZIP", e);
@@ -437,7 +420,7 @@ public class GameInfoParser {
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(iconFile)) {
                 StreamUtils.transferTo(zis, fos);
             }
-            Log.d(TAG, "Icon extracted from ZIP to: " + iconFile.getAbsolutePath());
+
             return iconFile.getAbsolutePath();
         } catch (IOException e) {
             Log.e(TAG, "Failed to extract icon from ZIP", e);
@@ -461,7 +444,7 @@ public class GameInfoParser {
                     remaining -= read;
                 }
             }
-            Log.d(TAG, "Gameinfo extracted to: " + gameinfoFile.getAbsolutePath());
+
             return gameinfoFile;
         } catch (IOException e) {
             Log.e(TAG, "Failed to extract gameinfo", e);
@@ -484,17 +467,16 @@ public class GameInfoParser {
             TarArchiveEntry entry;
             while ((entry = tais.getNextTarEntry()) != null) {
                 String entryName = entry.getName();
-                Log.d(TAG, "Found tar entry: " + entryName);
-                
+
                 // 查找data/noarch/gameinfo文件
                 if (gameInfo == null && (entryName.contains("data/noarch/gameinfo") || entryName.endsWith("gameinfo"))) {
-                    Log.d(TAG, "Found gameinfo file: " + entryName);
+
                     gameInfo = parseGameInfo(tais);
                 }
                 
                 // 查找data/noarch/support/icon.png文件
                 if (iconPath == null && (entryName.contains("data/noarch/support/icon.png") || entryName.endsWith("support/icon.png"))) {
-                    Log.d(TAG, "Found icon file: " + entryName);
+
                     iconPath = extractIconFromTar(tais, entry, outputDir);
                 }
                 
@@ -531,7 +513,7 @@ public class GameInfoParser {
                     remaining -= read;
                 }
             }
-            Log.d(TAG, "Icon extracted to: " + iconFile.getAbsolutePath());
+
             return iconFile.getAbsolutePath();
         } catch (IOException e) {
             Log.e(TAG, "Failed to extract icon", e);
@@ -554,9 +536,7 @@ public class GameInfoParser {
                 lineNum++;
                 line = line.trim();
                 if (line.isEmpty()) continue;
-                
-                Log.d(TAG, "Gameinfo line " + lineNum + ": " + line);
-                
+
                 switch (lineNum) {
                     case 1:
                         info.name = line;
@@ -581,8 +561,7 @@ public class GameInfoParser {
                         break;
                 }
             }
-            
-            Log.d(TAG, "Parsed game info from file: " + info);
+
             return info;
             
         } catch (IOException e) {
@@ -605,9 +584,7 @@ public class GameInfoParser {
             lineNum++;
             line = line.trim();
             if (line.isEmpty()) continue;
-            
-            Log.d(TAG, "Line " + lineNum + ": " + line);
-            
+
             switch (lineNum) {
                 case 1:
                     info.name = line;
@@ -632,8 +609,7 @@ public class GameInfoParser {
                     break;
             }
         }
-        
-        Log.d(TAG, "Parsed game info: " + info);
+
         return info;
     }
 
@@ -641,8 +617,7 @@ public class GameInfoParser {
      * 解析makeself头部
      */
     private static ExtractionInfo parseMakeselfHeader(String content) {
-        Log.d(TAG, "Parsing makeself header");
-        
+
         String[] lines = content.split("\n");
         long offset = 0;
         long filesize = 0;
@@ -719,4 +694,3 @@ public class GameInfoParser {
         }
     }
 }
-

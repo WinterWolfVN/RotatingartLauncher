@@ -30,17 +30,14 @@ public class Bootstrapper {
     }
 
     public int launch(Context ctx, GameItem game) {
-        Log.i(TAG, "Launching bootstrapper");
         Intent intent = new Intent(ctx, GameActivity.class);
         intent.putExtra("IS_BOOTSTRAPPER", true);
 
-        // TODO: set parameters
         ctx.startActivity(intent);
         return 0;
     }
 
     public static boolean ExtractBootstrapper(String zipFilePath, String gamePath) {
-        Log.i(TAG, "Extracting to directory: " + gamePath);
         @Nullable var manifest = BootstrapperManifest.FromZip(zipFilePath);
         if (manifest == null) {
             Log.e(TAG, "Failed to extract bootstrapper: manifest is null");
@@ -51,7 +48,6 @@ public class Bootstrapper {
                 .toAbsolutePath()
                 .toString();
 
-        Log.i(TAG, "Target extraction path: " + targetPath);
 
         // Create target directory if it doesn't exist
         File targetDir = new File(targetPath);
@@ -95,7 +91,7 @@ public class Bootstrapper {
                     try (InputStream in = zipFile.getInputStream(entry)) {
                         java.nio.file.Files.copy(in, entryDestination.toPath(), 
                             java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                        Log.d(TAG, "Extracted: " + entry.getName());
+
                     }
                 }
             }

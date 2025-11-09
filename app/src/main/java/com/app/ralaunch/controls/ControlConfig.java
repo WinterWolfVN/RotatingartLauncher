@@ -89,4 +89,3 @@ public class ControlConfig {
         return gson.toJson(this);
     }
 }
-

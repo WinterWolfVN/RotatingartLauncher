@@ -302,8 +302,7 @@ public class VirtualJoystick extends View implements ControlView {
                 mInputBridge.sendKey(mData.joystickKeys[3], true); // A (left)
                 break;
         }
-        
-        Log.d(TAG, "摇杆方向按下: " + dirName + " (dir=" + direction + ")");
+
     }
     
     /**
@@ -344,8 +343,7 @@ public class VirtualJoystick extends View implements ControlView {
                 mInputBridge.sendKey(mData.joystickKeys[3], false);
                 break;
         }
-        
-        Log.d(TAG, "摇杆方向释放: " + dirName + " (dir=" + direction + ")");
+
     }
     
     /**

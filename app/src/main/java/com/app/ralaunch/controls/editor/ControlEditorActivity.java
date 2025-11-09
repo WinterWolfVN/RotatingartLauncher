@@ -150,7 +150,6 @@ public class ControlEditorActivity extends AppCompatActivity {
             try {
                 String json = new String(java.nio.file.Files.readAllBytes(customFile.toPath()));
                 mCurrentConfig = new com.google.gson.Gson().fromJson(json, ControlConfig.class);
-                Log.i(TAG, "Loaded custom layout: " + mCurrentConfig.name);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load custom layout", e);
                 loadDefaultLayout();
@@ -164,7 +163,6 @@ public class ControlEditorActivity extends AppCompatActivity {
                 is.close();
                 String json = new String(buffer, "UTF-8");
                 mCurrentConfig = new com.google.gson.Gson().fromJson(json, ControlConfig.class);
-                Log.i(TAG, "Loaded default layout from assets: " + mCurrentConfig.name);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to load default layout from assets", e);
                 loadDefaultLayout();
@@ -185,7 +183,6 @@ public class ControlEditorActivity extends AppCompatActivity {
         joystick.y = mScreenHeight - joystick.height - 50;
         mCurrentConfig.controls.add(joystick);
         
-        Log.i(TAG, "Loaded hardcoded default layout");
     }
     
     private void displayLayout() {
@@ -219,7 +216,6 @@ public class ControlEditorActivity extends AppCompatActivity {
         // 重新创建侧边对话框（因为父布局已更改）
         mSideDialog = new SideEditDialog(this, mEditorContainer, mScreenWidth, mScreenHeight);
         
-        Log.i(TAG, "Displayed " + mCurrentConfig.controls.size() + " controls");
     }
     
     private void setupControlInteractions() {
@@ -269,7 +265,6 @@ public class ControlEditorActivity extends AppCompatActivity {
                 case MotionEvent.ACTION_UP:
                     if (!isDragging[0]) {
                         // 点击事件 - 显示侧边对话框
-                        Log.i(TAG, "Control clicked: " + data.name);
                         mSideDialog.show(data);
                     }
                     return true;
@@ -319,7 +314,6 @@ public class ControlEditorActivity extends AppCompatActivity {
             String json = new com.google.gson.Gson().toJson(mCurrentConfig);
             java.nio.file.Files.write(file.toPath(), json.getBytes());
             Toast.makeText(this, "布局已保存", Toast.LENGTH_SHORT).show();
-            Log.i(TAG, "Layout saved to: " + file.getAbsolutePath());
         } catch (Exception e) {
             Log.e(TAG, "Failed to save layout", e);
             Toast.makeText(this, "保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -327,7 +321,7 @@ public class ControlEditorActivity extends AppCompatActivity {
     }
     
     private void loadLayout() {
-        // TODO: 实现从文件选择器加载布局
+
         Toast.makeText(this, "加载功能待实现", Toast.LENGTH_SHORT).show();
     }
     

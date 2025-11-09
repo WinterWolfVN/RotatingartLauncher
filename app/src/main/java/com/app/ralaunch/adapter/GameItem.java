@@ -66,7 +66,6 @@ public class GameItem {
         this.gameBasePath = gameBasePath;
     }
 
-
     public String getGamePath() {
         return gamePath;
     }

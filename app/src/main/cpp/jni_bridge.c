@@ -7,8 +7,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include "jni_bridge.h"
-#include "dotnet_params.h"
-#include "dotnet_host.h"
 
 #define LOG_TAG "GameLauncher"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -52,7 +50,7 @@ jint Bridge_JNI_OnLoad(JavaVM* vm) {
 void Bridge_JNI_OnUnload(JavaVM* vm) {
     (void)vm;
     LOGI("JNI_OnUnload called");
-    CleanupGlobalMemory();
+    // CleanupGlobalMemory() 已移除（旧的 dotnet_host 代码）
     g_jvm = NULL;
 }
 
@@ -143,151 +141,14 @@ void Bridge_NotifyGameExit(int exitCode) {
     }
 }
 
-/**
- * @brief JNI 函数：设置启动参数（基础版本）
- * 
- * @param env JNI 环境指针
- * @param clazz Java 类引用
- * @param appPath 应用程序主程序集路径
- * @param dotnetPath .NET 运行时路径
- * 
- * 从 Java 层接收启动参数并传递给 dotnet_params 模块。
- */
-JNIEXPORT void JNICALL
-Java_com_app_ralaunch_game_GameLauncher_setLaunchParams(
-    JNIEnv *env, jclass clazz, jstring appPath, jstring dotnetPath) {
-    (void)clazz;
-    const char *app_path = (*env)->GetStringUTFChars(env, appPath, 0);
-    const char *dotnet_path = (*env)->GetStringUTFChars(env, dotnetPath, 0);
-    Params_SetLaunch(app_path, dotnet_path);
-    (*env)->ReleaseStringUTFChars(env, appPath, app_path);
-    (*env)->ReleaseStringUTFChars(env, dotnetPath, dotnet_path);
-}
-
-/**
- * @brief JNI 函数：设置启动参数（包含运行时版本）
- * 
- * @param env JNI 环境指针
- * @param clazz Java 类引用
- * @param appPath 应用程序主程序集路径
- * @param dotnetPath .NET 运行时路径
- * @param frameworkVersion 指定的框架版本（可为 NULL）
- * 
- * 从 Java 层接收完整启动参数（包含框架版本）并传递给 dotnet_params 模块。
- */
-JNIEXPORT void JNICALL
-Java_com_app_ralaunch_game_GameLauncher_setLaunchParamsWithRuntime(
-    JNIEnv *env, jclass clazz, jstring appPath, jstring dotnetPath, jstring frameworkVersion) {
-    (void)clazz;
-    const char *app_path = (*env)->GetStringUTFChars(env, appPath, 0);
-    const char *dotnet_path = (*env)->GetStringUTFChars(env, dotnetPath, 0);
-    const char *fx_ver = frameworkVersion ? (*env)->GetStringUTFChars(env, frameworkVersion, 0) : NULL;
-    Params_SetLaunchWithRuntime(app_path, dotnet_path, fx_ver);
-    (*env)->ReleaseStringUTFChars(env, appPath, app_path);
-    (*env)->ReleaseStringUTFChars(env, dotnetPath, dotnet_path);
-    if (fx_ver) (*env)->ReleaseStringUTFChars(env, frameworkVersion, fx_ver);
-}
-
-/**
- * @brief JNI 函数：设置详细日志模式
- * 
- * @param env JNI 环境指针
- * @param clazz Java 类引用
- * @param enabled 是否启用详细日志（true/false）
- * 
- * 从 Java 层接收日志设置并更新全局标志。启用后，CoreCLR 会输出详细的调试信息。
- */
-JNIEXPORT void JNICALL
-Java_com_app_ralaunch_game_GameLauncher_setVerboseLogging(
-    JNIEnv *env, jclass clazz, jboolean enabled) {
-    (void)env;
-    (void)clazz;
-    g_verboseLogging = enabled ? 1 : 0;
-    LOGI("🔧 [JNI] setVerboseLogging called: received=%d, g_verboseLogging=%d", enabled, g_verboseLogging);
-    LOGI("Verbose logging set to: %s", g_verboseLogging ? "enabled" : "disabled");
-}
-
-/**
- * @brief JNI 函数：设置 FNA 渲染器类型
- * 
- * @param env JNI 环境指针
- * @param clazz Java 类引用
- * @param renderer 渲染器类型字符串（opengl_gl4es/opengl_native/vulkan）
- * 
- * 从 Java 层接收渲染器设置并保存到全局变量。
- * FNA3D 会根据环境变量选择相应的渲染后端。
- */
-JNIEXPORT void JNICALL
-Java_com_app_ralaunch_game_GameLauncher_setRenderer(
-    JNIEnv *env, jclass clazz, jstring renderer) {
-    (void)clazz;
-    
-    // 释放旧的渲染器字符串
-    if (g_renderer) {
-        free(g_renderer);
-        g_renderer = NULL;
-    }
-    
-    // 复制新的渲染器字符串
-    if (renderer) {
-        const char* rendererStr = (*env)->GetStringUTFChars(env, renderer, NULL);
-        if (rendererStr) {
-            g_renderer = strdup(rendererStr);
-            LOGI("Renderer set to: %s", g_renderer);
-            (*env)->ReleaseStringUTFChars(env, renderer, rendererStr);
-        }
-    }
-}
-
-/**
- * @brief JNI 函数：设置Bootstrap启动参数
- * 
- * @param env JNI 环境指针
- * @param clazz Java 类引用
- * @param bootstrapDll Bootstrap程序集路径
- * @param targetGameAssembly 目标游戏程序集路径
- * @param dotnetPath .NET 运行时路径
- * 
- * 从 Java 层接收Bootstrap启动参数并传递给 dotnet_params 模块。
- * Bootstrap将通过反射加载并启动目标游戏程序集。
- */
-JNIEXPORT void JNICALL
-Java_com_app_ralaunch_game_GameLauncher_setBootstrapLaunchParams(
-    JNIEnv *env, jclass clazz, jstring bootstrapDll, jstring targetGameAssembly, jstring dotnetPath) {
-    (void)clazz;
-    
-    // 从 dotnet_host.c 中导入外部变量
-    extern char* h_appDir;
-    
-    const char* bootstrap_dll = (*env)->GetStringUTFChars(env, bootstrapDll, 0);
-    const char* target_game = (*env)->GetStringUTFChars(env, targetGameAssembly, 0);
-    const char* dotnet_path = (*env)->GetStringUTFChars(env, dotnetPath, 0);
-    
-    // 设置Bootstrap启动参数
-    Params_SetBootstrapLaunch(bootstrap_dll, target_game, dotnet_path);
-    
-    // 从目标游戏路径中提取目录（Bootstrap需要在游戏目录运行）
-    if (h_appDir) {
-        free(h_appDir);
-        h_appDir = NULL;
-    }
-    
-    if (target_game) {
-        char* target_game_copy = strdup(target_game);
-        char* last_slash = strrchr(target_game_copy, '/');
-        if (last_slash) {
-            *last_slash = '\0';
-            h_appDir = strdup(target_game_copy);
-        } else {
-            h_appDir = strdup(".");
-        }
-        free(target_game_copy);
-    }
-    
-    (*env)->ReleaseStringUTFChars(env, bootstrapDll, bootstrap_dll);
-    (*env)->ReleaseStringUTFChars(env, targetGameAssembly, target_game);
-    (*env)->ReleaseStringUTFChars(env, dotnetPath, dotnet_path);
-}
+// ======================================================================
+// 已移除的旧 JNI 函数（已在 Java 端和 C++ 端删除）：
+// - setLaunchParams
+// - setLaunchParamsWithRuntime  
+// - setVerboseLogging
+// - setRenderer
+// - setBootstrapLaunchParams
+// ======================================================================
 
 /**
  * @brief 获取Native层的真实CPU架构

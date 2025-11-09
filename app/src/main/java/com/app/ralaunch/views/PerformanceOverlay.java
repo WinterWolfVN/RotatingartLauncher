@@ -258,4 +258,3 @@ public class PerformanceOverlay extends View implements PerformanceMonitor.Perfo
         // 可以在这里添加内存泄漏的UI提示
     }
 }
-

@@ -36,5 +36,3 @@ public final class UiUtils {
         if (fallbackResId != 0) view.setImageResource(fallbackResId);
     }
 }
-
-

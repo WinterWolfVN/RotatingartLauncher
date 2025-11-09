@@ -83,7 +83,6 @@ public class ControlLayout extends FrameLayout {
             }
         }
         
-        Log.i(TAG, "Loaded " + mControls.size() + " controls");
     }
     
     /**
@@ -94,11 +93,9 @@ public class ControlLayout extends FrameLayout {
             // 尝试加载自定义布局
             java.io.File customFile = new java.io.File(getContext().getFilesDir(), "custom_layout.json");
             if (customFile.exists()) {
-                Log.i(TAG, "Loading custom layout from: " + customFile.getAbsolutePath());
                 String json = new String(java.nio.file.Files.readAllBytes(customFile.toPath()));
                 ControlConfig config = new com.google.gson.Gson().fromJson(json, ControlConfig.class);
                 loadLayout(config);
-                Log.i(TAG, "Custom layout loaded: " + config.name);
                 return;
             }
         } catch (Exception e) {
@@ -113,7 +110,6 @@ public class ControlLayout extends FrameLayout {
      * 加载默认控制布局
      */
     public void loadDefaultLayout() {
-        Log.i(TAG, "Loading default control layout for Terraria");
         
         ControlConfig config = new ControlConfig();
         config.name = "Terraria默认布局";
@@ -345,7 +341,6 @@ public class ControlLayout extends FrameLayout {
      */
     public void setModifiable(boolean modifiable) {
         mModifiable = modifiable;
-        Log.i(TAG, "Edit mode: " + (modifiable ? "enabled" : "disabled"));
         
         // 重新设置所有控件的触摸监听器
         if (mConfig != null && mConfig.controls != null) {
@@ -397,4 +392,3 @@ public class ControlLayout extends FrameLayout {
         return dp * getResources().getDisplayMetrics().density;
     }
 }
-

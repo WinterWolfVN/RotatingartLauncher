@@ -137,7 +137,7 @@ public class SettingsManager {
     public boolean getBoolean(String key, boolean defaultValue) {
         try {
             boolean value = settings.optBoolean(key, defaultValue);
-            Log.d(TAG, "getBoolean: key=" + key + ", value=" + value + ", default=" + defaultValue);
+
             return value;
         } catch (Exception e) {
             Log.e(TAG, "Error getting boolean for key: " + key, e);
@@ -166,9 +166,9 @@ public class SettingsManager {
     public void putBoolean(String key, boolean value) {
         try {
             settings.put(key, value);
-            Log.d(TAG, "putBoolean: key=" + key + ", value=" + value);
+
             saveSettings();
-            Log.d(TAG, "Settings saved to: " + settingsFile.getAbsolutePath());
+
         } catch (JSONException e) {
             Log.e(TAG, "Error setting boolean for key: " + key, e);
         }
@@ -259,4 +259,3 @@ public class SettingsManager {
         loadSettings();
     }
 }
-

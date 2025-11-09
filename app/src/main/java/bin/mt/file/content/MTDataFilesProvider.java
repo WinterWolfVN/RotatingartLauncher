@@ -124,7 +124,7 @@ public class MTDataFilesProvider extends DocumentsProvider {
     @Override // android.provider.DocumentsProvider, android.content.ContentProvider
     public final void attachInfo(Context context, ProviderInfo info) {
         super.attachInfo(context, info);
-        Log.d(TAG, "attachInfo会在onCreate之后吗？attachInfo: ");
+
         this.b_pkgName = context.getPackageName();
         this.c_dataDir = Objects.requireNonNull(context.getFilesDir().getParentFile());
         String path = c_dataDir.getPath();
@@ -375,7 +375,7 @@ public class MTDataFilesProvider extends DocumentsProvider {
 
     @Override // android.content.ContentProvider
     public final boolean onCreate() {
-        Log.d(TAG, "attachInfo会在onCreate之后吗？onCreate: ");
+
         return true;
     }
 
@@ -430,7 +430,6 @@ public class MTDataFilesProvider extends DocumentsProvider {
         ApplicationInfo appInfo = Objects.requireNonNull(getContext()).getApplicationInfo();
         //虚拟根目录的标题 从ApplicationInfo获取label
         String title = appInfo.loadLabel(getContext().getPackageManager()).toString();
-        Log.d(TAG, "queryRoots: 获取不到应用名？为什么会变成uri的最后一段"+title);
 
         MatrixCursor result = new MatrixCursor(projection != null ? projection : g_DEFAULT_ROOT_PROJECTION);
         MatrixCursor.RowBuilder row = result.newRow();

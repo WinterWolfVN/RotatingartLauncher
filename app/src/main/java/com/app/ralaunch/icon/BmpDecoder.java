@@ -48,10 +48,7 @@ public class BmpDecoder {
             
             // 图标的高度是实际高度的2倍（包含 AND mask）
             int actualHeight = height / 2;
-            
-            Log.d(TAG, String.format("BMP Info: %dx%d, %d bits, compression=%d", 
-                width, actualHeight, bitCount, compression));
-            
+
             // 只支持常见的位深度
             if (bitCount != 32 && bitCount != 24 && bitCount != 8 && bitCount != 4 && bitCount != 1) {
                 Log.e(TAG, "Unsupported bit count: " + bitCount);
@@ -241,4 +238,3 @@ public class BmpDecoder {
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
     }
 }
-

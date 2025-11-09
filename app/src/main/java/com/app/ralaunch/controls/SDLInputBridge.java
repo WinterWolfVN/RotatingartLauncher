@@ -94,10 +94,10 @@ public class SDLInputBridge implements ControlInputBridge {
             // 调用SDLActivity的静态native方法
             if (isDown) {
                 SDLActivity.onNativeKeyDown(keycode);
-                Log.d(TAG, "Key DOWN: scancode=" + scancode + " -> keycode=" + keycode);
+
             } else {
                 SDLActivity.onNativeKeyUp(keycode);
-                Log.d(TAG, "Key UP: scancode=" + scancode + " -> keycode=" + keycode);
+
             }
         } catch (Exception e) {
             Log.e(TAG, "Error sending key: " + scancode, e);
@@ -126,7 +126,7 @@ public class SDLInputBridge implements ControlInputBridge {
             int action = isDown ? ACTION_DOWN : ACTION_UP;
             // 调用SDLActivity的静态native方法，传递按钮中心坐标
             SDLActivity.onNativeMouse(sdlButton, action, x, y, false);
-            Log.d(TAG, "Mouse button " + sdlButton + " " + (isDown ? "DOWN" : "UP") + " at (" + x + ", " + y + ")");
+
         } catch (Exception e) {
             Log.e(TAG, "Error sending mouse button: " + button, e);
         }
@@ -142,4 +142,3 @@ public class SDLInputBridge implements ControlInputBridge {
         }
     }
 }
-

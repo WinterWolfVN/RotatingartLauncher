@@ -79,7 +79,7 @@ public class GameActivity extends SDLActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate: started");
+
         mainActivity = this;
 
         // 强制横屏，防止 SDL 在运行时将方向改为 FULL_SENSOR 导致旋转为竖屏
@@ -126,10 +126,6 @@ public class GameActivity extends SDLActivity {
         String bootstrapperCurrentDir = getIntent().getStringExtra("BOOTSTRAPPER_CURRENT_DIR"); // 引导程序工作目录（仅引导程序使用）
 
         if (!isBootstrapper){
-            Log.d(TAG, "启动游戏: " + gameName);
-            Log.d(TAG, "程序集路径: " + assemblyPath);
-            Log.d(TAG, "游戏本体路径: " + gameBodyPath);
-            Log.d(TAG, "ModLoader 启用: " + modLoaderEnabled);
 
             // 如有按次覆盖的运行时偏好，从 Intent 写入到 app_prefs 供本次启动解析
             if (runtimePref != null && !runtimePref.isEmpty()) {
@@ -139,11 +135,6 @@ public class GameActivity extends SDLActivity {
 
             setLaunchParams();
         } else {
-            Log.d(TAG, "启动 Bootstrapper");
-            Log.d(TAG, "游戏根目录路径: " + gameBasePath);
-            Log.d(TAG, "Bootstrapper 程序集路径: " + bootstrapperAssemblyPath);
-            Log.d(TAG, "Bootstrapper 入口点: " + bootstrapperEntryPoint);
-            Log.d(TAG, "Bootstrapper 工作目录: " + bootstrapperCurrentDir);
 
             if (gameBasePath == null || bootstrapperAssemblyPath == null || bootstrapperEntryPoint == null || bootstrapperCurrentDir == null) {
                 Log.e(TAG, "Bootstrapper 启动参数不完整");
@@ -163,7 +154,7 @@ public class GameActivity extends SDLActivity {
         // 若系统因为 SDL 的请求发生了旋转，这里立即拉回横屏
         try {
             if (newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE) {
-                Log.d(TAG, "onConfigurationChanged: force back to landscape");
+
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
             }
         } catch (Exception e) {
@@ -171,14 +162,10 @@ public class GameActivity extends SDLActivity {
         }
     }
 
-    
-
     @Override
     protected String getMainFunction() {
         return "SDL_main";
     }
-
-
 
     // 处理权限请求结果
     @Override
@@ -201,7 +188,6 @@ public class GameActivity extends SDLActivity {
     // 设置启动参数
     private void setLaunchParams() {
         try {
-            Log.d(TAG, "Setting launch parameters for SDL_main...");
 
             // 获取程序集路径和游戏本体路径
             String assemblyPath = getIntent().getStringExtra("GAME_PATH");
@@ -221,10 +207,10 @@ public class GameActivity extends SDLActivity {
                     File gameBodyDir = gameBodyFile.getParentFile();
                     String gameBodyName = gameBodyFile.getName().replace(".exe", ".dll");
                     finalAssemblyPath = new File(gameBodyDir, gameBodyName).getAbsolutePath();
-                    Log.d(TAG, "ModLoader disabled, using game body DLL: " + finalAssemblyPath);
+
                 } else {
                     finalAssemblyPath = assemblyPath;
-                    Log.d(TAG, "ModLoader enabled, using ModLoader DLL: " + finalAssemblyPath);
+
                 }
             } else {
                 finalAssemblyPath = assemblyPath;
@@ -246,18 +232,10 @@ public class GameActivity extends SDLActivity {
             int launchMode = settingsManager.getLaunchMode();
             
             int result;
-            if (launchMode == 1) {
-                // 直接启动模式
-                Log.d(TAG, "Using Direct Launch mode");
-                result = GameLauncher.launchAssemblyDirect(this, finalAssemblyPath);
-            } else {
-                // Bootstrap模式（默认）
-                Log.d(TAG, "Using Bootstrap mode to launch game");
-                result = GameLauncher.launchWithBootstrap(this, finalAssemblyPath);
-            }
+            result = GameLauncher.launchAssemblyDirect(this, finalAssemblyPath);
 
             if (result == 0) {
-                Log.d(TAG, "Launch parameters set successfully, SDL_main will handle the execution");
+
             } else {
                 Log.e(TAG, "Failed to set launch parameters: " + result);
                 runOnUiThread(() -> {
@@ -274,7 +252,6 @@ public class GameActivity extends SDLActivity {
 
     private void setBootstrapperParams(String gameBasePath, String bootstrapperAssemblyPath, String bootstrapperEntryPoint, String bootstrapperCurrentDir) {
         try {
-            Log.d(TAG, "Setting bootstrapper parameters for SDL_main...");
 
             // 验证引导程序程序集文件是否存在
             File assemblyFile = new File(bootstrapperAssemblyPath);
@@ -290,7 +267,7 @@ public class GameActivity extends SDLActivity {
             int result = GameLauncher.launchAssemblyDirect(this, bootstrapperAssemblyPath);
 
             if (result == 0) {
-                Log.d(TAG, "Bootstrapper parameters set successfully, SDL_main will handle the execution");
+
             } else {
                 Log.e(TAG, "Failed to set bootstrapper parameters: " + result);
                 runOnUiThread(() -> {
@@ -318,7 +295,7 @@ public class GameActivity extends SDLActivity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
         decorView.setSystemUiVisibility(uiOptions);
-        Log.d(TAG, "Fullscreen mode enabled");
+
     }
 
     @Override
@@ -340,7 +317,6 @@ public class GameActivity extends SDLActivity {
      */
     private void initializeVirtualControls() {
         try {
-            Log.d(TAG, "Initializing virtual controls");
 
             // 创建输入桥接
             mInputBridge = new SDLInputBridge();
@@ -354,7 +330,6 @@ public class GameActivity extends SDLActivity {
 
             // 检查是否启用性能监控
             boolean performanceEnabled = RuntimePreference.isPerformanceMonitorEnabled(this);
-            Log.d(TAG, "Performance monitor enabled: " + performanceEnabled);
 
             if (performanceEnabled) {
                 // 初始化性能监控
@@ -365,9 +340,9 @@ public class GameActivity extends SDLActivity {
 
                 // 启动监控（1秒更新间隔）
                 mPerformanceMonitor.startMonitoring(1000, mPerformanceOverlay);
-                Log.d(TAG, "Performance monitor started");
+
             } else {
-                Log.d(TAG, "Performance monitor disabled by user");
+
             }
 
             // 添加到SDL Surface上（延迟到SDL Surface创建后）
@@ -381,12 +356,11 @@ public class GameActivity extends SDLActivity {
                             ViewGroup.LayoutParams.MATCH_PARENT
                         );
                         contentView.addView(mControlLayout, params);
-                        Log.d(TAG, "Virtual controls added to layout");
 
                         // 添加性能显示层到最上层（如果已启用）
                         if (mPerformanceOverlay != null) {
                             contentView.addView(mPerformanceOverlay, params);
-                            Log.d(TAG, "Performance overlay added to layout");
+
                         }
                     }
                 } catch (Exception e) {
@@ -605,7 +579,6 @@ public class GameActivity extends SDLActivity {
         mControlLayout.setControlsVisible(true);
 
         Toast.makeText(this, R.string.editor_mode_on, Toast.LENGTH_SHORT).show();
-        Log.i(TAG, "Entered edit mode");
     }
 
     /**
@@ -644,7 +617,6 @@ public class GameActivity extends SDLActivity {
         mGameMenu.setAdapter(mGameMenuAdapter);
 
         Toast.makeText(this, R.string.editor_mode_off, Toast.LENGTH_SHORT).show();
-        Log.i(TAG, "Exited edit mode");
     }
 
     /**
@@ -715,7 +687,6 @@ public class GameActivity extends SDLActivity {
             mHasUnsavedChanges = false;
 
             Toast.makeText(this, "布局已保存", Toast.LENGTH_SHORT).show();
-            Log.i(TAG, "Layout saved to: " + file.getAbsolutePath());
         } catch (Exception e) {
             Log.e(TAG, "Failed to save layout", e);
             Toast.makeText(this, "保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -727,7 +698,7 @@ public class GameActivity extends SDLActivity {
      */
     private void loadLayout() {
         Toast.makeText(this, "加载布局功能开发中...", Toast.LENGTH_SHORT).show();
-        // TODO: 实现文件选择器加载自定义布局
+
     }
 
     /**
@@ -755,7 +726,6 @@ public class GameActivity extends SDLActivity {
         try {
             Intent intent = new Intent(this, ControlEditorActivity.class);
             startActivityForResult(intent, CONTROL_EDITOR_REQUEST_CODE);
-            Log.i(TAG, "Opening control editor");
         } catch (Exception e) {
             Log.e(TAG, "Failed to open control editor", e);
             Toast.makeText(this, "无法打开控制编辑器: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -767,7 +737,7 @@ public class GameActivity extends SDLActivity {
      */
     private void showQuickSettings() {
         Toast.makeText(this, "快速设置功能开发中...", Toast.LENGTH_SHORT).show();
-        // TODO: 实现快速设置对话框，包括分辨率、帧率等
+
     }
 
     /**
@@ -778,7 +748,6 @@ public class GameActivity extends SDLActivity {
             .setTitle(R.string.game_menu_exit_confirm)
             .setMessage(R.string.game_menu_exit_message)
             .setPositiveButton(R.string.game_menu_yes, (dialog, which) -> {
-                Log.i(TAG, "User confirmed exit");
                 finish();
             })
             .setNegativeButton(R.string.game_menu_no, null)
@@ -792,7 +761,6 @@ public class GameActivity extends SDLActivity {
             // 从控制编辑器返回，重新加载布局
             if (mControlLayout != null) {
                 mControlLayout.loadCustomOrDefaultLayout();
-                Log.i(TAG, "Control layout reloaded after editing");
             }
         }
     }
@@ -817,12 +785,11 @@ public class GameActivity extends SDLActivity {
 
     @Override
     protected void onDestroy() {
-        Log.d(TAG, "onDestroy: cleaning up");
 
         // 停止性能监控
         if (mPerformanceMonitor != null) {
             mPerformanceMonitor.stopMonitoring();
-            Log.d(TAG, "Performance monitor stopped");
+
         }
 
         super.onDestroy();
@@ -834,8 +801,6 @@ public class GameActivity extends SDLActivity {
      */
     public static void sendTextToGame(String text) {
         try {
-            Log.i(TAG, "=== 发送文本到SDL ===");
-            Log.i(TAG, "Text: " + text);
 
             // 直接调用SDLInputConnection.nativeCommitText
             // 这会触发SDL_TEXTINPUT事件，FNA会接收并转发给Terraria
@@ -846,9 +811,6 @@ public class GameActivity extends SDLActivity {
 
             // 发送文本，newCursorPosition设为1（光标移到文本末尾）
             nativeCommitText.invoke(null, text, 1);
-
-            Log.i(TAG, "✓ 文本已通过SDL_TEXTINPUT发送");
-            Log.i(TAG, "✓ 如果启用了IME，Terraria应该能接收到：" + text);
 
         } catch (Exception e) {
             Log.e(TAG, "✗ 发送文本失败", e);
@@ -879,8 +841,6 @@ public class GameActivity extends SDLActivity {
             // 释放Backspace
             onNativeKeyUp.invoke(null, SDL_SCANCODE_BACKSPACE);
 
-            Log.d(TAG, "✓ 已发送Backspace事件");
-
         } catch (Exception e) {
             Log.e(TAG, "✗ 发送Backspace失败", e);
         }
@@ -900,7 +860,6 @@ public class GameActivity extends SDLActivity {
      */
     public static void enableSDLTextInputForIME() {
         try {
-            Log.i(TAG, "=== 尝试启用SDL文本输入以支持IME ===");
 
             // 方法1：调用SDL的showTextInput方法（这是正确的方法！）
             try {
@@ -911,14 +870,12 @@ public class GameActivity extends SDLActivity {
                 // 设置整个屏幕为输入区域
                 boolean result = (Boolean) showTextInput.invoke(null, 0, 0, 1920, 1080);
                 if (result) {
-                    Log.i(TAG, "✓ 通过SDLActivity.showTextInput()启用成功！");
-                    Log.i(TAG, "✓ SDL文本输入模式已激活，FnaIme应该能接收输入了");
                     return;
                 } else {
                     Log.w(TAG, "⚠ SDLActivity.showTextInput()返回false");
                 }
             } catch (Exception e) {
-                Log.d(TAG, "showTextInput()调用失败: " + e.getMessage());
+
             }
 
             // 如果showTextInput失败，记录警告
@@ -939,7 +896,6 @@ public class GameActivity extends SDLActivity {
      */
     public static void disableSDLTextInput() {
         try {
-            Log.i(TAG, "=== 禁用SDL文本输入 ===");
 
             // 调用SDL的hideTextInput方法
             Class<?> sdlActivityClass = Class.forName("org.libsdl.app.SDLActivity");
@@ -947,15 +903,13 @@ public class GameActivity extends SDLActivity {
             hideTextInput.setAccessible(true);
             hideTextInput.invoke(null);
 
-            Log.i(TAG, "✓ SDL文本输入已禁用");
-
         } catch (Exception e) {
-            Log.d(TAG, "禁用SDL文本输入失败（这是正常的，如果SDL还没初始化）: " + e.getMessage());
+
         }
     }
 
     public static void onGameExit(int exitCode) {
-        Log.d(TAG, "onGameExit: " + exitCode);
+
         mainActivity.runOnUiThread(() -> {
             if (exitCode == 0) {
                 Toast.makeText(mainActivity, "游戏已成功运行完成", Toast.LENGTH_LONG).show();

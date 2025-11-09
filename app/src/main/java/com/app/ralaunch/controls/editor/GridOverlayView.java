@@ -78,4 +78,3 @@ public class GridOverlayView extends View {
         canvas.drawLine(0, centerY, width, centerY, mAxisPaint);
     }
 }
-

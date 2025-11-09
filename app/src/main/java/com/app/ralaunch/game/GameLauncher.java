@@ -12,7 +12,7 @@ import java.io.File;
  * 
  * <p>此类负责启动 .NET 应用程序（游戏），支持以下特性：
  * <ul>
- *   <li>多种启动模式：应用程序主机模式、直接程序集启动</li>
+ *   <li>使用 netcorehost API 直接启动程序集</li>
  *   <li>多版本运行时支持（.NET 6/7/8/9/10）</li>
  *   <li>运行时版本自动选择和手动指定</li>
  *   <li>游戏本体路径支持（用于模组加载器如 tModLoader）</li>
@@ -22,8 +22,8 @@ import java.io.File;
  * <ol>
  *   <li>Java 层设置启动参数（程序集路径、运行时路径等）</li>
  *   <li>参数通过 JNI 传递给 Native 层</li>
- *   <li>Native 层初始化 CoreCLR 运行时</li>
- *   <li>CoreCLR 加载并执行 .NET 程序集</li>
+ *   <li>Native 层使用 netcorehost 加载 hostfxr</li>
+ *   <li>hostfxr 初始化 .NET 运行时并执行程序集</li>
  * </ol>
  * 
  * @author RA Launcher Team
@@ -33,77 +33,31 @@ public class GameLauncher {
     private static final String TAG = "GameLauncher";
 
     /**
-     * 设置基础启动参数（Native 方法）
+     * 【新】netcorehost API：设置启动参数
      * 
-     * @param appPath .NET 程序集路径
-     * @param dotnetPath .NET 运行时根目录路径
-     */
-    private static native void setLaunchParams(String appPath, String dotnetPath);
-    
-    /**
-     * 设置带运行时版本的启动参数（Native 方法）
-     * 
-     * @param appPath .NET 程序集路径
-     * @param dotnetPath .NET 运行时根目录路径
-     * @param frameworkVersion 指定的框架版本（如 "8.0.1"）
-     */
-    private static native void setLaunchParamsWithRuntime(String appPath, String dotnetPath, String frameworkVersion);
-    
-    /**
-     * 设置详细日志模式（Native 方法）
-     * 
-     * @param enabled 是否启用详细日志（true = 启用，false = 禁用）
-     */
-    private static native void setVerboseLogging(boolean enabled);
-    
-    /**
-     * 设置 FNA 渲染器（Native 方法）
-     * 
-     * @param renderer 渲染器类型（opengl_gl4es/opengl_native/vulkan）
-     */
-    private static native void setRenderer(String renderer);
-    
-    /**
-     * 设置完整启动参数（Native 方法，用于 CoreCLR 直接启动）
-     * 
-     * @param appPath .NET 程序集路径
-     * @param dotnetPath .NET 运行时根目录路径
      * @param appDir 应用程序目录
-     * @param trustedAssemblies 受信程序集列表（冒号分隔）
-     * @param nativeSearchPaths 原生库搜索路径（冒号分隔）
-     * @param mainAssemblyPath 主程序集路径
+     * @param mainAssembly 主程序集名称（如 "MyGame.dll"）
+     * @param dotnetRoot .NET 运行时根目录（可为 null）
+     * @param frameworkMajor 首选框架主版本号（0 = 自动选择最高版本）
+     * @return 0 成功，负数失败
      */
-    private static native void setLaunchParamsFull(String appPath, String dotnetPath, String appDir,
-                                                  String trustedAssemblies, String nativeSearchPaths,
-                                                  String mainAssemblyPath);
+    public static native int netcorehostSetParams(
+        String appDir, 
+        String mainAssembly, 
+        String dotnetRoot, 
+        int frameworkMajor);
     
     /**
-     * 设置带游戏本体路径的启动参数（Native 方法，用于 tModLoader 等模组加载器）
+     * 【新】netcorehost API：启动应用
      * 
-     * @param appPath .NET 程序集路径
-     * @param gameBodyPath 游戏本体路径
-     * @param dotnetPath .NET 运行时根目录路径
+     * @return 应用退出码
      */
-    private static native void setLaunchParamsWithGameBody(String appPath, String gameBodyPath, String dotnetPath);
-
-    /**
-     * JNI 方法：设置Bootstrap启动参数
-     * 
-     * @param bootstrapDll Bootstrap程序集路径
-     * @param targetGameAssembly 目标游戏程序集路径
-     * @param dotnetPath .NET 运行时根目录路径
-     */
-    private static native void setBootstrapLaunchParams(String bootstrapDll, String targetGameAssembly, String dotnetPath);
+    public static native int netcorehostLaunch();
     
     /**
-     * JNI 方法：运行任意 .NET 程序集（带命令行参数）
-     * 
-     * @param assemblyPath .NET 程序集路径
-     * @param args 命令行参数数组
-     * @param dotnetPath .NET 运行时根目录路径
-     * @return 0表示成功，非0表示失败
+     * 【新】netcorehost API：清理资源
      */
-    private static native int runDotnetAssembly(String assemblyPath, String[] args, String dotnetPath);
+    public static native void netcorehostCleanup();
 
     /**
      * 使用应用程序主机模式启动 .NET 应用
@@ -120,45 +74,27 @@ public class GameLauncher {
      */
     public static int launchDotnetAppHost(Context context, String assemblyPath,String assemblyName) {
         try {
-            Log.d(TAG, "Preparing to launch app in host mode: " + assemblyPath);
+            Log.i(TAG, "=== 使用 netcorehost API 启动 ===");
             
-            // 设置详细日志模式
-            boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
-            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
-            setVerboseLogging(verboseLogging);
-            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
-            
-            // 设置渲染器
-            String renderer = RuntimePreference.getEffectiveRenderer(context);
-            setRenderer(renderer);
-            Log.d(TAG, "Renderer set to: " + renderer);
-
             // 检查传入的是否是完整路径
             File potentialAssembly = new File(assemblyPath);
             if (potentialAssembly.exists() && potentialAssembly.isFile()) {
                 // 如果传入的是文件路径，直接使用它
-                Log.d(TAG, "Using direct assembly path: " + assemblyPath);
+                Log.i(TAG, "Detected file path, launching assembly directly");
                 return launchAssemblyDirect(context, assemblyPath);
             }
 
             // 定义路径
-            File appDir = context.getFilesDir();
-            File appsDir = context.getExternalFilesDir(assemblyPath);
-            if (appsDir == null) {
-                appsDir = new File(context.getExternalFilesDir(null), assemblyPath);
+            File appDir = new File(assemblyPath);
+            if (!appDir.exists()) {
+                appDir = context.getExternalFilesDir(assemblyPath);
+                if (appDir == null) {
+                    appDir = new File(context.getExternalFilesDir(null), assemblyPath);
+                }
             }
 
-            // dotnet 运行时根目录
-            File runtimeDir = new File(appDir, "dotnet");
-            String frameworkVersion = resolvePreferredFrameworkVersion(runtimeDir, context);
-
             // 应用程序文件
-            File dllFile = new File(assemblyPath ,assemblyName + ".dll");
-
-            // 打印路径以供调试
-            Log.d(TAG, "App DLL: " + dllFile.getAbsolutePath());
-            Log.d(TAG, "Dotnet Runtime: " + runtimeDir.getAbsolutePath());
-            Log.d(TAG, "Preferred Framework: " + (frameworkVersion == null ? "<auto>" : frameworkVersion));
+            File dllFile = new File(appDir, assemblyName + ".dll");
 
             // 校验关键文件
             if (!dllFile.exists()) {
@@ -166,20 +102,35 @@ public class GameLauncher {
                 return -1;
             }
 
+            // 获取 .NET 运行时根目录
+            File runtimeDir = com.app.ralaunch.utils.RuntimeManager.getDotnetRoot(context);
             if (!runtimeDir.exists()) {
                 Log.e(TAG, "Dotnet runtime not found: " + runtimeDir.getAbsolutePath());
                 return -1;
             }
 
-            // 设置启动参数
-            Log.d(TAG, "Setting launch parameters...");
-            if (frameworkVersion != null) {
-                setLaunchParamsWithRuntime(dllFile.getAbsolutePath(), runtimeDir.getAbsolutePath(), frameworkVersion);
-            } else {
-                setLaunchParams(dllFile.getAbsolutePath(), runtimeDir.getAbsolutePath());
+            // 解析首选框架主版本号
+            int frameworkMajor = resolvePreferredFrameworkMajor(context);
+            
+            Log.i(TAG, "App Dir: " + appDir.getAbsolutePath());
+            Log.i(TAG, "Assembly: " + dllFile.getName());
+            Log.i(TAG, ".NET Root: " + runtimeDir.getAbsolutePath());
+            Log.i(TAG, "Framework Major: " + frameworkMajor + " (0=auto)");
+
+            // 使用 netcorehost API 设置启动参数
+            int result = netcorehostSetParams(
+                appDir.getAbsolutePath(),
+                dllFile.getName(),
+                runtimeDir.getAbsolutePath(),
+                frameworkMajor
+            );
+
+            if (result != 0) {
+                Log.e(TAG, "netcorehostSetParams failed: " + result);
+                return -1;
             }
 
-            Log.d(TAG, "Launch parameters set successfully");
+            Log.i(TAG, "✓ Launch parameters set successfully");
             return 0; // 返回0表示参数设置成功，实际执行在SDL_main中
 
         } catch (Exception e) {
@@ -191,34 +142,20 @@ public class GameLauncher {
     /**
      * 直接启动指定的程序集文件
      * 
-     * <p>此方法使用 CoreCLR 直接启动模式，不依赖 hostfxr。
-     * 它会构建完整的受信程序集列表（TPA）和原生库搜索路径（NSP），
-     * 并将所有参数传递给 Native 层。
+     * <p>此方法使用 netcorehost API 直接启动程序集。
+     * 通过 hostfxr 的 initialize_for_dotnet_command_line 接口启动。
      * 
-     * <p>此方法比 {@link #launchDotnetAppHost} 提供更细粒度的控制，
-     * 适用于需要自定义加载逻辑的场景。
+     * <p>适用于直接运行独立的 .NET 程序集。
      * 
      * @param context Android 上下文
      * @param assemblyPath .NET 程序集的完整路径
      * @return 0 表示参数设置成功，-1 表示失败
      * 
-     * @see com.app.ralaunch.utils.RuntimeManager#buildTrustedAssemblies
-     * @see com.app.ralaunch.utils.RuntimeManager#buildNativeSearchPaths
+     * @see #launchDotnetAppHost
      */
     public static int launchAssemblyDirect(Context context, String assemblyPath) {
         try {
-            Log.d(TAG, "Preparing to launch assembly directly: " + assemblyPath);
-            
-            // 设置详细日志模式
-            boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
-            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
-            setVerboseLogging(verboseLogging);
-            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
-            
-            // 设置渲染器
-            String renderer = RuntimePreference.getEffectiveRenderer(context);
-            setRenderer(renderer);
-            Log.d(TAG, "Renderer set to: " + renderer);
+            Log.i(TAG, "=== launchAssemblyDirect (netcorehost API) ===");
 
             File assemblyFile = new File(assemblyPath);
             if (!assemblyFile.exists()) {
@@ -226,20 +163,36 @@ public class GameLauncher {
                 return -1;
             }
 
-            // 使用全参数透传（coreclr 直启，不依赖 hostfxr）
-            java.io.File appDir = assemblyFile.getParentFile();
+            File appDir = assemblyFile.getParentFile();
+            File dotnetRoot = com.app.ralaunch.utils.RuntimeManager.getDotnetRoot(context);
+            
+            if (!dotnetRoot.exists()) {
+                Log.e(TAG, ".NET runtime not found: " + dotnetRoot);
+                return -1;
+            }
 
-            java.io.File dotnetRoot = com.app.ralaunch.utils.RuntimeManager.getDotnetRoot(context);
-            String selected = com.app.ralaunch.utils.RuntimeManager.getSelectedVersion(context);
-            if (selected == null) { Log.e(TAG, "No runtime version installed"); return -1; }
-            java.io.File runtimeVerDir = new java.io.File(com.app.ralaunch.utils.RuntimeManager.getSharedRoot(context), selected);
-            if (!runtimeVerDir.exists()) { Log.e(TAG, "Runtime version dir missing: " + runtimeVerDir); return -1; }
-            String tpa = com.app.ralaunch.utils.RuntimeManager.buildTrustedAssemblies(runtimeVerDir, appDir);
-            String nsp = com.app.ralaunch.utils.RuntimeManager.buildNativeSearchPaths(runtimeVerDir, appDir);
-            Log.d(TAG, "Using runtime version: " + selected + ", TPA size=" + tpa.length());
-            setLaunchParamsFull(assemblyFile.getAbsolutePath(), dotnetRoot.getAbsolutePath(), appDir.getAbsolutePath(), tpa, nsp, assemblyFile.getAbsolutePath());
+            // 解析首选框架主版本号
+            int frameworkMajor = resolvePreferredFrameworkMajor(context);
+            
+            Log.i(TAG, "App Dir: " + appDir.getAbsolutePath());
+            Log.i(TAG, "Assembly: " + assemblyFile.getName());
+            Log.i(TAG, ".NET Root: " + dotnetRoot.getAbsolutePath());
+            Log.i(TAG, "Framework Major: " + frameworkMajor);
 
-            Log.d(TAG, "Launch parameters set successfully");
+            // 使用 netcorehost API
+            int result = netcorehostSetParams(
+                appDir.getAbsolutePath(),
+                assemblyFile.getName(),
+                dotnetRoot.getAbsolutePath(),
+                frameworkMajor
+            );
+
+            if (result != 0) {
+                Log.e(TAG, "netcorehostSetParams failed: " + result);
+                return -1;
+            }
+
+            Log.i(TAG, "✓ Assembly launch parameters set");
             return 0;
 
         } catch (Exception e) {
@@ -248,114 +201,29 @@ public class GameLauncher {
         }
     }
     
-    /**
-     * 带游戏本体路径启动程序集
-     * 
-     * <p>此方法专为模组加载器设计（如 tModLoader），这些加载器需要同时指定：
-     * <ul>
-     *   <li>加载器程序集路径（assemblyPath）</li>
-     *   <li>游戏本体路径（gameBodyPath）</li>
-     * </ul>
-     * 
-     * <p>加载器会在运行时加载游戏本体并应用模组。
-     * 
-     * @param context Android 上下文
-     * @param assemblyPath 模组加载器程序集路径
-     * @param gameBodyPath 游戏本体路径
-     * @param assemblyName 程序集名称（不含 .dll 扩展名）
-     * @return 0 表示参数设置成功，-1 表示失败
-     * 
-     * @see #launchDotnetAppHost
-     */
-    public static int launchDotnetAppHostWithGameBody(Context context, String assemblyPath, String gameBodyPath, String assemblyName) {
-        try {
-            Log.d(TAG, "Preparing to launch app with game body: " + assemblyPath);
-            
-            // 设置详细日志模式
-            boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
-            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
-            setVerboseLogging(verboseLogging);
-            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
-            Log.d(TAG, "Game body path: " + gameBodyPath);
-
-            File assemblyFile = new File(assemblyPath);
-            if (!assemblyFile.exists()) {
-                Log.e(TAG, "Assembly file not found: " + assemblyPath);
-                return -1;
-            }
-            
-            File gameBodyFile = new File(gameBodyPath);
-            if (!gameBodyFile.exists()) {
-                Log.e(TAG, "Game body file not found: " + gameBodyPath);
-                return -1;
-            }
-
-            // dotnet 运行时根目录
-            File runtimeDir = new File(context.getFilesDir(), "dotnet");
-            String frameworkVersion = resolvePreferredFrameworkVersion(runtimeDir, context);
-
-            // 打印路径以供调试
-            Log.d(TAG, "Assembly: " + assemblyFile.getAbsolutePath());
-            Log.d(TAG, "Game Body: " + gameBodyFile.getAbsolutePath());
-            Log.d(TAG, "Dotnet Runtime: " + runtimeDir.getAbsolutePath());
-            Log.d(TAG, "Preferred Framework: " + (frameworkVersion == null ? "<auto>" : frameworkVersion));
-
-            if (!runtimeDir.exists()) {
-                Log.e(TAG, "Dotnet runtime not found: " + runtimeDir.getAbsolutePath());
-                return -1;
-            }
-
-            // 设置启动参数（包括游戏本体路径）
-            Log.d(TAG, "Setting launch parameters with game body...");
-            if (frameworkVersion != null) {
-                // 先设置包含运行时版本的参数
-                setLaunchParamsWithRuntime(assemblyFile.getAbsolutePath(), runtimeDir.getAbsolutePath(), frameworkVersion);
-            }
-            // 再设置包含 game body 的启动参数（沿用 dotnetPath）
-            setLaunchParamsWithGameBody(assemblyFile.getAbsolutePath(), gameBodyFile.getAbsolutePath(), runtimeDir.getAbsolutePath());
-
-            Log.d(TAG, "Launch parameters set successfully");
-            return 0;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error in launchDotnetAppHostWithGameBody: " + e.getMessage(), e);
-            return -1;
-        }
-    }
 
     /**
-     * 解析首选框架版本
+     * 解析首选框架主版本号（用于 netcorehost API）
      * 
      * <p>版本解析优先级：
      * <ol>
-     *   <li>RuntimeManager 选择的版本（最高优先级）</li>
+     *   <li>RuntimeManager 选择的版本（提取主版本号）</li>
      *   <li>dotnet_framework 偏好设置（net7/net8/net9/net10）</li>
-     *   <li>自动选择（返回 null，由 Native 层选择最高版本）</li>
+     *   <li>自动选择（返回 0，由 Native 层选择最高版本）</li>
      * </ol>
      * 
-     * <p>如果首选版本不存在，会回退到下一优先级。
-     * 
-     * @param runtimeDir 运行时根目录
      * @param context Android 上下文
-     * @return 框架版本号（如 "8.0.1"），null 表示自动选择
-     * 
-     * @see com.app.ralaunch.utils.RuntimeManager#getSelectedVersion
-     * @see com.app.ralaunch.utils.RuntimeManager#getLatestVersionForMajor
+     * @return 框架主版本号（如 8 表示 .NET 8），0 表示自动选择
      */
-    private static String resolvePreferredFrameworkVersion(File runtimeDir, Context context) {
+    private static int resolvePreferredFrameworkMajor(Context context) {
         try {
             // 1. 优先使用 RuntimeManager 选择的版本
             String selectedVersion = com.app.ralaunch.utils.RuntimeManager.getSelectedVersion(context);
             if (selectedVersion != null && !selectedVersion.isEmpty()) {
-                File versionDir = new File(
-                    new File(new File(runtimeDir, "shared"), "Microsoft.NETCore.App"), 
-                    selectedVersion
-                );
-                if (versionDir.exists()) {
-                    Log.d(TAG, "Using RuntimeManager selected version: " + selectedVersion);
-                    return selectedVersion;
-                } else {
-                    Log.w(TAG, "Selected version directory not found: " + versionDir);
+                int major = com.app.ralaunch.utils.RuntimeManager.getMajorVersion(selectedVersion);
+                if (major > 0) {
+                    Log.i(TAG, "Using RuntimeManager selected version: " + selectedVersion + " (major=" + major + ")");
+                    return major;
                 }
             }
 
@@ -364,174 +232,33 @@ public class GameLauncher {
             String pref = prefs.getString("dotnet_framework", "auto");
             if (pref == null) pref = "auto";
 
-            // 如果是 auto，返回 null 表示让 native 自动挑选最高版本
+            // 如果是 auto，返回 0 表示让 native 自动挑选最高版本
             if (pref.equalsIgnoreCase("auto")) {
-                Log.d(TAG, "Using auto framework version selection");
-                return null;
+                Log.i(TAG, "Using auto framework selection");
+                return 0;
             }
 
             // 解析主版本号偏好
-            int preferredMajor = -1;
+            int preferredMajor = 0;
             if (pref.equalsIgnoreCase("net6")) preferredMajor = 6;
             else if (pref.equalsIgnoreCase("net7")) preferredMajor = 7;
             else if (pref.equalsIgnoreCase("net8")) preferredMajor = 8;
             else if (pref.equalsIgnoreCase("net9")) preferredMajor = 9;
             else if (pref.equalsIgnoreCase("net10")) preferredMajor = 10;
 
-            if (preferredMajor != -1) {
-                String versionForMajor = com.app.ralaunch.utils.RuntimeManager.getLatestVersionForMajor(
-                    context, preferredMajor);
-                if (versionForMajor != null) {
-                    Log.d(TAG, "Using latest version for major " + preferredMajor + ": " + versionForMajor);
-                    return versionForMajor;
-                }
+            if (preferredMajor > 0) {
+                Log.i(TAG, "Using framework preference: net" + preferredMajor);
             }
 
-            Log.d(TAG, "No specific framework version resolved, using auto");
-            return null;
+            return preferredMajor;
 
         } catch (Exception e) {
-            Log.w(TAG, "resolvePreferredFrameworkVersion failed: " + e.getMessage(), e);
-            return null;
+            Log.w(TAG, "resolvePreferredFrameworkMajor failed: " + e.getMessage(), e);
+            return 0; // 失败时默认自动选择
         }
     }
 
-    /**
-     * 使用Bootstrap模式启动游戏
-     * 
-     * <p>Bootstrap模式通过反射加载并启动目标游戏程序集，允许在启动前执行自定义初始化逻辑。
-     * 
-     * @param context Android 上下文
-     * @param targetGameAssembly 目标游戏程序集路径（例如：tModLoader.dll）
-     * @return 0 表示参数设置成功，-1 表示失败
-     */
-    public static int launchWithBootstrap(Context context, String targetGameAssembly) {
-        try {
-            // 设置详细日志模式
-            boolean verboseLogging = RuntimePreference.isVerboseLogging(context);
-            Log.d(TAG, "📝 Read verbose logging setting from preferences: " + verboseLogging);
-            setVerboseLogging(verboseLogging);
-            Log.d(TAG, "✅ Verbose logging passed to native layer: " + (verboseLogging ? "enabled" : "disabled"));
-            
-            // 设置渲染器
-            String renderer = RuntimePreference.getEffectiveRenderer(context);
-            setRenderer(renderer);
-            Log.d(TAG, "Renderer set to: " + renderer);
-            
-            // 🐛 调试：检测设备架构
-            String deviceArch = com.app.ralaunch.utils.RuntimePreference.getDeviceArchitecture();
-            String userArch = com.app.ralaunch.utils.RuntimePreference.getArchitecture(context);
-            String effectiveArch = com.app.ralaunch.utils.RuntimePreference.getEffectiveArchitecture(context);
-            Log.d(TAG, "🔍 Architecture Detection:");
-            Log.d(TAG, "  Device Architecture: " + deviceArch);
-            Log.d(TAG, "  User Preference: " + userArch);
-            Log.d(TAG, "  Effective Architecture: " + effectiveArch);
-            
-            Log.d(TAG, "Preparing to launch with Bootstrap");
-            Log.d(TAG, "  Target Game: " + targetGameAssembly);
 
-            // 验证目标游戏文件存在性
-            File targetGameFile = new File(targetGameAssembly);
-            if (!targetGameFile.exists()) {
-                Log.e(TAG, "Target game assembly not found: " + targetGameAssembly);
-                return -1;
-            }
-
-            // 解压Bootstrap.zip到游戏目录的bootstrap文件夹
-            File gameDir = targetGameFile.getParentFile();
-            File bootstrapDir = new File(gameDir, "bootstrap");
-            
-            if (!bootstrapDir.exists()) {
-                bootstrapDir.mkdirs();
-                Log.d(TAG, "Created bootstrap directory: " + bootstrapDir.getAbsolutePath());
-            }
-
-            File bootstrapDll = new File(bootstrapDir, "Bootstrap.dll");
-            
-            // 总是重新解压Bootstrap.zip以确保使用最新版本
-            if (bootstrapDir.exists()) {
-                Log.d(TAG, "Deleting old bootstrap directory to update");
-                deleteRecursive(bootstrapDir);
-            }
-            
-            Log.d(TAG, "Extracting Bootstrap.zip to: " + bootstrapDir.getAbsolutePath());
-            
-            // 直接从assets解压Bootstrap.zip
-            try (java.io.InputStream is = context.getAssets().open("Bootstrap.zip");
-                 java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(is)) {
-                
-                java.util.zip.ZipEntry entry;
-                byte[] buffer = new byte[8192];
-                
-                while ((entry = zis.getNextEntry()) != null) {
-                    File entryFile = new File(bootstrapDir, entry.getName());
-                    
-                    if (entry.isDirectory()) {
-                        entryFile.mkdirs();
-                    } else {
-                        entryFile.getParentFile().mkdirs();
-                        
-                        try (java.io.FileOutputStream fos = new java.io.FileOutputStream(entryFile)) {
-                            int bytesRead;
-                            while ((bytesRead = zis.read(buffer)) != -1) {
-                                fos.write(buffer, 0, bytesRead);
-                            }
-                        }
-                    }
-                    zis.closeEntry();
-                }
-            }
-            
-            Log.d(TAG, "Bootstrap extracted successfully");
-
-            // 获取 .NET 运行时路径并构建 TPA/NSP
-            java.io.File dotnetRoot = com.app.ralaunch.utils.RuntimeManager.getDotnetRoot(context);
-            if (dotnetRoot == null || !dotnetRoot.exists()) {
-                Log.e(TAG, "Failed to get .NET runtime path");
-                return -1;
-            }
-
-            String selected = com.app.ralaunch.utils.RuntimeManager.getSelectedVersion(context);
-            if (selected == null) {
-                Log.e(TAG, "No runtime version installed");
-                return -1;
-            }
-
-            java.io.File runtimeVerDir = new java.io.File(com.app.ralaunch.utils.RuntimeManager.getSharedRoot(context), selected);
-            if (!runtimeVerDir.exists()) {
-                Log.e(TAG, "Runtime version dir missing: " + runtimeVerDir);
-                return -1;
-            }
-
-            // 构建游戏目录的 TPA (包含bootstrap子目录)
-            String tpa = com.app.ralaunch.utils.RuntimeManager.buildTrustedAssemblies(runtimeVerDir, gameDir);
-            String nsp = com.app.ralaunch.utils.RuntimeManager.buildNativeSearchPaths(runtimeVerDir, gameDir);
-
-            Log.d(TAG, "Using runtime version: " + selected);
-            Log.d(TAG, "TPA size: " + tpa.length() + " bytes");
-
-            // 设置完整的启动参数（包含 TPA 和 NSP）
-            setLaunchParamsFull(
-                bootstrapDll.getAbsolutePath(),  // appPath (Bootstrap.dll)
-                dotnetRoot.getAbsolutePath(),     // dotnetPath
-                gameDir.getAbsolutePath(),        // appDir (游戏目录)
-                tpa,                              // trustedAssemblies
-                nsp,                              // nativeSearchPaths
-                bootstrapDll.getAbsolutePath()    // mainAssemblyPath (Bootstrap.dll)
-            );
-            
-            // 设置Bootstrap参数（将目标游戏程序集路径传递给Native层）
-            setBootstrapLaunchParams(bootstrapDll.getAbsolutePath(), targetGameAssembly, dotnetRoot.getAbsolutePath());
-
-            Log.d(TAG, "Bootstrap launch parameters set successfully");
-            return 0;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to prepare bootstrap launch", e);
-            return -1;
-        }
-    }
-    
     /**
      * 递归删除目录及其所有内容
      */
@@ -547,52 +274,8 @@ public class GameLauncher {
         fileOrDirectory.delete();
     }
     
-    /**
-     * 运行任意 .NET 程序集（带命令行参数）
-     * 
-     * <p>此方法用于运行独立的 .NET 程序集，如 SMAPI.Installer.dll
-     * 
-     * @param context Android 上下文
-     * @param assemblyPath .NET 程序集路径
-     * @param args 命令行参数数组
-     * @return 0表示成功，非0表示失败
-     */
-    public static int runAssembly(Context context, String assemblyPath, String[] args) {
-        try {
-            Log.d(TAG, "Running .NET assembly: " + assemblyPath);
-            if (args != null && args.length > 0) {
-                Log.d(TAG, "  Arguments: " + String.join(" ", args));
-            }
-            
-            // 获取 .NET 运行时路径
-            File dotnetRoot = com.app.ralaunch.utils.RuntimeManager.getDotnetRoot(context);
-            if (dotnetRoot == null || !dotnetRoot.exists()) {
-                Log.e(TAG, "Failed to get .NET runtime path");
-                return -1;
-            }
-            
-            String selected = com.app.ralaunch.utils.RuntimeManager.getSelectedVersion(context);
-            if (selected == null) {
-                Log.e(TAG, "No runtime version installed");
-                return -1;
-            }
-            
-            String dotnetPath = dotnetRoot.getAbsolutePath() + "/" + selected;
-            Log.d(TAG, ".NET runtime path: " + dotnetPath);
-            
-            // 调用 native 方法运行程序集
-            int result = runDotnetAssembly(assemblyPath, args, dotnetPath);
-            
-            if (result == 0) {
-                Log.d(TAG, "Assembly executed successfully");
-            } else {
-                Log.e(TAG, "Assembly execution failed with code: " + result);
-            }
-            
-            return result;
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to run assembly", e);
-            return -1;
-        }
-    }
+
+
+    
+
 }

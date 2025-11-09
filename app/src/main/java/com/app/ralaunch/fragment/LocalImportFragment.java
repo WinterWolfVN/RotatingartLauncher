@@ -19,8 +19,8 @@ import com.app.ralaunch.adapter.GameItem;
 import com.app.ralaunch.game.Bootstrapper;
 import com.app.ralaunch.game.BootstrapperManifest;
 import com.app.ralaunch.utils.GameExtractor;
-import com.app.ralaunch.utils.GameInfoParser;
 import com.app.ralaunch.utils.IconExtractorHelper;
+import com.app.ralib.extractors.GogShFileExtractor;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,17 +28,18 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 
 /**
  * 本地导入Fragment
- * 
+ *
  * 处理从本地导入游戏的完整流程：
  * - 选择游戏文件和 ModLoader 文件
  * - 解压游戏压缩包
  * - 提取游戏信息
  * - 显示导入进度
  * - 处理导入错误
- * 
+ *
  * 使用 GameExtractor 执行实际的解压和导入操作
  */
 public class LocalImportFragment extends Fragment {
@@ -134,17 +135,17 @@ public class LocalImportFragment extends Fragment {
             File file = new File(gameFilePath);
             gameFileText.setText("已选择: " + file.getName());
             new Thread(() -> {
-                GameInfoParser.GameInfo gameInfo = GameInfoParser.extractGameInfo(filePath);
+                var gdzf = GogShFileExtractor.GameDataZipFile.parseFromGogShFile(Paths.get(filePath));
                 if (getActivity() != null && isAdded()) {
                     getActivity().runOnUiThread(() -> {
-                        if (gameInfo != null) {
-                            gameName = gameInfo.name;
-                            gameVersion = gameInfo.version;
-                            gameIconPath = gameInfo.iconPath;
+                        if (gdzf != null) {
+                            gameName = gdzf.id;
+                            gameVersion = gdzf.version;
+                            gameIconPath = null; // TODO: 从 gdzf 提取图标路径
                             if (getActivity() != null) {
                                 ((MainActivity) getActivity()).showToast("检测到游戏: " + gameName + " " + gameVersion);
                             }
-                            Log.d(TAG, "Game info: " + gameInfo);
+                            Log.d(TAG, "Game data zip file: " + gdzf);
                             Log.d(TAG, "Icon path: " + gameIconPath);
                         } else {
                             gameName = "未知游戏";
@@ -209,7 +210,7 @@ public class LocalImportFragment extends Fragment {
 
         // 只需要游戏文件即可导入，ModLoader 是可选的
         startImportButton.setEnabled(hasGameFile);
-        
+
         if (hasGameFile) {
             startImportButton.setAlpha(1.0f);
         } else {
@@ -242,15 +243,15 @@ public class LocalImportFragment extends Fragment {
         if (gameName == null || gameVersion == null) {
             Log.w(TAG, "Game info lost, re-parsing...");
             importStatus.setText("正在读取游戏信息...");
-            
+
             new Thread(() -> {
-                GameInfoParser.GameInfo gameInfo = GameInfoParser.extractGameInfo(gameFilePath);
+                var gdzf = GogShFileExtractor.GameDataZipFile.parseFromGogShFile(Paths.get(gameFilePath));
                 if (getActivity() != null && isAdded()) {
                     getActivity().runOnUiThread(() -> {
-                        if (gameInfo != null) {
-                            gameName = gameInfo.name;
-                            gameVersion = gameInfo.version;
-                            gameIconPath = gameInfo.iconPath;
+                        if (gdzf != null) {
+                            gameName = gdzf.id;
+                            gameVersion = gdzf.version;
+                            gameIconPath = null;
                             Log.d(TAG, "Re-parsed game info: " + gameName + " " + gameVersion);
                             Log.d(TAG, "Re-parsed icon path: " + gameIconPath);
 
@@ -268,10 +269,10 @@ public class LocalImportFragment extends Fragment {
             }).start();
             return;
         }
-        
+
         continueImport();
     }
-    
+
     private void continueImport() {
         // 创建游戏目录
         gameDir = createGameDirectory();
@@ -297,7 +298,7 @@ public class LocalImportFragment extends Fragment {
 
         // 检查是否有 ModLoader
         boolean hasModLoader = modLoaderFilePath != null && !modLoaderFilePath.isEmpty();
-        
+
         if (hasModLoader) {
             // 有 ModLoader，使用完整导入逻辑
             GameExtractor.installCompleteGame(gameFilePath, modLoaderFilePath, outputPath,
@@ -339,9 +340,9 @@ public class LocalImportFragment extends Fragment {
                                     // 如果基于zip名称没找到，尝试常见名称
                                     if (assemblyFile == null || !assemblyFile.exists()) {
                                         String[] possibleNames = {
-                                            "tModLoader.dll",
-                                            "ModLoader.dll",
-                                            "Terraria.dll"
+                                                "tModLoader.dll",
+                                                "ModLoader.dll",
+                                                "Terraria.dll"
                                         };
 
                                         for (String name : possibleNames) {
@@ -364,22 +365,22 @@ public class LocalImportFragment extends Fragment {
                                     }
 
                                     String finalGamePath = (assemblyFile != null && assemblyFile.exists())
-                                        ? assemblyFile.getAbsolutePath()
-                                        : modLoaderPath;
+                                            ? assemblyFile.getAbsolutePath()
+                                            : modLoaderPath;
 
                                     if (assemblyFile == null || !assemblyFile.exists()) {
                                         Log.w(TAG, "No valid ModLoader DLL found, using directory path: " + modLoaderPath);
                                     }
-                                
+
                                     // 🔍 检测 SMAPI（星露谷物语模组加载器）
                                     String[] smapiPaths = GameExtractor.detectAndConfigureSMAPI(requireContext(), modLoaderDir);
-                                    
+
                                     String gameBodyPath;
                                     if (smapiPaths != null) {
                                         // ✅ 检测到 SMAPI，使用检测到的路径
                                         finalGamePath = smapiPaths[0];  // SMAPI 启动器路径
                                         gameBodyPath = smapiPaths[1];   // 游戏本体路径
-                                        
+
                                         Log.d(TAG, "✅ SMAPI 已自动配置:");
                                         Log.d(TAG, "  - SMAPI 启动器: " + finalGamePath);
                                         Log.d(TAG, "  - 游戏本体: " + gameBodyPath);
@@ -399,14 +400,14 @@ public class LocalImportFragment extends Fragment {
                                     Log.d(TAG, "GameExtractor returned modLoaderPath: " + modLoaderPath);
 
                                     var newGame = new GameItem();
-                                    
+
                                     // 如果有模组加载器，提取模组加载器的信息
                                     String iconSourcePath;
                                     String displayName;
                                     if (modLoaderPath != null && !modLoaderPath.isEmpty()) {
                                         // 使用模组加载器的程序集
                                         iconSourcePath = finalGamePath;
-                                        
+
                                         // 尝试从程序集文件名提取名称
                                         File modLoaderFile = new File(finalGamePath);
                                         if (modLoaderFile.exists() && modLoaderFile.isFile()) {
@@ -416,7 +417,7 @@ public class LocalImportFragment extends Fragment {
                                         } else {
                                             displayName = gameName + " (Modded)";
                                         }
-                                        
+
                                         // 自动启用模组加载器
                                         newGame.setModLoaderEnabled(true);
                                         Log.i(TAG, "ModLoader detected, enabled automatically");
@@ -425,7 +426,7 @@ public class LocalImportFragment extends Fragment {
                                         iconSourcePath = gameBodyPath;
                                         displayName = gameName;
                                     }
-                                    
+
                                     newGame.setGameName(displayName);
                                     try {
                                         newGame.setGameBasePath(gameDir.getCanonicalPath());
@@ -435,7 +436,7 @@ public class LocalImportFragment extends Fragment {
                                     newGame.setGamePath(finalGamePath);
                                     newGame.setGameBodyPath(gameBodyPath);
                                     newGame.setEngineType(engineType);
-                                    
+
                                     // 从正确的程序集中提取图标
                                     String extractedIconPath = extractIconFromExecutable(iconSourcePath, gameIconPath);
                                     newGame.setIconPath(extractedIconPath);
@@ -487,15 +488,15 @@ public class LocalImportFragment extends Fragment {
                                     // 🔍 检测是否为 SMAPI（星露谷物语模组加载器）
                                     File currentGameDir = new File(gamePath);
                                     String[] smapiPaths = GameExtractor.detectAndConfigureSMAPI(requireContext(), currentGameDir);
-                                    
+
                                     String finalGamePath;
                                     String gameBodyPath = null;
-                                    
+
                                     if (smapiPaths != null) {
                                         // ✅ 检测到 SMAPI
                                         finalGamePath = smapiPaths[0];  // SMAPI 启动器
                                         gameBodyPath = smapiPaths[1];   // 游戏本体
-                                        
+
                                         Log.d(TAG, "✅ SMAPI 已自动配置（纯游戏导入）:");
                                         Log.d(TAG, "  - SMAPI 启动器: " + finalGamePath);
                                         Log.d(TAG, "  - 游戏本体: " + gameBodyPath);
@@ -503,17 +504,17 @@ public class LocalImportFragment extends Fragment {
                                     } else {
                                         // 纯游戏，根据 gameinfo 中的游戏名称查找程序集
                                         finalGamePath = findGameBodyPath(gamePath);
-                                        
+
                                         if (finalGamePath == null) {
                                             Log.w("LocalImportFragment", "Game executable not found, using directory path");
                                             finalGamePath = gamePath;
                                         }
-                                        
+
                                         Log.d(TAG, "Pure game path: " + finalGamePath);
                                     }
 
                                     var newGame = new GameItem();
-                                    
+
                                     // 检测是否有 SMAPI（模组加载器）
                                     String iconSourcePath;
                                     String displayName;
@@ -521,7 +522,7 @@ public class LocalImportFragment extends Fragment {
                                         // 检测到 SMAPI，使用 SMAPI 的信息
                                         iconSourcePath = finalGamePath;  // SMAPI 启动器
                                         displayName = gameName + " (SMAPI)";
-                                        
+
                                         // 自动启用模组加载器
                                         newGame.setModLoaderEnabled(true);
                                         Log.i(TAG, "SMAPI detected, enabled automatically");
@@ -530,7 +531,7 @@ public class LocalImportFragment extends Fragment {
                                         iconSourcePath = finalGamePath;
                                         displayName = gameName;
                                     }
-                                    
+
                                     newGame.setGameName(displayName);
                                     try {
                                         newGame.setGameBasePath(currentGameDir.getCanonicalPath());
@@ -538,15 +539,15 @@ public class LocalImportFragment extends Fragment {
                                         throw new RuntimeException(e);
                                     }
                                     newGame.setGamePath(finalGamePath);
-                                    
+
                                     // 如果检测到 SMAPI，设置游戏本体路径
                                     if (gameBodyPath != null) {
                                         newGame.setGameBodyPath(gameBodyPath);
                                         Log.d(TAG, "SMAPI game body path set: " + gameBodyPath);
                                     }
-                                    
+
                                     newGame.setEngineType(engineType);
-                                    
+
                                     // 从正确的程序集中提取图标
                                     String extractedIconPath = extractIconFromExecutable(iconSourcePath, gameIconPath);
                                     newGame.setIconPath(extractedIconPath);
@@ -618,10 +619,10 @@ public class LocalImportFragment extends Fragment {
 
         // 3. 尝试常见的游戏本体名称
         String[] commonNames = {
-            "Terraria",      // Terraria
-            "Stardew Valley", // Stardew Valley
-            "Game",          // 通用名称
-            gameName         // 原始游戏名称
+                "Terraria",      // Terraria
+                "Stardew Valley", // Stardew Valley
+                "Game",          // 通用名称
+                gameName         // 原始游戏名称
         };
 
         for (String name : commonNames) {
@@ -706,7 +707,7 @@ public class LocalImportFragment extends Fragment {
 
     /**
      * 高清化小图标（使用双三次插值+锐化）
-     * 
+     *
      * @param iconPath 原始图标路径
      * @return 高清化后的图标路径，失败返回null
      */
@@ -718,77 +719,77 @@ public class LocalImportFragment extends Fragment {
                 Log.e(TAG, "Failed to decode original icon");
                 return null;
             }
-            
+
             int originalWidth = original.getWidth();
             int originalHeight = original.getHeight();
-            
+
             Log.i(TAG, String.format("Original icon size: %dx%d", originalWidth, originalHeight));
-            
+
             // 目标尺寸：256x256（或原尺寸的8倍，取较小值）
             int targetSize = Math.min(256, Math.max(originalWidth, originalHeight) * 8);
-            
+
             // 使用双三次插值放大
             android.graphics.Bitmap upscaled = android.graphics.Bitmap.createScaledBitmap(
-                original, targetSize, targetSize, true);
-            
+                    original, targetSize, targetSize, true);
+
             // 应用锐化滤镜提升清晰度
             android.graphics.Bitmap sharpened = applySharpen(upscaled);
-            
+
             // 保存高清化后的图标
             String upscaledPath = iconPath.replace(".png", "_upscaled.png");
             java.io.FileOutputStream out = new java.io.FileOutputStream(upscaledPath);
             sharpened.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
             out.close();
-            
+
             // 清理
             original.recycle();
             upscaled.recycle();
             sharpened.recycle();
-            
-            Log.i(TAG, String.format("Icon upscaled from %dx%d to %dx%d", 
-                originalWidth, originalHeight, targetSize, targetSize));
-            
+
+            Log.i(TAG, String.format("Icon upscaled from %dx%d to %dx%d",
+                    originalWidth, originalHeight, targetSize, targetSize));
+
             return upscaledPath;
-            
+
         } catch (Exception e) {
             Log.e(TAG, "Failed to upscale icon: " + e.getMessage(), e);
             return null;
         }
     }
-    
+
     /**
      * 应用锐化滤镜
      */
     private android.graphics.Bitmap applySharpen(android.graphics.Bitmap src) {
         // 锐化卷积核
         float[] sharpenKernel = {
-            0, -1, 0,
-            -1, 5, -1,
-            0, -1, 0
+                0, -1, 0,
+                -1, 5, -1,
+                0, -1, 0
         };
-        
+
         android.graphics.Bitmap result = android.graphics.Bitmap.createBitmap(
-            src.getWidth(), src.getHeight(), src.getConfig());
-        
+                src.getWidth(), src.getHeight(), src.getConfig());
+
         android.renderscript.RenderScript rs = null;
         try {
             rs = android.renderscript.RenderScript.create(getContext());
             android.renderscript.Allocation input = android.renderscript.Allocation.createFromBitmap(rs, src);
             android.renderscript.Allocation output = android.renderscript.Allocation.createFromBitmap(rs, result);
-            
-            android.renderscript.ScriptIntrinsicConvolve3x3 convolution = 
-                android.renderscript.ScriptIntrinsicConvolve3x3.create(rs, android.renderscript.Element.U8_4(rs));
-            
+
+            android.renderscript.ScriptIntrinsicConvolve3x3 convolution =
+                    android.renderscript.ScriptIntrinsicConvolve3x3.create(rs, android.renderscript.Element.U8_4(rs));
+
             convolution.setInput(input);
             convolution.setCoefficients(sharpenKernel);
             convolution.forEach(output);
-            
+
             output.copyTo(result);
-            
+
             input.destroy();
             output.destroy();
             convolution.destroy();
-            
+
         } catch (Exception e) {
             Log.w(TAG, "Failed to apply sharpen filter, using original: " + e.getMessage());
             return src;
@@ -797,13 +798,13 @@ public class LocalImportFragment extends Fragment {
                 rs.destroy();
             }
         }
-        
+
         return result;
     }
-    
+
     /**
      * 尝试从游戏程序集中提取图标
-     * 
+     *
      * @param exePath 游戏可执行文件路径（.exe或.dll）
      * @param fallbackIconPath 回退的图标路径（GOG的icon.png）
      * @return 提取的图标路径，如果提取失败则返回fallbackIconPath
@@ -825,7 +826,7 @@ public class LocalImportFragment extends Fragment {
         if (exePath.toLowerCase().endsWith(".dll")) {
             File gameDir = exeFile.getParentFile();
             String baseName = exeFile.getName().substring(0, exeFile.getName().length() - 4);
-            
+
             // 尝试 .exe (Windows)
             File winExe = new File(gameDir, baseName + ".exe");
             if (winExe.exists()) {
@@ -835,22 +836,22 @@ public class LocalImportFragment extends Fragment {
                 Log.i(TAG, "No .exe file found, will try .dll (may have small icons)");
             }
         }
-        
+
         try {
             Log.i(TAG, "Attempting to extract icon from: " + tryPath);
-            
+
             // 使用IconExtractorHelper提取图标
             String extractedIconPath = IconExtractorHelper.extractGameIcon(getContext(), tryPath);
-            
+
             if (extractedIconPath != null && new File(extractedIconPath).exists()) {
                 // 检查提取的图标大小，如果太小则高清化
                 File iconFile = new File(extractedIconPath);
                 long fileSize = iconFile.length();
-                
+
                 // 如果图标文件小于5KB，可能是16x16或32x32的小图标，需要高清化
                 if (fileSize < 5 * 1024) {
                     Log.w(TAG, String.format("Extracted icon is small (%d bytes), applying upscaling...", fileSize));
-                    
+
                     // 尝试高清化图标
                     String upscaledPath = upscaleIcon(extractedIconPath);
                     if (upscaledPath != null) {
@@ -861,7 +862,7 @@ public class LocalImportFragment extends Fragment {
                         return fallbackIconPath;
                     }
                 }
-                
+
                 Log.i(TAG, "✅ Successfully extracted icon to: " + extractedIconPath);
                 return extractedIconPath;
             } else {

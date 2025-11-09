@@ -9,7 +9,7 @@
 
 #include <jni.h>
 #include <android/log.h>
-#include "dotnet_host.h"
+#include "netcorehost_launcher.h"
 #include "jni_bridge.h"
 
 // gl4es静态链接方案（SDL+OpenGL）
@@ -68,26 +68,30 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* vm, void* reserved) {
  * @return 应用程序退出码
  * 
  * 这是 .NET 应用程序的主入口点。所有启动参数已经由 Java 层
- * 通过 JNI 调用预先设置（见 GameLauncher.setLaunchParamsFull），
- * 因此这里直接调用 CoreCLR 启动函数。
+ * 通过 JNI 调用预先设置（见 GameLauncher.netcorehostSetParams），
+ * 因此这里直接调用 netcorehost 启动函数。
  * 
  * 调用流程：
  * 1. Java SDLActivity 启动
- * 2. Java 调用 GameLauncher.setLaunchParamsFull() 设置参数
+ * 2. Java 调用 GameLauncher.netcorehostSetParams() 设置参数
  * 3. SDL 调用此 SDL_main 函数
- * 4. 此函数调用 launch_with_coreclr_passthrough()
- * 5. CoreCLR 加载并执行 .NET 应用程序
+ * 4. 此函数调用 netcorehost_launch()
+ * 5. netcorehost API 加载并执行 .NET 应用程序
  */
 __attribute__((visibility("default"))) int SDL_main(int argc, char* argv[]) {
     (void)argc;
     (void)argv;
     
-    LOGI("SDL_main started (all params provided by Java layer)");
+    LOGI("SDL_main started (using netcorehost API)");
     
-    // 启动 CoreCLR 并执行 .NET 应用程序
-    int result = launch_with_coreclr_passthrough();
+    // 使用 netcorehost API 启动 .NET 应用程序
+    int result = netcorehost_launch();
     
-    LOGI("CoreCLR execution finished with result: %d", result);
+    LOGI(".NET execution finished with result: %d", result);
+    
+    // 清理资源
+    netcorehost_cleanup();
+    
     return result;
 }
 

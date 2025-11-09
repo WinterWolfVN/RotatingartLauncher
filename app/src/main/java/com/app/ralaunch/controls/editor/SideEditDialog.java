@@ -545,4 +545,3 @@ public class SideEditDialog {
         void onKeySelected(int keycode, String keyName);
     }
 }
-

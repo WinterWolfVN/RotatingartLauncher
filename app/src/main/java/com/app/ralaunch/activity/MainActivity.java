@@ -289,8 +289,7 @@ public class MainActivity extends AppCompatActivity implements
                 // 保存到配置文件
                 RaLaunchApplication.getGameDataManager().saveGameList(gameList);
                 showToast("程序集路径已保存");
-                
-                Log.d("MainActivity", "Updated game path: " + newPath);
+
             } else {
                 showToast("请先选择一个游戏");
             }
@@ -322,8 +321,7 @@ public class MainActivity extends AppCompatActivity implements
         }
         
         java.util.List<String> versions = RuntimeManager.listInstalledVersions(this);
-        Log.d("MainActivity", "setupRuntimeSelector called, found " + versions.size() + " versions");
-        
+
         if (versions.isEmpty()) {
             runtimeSelectContainer.setVisibility(View.GONE);
             Log.w("MainActivity", "Runtime selector hidden - no versions found");
@@ -331,7 +329,6 @@ public class MainActivity extends AppCompatActivity implements
         }
         
         runtimeSelectContainer.setVisibility(View.VISIBLE);
-        Log.i("MainActivity", "Runtime selector visible - " + versions.size() + " versions found");
         
         // 显示当前版本
         String selectedVersion = RuntimeManager.getSelectedVersion(this);
@@ -349,8 +346,7 @@ public class MainActivity extends AppCompatActivity implements
             // 显示运行时选择对话框
             showRuntimeSelectorDialog();
         });
-        
-        Log.d("MainActivity", "Runtime selector setup complete");
+
     }
     
     /**
@@ -382,19 +378,16 @@ public class MainActivity extends AppCompatActivity implements
             .setAutoCloseOnSelect(true)
             .setAutoCloseDelay(300)
             .setOnOptionSelectedListener(version -> {
-                Log.d("MainActivity", "Runtime version changed callback: " + version);
-                
+
                 // 保存选择
                 RuntimeManager.setSelectedVersion(this, version);
                 
                 // 更新显示的版本
                 tvCurrentRuntime.setText(".NET " + version);
-                Log.d("MainActivity", "Updated UI to show: .NET " + version);
-                
+
                 // 验证保存的版本
                 String savedVersion = RuntimeManager.getSelectedVersion(this);
-                Log.d("MainActivity", "Verified saved version: " + savedVersion);
-                
+
                 // 显示提示 - 使用 Snackbar
                 showSuccessSnackbar("已切换到 .NET " + version);
                 
@@ -509,7 +502,7 @@ public class MainActivity extends AppCompatActivity implements
 
             pageManager.showPage(localImportFragment, "local_import");
         } else if ("download".equals(sourceType)) {
-            // TODO: 跳转到在线下载页面
+
             // 这里可以创建一个专门的下载页面
             showToast("在线下载功能即将开放");
             // 暂时返回主界面
@@ -566,7 +559,7 @@ public class MainActivity extends AppCompatActivity implements
         // 检查自定义图标路径
         if (newGame.getIconPath() == null || !new File(newGame.getIconPath()).exists()) {
             newGame.setIconPath(null);
-            Log.d("MainActivity", "invalid icon path: " + newGame.getIconPath());
+
         }
 
         gameList.add(0, newGame);
@@ -675,13 +668,10 @@ public class MainActivity extends AppCompatActivity implements
                 return false;
             }
 
-            Log.d("MainActivity", "删除游戏目录: " + gameDir.getAbsolutePath());
-
             // 递归删除目录
             boolean success = deleteDirectory(gameDir);
 
             if (success) {
-                Log.i("MainActivity", "成功删除游戏目录: " + gameDir.getName());
             } else {
                 Log.w("MainActivity", "删除游戏目录失败: " + gameDir.getName());
             }
@@ -720,7 +710,7 @@ public class MainActivity extends AppCompatActivity implements
         // 删除文件或空目录
         boolean deleted = dir.delete();
         if (deleted) {
-            Log.d("MainActivity", "已删除: " + dir.getName());
+
         }
         return deleted;
     }
@@ -775,8 +765,6 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             modLoaderSwitchContainer.setVisibility(View.GONE);
         }
-
-        
 
         YoYo.with(Techniques.Tada)
                 .duration(800)

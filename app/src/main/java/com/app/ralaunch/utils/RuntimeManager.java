@@ -49,13 +49,13 @@ public final class RuntimeManager {
         
         File archSpecificDir = new File(ctx.getFilesDir(), dirName);
         if (archSpecificDir.exists()) {
-            Log.d(TAG, "Using architecture-specific dotnet root: " + dirName);
+
             return archSpecificDir;
         }
         
         // 回退到默认 dotnet 目录（向后兼容）
         File defaultDir = new File(ctx.getFilesDir(), "dotnet");
-        Log.d(TAG, "Using default dotnet root: dotnet");
+
         return defaultDir;
     }
 
@@ -72,7 +72,7 @@ public final class RuntimeManager {
         File sharedRoot = new File(dotnetRoot, "shared/Microsoft.NETCore.App");
         
         if (sharedRoot.exists()) {
-            Log.d(TAG, "Using shared root path: " + sharedRoot.getAbsolutePath());
+
         } else {
             Log.w(TAG, "Shared root not found: " + sharedRoot.getAbsolutePath());
         }
@@ -153,7 +153,7 @@ public final class RuntimeManager {
                 // 验证是否为有效的版本号格式（例如 7.0.0, 8.0.1, 9.0.0, 10.0.0）
                 if (name.matches("\\d+\\.\\d+\\.\\d+.*")) {
                     res.add(name);
-                    Log.d(TAG, "Found runtime version: " + name);
+
                 }
             }
         }
@@ -178,8 +178,7 @@ public final class RuntimeManager {
                 return v1.compareTo(v2);
             }
         });
-        
-        Log.d(TAG, "Total installed versions: " + res.size());
+
         return res;
     }
 
@@ -195,7 +194,7 @@ public final class RuntimeManager {
             // 验证选中的版本是否仍然存在
             List<String> installed = listInstalledVersions(ctx);
             if (installed.contains(v)) {
-                Log.d(TAG, "Using selected version: " + v);
+
                 return v;
             } else {
                 Log.w(TAG, "Selected version not found: " + v + ", falling back to latest");
@@ -206,7 +205,7 @@ public final class RuntimeManager {
         List<String> vers = listInstalledVersions(ctx);
         if (!vers.isEmpty()) {
             String latest = vers.get(vers.size() - 1);
-            Log.d(TAG, "Using latest version: " + latest);
+
             return latest;
         }
         
@@ -219,14 +218,14 @@ public final class RuntimeManager {
      * @param version 版本号
      */
     public static void setSelectedVersion(Context ctx, String version) {
-        Log.d(TAG, "Setting selected runtime version: " + version);
+
         boolean success = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
            .edit()
            .putString(KEY_RUNTIME_VERSION, version)
            .commit(); // 使用 commit() 确保立即保存
         
         if (success) {
-            Log.d(TAG, "Runtime version saved successfully: " + version);
+
         } else {
             Log.e(TAG, "Failed to save runtime version: " + version);
         }
@@ -264,8 +263,7 @@ public final class RuntimeManager {
                 latest = version; // 因为列表已排序，最后一个就是最新的
             }
         }
-        
-        Log.d(TAG, "Latest version for major " + majorVersion + ": " + latest);
+
         return latest;
     }
 
@@ -310,7 +308,7 @@ public final class RuntimeManager {
         File hostDir = new File(runtimeVerDir.getParentFile().getParentFile().getParentFile(), "host");
         if (hostDir.exists()) {
             appendPath(sb, hostDir.getAbsolutePath());
-            Log.d(TAG, "Added host directory to search paths: " + hostDir.getAbsolutePath());
+
         }
         
         appendPath(sb, "/system/lib64");
@@ -350,5 +348,3 @@ public final class RuntimeManager {
         sb.append(p);
     }
 }
-
-

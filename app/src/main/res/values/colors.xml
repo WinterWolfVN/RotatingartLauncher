@@ -31,6 +31,8 @@
     <!-- 渐变色（用于背景） -->
     <color name="gradient_blue_start">#DBE9FD</color>
     <color name="gradient_purple_end">#DCD9FF</color>
+    <color name="gradient_dark_start">#000000</color>
+    <color name="gradient_dark_end">#1A1A1A</color>
     
     <!-- 状态色 -->
     <color name="transparent">#00000000</color>

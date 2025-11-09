@@ -199,12 +199,11 @@ public class VirtualButton extends View implements ControlView {
         }
     }
     
-    
     private void sendInput(boolean isDown) {
         if (mData.keycode >= 0) {
             // 键盘按键
             mInputBridge.sendKey(mData.keycode, isDown);
-            Log.d(TAG, "Button " + mData.name + " send key: " + mData.keycode + " " + (isDown ? "DOWN" : "UP"));
+
         } else if (mData.keycode != ControlData.SPECIAL_KEYBOARD) {
             // 鼠标按键（排除特殊功能键）
             // 计算按钮中心点的屏幕坐标
@@ -214,7 +213,7 @@ public class VirtualButton extends View implements ControlView {
             float centerY = location[1] + getHeight() / 2.0f;
             
             mInputBridge.sendMouseButton(mData.keycode, isDown, centerX, centerY);
-            Log.d(TAG, "Button " + mData.name + " send mouse: " + mData.keycode + " " + (isDown ? "DOWN" : "UP") + " at (" + centerX + ", " + centerY + ")");
+
         }
     }
     
@@ -328,7 +327,6 @@ public class VirtualButton extends View implements ControlView {
                         // 移除EditText
                         rootView.removeView(dummyInput);
                         
-                        Log.i(TAG, "✓ 键盘已关闭，SDL文本输入已禁用");
                     } catch (Exception e) {
                         Log.e(TAG, "Failed to cleanup input", e);
                     }
@@ -350,7 +348,6 @@ public class VirtualButton extends View implements ControlView {
                             
                             if (wasKeyboardVisible && !isKeyboardVisible) {
                                 // 键盘从显示变为隐藏
-                                Log.i(TAG, "检测到键盘已隐藏，执行清理");
                                 rootView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                                 cleanup.run();
                             }
@@ -403,7 +400,6 @@ public class VirtualButton extends View implements ControlView {
                 dummyInput.setOnEditorActionListener((v, actionId, event) -> {
                     if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
                         (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER)) {
-                        Log.i(TAG, "用户按回车关闭键盘");
                         rootView.getViewTreeObserver().removeOnGlobalLayoutListener(layoutListener);
                         cleanup.run();
                         return true;
@@ -413,13 +409,10 @@ public class VirtualButton extends View implements ControlView {
                 
                 // 30秒自动关闭
                 timeoutRunnable[0] = () -> {
-                    Log.i(TAG, "键盘30秒超时，自动关闭");
                     rootView.getViewTreeObserver().removeOnGlobalLayoutListener(layoutListener);
                     cleanup.run();
                 };
                 timeoutHandler.postDelayed(timeoutRunnable[0], 30000);
-                
-                Log.i(TAG, "✓ Android IME已显示");
                 
             } catch (Exception e) {
                 Log.e(TAG, "Failed to show IME", e);
@@ -427,4 +420,3 @@ public class VirtualButton extends View implements ControlView {
         }
     }
 }
-

@@ -50,15 +50,11 @@ public class GameConfigManager {
             Type listType = new TypeToken<List<GameConfig>>(){}.getType();
             List<GameConfig> configs = gson.fromJson(json, listType);
 
-
-
             for (GameConfig config : configs) {
                 gameConfigs.put(config.getId(), config);
                 availableGames.add(config);
-                Log.d(TAG, "Loaded game config: " + config.getName());
-            }
 
-            Log.d(TAG, "Successfully loaded " + gameConfigs.size() + " game configurations");
+            }
 
         } catch (IOException e) {
             Log.e(TAG, "Failed to load game configurations: " + e.getMessage());

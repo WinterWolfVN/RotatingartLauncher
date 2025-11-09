@@ -222,5 +222,3 @@ public final class RuntimePreference {
         return SettingsManager.getInstance(context).isPerformanceMonitorEnabled();
     }
 }
-
-

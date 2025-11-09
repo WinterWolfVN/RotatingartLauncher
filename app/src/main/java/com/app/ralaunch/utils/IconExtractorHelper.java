@@ -39,9 +39,6 @@ public class IconExtractorHelper {
         String nameWithoutExt = gameFile.getName().replaceAll("\\.[^.]+$", "");
         String iconPath = gameFile.getParent() + File.separator + nameWithoutExt + "_icon.png";
         
-        Log.i(TAG, "Extracting icon from: " + gamePath);
-        Log.i(TAG, "Output path: " + iconPath);
-        
         try {
             boolean success = IconExtractor.extractIconToPng(gamePath, iconPath);
             

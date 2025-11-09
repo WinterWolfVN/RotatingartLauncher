@@ -202,4 +202,3 @@ public class ControlData {
         return joystick;
     }
 }
-

@@ -194,4 +194,3 @@ public class ControlHandleView extends View {
         return dp * getResources().getDisplayMetrics().density;
     }
 }
-

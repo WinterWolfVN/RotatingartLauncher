@@ -12,15 +12,13 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
+using MonoMod.Logs;
 // using Terraria.ModLoader.Core; // 移除硬引用，改用反射动态加载
 
 namespace AssemblyMain
 {
     public static class Program
     {
-
-
-
         private static readonly Dictionary<string, nint> assemblies = new Dictionary<string, nint>();
 
         private static readonly ConcurrentDictionary<string, Assembly> _resolvedAssemblies = new();
@@ -51,31 +49,105 @@ namespace AssemblyMain
         /// <param name="targetGamePathPtr">目标游戏程序集路径（UTF-8字符串指针）</param>
         /// <returns>0表示成功，其他值表示错误码</returns>
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-        public static int LaunchGame(IntPtr targetGamePathPtr)
+        public static int LaunchGame(IntPtr targetGamePathPtr,IntPtr targetDotnetPtr)
         {
             try
             {
                 // 步骤0: 初始化Console重定向到logcat
                 DualWriter.Initialize();
                 
-                // 步骤1: 测试IntPtr是否有效
-                if (targetGamePathPtr == IntPtr.Zero)
-                {
-                    Console.WriteLine("[Bootstrap] ERROR: targetGamePathPtr is null");
-                    return -2;
-                }
-                
-                // 步骤2: 尝试解析字符串
-                string targetGamePath = null;
+                // 步骤0.5: 配置 MonoMod 日志输出到 Console（通过 DualWriter 输出到 logcat）
                 try
                 {
-                    targetGamePath = Marshal.PtrToStringUTF8(targetGamePathPtr);
-                    Console.WriteLine($"[Bootstrap] Target game path: {targetGamePath}");
+                    // 订阅所有级别的 MonoMod 日志（DefaultFilter 包含 Error, Warning, Info, Trace，不包括 Spam）
+                    // 如果需要包含 Spam，可以使用 LogLevelFilter.DefaultFilter | LogLevelFilter.Spam
+                    DebugLog.Subscribe(LogLevelFilter.DefaultFilter,
+                        (source, time, level, message) =>
+                        {
+                            // 输出到 Console，DualWriter 会自动转发到 logcat
+                            Console.WriteLine($"[MonoMod-{level}] [{source}] {message}");
+                        });
+                    Console.WriteLine("[Bootstrap] ✓ MonoMod log subscription configured (Error/Warning/Info/Trace)");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[Bootstrap] ERROR: Failed to parse string: {ex.Message}");
-                    return -3; // 字符串解析失败
+                    Console.WriteLine($"[Bootstrap] ⚠ Failed to configure MonoMod logging: {ex.Message}");
+                    // 不返回错误，继续执行
+                }
+                
+                // 步骤1: 解析参数
+                string targetGamePath = null;
+                string targetDotnet = null;
+                
+                try
+                {
+                    if (targetGamePathPtr == IntPtr.Zero)
+                    {
+                        Console.WriteLine("[Bootstrap] ERROR: targetGamePathPtr is null");
+                        return -2;
+                    }
+                    
+                    targetGamePath = Marshal.PtrToStringUTF8(targetGamePathPtr);
+                    Console.WriteLine($"[Bootstrap] Target game path: {targetGamePath}");
+                    
+                    if (targetDotnetPtr != IntPtr.Zero)
+                    {
+                        targetDotnet = Marshal.PtrToStringUTF8(targetDotnetPtr);
+                        if (!string.IsNullOrEmpty(targetDotnet))
+                        {
+                            Console.WriteLine($"[Bootstrap] Target dotnet path: {targetDotnet}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Bootstrap] ERROR: Failed to parse arguments: {ex.Message}");
+                    return -3;
+                }
+                
+                // 步骤2: ⚠️ 配置混合运行时（CoreCLR + 静态链接的 Mono JIT）
+                // 
+                // 关键特性：
+                // - libcoreclr.so 内部静态链接了 Mono JIT (libmonosgen-2.0.a)
+                // - 暴露标准 CoreCLR API（coreclr_initialize, coreclr_create_delegate 等）
+                // - JIT 功能通过 getJit() 返回内嵌的 Mono JIT 实例
+                // - 但也暴露了 Mono.Runtime 类型，导致 MonoMod 误检测
+                //
+                Console.WriteLine("[Bootstrap] Configuring hybrid runtime detection...");
+                
+                try
+                {
+                   
+                    
+                    // 2.2 设置 JIT 路径为 libcoreclr.so（因为 Mono JIT 静态链接在其中）
+                    if (!string.IsNullOrEmpty(targetDotnet))
+                    {
+                        string coreclrPath = Path.Combine(targetDotnet, "shared", "Microsoft.NETCore.App", "8.0.0", "libcoreclr.so");
+                        if (!File.Exists(coreclrPath))
+                        {
+                            coreclrPath = Path.Combine(targetDotnet, "libcoreclr.so");
+                        }
+                        
+                        if (File.Exists(coreclrPath))
+                        {
+                            var coreBaseRuntimeType = Type.GetType("MonoMod.Core.Platforms.Runtimes.CoreBaseRuntime, MonoMod.Core");
+                            if (coreBaseRuntimeType != null)
+                            {
+                                var setJitPathMethod = coreBaseRuntimeType.GetMethod("SetManuallyLoadedJitPath",
+                                    BindingFlags.Public | BindingFlags.Static);
+                                if (setJitPathMethod != null)
+                                {
+                                    setJitPathMethod.Invoke(null, new object[] { coreclrPath });
+                                    Console.WriteLine($"[Bootstrap] ✓ Set JIT path: {coreclrPath}");
+                                    Console.WriteLine("[Bootstrap]   (contains statically-linked Mono JIT)");
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Bootstrap] ⚠ Hybrid runtime config failed: {ex.Message}");
                 }
                 
                 if (string.IsNullOrEmpty(targetGamePath))
@@ -129,15 +201,23 @@ namespace AssemblyMain
                         Console.WriteLine($"[Bootstrap] ERROR: Cannot set working directory: {ex.Message}");
                         return -73;
                     }
-                    
+
                     try
                     {
-            AssemblyLoadContext.Default.Resolving += ResolveManagedAssemblies;
-          
+
+
+
+                        AssemblyLoadContext.Default.Resolving += ResolveManagedAssemblies;
+
+
+
+
+
+
                         // 🔧 注册 UnmanagedDll 解析器（必须在加载任何程序集之前！）
                         AssemblyLoadContext.Default.ResolvingUnmanagedDll += SdlAndroidPatch.ResolveUnmanagedDll;
 
-            Thread.CurrentThread.Name = "Entry Thread";
+                        Thread.CurrentThread.Name = "Entry Thread";
 
                         // 设置FNA/MonoGame环境变量
                         Environment.SetEnvironmentVariable("FNA_WORKAROUND_WINDOW_RESIZABLE", "1");
@@ -145,12 +225,12 @@ namespace AssemblyMain
                         Environment.SetEnvironmentVariable("FNA_KEYBOARD_USE_SCANCODES", "1");
                         // 强制横屏方向（覆盖FNA默认的"LandscapeLeft LandscapeRight Portrait"）
                         Environment.SetEnvironmentVariable("SDL_ORIENTATIONS", "LandscapeLeft LandscapeRight");
-                        
+
                         // 🔧 Android OpenGL 配置：使用 gl4es 转换层
                         // gl4es 将 desktop OpenGL 调用转换为 OpenGL ES（Android 原生支持）
                         Environment.SetEnvironmentVariable("FNA3D_OPENGL_DRIVER", "gl4es");
                         Environment.SetEnvironmentVariable("LIBGL_ES", "2"); // gl4es: 使用 OpenGL ES 2.0
-                        
+
                         // 🔧 Android 文件系统重定向：避免访问受限路径 (/data/.config 等)
                         // 这些环境变量也在 native 代码中设置，这里是双重保险
                         string gameDir = Directory.GetCurrentDirectory();
@@ -159,10 +239,15 @@ namespace AssemblyMain
                         Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(gameDir, ".local", "share"));
                         Environment.SetEnvironmentVariable("XDG_CACHE_HOME", Path.Combine(gameDir, ".cache"));
                         Environment.SetEnvironmentVariable("TMPDIR", Path.Combine(gameDir, "tmp"));
-                        
+
                         Console.WriteLine("[Bootstrap] Environment configured: gl4es + file system redirection");
                         Console.WriteLine($"[Bootstrap] HOME={gameDir}");
+
+
                     }
+
+
+
                     catch (Exception ex)
                     {
                         Console.WriteLine($"[Bootstrap] ERROR: Basic environment setup failed: {ex.Message}");
@@ -226,6 +311,54 @@ namespace AssemblyMain
                         Console.WriteLine($"[Bootstrap] Loading target assembly: {Path.GetFileName(targetGamePath)}");
                         targetAssembly = Assembly.LoadFrom(targetGamePath);
                         Console.WriteLine($"[Bootstrap] Target assembly loaded successfully");
+                        
+                        // ⚠️ 关键：在应用补丁之前，强制初始化 MonoMod PlatformTriple
+                        // 这样可以提前捕获和诊断任何运行时检测问题
+                        Console.WriteLine("[Bootstrap] Initializing MonoMod PlatformTriple...");
+                        try
+                        {
+                            var platformTripleType = Type.GetType("MonoMod.Core.Platforms.PlatformTriple, MonoMod.Core");
+                            if (platformTripleType != null)
+                            {
+                                var currentProperty = platformTripleType.GetProperty("Current", BindingFlags.Public | BindingFlags.Static);
+                                if (currentProperty != null)
+                                {
+                                    var triple = currentProperty.GetValue(null);
+                                    Console.WriteLine($"[Bootstrap] ✓ PlatformTriple initialized: {triple}");
+                                }
+                            }
+                        }
+                        catch (Exception initEx)
+                        {
+                            Console.WriteLine($"[Bootstrap] ❌ ERROR: PlatformTriple initialization failed!");
+                            Console.WriteLine($"[Bootstrap]   Exception: {initEx.Message}");
+                            Console.WriteLine($"[Bootstrap]   Type: {initEx.GetType().Name}");
+                            Console.WriteLine($"[Bootstrap]   Full exception: {initEx}");
+                            
+                            // 递归输出所有内部异常
+                            Exception? current = initEx;
+                            int depth = 0;
+                            while (current != null && depth < 10)
+                            {
+                                if (current.InnerException != null)
+                                {
+                                    Console.WriteLine($"[Bootstrap]   Inner Exception [{depth}]: {current.InnerException.GetType().Name}: {current.InnerException.Message}");
+                                    Console.WriteLine($"[Bootstrap]   Inner Stack [{depth}]: {current.InnerException.StackTrace}");
+                                    current = current.InnerException;
+                                    depth++;
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+                            
+                            Console.WriteLine($"[Bootstrap]   Stack trace:");
+                            Console.WriteLine(initEx.StackTrace);
+                            
+                            // 这个错误是致命的，无法继续
+                            return -90;
+                        }
                         
                         // 🔧 立即应用补丁（MonoGame.Framework 现在已加载）
                         try
@@ -368,6 +501,7 @@ namespace AssemblyMain
                         Console.WriteLine($"[Bootstrap] Inner exception: {ex.InnerException.Message}");
                         Console.WriteLine($"[Bootstrap] Inner stack trace: {ex.InnerException.StackTrace}");
                     }
+                    throw;
                     return -8;
                 }
             }
@@ -376,253 +510,12 @@ namespace AssemblyMain
                 Console.WriteLine($"[Bootstrap] FATAL ERROR: {ex.Message}");
                 Console.WriteLine($"[Bootstrap] Stack trace: {ex.StackTrace}");
                 return -1;
+                throw;
             }
         }
 
-        private static void InitializeGameEnvironment(string targetGamePath)
-        {
-            // 验证文件存在
-            if (!File.Exists(targetGamePath))
-            {
-                throw new FileNotFoundException($"Target game assembly not found: {targetGamePath}");
-            }
-
-            string directoryName = Path.GetDirectoryName(targetGamePath);
-          
-            Console.WriteLine($"[Bootstrap] Working directory: {directoryName}");
-            Directory.SetCurrentDirectory(directoryName);
-
-
-            // 设置SavePath
-            string savePath = directoryName + "_Saves";
-            Console.WriteLine($"[Bootstrap] Save path: {savePath}");
-
-            AssemblyLoadContext.Default.Resolving += ResolveManagedAssemblies;
-
-            Thread.CurrentThread.Name = "Entry Thread";
-
-            Environment.SetEnvironmentVariable("FNA_WORKAROUND_WINDOW_RESIZABLE", "1");
-
-
-            // 读取配置文件
-            if (File.Exists("cli-argsConfig.txt"))
-
-            {
-                var configArgs = File.ReadAllLines("cli-argsConfig.txt").SelectMany(a => a.Split(" ", 2)).ToArray();
-                Console.WriteLine($"[Bootstrap] Loaded {configArgs.Length} args from cli-argsConfig.txt");
-            }
-
-            if (File.Exists("env-argsConfig.txt"))
-
-            {
-                foreach (var environmentVar in File.ReadAllLines("env-argsConfig.txt").Select(text => text.Split("=")).Where(envVar => envVar.Length == 2))
-
-                {
-                    Environment.SetEnvironmentVariable(environmentVar[0], environmentVar[1]);
-
-                    Console.WriteLine($"[Bootstrap] Set env: {environmentVar[0]}={environmentVar[1]}");
-                }
-            }
-
-            _assemblyPathCache.Clear();
-
-            AddAssembliesToCache(directoryName);
-
-            string librariesPath = Path.Combine(directoryName, "Libraries");
-            if (Directory.Exists(librariesPath))
-            {
-                AddAssembliesToCache(librariesPath, true);
-            }
-
-
-            Console.WriteLine($"[Bootstrap] Built assembly path cache with {_assemblyPathCache.Count} entries");
-
-            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-
-
-            // 应用Harmony补丁
-            Console.WriteLine($"[Bootstrap] Applying Harmony patches...");
-            GetEntryAssembly.GetEntryAssemblyPatch();
-            LoggingHooksPatch.LoggingHooksHarmonyPatch(targetGamePath);
-            TryFixFileCasings.TryFixFileCasingsPatch(targetGamePath);
-            // 全屏补丁已移至SDL/FNA底层
-
-            Console.WriteLine($"[Bootstrap] Initialization complete");
-        }
-
-        public static void Main(string[] args)
-
-        {
-            // 从args[0]获取目标游戏程序集路径
-            if (args.Length == 0)
-            {
-                Console.WriteLine("[Bootstrap] ERROR: No target game assembly specified!");
-                Console.WriteLine("[Bootstrap] Usage: Bootstrap.dll <GameAssemblyPath>");
-                Environment.Exit(-1);
-                return;
-            }
-
-            string targetGamePath = args[0];
-            Console.WriteLine($"[Bootstrap] Target game assembly: {targetGamePath}");
-
-            if (!File.Exists(targetGamePath))
-            {
-                Console.WriteLine($"[Bootstrap] ERROR: Target game assembly not found: {targetGamePath}");
-                Environment.Exit(-1);
-                return;
-            }
-
-            string directoryName = Path.GetDirectoryName(targetGamePath);
-            Console.WriteLine($"[Bootstrap] Working directory: {directoryName}");
-            Directory.SetCurrentDirectory(directoryName);
-
-            // 快速检测游戏类型
-            GameDetector.GameInfo gameInfo = null;
-            Assembly gameAssembly = null;
-            
-            try
-            {
-                // 先加载程序集以便检测
-                AssemblyLoadContext.Default.Resolving += ResolveManagedAssemblies;
-                
-                // 🔧 注册 UnmanagedDll 解析器（必须在加载任何程序集之前！）
-                AssemblyLoadContext.Default.ResolvingUnmanagedDll += SdlAndroidPatch.ResolveUnmanagedDll;
-                
-                Thread.CurrentThread.Name = "Entry Thread";
-                
-                _assemblyPathCache.Clear();
-                AddAssembliesToCache(directoryName);
-                
-                string librariesPath = Path.Combine(directoryName, "Libraries");
-                if (Directory.Exists(librariesPath))
-                {
-                    AddAssembliesToCache(librariesPath, true);
-                }
-                
-                string bootstrapDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                if (!string.IsNullOrEmpty(bootstrapDir) && Directory.Exists(bootstrapDir))
-                {
-                    AddAssembliesToCache(bootstrapDir, true, forceOverride: true);
-                }
-                
-                AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-                
-                gameAssembly = Assembly.LoadFrom(targetGamePath);
-                
-                // 🔧 立即应用补丁（MonoGame.Framework 现在已加载）
-                try
-                {
-                    FuncLoaderPatch.Apply();
-                    MouseInputPatch.Apply(); // 修复触屏偏移问题
-                }
-                catch (Exception patchEx)
-                {
-                    Console.WriteLine($"[Bootstrap] Patch warning: {patchEx.Message}");
-                }
-                
-                gameInfo = GameDetector.DetectGame(targetGamePath, gameAssembly);
-                GameDetector.PrintGameInfo(gameInfo);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Bootstrap] Detection failed: {ex.Message}");
-                gameInfo = new GameDetector.GameInfo();
-            }
-
-            // 准备启动参数
-            string[] gameArgs = null;
-            
-            // 🎯 tModLoader特有设置
-            if (gameInfo.Type == GameDetector.GameType.Terraria || 
-                gameInfo.Type == GameDetector.GameType.TerrariatModLoader)
-            {
-                // 设置SavePath（tModLoader特有）
-                string savePath = directoryName + "_Saves";
-                Console.WriteLine($"[Bootstrap] Save path: {savePath}");
-                
-                // tModLoader启动参数
-                gameArgs = new string[] {
-                    "-tmlsavedirectory",
-                    savePath
-                };
-
-                // 应用tModLoader特有补丁
-                try
-                {
-            GetEntryAssembly.GetEntryAssemblyPatch();
-                    LoggingHooksPatch.LoggingHooksHarmonyPatch(targetGamePath);
-                    
-                    if (gameInfo.RequiresFileCasingsPatch)
-                    {
-                        TryFixFileCasings.TryFixFileCasingsPatch(targetGamePath);
-                    }
-                    
-                    Console.WriteLine("[Bootstrap] tModLoader patches applied");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[Bootstrap] Patch failed: {ex.Message}");
-                }
-            }
-            else
-            {
-                // 其他游戏（如SMAPI）：无启动参数，无特殊补丁
-                gameArgs = new string[0];
-                Console.WriteLine("[Bootstrap] Generic game mode (no special patches)");
-            }
-
-            // 读取配置文件
-            Environment.SetEnvironmentVariable("FNA_WORKAROUND_WINDOW_RESIZABLE", "1");
-            
-            // 🔧 Android OpenGL 配置：使用 gl4es 转换层
-            Environment.SetEnvironmentVariable("FNA3D_OPENGL_DRIVER", "gl4es");
-            Environment.SetEnvironmentVariable("LIBGL_ES", "2");
-            
-            // 🔧 Android 文件系统重定向
-            string currentDir = Directory.GetCurrentDirectory();
-            Environment.SetEnvironmentVariable("HOME", currentDir);
-            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(currentDir, ".config"));
-            Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(currentDir, ".local", "share"));
-            Environment.SetEnvironmentVariable("XDG_CACHE_HOME", Path.Combine(currentDir, ".cache"));
-            Environment.SetEnvironmentVariable("TMPDIR", Path.Combine(currentDir, "tmp"));
-            
-            if (File.Exists("cli-argsConfig.txt"))
-            {
-                var configArgs = File.ReadAllLines("cli-argsConfig.txt").SelectMany(a => a.Split(" ", 2)).ToArray();
-                Console.WriteLine($"[Bootstrap] Loaded config args");
-            }
-
-            if (File.Exists("env-argsConfig.txt"))
-            {
-                foreach (var environmentVar in File.ReadAllLines("env-argsConfig.txt").Select(text => text.Split("=")).Where(envVar => envVar.Length == 2))
-                {
-                    Environment.SetEnvironmentVariable(environmentVar[0], environmentVar[1]);
-                }
-            }
-
-            // 启动游戏
-            try
-            {
-                MethodInfo entryPoint = gameAssembly.EntryPoint;
-                
-                if (entryPoint == null)
-                {
-                    Console.WriteLine("[Bootstrap] ERROR: No entry point!");
-                    Environment.Exit(-1);
-                    return;
-                }
-
-                Console.WriteLine($"[Bootstrap] Launching: {entryPoint.DeclaringType?.FullName}.{entryPoint.Name}");
-                entryPoint.Invoke(null, new object[] { gameArgs });
-                
-                Console.WriteLine("[Bootstrap] Game exited normally");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Bootstrap] FATAL: {ex.Message}");
-                Environment.Exit(-1);
-            }
-        }
+       
+     
 
         public static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
@@ -682,44 +575,6 @@ namespace AssemblyMain
 
     
 
-        /// <summary>
-        /// 判断游戏目录中的DLL是否应该跳过
-        /// 跳过与CoreCLR运行时冲突的DLL
-        /// </summary>
-        private static bool ShouldSkipGameDll(string fileName)
-        {
-            string lower = fileName.ToLowerInvariant();
-            
-            // 1. CoreCLR核心运行时DLL（由运行时目录提供）
-            if (lower == "system.private.corelib" ||
-                lower == "coreclr" ||
-                lower == "hostfxr" ||
-                lower == "hostpolicy" ||
-                lower == "mscorlib" ||
-                lower == "netstandard")
-            {
-                return true;
-            }
-            
-            // 2. 原生Windows库（不是托管程序集）
-            if (lower == "soft_oal" ||
-                lower == "galaxy64" ||
-                lower == "galaxy" ||
-                lower == "openal32" ||
-                lower == "d3dcompiler_47" ||
-                lower == "libskiasharp")
-            {
-                return true;
-            }
-            
-            // 3. Windows API兼容层（不是托管程序集）
-            if (lower.StartsWith("api-ms-win-") || lower == "ucrtbase")
-            {
-                return true;
-            }
-            
-            return false;
-        }
 
         private static void AddAssembliesToCache(string path, bool recursive = false, bool forceOverride = false, bool applyFilter = true)
         {
@@ -730,12 +585,7 @@ namespace AssemblyMain
                 {
                     string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(dllPath);
 
-                    // 根据applyFilter决定是否过滤（游戏目录过滤，运行时目录不过滤）
-                    if (applyFilter && ShouldSkipGameDll(fileNameWithoutExtension))
-                    {
-                        continue;
-                    }
-                    
+                  
                     // 如果forceOverride为true，强制覆盖已存在的条目（用于Bootstrap目录）
                     if (forceOverride)
                     {
@@ -754,12 +604,12 @@ namespace AssemblyMain
         }
 
         private static Assembly ResolveManagedAssemblies(AssemblyLoadContext ctx, AssemblyName name)
-    {
-        if (name.Name is null)
-            return null;
-
-        try
         {
+            if (name.Name is null)
+                return null;
+
+            try
+            {
             // 🔧 动态查找 AssemblyManager 类型（tModLoader特有）
             // 只在 tModLoader 游戏中才存在，其他游戏中不会加载
             Type assemblyManagerType = null;
@@ -789,7 +639,7 @@ namespace AssemblyMain
                 }
                 return null;
             }
-
+            
             // 以下是 tModLoader 特有的解析逻辑
             FieldInfo loadedModContextsField = assemblyManagerType.GetField("loadedModContexts",
                 BindingFlags.NonPublic | BindingFlags.Static);
@@ -856,7 +706,6 @@ namespace AssemblyMain
             }
             return null;
         }
+        }
     }
-
-      
-    }
+}

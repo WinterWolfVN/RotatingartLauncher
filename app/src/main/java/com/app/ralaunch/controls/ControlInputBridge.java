@@ -28,4 +28,3 @@ public interface ControlInputBridge {
      */
     void sendMouseMove(float deltaX, float deltaY);
 }
-

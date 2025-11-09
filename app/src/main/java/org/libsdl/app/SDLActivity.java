@@ -53,7 +53,6 @@ import android.widget.Toast;
 import java.util.Hashtable;
 import java.util.Locale;
 
-
 /**
     SDL Activity
 */
@@ -64,7 +63,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     private static final int SDL_MICRO_VERSION = 1;
 /*
     // Display InputType.SOURCE/CLASS of events and devices
-    //
     // SDLActivity.debugSource(device.getSources(), "device[" + device.getName() + "]");
     // SDLActivity.debugSource(event.getSource(), "event");
     public static void debugSource(int sources, String prefix) {
@@ -80,7 +78,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         if ((s & InputDevice.SOURCE_CLASS_POINTER) != 0)    cls += " POINTER";
         if ((s & InputDevice.SOURCE_CLASS_POSITION) != 0)   cls += " POSITION";
         if ((s & InputDevice.SOURCE_CLASS_TRACKBALL) != 0)  cls += " TRACKBALL";
-
 
         int s2 = s_copy & ~InputDevice.SOURCE_ANY; // keep class bits
         s2 &= ~(  InputDevice.SOURCE_CLASS_BUTTON
@@ -165,7 +162,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         if (s2 != 0) src += " Some_Unkown";
 
-        Log.v(TAG, prefix + "int=" + s_copy + " CLASS={" + cls + " } source(s):" + src);
     }
 */
 
@@ -319,15 +315,13 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Setup
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.v(TAG, "Device: " + Build.DEVICE);
-        Log.v(TAG, "Model: " + Build.MODEL);
-        Log.v(TAG, "onCreate()");
+
         super.onCreate(savedInstanceState);
 
         try {
             Thread.currentThread().setName("SDLActivity");
         } catch (Exception e) {
-            Log.v(TAG, "modify thread properties failed " + e.toString());
+
         }
 
         // Load shared libraries
@@ -423,7 +417,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         if (intent != null && intent.getData() != null) {
             String filename = intent.getData().getPath();
             if (filename != null) {
-                Log.v(TAG, "Got filename: " + filename);
+
                 SDLActivity.onNativeDropFile(filename);
             }
         }
@@ -454,7 +448,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Events
     @Override
     protected void onPause() {
-        Log.v(TAG, "onPause()");
+
         super.onPause();
 
         if (mHIDDeviceManager != null) {
@@ -467,7 +461,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onResume() {
-        Log.v(TAG, "onResume()");
+
         super.onResume();
 
         if (mHIDDeviceManager != null) {
@@ -480,7 +474,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onStop() {
-        Log.v(TAG, "onStop()");
+
         super.onStop();
         if (mHasMultiWindow) {
             pauseNativeThread();
@@ -489,7 +483,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onStart() {
-        Log.v(TAG, "onStart()");
+
         super.onStart();
         if (mHasMultiWindow) {
             resumeNativeThread();
@@ -529,7 +523,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        Log.v(TAG, "onWindowFocusChanged(): " + hasFocus);
 
         if (SDLActivity.mBrokenLibraries) {
            return;
@@ -554,7 +547,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     public void onLowMemory() {
-        Log.v(TAG, "onLowMemory()");
+
         super.onLowMemory();
 
         if (SDLActivity.mBrokenLibraries) {
@@ -566,7 +559,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
-        Log.v(TAG, "onConfigurationChanged()");
+
         super.onConfigurationChanged(newConfig);
 
         if (SDLActivity.mBrokenLibraries) {
@@ -581,7 +574,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     @Override
     protected void onDestroy() {
-        Log.v(TAG, "onDestroy()");
 
         if (mHIDDeviceManager != null) {
             HIDDeviceManager.release(mHIDDeviceManager);
@@ -604,7 +596,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             try {
                 SDLActivity.mSDLThread.join();
             } catch(Exception e) {
-                Log.v(TAG, "Problem stopping SDLThread: " + e);
+
             }
         }
 
@@ -616,10 +608,8 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     @Override
     public void onBackPressed() {
         // Check if we want to block the back button in case of mouse right click.
-        //
         // If we do, the normal hardware back button will no longer work and people have to use home,
         // but the mouse right click will work.
-        //
         boolean trapBack = SDLActivity.nativeGetHintBoolean("SDL_ANDROID_TRAP_BACK_BUTTON", false);
         if (trapBack) {
             // Exit and let the mouse handler handle this button (if appropriate)
@@ -707,7 +697,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 if (mSDLThread == null) {
                     // This is the entry point to the C app.
                     // Start up the C app thread and enable sensor input for the first time
-                    // FIXME: Why aren't we enabling sensor input at start?
 
                     mSDLThread = new Thread(new SDLMain(), "SDLThread");
                     mSurface.enableSensor(Sensor.TYPE_ACCELEROMETER, true);
@@ -879,11 +868,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     // when called.  That way, we know our current size is really the
                     // size we need, instead of grabbing a size that's still got
                     // the navigation and/or status bars before they're hidden.
-                    //
                     // We'll wait for up to half a second, because some devices
                     // take a surprisingly long time for the surface resize, but
                     // then we'll just give up and return.
-                    //
                     synchronized (SDLActivity.getContext()) {
                         try {
                             SDLActivity.getContext().wait(500);
@@ -1022,7 +1009,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             }
         }
 
-        Log.v(TAG, "setOrientation() requestedOrientation=" + req + " width=" + w +" height="+ h +" resizable=" + resizable + " hint=" + hint);
         mSingleton.setRequestedOrientation(req);
     }
 
@@ -1090,11 +1076,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     {
         // DeX mode in Samsung Experience 9.0 and earlier doesn't support relative mice properly under
         // Android 7 APIs, and simply returns no data under Android 8 APIs.
-        //
         // This is fixed in Samsung Experience 9.5, which corresponds to Android 8.1.0, and
         // thus SDK version 27.  If we are in DeX mode and not API 27 or higher, as a result,
         // we should stick to relative mode.
-        //
         if (Build.VERSION.SDK_INT < 27 /* Android 8.1 (O_MR1) */ && isDeXMode()) {
             return false;
         }
@@ -1231,7 +1215,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
             /* environment variables set! */
             return true;
         } catch (Exception e) {
-           Log.v(TAG, "exception " + e.toString());
+
         }
         return false;
     }
@@ -1328,7 +1312,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         // Dispatch the different events depending on where they come from
         // Some SOURCE_JOYSTICK, SOURCE_DPAD or SOURCE_GAMEPAD are also SOURCE_KEYBOARD
         // So, we try to process them as JOYSTICK/DPAD/GAMEPAD events first, if that fails we try them as KEYBOARD
-        //
         // Furthermore, it's possible a game controller has SOURCE_KEYBOARD and
         // SOURCE_JOYSTICK, while its key events arrive from the keyboard source
         // So, retrieve the device itself and check all of its sources
@@ -1486,8 +1469,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     protected void messageboxCreateAndShow(Bundle args) {
 
-        // TODO set values from "flags" to messagebox dialog
-
         // get colors
 
         int[] colors = args.getIntArray("colors");
@@ -1569,7 +1550,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 button.setTextColor(textColor);
             }
             if (buttonBorderColor != Color.TRANSPARENT) {
-                // TODO set color for border of messagebox button
+
             }
             if (buttonBackgroundColor != Color.TRANSPARENT) {
                 Drawable drawable = button.getBackground();
@@ -1582,7 +1563,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                 }
             }
             if (buttonSelectedColor != Color.TRANSPARENT) {
-                // TODO set color for selected messagebox button
+
             }
             buttons.addView(button);
         }
@@ -1876,14 +1857,10 @@ class SDLMain implements Runnable {
         try {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DISPLAY);
         } catch (Exception e) {
-            Log.v("SDL", "modify thread properties failed " + e.toString());
+
         }
 
-        Log.v("SDL", "Running main function " + function + " from library " + library);
-
         SDLActivity.nativeRunMain(library, function, arguments);
-
-        Log.v("SDL", "Finished main function");
 
         if (SDLActivity.mSingleton != null && !SDLActivity.mSingleton.isFinishing()) {
             // Let's finish the Activity
@@ -1917,15 +1894,10 @@ class DummyEdit extends View implements View.OnKeyListener {
         return SDLActivity.handleKeyEvent(v, keyCode, event, ic);
     }
 
-    //
     @Override
     public boolean onKeyPreIme (int keyCode, KeyEvent event) {
         // As seen on StackOverflow: http://stackoverflow.com/questions/7634346/keyboard-hide-event
-        // FIXME: Discussion at http://bugzilla.libsdl.org/show_bug.cgi?id=1639
-        // FIXME: This is not a 100% effective solution to the problem of detecting if the keyboard is showing or not
-        // FIXME: A more effective solution would be to assume our Layout to be RelativeLayout or LinearLayout
-        // FIXME: And determine the keyboard presence doing this: http://stackoverflow.com/questions/2150078/how-to-check-visibility-of-software-keyboard-in-android
-        // FIXME: An even more effective way would be if Android provided this out of the box, but where would the fun be in that :)
+
         if (event.getAction()==KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_BACK) {
             if (SDLActivity.mTextEdit != null && SDLActivity.mTextEdit.getVisibility() == View.VISIBLE) {
                 SDLActivity.onNativeKeyboardFocusLost();
@@ -2114,4 +2086,3 @@ class SDLClipboardHandler implements
         SDLActivity.onNativeClipboardChanged();
     }
 }
-

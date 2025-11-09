@@ -285,7 +285,7 @@ class HIDDeviceUSB implements HIDDevice {
                 }
                 catch (Exception e)
                 {
-                    Log.v(TAG, "Exception in UsbDeviceConnection bulktransfer: " + e);
+
                     break;
                 }
                 if (r < 0) {

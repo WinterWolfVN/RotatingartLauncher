@@ -90,7 +90,7 @@ public class GameDataManager {
                     .edit()
                     .putString(KEY_GAME_LIST, gameListJson)
                     .apply();
-            Log.d(TAG, "游戏列表保存成功，项目数: " + gameList.size());
+
         } catch (Exception e) {
             Log.e(TAG, "保存游戏列表时发生错误: " + e.getMessage());
         }
@@ -104,7 +104,7 @@ public class GameDataManager {
                 Gson gson = new Gson();
                 Type listType = new TypeToken<ArrayList<GameItem>>(){}.getType();
                 List<GameItem> result = gson.fromJson(gameListJson, listType);
-                Log.d(TAG, "成功加载游戏列表，项目数: " + (result != null ? result.size() : 0));
+
                 return result != null ? result : new ArrayList<>();
             }
         } catch (Exception e) {
