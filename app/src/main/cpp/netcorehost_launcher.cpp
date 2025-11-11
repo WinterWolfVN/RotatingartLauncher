@@ -264,33 +264,33 @@ int netcorehost_launch() {
         LOGW("⚠️  JavaVM 未初始化，某些 .NET 功能（如加密）可能无法工作");
     }
 
-    // 预加载并初始化加密库（关键！）
-    // libSystem.Security.Cryptography.Native.Android.so 需要通过 JNI_OnLoad 获取 JavaVM
-    if (jvm && g_dotnet_path) {
-        // 使用固定的 .NET 10 RC2 版本路径
-        std::string crypto_lib_path = std::string(g_dotnet_path) +
-                                      "/shared/Microsoft.NETCore.App/10.0.0-rc.2.25502.107" +
-                                      "/libSystem.Security.Cryptography.Native.Android.so";
-
-        LOGI("🔐 预加载加密库: %s", crypto_lib_path.c_str());
-        void* crypto_handle = dlopen(crypto_lib_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
-        if (crypto_handle) {
-            LOGI("✓ 加密库已加载");
-
-            // 查找并调用 JNI_OnLoad 来初始化加密库
-            typedef jint (*JNI_OnLoad_t)(JavaVM*, void*);
-            JNI_OnLoad_t crypto_onload = (JNI_OnLoad_t)dlsym(crypto_handle, "JNI_OnLoad");
-            if (crypto_onload) {
-                jint jni_version = crypto_onload(jvm, nullptr);
-                LOGI("✅ 加密库 JNI 已初始化 (version: 0x%x)", jni_version);
-            } else {
-                LOGI("ℹ️  加密库没有 JNI_OnLoad (可能不需要)");
-            }
-        } else {
-            LOGW("⚠️  无法预加载加密库: %s", dlerror());
-            LOGI("ℹ️  将尝试通过 CoreCLR 延迟加载");
-        }
-    }
+//    // 预加载并初始化加密库（关键！）
+//    // libSystem.Security.Cryptography.Native.Android.so 需要通过 JNI_OnLoad 获取 JavaVM
+//    if (jvm && g_dotnet_path) {
+//        // 使用固定的 .NET 10 RC2 版本路径
+//        std::string crypto_lib_path = std::string(g_dotnet_path) +
+//                                      "/shared/Microsoft.NETCore.App/10.0.0-rc.2.25502.107" +
+//                                      "/libSystem.Security.Cryptography.Native.Android.so";
+//
+//        LOGI("🔐 预加载加密库: %s", crypto_lib_path.c_str());
+//        void* crypto_handle = dlopen(crypto_lib_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
+//        if (crypto_handle) {
+//            LOGI("✓ 加密库已加载");
+//
+//            // 查找并调用 JNI_OnLoad 来初始化加密库
+//            typedef jint (*JNI_OnLoad_t)(JavaVM*, void*);
+//            JNI_OnLoad_t crypto_onload = (JNI_OnLoad_t)dlsym(crypto_handle, "JNI_OnLoad");
+//            if (crypto_onload) {
+//                jint jni_version = crypto_onload(jvm, nullptr);
+//                LOGI("✅ 加密库 JNI 已初始化 (version: 0x%x)", jni_version);
+//            } else {
+//                LOGI("ℹ️  加密库没有 JNI_OnLoad (可能不需要)");
+//            }
+//        } else {
+//            LOGW("⚠️  无法预加载加密库: %s", dlerror());
+//            LOGI("ℹ️  将尝试通过 CoreCLR 延迟加载");
+//        }
+//    }
     std::shared_ptr<netcorehost::Hostfxr> hostfxr;
     
     try {

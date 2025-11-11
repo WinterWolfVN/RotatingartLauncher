@@ -1,11 +1,13 @@
 package com.app.ralaunch.game;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.Log;
 
 import com.app.ralaunch.utils.RuntimePreference;
 
 import java.io.File;
+import java.nio.file.Paths;
 
 /**
  * .NET 游戏启动器（简化版）
@@ -79,6 +81,7 @@ public class GameLauncher {
      * @param assemblyPath 程序集完整路径
      * @return 0 表示参数设置成功，-1 表示失败
      */
+    @SuppressLint("UnsafeDynamicallyLoadedCode")
     public static int launchAssemblyDirect(Context context, String assemblyPath) {
         Log.i(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         Log.i(TAG, "🚀 准备直接启动程序集");
@@ -125,6 +128,14 @@ public class GameLauncher {
             Log.i(TAG, "  .NET路径: " + (dotnetRoot != null ? dotnetRoot : "(自动检测)"));
             Log.i(TAG, "  框架版本: " + frameworkMajor + ".x");
             Log.i(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            // 加载 Crypto 库
+            // TODO: 根据不同平台加载对应的库文件
+            Log.i(TAG, "⏳ 加载加密库 libSystem.Security.Cryptography.Native.Android.so ...");
+            System.load(Paths.get(
+                    dotnetRoot,
+                    "shared/Microsoft.NETCore.App/10.0.0-rc.2.25502.107/libSystem.Security.Cryptography.Native.Android.so").toString());
+            Log.i(TAG, "✅ 加密库加载成功");
             
             // 设置启动参数（简化版 - 4个参数）
             int result = netcorehostSetParams(appDir, mainAssembly, dotnetRoot, frameworkMajor);
