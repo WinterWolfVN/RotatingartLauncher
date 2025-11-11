@@ -698,7 +698,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
                     // This is the entry point to the C app.
                     // Start up the C app thread and enable sensor input for the first time
 
-                    mSDLThread = new Thread(new SDLMain(), "SDLThread");
+                    mSDLThread = new Thread(null, new SDLMain(), "SDLThread", 4 * 1024 * 1024);
                     mSurface.enableSensor(Sensor.TYPE_ACCELEROMETER, true);
                     mSDLThread.start();
 

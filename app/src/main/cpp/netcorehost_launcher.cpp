@@ -12,6 +12,7 @@
 #include <netcorehost/context.hpp>
 #include <netcorehost/error.hpp>
 #include <netcorehost/bindings.hpp>
+#include <jni.h>
 
 // 直接声明静态链接的 nethost 函数
 extern "C" {
@@ -20,6 +21,8 @@ extern "C" {
         size_t* buffer_size,
         const netcorehost::bindings::get_hostfxr_parameters* parameters
     );
+    JNIEnv* Bridge_GetJNIEnv();
+    JavaVM* Bridge_GetJavaVM();
 }
 
 #include <jni.h>
@@ -124,7 +127,93 @@ int netcorehost_set_params(
     // 6. 启用详细日志（用于调试）
     setenv("COREHOST_TRACE", "1", 1);
     setenv("COREHOST_TRACEFILE", "/sdcard/Android/data/com.app.ralaunch/files/corehost_trace.log", 1);
-    
+
+    // 7. 设置保存目录
+    setenv("XDG_DATA_HOME", std::string(app_dir).c_str(), 1);
+    setenv("XDG_CONFIG_HOME", std::string(app_dir).c_str(), 1);
+    setenv("HOME", std::string(app_dir).c_str(), 1);
+
+//    // ⚠️ 关键：告诉 SDL 使用 gl4es 渲染器
+//    setenv("FNA3D_OPENGL_DRIVER", "gl4es", 1);
+//
+//    // ⚠️ 关键：告诉 FNA3D 使用 gl4es（用于OpenGL兼容性profile）
+//    // FNA3D 会使用 OpenGL Compatibility Profile
+//    setenv("FNA3D_USE_GL4ES", "1", 1);
+//
+//    // ⚠️ 关键：强制使用 OpenGL driver（不是 ES）
+//    setenv("FNA3D_FORCE_DRIVER", "OpenGL", 1);
+//
+//    // SDL 已在编译时配置为使用 gl4es AGL 接口（SDL_VIDEO_OPENGL_GL4ES）
+//    // 无需设置 SDL_VIDEO_GL_DRIVER
+//
+//    // gl4es 环境变量配置
+//    // LIBGL_ES: 目标 OpenGL ES 版本（2=GLES2, 3=GLES3）
+//    // LIBGL_GL: 模拟的桌面 OpenGL 版本（21=2.1, 30=3.0, etc）
+//    setenv("LIBGL_ES", "2", 1);      // 目标 GLES 2.0（兼容性最好）
+//    setenv("LIBGL_GL", "21", 1);     // 模拟 OpenGL 2.1
+//    setenv("LIBGL_LOGERR", "1", 1);  // 记录错误
+//    setenv("LIBGL_DEBUG", "1", 1);   // 调试信息
+
+//    // 6. CoreCLR GC 配置（Android 优化）
+//    // ⚠️ 关键配置：平衡稳定性和性能
+//
+//    // GC 模式配置
+//    setenv("COMPlus_gcServer", "0", 1);              // 使用工作站 GC（更适合移动设备）
+//    setenv("COMPlus_gcConcurrent", "1", 1);          // 启用并发 GC（减少卡顿）
+//    setenv("COMPlus_GCHeapCount", "2", 1);           // 使用 2 个 GC 堆（多核优化）
+//
+//    // 堆大小配置（根据 Android 设备内存优化）
+//    setenv("COMPlus_GCHeapHardLimit", "800000000", 1);  // 硬限制 800MB（避免 OOM）
+//    setenv("COMPlus_GCHeapHardLimitPercent", "50", 1);  // 最多使用 50% 物理内存
+//    setenv("DOTNET_GCGen0Size", "8000000", 1);          // Gen0: 8MB（减少频繁 GC）
+//    setenv("DOTNET_GCGen1Size", "16000000", 1);         // Gen1: 16MB
+//
+//    // 线程和性能配置
+    setenv("COMPlus_DefaultStackSize", "4000000", 1);   // 栈大小 4MB（足够大）
+//    setenv("COMPlus_Thread_UseAllCpuGroups", "1", 1);   // 使用所有 CPU 核心
+//    setenv("COMPlus_GCRetainVM", "1", 1);               // 保留 VM（减少重新初始化）
+//
+//    // ReadyToRun 和 JIT 配置
+//    setenv("COMPlus_ReadyToRun", "1", 1);               // 启用 R2R（提高启动速度）
+//    setenv("COMPlus_TieredCompilation", "1", 1);        // 启用分层编译
+//    setenv("COMPlus_TC_QuickJit", "1", 1);              // 启用快速 JIT
+//
+//    // 其他优化
+//    setenv("COMPlus_EnableEventLog", "0", 1);           // 禁用事件日志（减少开销）
+//    setenv("DOTNET_EnableWriteXorExecute", "0", 1);     // 禁用 W^X（Android 兼容性）
+//
+//    LOGI("✅ 已设置 GC 模式：Workstation + 并发 GC + 2 堆");
+//    LOGI("   堆限制: 800MB 或 50% 物理内存");
+//    LOGI("   Gen0: 8MB, Gen1: 16MB, 栈: 2MB");
+
+    setenv("FNA3D_FORCE_DRIVER", "OpenGL", 1);
+    setenv("FNA3D_OPENGL_FORCE_CORE_PROFILE", "0", 1);     // 禁用 Core Profile
+    setenv("FNA3D_OPENGL_FORCE_ES3", "1", 1);              // 强制使用 ES3
+    setenv("FNA3D_OPENGL_FORCE_VER_MAJOR", "3", 1);        // 限制 OpenGL 主版本为 3
+    setenv("FNA3D_OPENGL_FORCE_VER_MINOR", "0", 1);        // 限制 OpenGL 次版本为 0
+    setenv("FNA3D_OPENGL_FORCE_COMPATIBILITY_PROFILE", "1", 1);  // 强制兼容性模式
+
+    // ⚠️ 关键：告诉 SDL 使用原生 GLES 渲染器（不是 gl4es）
+    setenv("FNA3D_OPENGL_DRIVER", "native", 1);
+
+    // SDL hints - 忽略 GL 扩展加载错误并禁用高级特性
+    setenv("SDL_VIDEO_X11_FORCE_EGL", "1", 1);
+    setenv("SDL_OPENGL_ES_DRIVER", "1", 1);
+    setenv("SDL_VIDEO_GL_DRIVER", "", 1);
+
+    // 禁用所有不支持的OpenGL扩展和高级特性
+    setenv("FNA3D_DISABLE_ARB_DEBUG_OUTPUT", "1", 1);
+    setenv("FNA3D_DISABLE_ARB_EXTENSION", "1", 1);
+    setenv("FNA3D_FORCE_GL_ENABLE_DEBUG_OUTPUT", "0", 1);
+
+    // 禁用着色器特化（Shader Specialization）- 这是导致glSpecializeShaderARB错误的原因
+    setenv("FNA3D_DISABLE_SHADER_SPECIALIZATION", "1", 1);
+
+    // 强制SDL忽略扩展加载失败
+    setenv("SDL_HINT_VIDEO_ALLOW_SCREENSAVER", "1", 1);
+
+    setenv("SDL_TOUCH_MOUSE_EVENTS", "1", 1); // 启用触摸模拟鼠标事件
+
     return 0;
 }
 
@@ -154,10 +243,54 @@ int netcorehost_launch() {
             LOGW("⚠️  无法设置工作目录: %s", app_dir.c_str());
         }
     }
-    
+
     LOGI("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     setenv("COREHOST_TRACEFILE", "/sdcard/Android/data/com.app.ralaunch/files/corehost_trace.log", 1);
     LOGI("✓ 已启用 COREHOST_TRACE，日志将写入 /sdcard/Android/data/com.app.ralaunch/files/corehost_trace.log");
+    // 初始化 JNI Bridge（在运行 .NET 程序集前）
+    // 重要：.NET 加密库需要 JNI 环境来调用 Android KeyStore API
+    LOGI("⏳ 初始化 JNI Bridge...");
+    JavaVM* jvm = Bridge_GetJavaVM();
+    JNIEnv* env = nullptr;
+    if (jvm) {
+        // 验证 JavaVM 已正确初始化
+        env = Bridge_GetJNIEnv();
+        if (env) {
+            LOGI("✅ JNI Bridge 已初始化，JavaVM: %p, JNIEnv: %p", jvm, env);
+        } else {
+            LOGW("⚠️  JNI Bridge 初始化后无法获取 JNIEnv");
+        }
+    } else {
+        LOGW("⚠️  JavaVM 未初始化，某些 .NET 功能（如加密）可能无法工作");
+    }
+
+    // 预加载并初始化加密库（关键！）
+    // libSystem.Security.Cryptography.Native.Android.so 需要通过 JNI_OnLoad 获取 JavaVM
+    if (jvm && g_dotnet_path) {
+        // 使用固定的 .NET 10 RC2 版本路径
+        std::string crypto_lib_path = std::string(g_dotnet_path) +
+                                      "/shared/Microsoft.NETCore.App/10.0.0-rc.2.25502.107" +
+                                      "/libSystem.Security.Cryptography.Native.Android.so";
+
+        LOGI("🔐 预加载加密库: %s", crypto_lib_path.c_str());
+        void* crypto_handle = dlopen(crypto_lib_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
+        if (crypto_handle) {
+            LOGI("✓ 加密库已加载");
+
+            // 查找并调用 JNI_OnLoad 来初始化加密库
+            typedef jint (*JNI_OnLoad_t)(JavaVM*, void*);
+            JNI_OnLoad_t crypto_onload = (JNI_OnLoad_t)dlsym(crypto_handle, "JNI_OnLoad");
+            if (crypto_onload) {
+                jint jni_version = crypto_onload(jvm, nullptr);
+                LOGI("✅ 加密库 JNI 已初始化 (version: 0x%x)", jni_version);
+            } else {
+                LOGI("ℹ️  加密库没有 JNI_OnLoad (可能不需要)");
+            }
+        } else {
+            LOGW("⚠️  无法预加载加密库: %s", dlerror());
+            LOGI("ℹ️  将尝试通过 CoreCLR 延迟加载");
+        }
+    }
     std::shared_ptr<netcorehost::Hostfxr> hostfxr;
     
     try {
