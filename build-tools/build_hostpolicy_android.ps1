@@ -4,7 +4,7 @@
 param(
     [string]$AndroidNdkPath = "D:\Android\ndk\27.2.12479018",
     [string]$DotnetSourcePath = "D:\runtime-10.0.0-rc.2",
-    [string]$OutputPath = "D:\Rotating-art-Launcher\app\src\main\jnilibs\arm64-v8a"
+    [string]$OutputPath = "D:\Rotating-art-Launcher\app\src\main\jniLibs\arm64-v8a"
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -134,7 +134,7 @@ if (-not (Test-Path $OutputPath)) {
     New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
 }
 
-# 复制到 jnilibs (用于编译时链接)
+# 复制到 jniLibs (用于编译时链接)
 Copy-Item -Path $HostpolicySo.FullName -Destination $OutputPath -Force
 Write-Host "   ✓ Copied to: $OutputPath" -ForegroundColor Green
 

@@ -87,7 +87,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
 # 2. gl4es内部链接到系统的EGL和GLESv2
 #    - 用于实际的GLES调用
 # 查找 nethost 静态库
-set(NETHOST_LIB_DIR ${CMAKE_SOURCE_DIR}/../jnilibs/${ANDROID_ABI})
+set(NETHOST_LIB_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 set(NETHOST_LIB ${NETHOST_LIB_DIR}/libnethost.a)
 if(NOT EXISTS ${NETHOST_LIB})
     message(WARNING "nethost library not found at ${NETHOST_LIB}, skipping")

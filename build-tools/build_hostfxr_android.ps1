@@ -4,7 +4,7 @@
 param(
     [string]$AndroidNdkPath = "D:\Android\ndk\27.2.12479018",
     [string]$DotnetSourcePath = "D:\runtime-10.0.0-rc.2",
-    [string]$OutputPath = "D:\Rotating-art-Launcher\app\src\main\jnilibs\arm64-v8a"
+    [string]$OutputPath = "D:\Rotating-art-Launcher\app\src\main\jniLibs\arm64-v8a"
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -212,7 +212,7 @@ if (-not (Test-Path $OutputPath)) {
 }
 
 foreach ($file in $BuiltFiles) {
-    # 复制到 jnilibs
+    # 复制到 jniLibs
     $destPath = Join-Path $OutputPath $file.Name
     Copy-Item -Path $file.FullName -Destination $destPath -Force
     Write-Host "   ✓ Copied $($file.Name) to: $destPath" -ForegroundColor Green

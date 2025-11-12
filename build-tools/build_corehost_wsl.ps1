@@ -4,7 +4,7 @@
 param(
     [string]$DotnetSourcePath = "D:\runtime-10.0.0-rc.2",
     [string]$AndroidNdkVersion = "27.0.12077973",
-    [string]$OutputPath = "D:\Rotating-art-Launcher\app\src\main\jnilibs\arm64-v8a"
+    [string]$OutputPath = "D:\Rotating-art-Launcher\app\src\main\jniLibs\arm64-v8a"
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
