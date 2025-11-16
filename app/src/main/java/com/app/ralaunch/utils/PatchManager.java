@@ -38,6 +38,9 @@ public class PatchManager {
         this.patchConfigs = new HashMap<>();
         this.availablePatches = new ArrayList<>();
 
+        // 初始化外部补丁文件夹（首次运行时复制 assets 中的补丁）
+        initializeExternalPatchesDirectory();
+
         // 初始化可用补丁列表
         initializeAvailablePatches();
         loadConfigs();
@@ -276,6 +279,83 @@ public class PatchManager {
      */
     private String generateKey(String gameId, String patchName) {
         return gameId + ":" + patchName;
+    }
+
+    /**
+     * 初始化外部补丁目录
+     * 首次运行时，将 assets 中的补丁程序集和配置文件复制到外部存储
+     */
+    private void initializeExternalPatchesDirectory() {
+        try {
+            File externalPatchesDir = getExternalPatchesDirectory();
+            File flagFile = new File(externalPatchesDir, ".initialized");
+
+            // 如果已经初始化过，跳过
+            if (flagFile.exists()) {
+                Log.d(TAG, "External patches directory already initialized");
+                return;
+            }
+
+            Log.d(TAG, "Initializing external patches directory: " + externalPatchesDir.getAbsolutePath());
+
+            // 复制 patch_metadata.json
+            try {
+                java.io.InputStream metadataStream = context.getAssets().open("patches/patch_metadata.json");
+                File metadataFile = new File(externalPatchesDir, "patch_metadata.json");
+                copyStream(metadataStream, new FileOutputStream(metadataFile));
+                metadataStream.close();
+                Log.d(TAG, "Copied patch_metadata.json to external storage");
+            } catch (IOException e) {
+                Log.w(TAG, "Failed to copy patch_metadata.json: " + e.getMessage());
+            }
+
+            // 列出 assets/patches/ 中的所有 DLL 文件并复制
+            try {
+                String[] patchFiles = context.getAssets().list("patches");
+                if (patchFiles != null) {
+                    for (String fileName : patchFiles) {
+                        if (fileName.endsWith(".dll")) {
+                            try {
+                                java.io.InputStream dllStream = context.getAssets().open("patches/" + fileName);
+                                File dllFile = new File(externalPatchesDir, fileName);
+                                copyStream(dllStream, new FileOutputStream(dllFile));
+                                dllStream.close();
+                                Log.d(TAG, "Copied " + fileName + " to external storage");
+                            } catch (IOException e) {
+                                Log.w(TAG, "Failed to copy " + fileName + ": " + e.getMessage());
+                            }
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                Log.w(TAG, "Failed to list patch files: " + e.getMessage());
+            }
+
+            // 创建初始化标记文件
+            try {
+                flagFile.createNewFile();
+                Log.d(TAG, "External patches directory initialization complete");
+            } catch (IOException e) {
+                Log.w(TAG, "Failed to create flag file: " + e.getMessage());
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error initializing external patches directory: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 复制输入流到输出流
+     */
+    private void copyStream(java.io.InputStream input, FileOutputStream output) throws IOException {
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = input.read(buffer)) != -1) {
+            output.write(buffer, 0, bytesRead);
+        }
+        output.flush();
+        output.close();
     }
 
     /**
