@@ -1058,11 +1058,35 @@ public class MainActivity extends AppCompatActivity implements
         AppLogger.info("MainActivity", "Launching game: " + game.getGameName());
         AppLogger.info("MainActivity", "Assembly path: " + assemblyPath);
 
+        // 获取启用的补丁列表
+        com.app.ralaunch.utils.PatchManager patchManager = new com.app.ralaunch.utils.PatchManager(this);
+        java.util.List<com.app.ralaunch.model.PatchInfo> enabledPatches = patchManager.getEnabledPatches(game);
+
+        if (!enabledPatches.isEmpty()) {
+            AppLogger.info("MainActivity", "Enabled patches for this game:");
+            for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
+                AppLogger.info("MainActivity", "  - " + patch.getPatchName());
+            }
+        }
+
         // 直接传递程序集路径给 GameActivity
         Intent intent = new Intent(MainActivity.this, GameActivity.class);
         intent.putExtra("GAME_NAME", game.getGameName());
         intent.putExtra("ASSEMBLY_PATH", assemblyPath);  // 使用新的参数名
-        
+        intent.putExtra("GAME_ID", game.getGamePath());  // 传递游戏ID用于补丁配置
+
+        // 传递启用的补丁信息
+        if (!enabledPatches.isEmpty()) {
+            java.util.ArrayList<String> patchDllNames = new java.util.ArrayList<>();
+            java.util.ArrayList<String> patchNames = new java.util.ArrayList<>();
+            for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
+                patchDllNames.add(patch.getDllFileName());
+                patchNames.add(patch.getPatchName());
+            }
+            intent.putStringArrayListExtra("ENABLED_PATCH_DLLS", patchDllNames);
+            intent.putStringArrayListExtra("ENABLED_PATCH_NAMES", patchNames);
+        }
+
         // 如果有 Bootstrapper 配置，传递相关参数
         if (game.isBootstrapperPresent() && game.getBootstrapperBasePath() != null) {
             intent.putExtra("USE_BOOTSTRAPPER", true);

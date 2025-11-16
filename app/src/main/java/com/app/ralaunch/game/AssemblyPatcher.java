@@ -3,6 +3,7 @@ package com.app.ralaunch.game;
 import android.content.Context;
 import android.content.res.AssetManager;
 
+import com.app.ralaunch.model.PatchInfo;
 import com.app.ralaunch.utils.AppLogger;
 
 import java.io.File;
@@ -19,111 +20,135 @@ import java.util.zip.ZipInputStream;
 
 /**
  * 程序集补丁工具
- * 
+ *
  * <p>此类负责从 MonoMod_Patch.zip 中提取补丁程序集，
  * 并替换游戏目录中的对应程序集文件
- * 
+ * 支持通过JSON配置动态启用/禁用补丁
+ *
  * @author RA Launcher Team
  */
 public class AssemblyPatcher {
     private static final String TAG = "AssemblyPatcher";
     private static final String PATCH_ARCHIVE = "MonoMod_Patch.zip";
-    
+
     // [WARN] 强制更新版本号：每次修改 MonoMod 后增加此版本号
     // 这会强制删除所有旧的补丁程序集并重新安装
     private static final int PATCH_VERSION = 3; // ← 更新 MonoMod 后增加这个数字（跳过 Mono.Cecil）
     private static final String VERSION_FILE = ".monomod_patch_version";
     
     /**
-     * 应用补丁到游戏目录
-     * 
+     * 应用补丁到游戏目录（旧版本，保持向后兼容）
+     *
      * @param context Android上下文
      * @param gameDirectory 游戏目录路径
      * @return 替换的程序集数量
      */
     public static int applyPatches(Context context, String gameDirectory) {
+        return applyPatches(context, gameDirectory, null);
+    }
+
+    /**
+     * 应用补丁到游戏目录（新版本，支持配置）
+     *
+     * @param context Android上下文
+     * @param gameDirectory 游戏目录路径
+     * @param enabledPatches 启用的补丁列表（如果为null则应用所有补丁）
+     * @return 替换的程序集数量
+     */
+    public static int applyPatches(Context context, String gameDirectory, List<PatchInfo> enabledPatches) {
         // [OK] 检查是否需要强制更新
         if (shouldForceUpdate(gameDirectory)) {
             AppLogger.warn(TAG, "🔄 检测到补丁版本更新，强制清理旧版本补丁...");
             cleanOldPatches(gameDirectory);
         }
         AppLogger.info(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        AppLogger.info(TAG, "🔧 开始应用 MonoMod 补丁");
+        AppLogger.info(TAG, "🔧 开始应用补丁");
         AppLogger.info(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         AppLogger.info(TAG, "  游戏目录: " + gameDirectory);
-        
+
         try {
-            // 1. 从 assets 加载补丁归档
-            Map<String, byte[]> patchAssemblies = loadPatchArchive(context);
-            
-            if (patchAssemblies.isEmpty()) {
-                AppLogger.warn(TAG, "未找到补丁程序集");
+            // 1. 从 assets 加载 MonoMod 补丁归档
+            Map<String, byte[]> monoModAssemblies = loadPatchArchive(context);
+
+            // 2. 加载启用的自定义补丁程序集
+            Map<String, byte[]> customPatchAssemblies = loadCustomPatches(context, enabledPatches);
+
+            // 3. 合并所有补丁
+            Map<String, byte[]> allPatchAssemblies = new HashMap<>();
+            allPatchAssemblies.putAll(monoModAssemblies);
+            allPatchAssemblies.putAll(customPatchAssemblies);
+
+            if (allPatchAssemblies.isEmpty()) {
+                AppLogger.warn(TAG, "未找到任何补丁程序集");
                 return 0;
             }
 
-            AppLogger.info(TAG, "已加载 " + patchAssemblies.size() + " 个补丁程序集:");
-            for (String assemblyName : patchAssemblies.keySet()) {
-                AppLogger.info(TAG, "   - " + assemblyName);
+            AppLogger.info(TAG, "已加载 " + allPatchAssemblies.size() + " 个补丁程序集:");
+            for (String assemblyName : monoModAssemblies.keySet()) {
+                AppLogger.info(TAG, "   - [MonoMod] " + assemblyName);
+            }
+            for (String assemblyName : customPatchAssemblies.keySet()) {
+                AppLogger.info(TAG, "   - [自定义] " + assemblyName);
             }
             
-            // 2. 扫描游戏目录中的程序集
+            // 4. 扫描游戏目录中的程序集
             File gameDir = new File(gameDirectory);
             List<File> gameAssemblies = findGameAssemblies(gameDir);
-            
+
             AppLogger.info(TAG, "  找到 " + gameAssemblies.size() + " 个游戏程序集");
-            
-            // 3. 应用补丁（替换已有的程序集）
+
+            // 5. 应用补丁（替换已有的程序集）
             int patchedCount = 0;
             for (File assemblyFile : gameAssemblies) {
                 String assemblyName = assemblyFile.getName();
-                
+
                 // [WARN] 跳过 Mono.Cecil，因为 tModLoader 需要特定版本（0.11.6.0）
                 if (assemblyName.startsWith("Mono.Cecil")) {
                     AppLogger.info(TAG, "⏭️  跳过（使用游戏自带版本）: " + assemblyName);
                     continue;
                 }
-                
-                if (patchAssemblies.containsKey(assemblyName)) {
-                    if (replaceAssembly(assemblyFile, patchAssemblies.get(assemblyName))) {
-                        AppLogger.info(TAG, "已替换: " + assemblyName);
+
+                if (allPatchAssemblies.containsKey(assemblyName)) {
+                    if (replaceAssembly(assemblyFile, allPatchAssemblies.get(assemblyName))) {
+                        AppLogger.info(TAG, "✅ 已替换: " + assemblyName);
                         patchedCount++;
                     } else {
-                        AppLogger.warn(TAG, "替换失败: " + assemblyName);
+                        AppLogger.warn(TAG, "❌ 替换失败: " + assemblyName);
                     }
                 }
             }
-            
-            // 4. 添加缺失的补丁程序集（如果游戏目录中不存在）
-            for (Map.Entry<String, byte[]> entry : patchAssemblies.entrySet()) {
+
+            // 6. 添加缺失的补丁程序集（如果游戏目录中不存在）
+            for (Map.Entry<String, byte[]> entry : allPatchAssemblies.entrySet()) {
                 String assemblyName = entry.getKey();
-                
+
                 // [WARN] 跳过 Mono.Cecil，因为 tModLoader 需要特定版本（0.11.6.0）
                 if (assemblyName.startsWith("Mono.Cecil")) {
                     continue;
                 }
-                
+
                 boolean alreadyExists = false;
-                
+
                 for (File assemblyFile : gameAssemblies) {
                     if (assemblyFile.getName().equals(assemblyName)) {
                         alreadyExists = true;
                         break;
                     }
                 }
-                
+
                 if (!alreadyExists) {
                     File newAssemblyFile = new File(gameDir, assemblyName);
                     if (replaceAssembly(newAssemblyFile, entry.getValue())) {
-                        AppLogger.info(TAG, "已添加: " + assemblyName);
+                        AppLogger.info(TAG, "➕ 已添加: " + assemblyName);
                         patchedCount++;
                     } else {
-                        AppLogger.warn(TAG, "添加失败: " + assemblyName);
+                        AppLogger.warn(TAG, "❌ 添加失败: " + assemblyName);
                     }
                 }
             }
-            
+
             AppLogger.info(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            AppLogger.info(TAG, "补丁应用完成，共替换 " + patchedCount + " 个程序集");
+            AppLogger.info(TAG, "✅ 补丁应用完成，共处理 " + patchedCount + " 个程序集");
             AppLogger.info(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             
             // [OK] 保存当前补丁版本号
@@ -138,8 +163,44 @@ public class AssemblyPatcher {
     }
     
     /**
+     * 加载自定义补丁程序集
+     *
+     * @param context Android上下文
+     * @param enabledPatches 启用的补丁列表
+     * @return 程序集名称 -> 程序集字节数据的映射
+     */
+    private static Map<String, byte[]> loadCustomPatches(Context context, List<PatchInfo> enabledPatches) {
+        Map<String, byte[]> assemblies = new HashMap<>();
+
+        if (enabledPatches == null || enabledPatches.isEmpty()) {
+            return assemblies;
+        }
+
+        AppLogger.info(TAG, "加载 " + enabledPatches.size() + " 个自定义补丁:");
+        for (PatchInfo patch : enabledPatches) {
+            AppLogger.info(TAG, "  - " + patch.getPatchName() + " (" + patch.getDllFileName() + ")");
+
+            try {
+                // 尝试从 assets/patches 目录加载补丁
+                String assetPath = "patches/" + patch.getDllFileName();
+                InputStream inputStream = context.getAssets().open(assetPath);
+                byte[] assemblyData = readAllBytes(inputStream);
+                inputStream.close();
+
+                assemblies.put(patch.getDllFileName(), assemblyData);
+                AppLogger.info(TAG, "    ✅ 已加载: " + patch.getDllFileName() + " (" + assemblyData.length + " bytes)");
+
+            } catch (IOException e) {
+                AppLogger.warn(TAG, "    ❌ 无法加载补丁: " + patch.getDllFileName() + " - " + e.getMessage());
+            }
+        }
+
+        return assemblies;
+    }
+
+    /**
      * 从 assets 中加载 MonoMod_Patch.zip
-     * 
+     *
      * @param context Android上下文
      * @return 程序集名称 -> 程序集字节数据的映射
      */

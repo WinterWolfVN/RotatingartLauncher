@@ -104,6 +104,25 @@ public class GameLauncher {
             int frameworkMajor);
 
     /**
+     * netcorehost API：调用程序集的方法
+     *
+     * @param appDir 应用程序目录
+     * @param assemblyName 程序集名称（如 "MyPatch.dll"）
+     * @param typeName 类型全名（如 "MyPatch.Entry"）
+     * @param methodName 方法名（如 "Initialize"）
+     * @param dotnetRoot .NET 运行时根目录（可为 null）
+     * @param frameworkMajor 首选框架主版本号（0 = 自动选择最高版本）
+     * @return 0 成功，负数失败
+     */
+    public static native int netcorehostCallMethod(
+            String appDir,
+            String assemblyName,
+            String typeName,
+            String methodName,
+            String dotnetRoot,
+            int frameworkMajor);
+
+    /**
      * netcorehost API：启动应用
      *
      * @return 应用退出码
@@ -126,6 +145,21 @@ public class GameLauncher {
      */
     @SuppressLint("UnsafeDynamicallyLoadedCode")
     public static int launchAssemblyDirect(Context context, String assemblyPath) {
+        return launchAssemblyDirect(context, assemblyPath, null);
+    }
+
+    /**
+     * 直接启动 .NET 程序集（支持自定义补丁配置）
+     *
+     * <p>此方法直接启动指定的 .NET 程序集，并在启动前应用 MonoMod 补丁和启用的自定义补丁
+     *
+     * @param context Android 上下文
+     * @param assemblyPath 程序集完整路径
+     * @param enabledPatches 启用的补丁列表（如果为null则仅应用MonoMod补丁）
+     * @return 0 表示参数设置成功，-1 表示失败
+     */
+    @SuppressLint("UnsafeDynamicallyLoadedCode")
+    public static int launchAssemblyDirect(Context context, String assemblyPath, java.util.List<com.app.ralaunch.model.PatchInfo> enabledPatches) {
         AppLogger.info(TAG, "================================================");
         AppLogger.info(TAG, "Preparing to launch assembly directly");
         AppLogger.info(TAG, "================================================");
@@ -147,22 +181,79 @@ public class GameLauncher {
             AppLogger.info(TAG, "Application directory: " + appDir);
             AppLogger.info(TAG, "Main assembly: " + mainAssembly);
 
-            // Step 1: 应用 MonoMod 补丁
+            // Step 1: 应用补丁文件替换（MonoMod + 自定义补丁）
             AppLogger.info(TAG, "");
-            AppLogger.info(TAG, "Step 1/2: Applying MonoMod patches");
-            int patchedCount = AssemblyPatcher.applyPatches(context, appDir);
+            AppLogger.info(TAG, "Step 1/3: Applying patch files");
+            if (enabledPatches != null && !enabledPatches.isEmpty()) {
+                AppLogger.info(TAG, "Enabled custom patches: " + enabledPatches.size());
+                for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
+                    AppLogger.info(TAG, "  - " + patch.getPatchName());
+                }
+            }
+
+            int patchedCount = AssemblyPatcher.applyPatches(context, appDir, enabledPatches);
 
             if (patchedCount < 0) {
                 AppLogger.warn(TAG, "Patch application failed, but will continue to launch");
             } else if (patchedCount == 0) {
-                AppLogger.info(TAG, "No assemblies need to be replaced");
+                AppLogger.info(TAG, "No patch files need to be applied");
             } else {
-                AppLogger.info(TAG, "Successfully replaced " + patchedCount + " assemblies");
+                AppLogger.info(TAG, "Successfully applied " + patchedCount + " patch files");
             }
 
-            // Step 2: 设置启动参数
+            // Step 2: 执行补丁程序集入口点（在游戏启动前）
             AppLogger.info(TAG, "");
-            AppLogger.info(TAG, "Step 2/2: Configuring runtime");
+            AppLogger.info(TAG, "Step 2/3: Executing patch entry points");
+
+            if (enabledPatches != null && !enabledPatches.isEmpty()) {
+                // 按优先级排序（优先级高的先执行）
+                java.util.List<com.app.ralaunch.model.PatchInfo> sortedPatches = new java.util.ArrayList<>(enabledPatches);
+                java.util.Collections.sort(sortedPatches, (p1, p2) -> Integer.compare(p2.getPriority(), p1.getPriority()));
+
+                // 获取运行时信息
+                String dotnetRoot = RuntimePreference.getDotnetRootPath();
+                String selectedVersion = RuntimeManager.getSelectedVersion(context);
+                int frameworkMajor = 8; // 默认值
+                if (selectedVersion != null && !selectedVersion.isEmpty()) {
+                    try {
+                        frameworkMajor = Integer.parseInt(selectedVersion.split("\\.")[0]);
+                    } catch (Exception e) {
+                        AppLogger.warn(TAG, "Failed to parse framework version, using default .NET 8");
+                    }
+                }
+
+                // 执行每个补丁的入口点
+                for (com.app.ralaunch.model.PatchInfo patch : sortedPatches) {
+                    if (patch.hasEntryPoint()) {
+                        AppLogger.info(TAG, "Executing patch: " + patch.getPatchName() + " (priority: " + patch.getPriority() + ")");
+                        AppLogger.info(TAG, "  Type: " + patch.getEntryTypeName());
+                        AppLogger.info(TAG, "  Method: " + patch.getEntryMethodName());
+
+                        int result = netcorehostCallMethod(
+                            appDir,
+                            patch.getDllFileName(),
+                            patch.getEntryTypeName(),
+                            patch.getEntryMethodName(),
+                            dotnetRoot,
+                            frameworkMajor
+                        );
+
+                        if (result != 0) {
+                            AppLogger.warn(TAG, "Patch execution failed: " + patch.getPatchName() + " (code: " + result + ")");
+                        } else {
+                            AppLogger.info(TAG, "✅ Patch executed successfully: " + patch.getPatchName());
+                        }
+                    } else {
+                        AppLogger.info(TAG, "Skipping " + patch.getPatchName() + " (no entry point configured)");
+                    }
+                }
+            } else {
+                AppLogger.info(TAG, "No patch entry points to execute");
+            }
+
+            // Step 3: 设置游戏启动参数
+            AppLogger.info(TAG, "");
+            AppLogger.info(TAG, "Step 3/3: Configuring game runtime");
 
             // 获取 .NET 运行时路径
             String dotnetRoot = RuntimePreference.getDotnetRootPath();

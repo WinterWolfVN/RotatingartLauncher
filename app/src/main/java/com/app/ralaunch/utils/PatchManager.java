@@ -45,25 +45,54 @@ public class PatchManager {
 
     /**
      * 初始化可用的补丁列表
+     * 从 assets/patches/patch_metadata.json 加载
      */
     private void initializeAvailablePatches() {
-        // tModLoader 补丁
-        availablePatches.add(new PatchInfo(
-            "tmodloader_patch",
-            "tModLoader 补丁",
-            "修复 tModLoader 在 Android 上的兼容性问题",
-            "assemblypatch.dll",
-            "tmodloader"
-        ));
+        try {
+            // 尝试从JSON文件加载补丁元数据
+            loadPatchesFromJson();
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to load patches from JSON, using hardcoded patches: " + e.getMessage());
 
-        // 可以在这里添加更多补丁
-        // availablePatches.add(new PatchInfo(
-        //     "other_game_patch",
-        //     "其他游戏补丁",
-        //     "描述",
-        //     "otherpatch.dll",
-        //     "othergame"
-        // ));
+            // 如果加载失败，使用硬编码的补丁列表作为后备
+            availablePatches.add(new PatchInfo(
+                "tmodloader_patch",
+                "tModLoader 补丁",
+                "修复 tModLoader 在 Android 上的兼容性问题",
+                "assemblypatch.dll",
+                "tmodloader"
+            ));
+        }
+    }
+
+    /**
+     * 从 JSON 文件加载补丁元数据
+     */
+    private void loadPatchesFromJson() {
+        try {
+            // 从 assets 读取 JSON 文件
+            java.io.InputStream is = context.getAssets().open("patches/patch_metadata.json");
+            byte[] buffer = new byte[is.available()];
+            is.read(buffer);
+            is.close();
+
+            String jsonString = new String(buffer, StandardCharsets.UTF_8);
+            JSONObject jsonRoot = new JSONObject(jsonString);
+            JSONArray patchesArray = jsonRoot.getJSONArray("patches");
+
+            availablePatches.clear();
+            for (int i = 0; i < patchesArray.length(); i++) {
+                JSONObject patchJson = patchesArray.getJSONObject(i);
+                PatchInfo patch = PatchInfo.fromJson(patchJson);
+                availablePatches.add(patch);
+                Log.d(TAG, "Loaded patch: " + patch.getPatchName() + " v" + patch.getVersion());
+            }
+
+            Log.d(TAG, "Successfully loaded " + availablePatches.size() + " patches from JSON");
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading patches from JSON", e);
+            throw new RuntimeException("Failed to load patch metadata", e);
+        }
     }
 
     /**

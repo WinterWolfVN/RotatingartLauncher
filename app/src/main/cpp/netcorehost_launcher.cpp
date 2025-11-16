@@ -12,6 +12,7 @@
 #include <netcorehost/context.hpp>
 #include <netcorehost/error.hpp>
 #include <netcorehost/bindings.hpp>
+#include <netcorehost/delegate_loader.hpp>
 #include <jni.h>
 
 // 直接声明静态链接的 nethost 函数
@@ -337,4 +338,148 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostLaunch(JNIEnv *env, jclass cl
 extern "C" JNIEXPORT void JNICALL
 Java_com_app_ralaunch_core_GameLauncher_netcorehostCleanup(JNIEnv *env, jclass clazz) {
     netcorehost_cleanup();
+}
+
+/**
+ * @brief JNI 函数：调用补丁程序集方法
+ */
+extern "C" JNIEXPORT jint JNICALL
+Java_com_app_ralaunch_core_GameLauncher_netcorehostCallMethod(
+        JNIEnv *env, jclass clazz,
+        jstring appDir, jstring assemblyName, jstring typeName, jstring methodName, jint frameworkMajor) {
+
+    const char *app_dir_str = env->GetStringUTFChars(appDir, nullptr);
+    const char *assembly_name_str = env->GetStringUTFChars(assemblyName, nullptr);
+    const char *type_name_str = env->GetStringUTFChars(typeName, nullptr);
+    const char *method_name_str = env->GetStringUTFChars(methodName, nullptr);
+
+    LOGI(LOG_TAG, "========================================");
+    LOGI(LOG_TAG, "🔧 调用补丁方法");
+    LOGI(LOG_TAG, "========================================");
+    LOGI(LOG_TAG, "  应用目录: %s", app_dir_str);
+    LOGI(LOG_TAG, "  程序集: %s", assembly_name_str);
+    LOGI(LOG_TAG, "  类型: %s", type_name_str);
+    LOGI(LOG_TAG, "  方法: %s", method_name_str);
+    LOGI(LOG_TAG, "========================================");
+
+    int result = -1;
+
+    try {
+        // 构建程序集完整路径
+        std::string assembly_path = std::string(app_dir_str) + "/" + std::string(assembly_name_str);
+
+        LOGI(LOG_TAG, "程序集路径: %s", assembly_path.c_str());
+
+        // 验证程序集文件存在
+        if (access(assembly_path.c_str(), F_OK) != 0) {
+            LOGE(LOG_TAG, "程序集文件不存在: %s", assembly_path.c_str());
+            result = -1;
+            goto cleanup;
+        }
+
+        // 加载 hostfxr
+        LOGI(LOG_TAG, "加载 hostfxr...");
+        auto hostfxr = netcorehost::Nethost::load_hostfxr();
+
+        if (!hostfxr) {
+            LOGE(LOG_TAG, "hostfxr 加载失败");
+            result = -2;
+            goto cleanup;
+        }
+
+        LOGI(LOG_TAG, "hostfxr 加载成功");
+
+        // 初始化运行时上下文
+        LOGI(LOG_TAG, "初始化运行时上下文...");
+        auto assembly_path_pdc = netcorehost::PdCString::from_str(assembly_path.c_str());
+
+        std::unique_ptr<netcorehost::HostfxrContextForRuntimeConfig> context;
+
+        context = hostfxr->initialize_for_runtime_config(assembly_path_pdc);
+
+        if (!context) {
+            LOGE(LOG_TAG, "运行时上下文初始化失败");
+            result = -3;
+            goto cleanup;
+        }
+
+        LOGI(LOG_TAG, "运行时上下文初始化成功");
+
+        // 获取委托加载器
+        LOGI(LOG_TAG, "获取委托加载器...");
+        auto loader = context->get_delegate_loader();
+
+        if (!loader) {
+            LOGE(LOG_TAG, "委托加载器获取失败");
+            result = -4;
+            goto cleanup;
+        }
+
+        // 构造完整的类型名（包含程序集名称）
+        std::string assembly_name_without_ext = std::string(assembly_name_str);
+        size_t dot_pos = assembly_name_without_ext.find_last_of('.');
+        if (dot_pos != std::string::npos) {
+            assembly_name_without_ext = assembly_name_without_ext.substr(0, dot_pos);
+        }
+
+        std::string full_type_name = std::string(type_name_str) + ", " + assembly_name_without_ext;
+
+        LOGI(LOG_TAG, "完整类型名: %s", full_type_name.c_str());
+        LOGI(LOG_TAG, "方法名: %s", method_name_str);
+
+        auto type_name_pdc = netcorehost::PdCString::from_str(full_type_name.c_str());
+        auto method_name_pdc = netcorehost::PdCString::from_str(method_name_str);
+
+        // 获取方法指针（使用默认签名：int (void*, int)）
+        typedef int (*component_entry_point_fn)(void* arg, int arg_size_in_bytes);
+        component_entry_point_fn patch_method = nullptr;
+
+        try {
+            patch_method = loader->get_function_with_default_signature(
+                    assembly_path_pdc,
+                    type_name_pdc,
+                    method_name_pdc
+            );
+        } catch (const netcorehost::HostingException& ex) {
+            LOGE(LOG_TAG, "获取方法指针失败: %s", ex.what());
+            result = -5;
+            goto cleanup;
+        }
+
+        if (!patch_method) {
+            LOGE(LOG_TAG, "方法指针为空");
+            result = -6;
+            goto cleanup;
+        }
+
+        LOGI(LOG_TAG, "方法指针获取成功");
+
+        // 调用补丁方法
+        LOGI(LOG_TAG, "========================================");
+        LOGI(LOG_TAG, "调用补丁方法: %s.%s()", type_name_str, method_name_str);
+        LOGI(LOG_TAG, "========================================");
+
+        int call_result = patch_method(nullptr, 0);
+
+        LOGI(LOG_TAG, "========================================");
+        LOGI(LOG_TAG, "补丁方法调用成功，返回值: %d", call_result);
+        LOGI(LOG_TAG, "========================================");
+
+        result = 0;
+
+    } catch (const netcorehost::HostingException& ex) {
+        LOGE(LOG_TAG, "托管错误: %s", ex.what());
+        result = -100;
+    } catch (const std::exception& ex) {
+        LOGE(LOG_TAG, "意外错误: %s", ex.what());
+        result = -101;
+    }
+
+cleanup:
+    env->ReleaseStringUTFChars(appDir, app_dir_str);
+    env->ReleaseStringUTFChars(assemblyName, assembly_name_str);
+    env->ReleaseStringUTFChars(typeName, type_name_str);
+    env->ReleaseStringUTFChars(methodName, method_name_str);
+
+    return result;
 }
