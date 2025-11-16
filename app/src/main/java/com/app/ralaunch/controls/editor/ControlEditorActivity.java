@@ -45,9 +45,6 @@ public class ControlEditorActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 强制使用深色主题
-        setTheme(R.style.Theme_AppCompat);
-
         // 设置全屏沉浸模式并隐藏刘海屏
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE
