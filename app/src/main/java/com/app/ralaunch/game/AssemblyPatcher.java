@@ -164,6 +164,7 @@ public class AssemblyPatcher {
     
     /**
      * 加载自定义补丁程序集
+     * 优先从外部存储加载，如果不存在则从 assets 加载
      *
      * @param context Android上下文
      * @param enabledPatches 启用的补丁列表
@@ -176,22 +177,51 @@ public class AssemblyPatcher {
             return assemblies;
         }
 
+        // 获取外部补丁目录
+        File externalFilesDir = context.getExternalFilesDir(null);
+        if (externalFilesDir == null) {
+            externalFilesDir = context.getFilesDir();
+        }
+        File externalPatchesDir = new File(externalFilesDir, "patches");
+
         AppLogger.info(TAG, "加载 " + enabledPatches.size() + " 个自定义补丁:");
+        AppLogger.info(TAG, "  外部补丁目录: " + externalPatchesDir.getAbsolutePath());
+
         for (PatchInfo patch : enabledPatches) {
             AppLogger.info(TAG, "  - " + patch.getPatchName() + " (" + patch.getDllFileName() + ")");
 
-            try {
-                // 尝试从 assets/patches 目录加载补丁
-                String assetPath = "patches/" + patch.getDllFileName();
-                InputStream inputStream = context.getAssets().open(assetPath);
-                byte[] assemblyData = readAllBytes(inputStream);
-                inputStream.close();
+            byte[] assemblyData = null;
 
+            // 1. 尝试从外部存储加载（用户自定义补丁）
+            File externalPatchFile = new File(externalPatchesDir, patch.getDllFileName());
+            if (externalPatchFile.exists()) {
+                try {
+                    java.io.FileInputStream fis = new java.io.FileInputStream(externalPatchFile);
+                    assemblyData = readAllBytes(fis);
+                    fis.close();
+                    AppLogger.info(TAG, "    ✅ 从外部存储加载: " + patch.getDllFileName() + " (" + assemblyData.length + " bytes)");
+                } catch (IOException e) {
+                    AppLogger.warn(TAG, "    ⚠️  外部补丁加载失败，尝试从 assets 加载: " + e.getMessage());
+                    assemblyData = null;
+                }
+            }
+
+            // 2. 如果外部存储不存在，从 assets 加载（内置补丁）
+            if (assemblyData == null) {
+                try {
+                    String assetPath = "patches/" + patch.getDllFileName();
+                    InputStream inputStream = context.getAssets().open(assetPath);
+                    assemblyData = readAllBytes(inputStream);
+                    inputStream.close();
+                    AppLogger.info(TAG, "    ✅ 从 assets 加载: " + patch.getDllFileName() + " (" + assemblyData.length + " bytes)");
+                } catch (IOException e) {
+                    AppLogger.warn(TAG, "    ❌ 无法加载补丁: " + patch.getDllFileName() + " - " + e.getMessage());
+                }
+            }
+
+            // 3. 添加到映射
+            if (assemblyData != null) {
                 assemblies.put(patch.getDllFileName(), assemblyData);
-                AppLogger.info(TAG, "    ✅ 已加载: " + patch.getDllFileName() + " (" + assemblyData.length + " bytes)");
-
-            } catch (IOException e) {
-                AppLogger.warn(TAG, "    ❌ 无法加载补丁: " + patch.getDllFileName() + " - " + e.getMessage());
             }
         }
 

@@ -1,0 +1,20 @@
+{
+  "id": "example_mod",
+  "name": "示例模组",
+  "description": "这是一个功能完整的示例模组，演示了模组系统的所有功能",
+  "version": "1.0.0",
+  "author": "FireworkSky",
+  "dllFileName": "ExampleMod.dll",
+  "entryPoint": {
+    "typeName": "ExampleMod.ModEntry",
+    "methodName": "Initialize",
+    "preInit": "PreInitialize",
+    "postInit": "PostInitialize"
+  },
+  "targetGames": [
+    "all"
+  ],
+  "priority": 100,
+  "enabled": true,
+  "dependencies": []
+}

@@ -3,7 +3,7 @@
   "name": "示例补丁",
   "description": "演示补丁系统功能的示例补丁",
   "version": "1.0.0",
-  "author": "RA Launcher Team",
+  "author": "FireworkSky",
   "dllFileName": "ExamplePatch.dll",
   "entryPoint": {
     "typeName": "ExamplePatch.Patcher",

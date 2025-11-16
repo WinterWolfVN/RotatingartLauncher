@@ -67,16 +67,38 @@ public class PatchManager {
 
     /**
      * 从 JSON 文件加载补丁元数据
+     * 优先从外部存储读取，如果不存在则从 assets 读取
      */
     private void loadPatchesFromJson() {
         try {
-            // 从 assets 读取 JSON 文件
-            java.io.InputStream is = context.getAssets().open("patches/patch_metadata.json");
-            byte[] buffer = new byte[is.available()];
-            is.read(buffer);
-            is.close();
+            String jsonString = null;
 
-            String jsonString = new String(buffer, StandardCharsets.UTF_8);
+            // 1. 尝试从外部存储读取（用户自定义补丁）
+            File externalPatchMetadata = getExternalPatchMetadataFile();
+            if (externalPatchMetadata.exists()) {
+                Log.d(TAG, "Loading patches from external storage: " + externalPatchMetadata.getAbsolutePath());
+                try (FileInputStream fis = new FileInputStream(externalPatchMetadata)) {
+                    byte[] buffer = new byte[fis.available()];
+                    fis.read(buffer);
+                    jsonString = new String(buffer, StandardCharsets.UTF_8);
+                    Log.d(TAG, "Loaded external patch metadata");
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to load external patch metadata, falling back to assets", e);
+                    jsonString = null;
+                }
+            }
+
+            // 2. 如果外部存储不存在，从 assets 读取（内置补丁）
+            if (jsonString == null) {
+                Log.d(TAG, "Loading patches from assets");
+                java.io.InputStream is = context.getAssets().open("patches/patch_metadata.json");
+                byte[] buffer = new byte[is.available()];
+                is.read(buffer);
+                is.close();
+                jsonString = new String(buffer, StandardCharsets.UTF_8);
+            }
+
+            // 3. 解析 JSON
             JSONObject jsonRoot = new JSONObject(jsonString);
             JSONArray patchesArray = jsonRoot.getJSONArray("patches");
 
@@ -257,10 +279,50 @@ public class PatchManager {
     }
 
     /**
+     * 获取外部存储补丁元数据文件
+     * 路径: /sdcard/Android/data/com.app.ralaunch/files/patches/patch_metadata.json
+     */
+    public File getExternalPatchMetadataFile() {
+        File externalFilesDir = context.getExternalFilesDir(null);
+        if (externalFilesDir == null) {
+            // 如果外部存储不可用，使用内部存储
+            externalFilesDir = context.getFilesDir();
+        }
+        File patchesDir = new File(externalFilesDir, "patches");
+        return new File(patchesDir, "patch_metadata.json");
+    }
+
+    /**
+     * 获取外部存储补丁目录
+     * 路径: /sdcard/Android/data/com.app.ralaunch/files/patches/
+     */
+    public File getExternalPatchesDirectory() {
+        File externalFilesDir = context.getExternalFilesDir(null);
+        if (externalFilesDir == null) {
+            externalFilesDir = context.getFilesDir();
+        }
+        File patchesDir = new File(externalFilesDir, "patches");
+        if (!patchesDir.exists()) {
+            patchesDir.mkdirs();
+            Log.d(TAG, "Created external patches directory: " + patchesDir.getAbsolutePath());
+        }
+        return patchesDir;
+    }
+
+    /**
      * 获取补丁库路径
+     * 优先从外部存储查找，如果不存在则使用内部存储
      */
     public String getPatchLibraryPath(String dllFileName) {
-        // 补丁库应该放在 app 的 native library 目录或 assets 中
+        // 1. 尝试从外部存储获取（用户自定义补丁）
+        File externalPatchesDir = getExternalPatchesDirectory();
+        File externalPatchFile = new File(externalPatchesDir, dllFileName);
+        if (externalPatchFile.exists()) {
+            Log.d(TAG, "Using external patch: " + externalPatchFile.getAbsolutePath());
+            return externalPatchFile.getAbsolutePath();
+        }
+
+        // 2. 使用内部存储（从 assets 复制的补丁）
         File patchDir = new File(context.getFilesDir(), "patches");
         if (!patchDir.exists()) {
             patchDir.mkdirs();
