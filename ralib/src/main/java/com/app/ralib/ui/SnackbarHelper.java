@@ -72,37 +72,57 @@ public class SnackbarHelper {
         TextView textView = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text);
         
         // 根据类型设置样式 - Material Design 3
+        // 使用主题属性获取颜色,跟随应用主题
         String icon;
         int backgroundColor;
         int strokeColor;
         int textColor;
 
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        android.content.res.Resources.Theme theme = context.getTheme();
+
         switch (type) {
             case SUCCESS:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_success);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_success_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_success_text);
+                // 使用三级色容器
+                theme.resolveAttribute(com.google.android.material.R.attr.colorTertiaryContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorTertiary, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnTertiaryContainer, typedValue, true);
+                textColor = typedValue.data;
                 break;
             case ERROR:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_error);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_error_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_error_text);
+                // 使用错误色容器
+                theme.resolveAttribute(com.google.android.material.R.attr.colorErrorContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorError, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnErrorContainer, typedValue, true);
+                textColor = typedValue.data;
                 textView.setMaxLines(3);
                 break;
             case WARNING:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_info);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_info_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_info_text);
+                // 使用主色容器(警告色)
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true);
+                textColor = typedValue.data;
                 break;
             case INFO:
             default:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_info);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_info_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_info_text);
+                // 使用主色容器
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true);
+                textColor = typedValue.data;
                 break;
         }
 
@@ -152,36 +172,56 @@ public class SnackbarHelper {
         TextView textView = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text);
 
         // 根据类型设置样式 - Material Design 3
+        // 使用主题属性获取颜色,跟随应用主题
         String icon;
         int backgroundColor;
         int strokeColor;
         int textColor;
 
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        android.content.res.Resources.Theme theme = context.getTheme();
+
         switch (type) {
             case SUCCESS:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_success);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_success_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_success_text);
+                // 使用三级色容器
+                theme.resolveAttribute(com.google.android.material.R.attr.colorTertiaryContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorTertiary, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnTertiaryContainer, typedValue, true);
+                textColor = typedValue.data;
                 break;
             case ERROR:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_error);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_error_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_error_text);
+                // 使用错误色容器
+                theme.resolveAttribute(com.google.android.material.R.attr.colorErrorContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorError, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnErrorContainer, typedValue, true);
+                textColor = typedValue.data;
                 break;
             case WARNING:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_info);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_info_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_info_text);
+                // 使用主色容器(警告色)
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true);
+                textColor = typedValue.data;
                 break;
             case INFO:
             default:
                 icon = "";
-                backgroundColor = context.getColor(com.app.ralib.R.color.snackbar_info);
-                strokeColor = context.getColor(com.app.ralib.R.color.snackbar_info_stroke);
-                textColor = context.getColor(com.app.ralib.R.color.snackbar_info_text);
+                // 使用主色容器
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true);
+                backgroundColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true);
+                strokeColor = typedValue.data;
+                theme.resolveAttribute(com.google.android.material.R.attr.colorOnPrimaryContainer, typedValue, true);
+                textColor = typedValue.data;
                 break;
         }
 
