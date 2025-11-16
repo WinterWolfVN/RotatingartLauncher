@@ -125,7 +125,7 @@ public class GameExtractor {
                     ))
                     .addExtractor(new BasicSevenZipExtractor(
                             Paths.get(modLoaderZipPath),
-                            getProperExtractionPrefixForModLoaderZip(Paths.get(modLoaderZipPath)),
+                            Paths.get(""), // 保持压缩包内的原始结构，不跳过任何目录
                             Paths.get(outputDir, "GoG Games", "ModLoader"), // for simplicity
                             extractionListener
                     ))

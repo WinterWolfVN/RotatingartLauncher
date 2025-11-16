@@ -16,6 +16,7 @@ import com.app.ralaunch.R;
 import com.app.ralaunch.activity.MainActivity;
 import com.app.ralaunch.model.GameItem;
 import com.app.ralaunch.utils.AppLogger;
+import com.app.ralaunch.utils.AssemblyChecker;
 import com.app.ralaunch.utils.GameExtractor;
 import com.app.ralaunch.utils.GamePathResolver;
 import com.app.ralaunch.utils.IconExtractorHelper;
@@ -376,19 +377,68 @@ public class LocalImportFragment extends Fragment {
                                     File assemblyFile = null;
 
                                     if (modLoaderBaseName != null && !modLoaderBaseName.isEmpty()) {
-                                        // 优先使用 zip 文件名推断的程序集名称
+                                        // 优先使用 zip 文件名推断的程序集名称，递归查找
                                         String expectedDllName = modLoaderBaseName + ".dll";
-                                        File expectedDll = new File(modLoaderDir, expectedDllName);
+                                        assemblyFile = findFileRecursively(modLoaderDir, expectedDllName);
 
-                                        if (expectedDll.exists()) {
-                                            assemblyFile = expectedDll;
-                                            AppLogger.debug(TAG, "Found ModLoader assembly based on zip name: " + expectedDllName);
+                                        if (assemblyFile != null && assemblyFile.exists()) {
+                                            AppLogger.debug(TAG, "Found ModLoader assembly based on zip name: " + assemblyFile.getAbsolutePath());
                                         } else {
-                                            AppLogger.warn(TAG, "Expected DLL not found: " + expectedDllName);
+                                            AppLogger.warn(TAG, "Expected DLL not found: " + expectedDllName + ", searching for any .dll/.exe");
+                                            // 如果找不到，尝试查找第一个 .dll 或 .exe 文件
+                                            assemblyFile = findFirstFileRecursively(modLoaderDir, name ->
+                                                name.toLowerCase().endsWith(".dll") || name.toLowerCase().endsWith(".exe")
+                                            );
+                                            if (assemblyFile != null) {
+                                                AppLogger.info(TAG, "Found alternative assembly: " + assemblyFile.getAbsolutePath());
+                                            }
+                                        }
+                                    } else {
+                                        // 如果没有 baseName，直接查找第一个 .dll 或 .exe
+                                        AppLogger.info(TAG, "No modLoaderBaseName, searching for any .dll/.exe");
+                                        assemblyFile = findFirstFileRecursively(modLoaderDir, name ->
+                                            name.toLowerCase().endsWith(".dll") || name.toLowerCase().endsWith(".exe")
+                                        );
+                                        if (assemblyFile != null) {
+                                            AppLogger.info(TAG, "Found assembly: " + assemblyFile.getAbsolutePath());
                                         }
                                     }
 
 
+
+                                    // 检测程序集是否有入口点
+                                    if (assemblyFile != null && assemblyFile.exists()) {
+                                        AppLogger.info(TAG, "检测程序集入口点: " + assemblyFile.getAbsolutePath());
+                                        try {
+                                            AssemblyChecker.CheckResult checkResult =
+                                                    AssemblyChecker.checkAssembly(getContext(), assemblyFile.getAbsolutePath());
+
+                                            if (checkResult != null) {
+                                                AppLogger.info(TAG, "程序集检测结果: " + checkResult);
+
+                                                if (!checkResult.hasEntryPoint) {
+                                                    AppLogger.warn(TAG, "警告：程序集没有入口点！可能需要宿主程序才能运行");
+                                                    // 尝试查找其他有入口点的程序集
+                                                    File alternativeAssembly = findFirstFileRecursively(modLoaderDir, name -> {
+                                                        if (!name.toLowerCase().endsWith(".dll") && !name.toLowerCase().endsWith(".exe")) {
+                                                            return false;
+                                                        }
+                                                        File file = new File(modLoaderDir, name);
+                                                        AssemblyChecker.CheckResult altResult =
+                                                                AssemblyChecker.checkAssembly(getContext(), file.getAbsolutePath());
+                                                        return altResult != null && altResult.hasEntryPoint;
+                                                    });
+
+                                                    if (alternativeAssembly != null) {
+                                                        AppLogger.info(TAG, "找到有入口点的程序集: " + alternativeAssembly.getAbsolutePath());
+                                                        assemblyFile = alternativeAssembly;
+                                                    }
+                                                }
+                                            }
+                                        } catch (Exception e) {
+                                            AppLogger.error(TAG, "检测程序集失败", e);
+                                        }
+                                    }
 
                                     String finalGamePath = (assemblyFile != null && assemblyFile.exists())
                                             ? assemblyFile.getAbsolutePath()
@@ -396,18 +446,16 @@ public class LocalImportFragment extends Fragment {
 
                                     if (assemblyFile == null || !assemblyFile.exists()) {
                                         AppLogger.warn(TAG, "No valid ModLoader DLL found, using directory path: " + modLoaderPath);
-
                                     }
 
                                     String gameBodyPath = null;
 
-                                        gameBodyPath = findGameBodyPath(gamePath);
-                                        if (gameBodyPath != null) {
-                                            AppLogger.debug(TAG, "Game body path: " + gameBodyPath);
-                                        } else {
-                                            AppLogger.warn(TAG, "Game body not found in: " + gamePath);
-                                        }
-                                    // }
+                                    gameBodyPath = findGameBodyPath(gamePath);
+                                    if (gameBodyPath != null) {
+                                        AppLogger.debug(TAG, "Game body path: " + gameBodyPath);
+                                    } else {
+                                        AppLogger.warn(TAG, "Game body not found in: " + gamePath);
+                                    }
 
                                     AppLogger.debug(TAG, "Final game path: " + finalGamePath);
                                     AppLogger.debug(TAG, "GameExtractor returned gamePath: " + gamePath);
@@ -422,14 +470,21 @@ public class LocalImportFragment extends Fragment {
                                         // 使用模组加载器的程序集
                                         iconSourcePath = finalGamePath;
 
-                                        // 尝试从程序集文件名提取名称
-                                        File modLoaderFile = new File(finalGamePath);
-                                        if (modLoaderFile.exists() && modLoaderFile.isFile()) {
-                                            String modLoaderName = modLoaderFile.getName().replace(".dll", "").replace(".exe", "");
-                                            displayName = modLoaderName;
-                                            AppLogger.info(TAG, "Using ModLoader assembly: " + modLoaderName);
+                                        // 优先级：modLoaderBaseName > 程序集文件名 > 游戏名称
+                                        if (modLoaderBaseName != null && !modLoaderBaseName.isEmpty()) {
+                                            displayName = modLoaderBaseName;
+                                            AppLogger.info(TAG, "Using ModLoader zip name: " + displayName);
                                         } else {
-                                            displayName = gameName; // 使用游戏名称
+                                            // 尝试从程序集文件名提取名称
+                                            File modLoaderFile = new File(finalGamePath);
+                                            if (modLoaderFile.exists() && modLoaderFile.isFile()) {
+                                                String modLoaderName = modLoaderFile.getName().replace(".dll", "").replace(".exe", "");
+                                                displayName = modLoaderName;
+                                                AppLogger.info(TAG, "Using ModLoader assembly name: " + modLoaderName);
+                                            } else {
+                                                displayName = gameName; // 回退到游戏名称
+                                                AppLogger.info(TAG, "Using game name as fallback: " + displayName);
+                                            }
                                         }
                                         newGame.setModLoaderEnabled(true);
 

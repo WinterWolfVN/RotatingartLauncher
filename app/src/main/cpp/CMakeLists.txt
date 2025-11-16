@@ -68,6 +68,25 @@ set(CMAKE_INSTALL_PREFIX ${_OLD_CMAKE_INSTALL_PREFIX})
 
 
 
+# 添加 NetCoreHost Manager 库（JNI包装）
+add_library(netcorehost_manager SHARED
+        netcorehost_manager.cpp
+        netcorehost_manager_jni.cpp
+        app_logger.c
+)
+
+# NetCoreHost Manager 链接 netcorehost
+target_link_libraries(netcorehost_manager
+        android
+        log
+        netcorehost
+)
+
+# NetCoreHost Manager 包含头文件
+target_include_directories(netcorehost_manager PRIVATE
+        ${NETCOREHOST_SOURCE_DIR}/include
+)
+
 # 添加你的主程序源码
 add_library(${CMAKE_PROJECT_NAME} SHARED
         sdl_entry.c
@@ -112,7 +131,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 # 安装共享库到APK的lib目录
-# 包括：libmain.so, SDL2, FAudio, FNA3D, netcorehost, mojoshader, theorafile
+# 包括：libmain.so, SDL2, FAudio, FNA3D, netcorehost, netcorehost_manager, mojoshader, theorafile
 # GL (libGL.so) 和 shaderconv 通过 GL4ESPlus 的 CMakeLists.txt 单独安装
-install(TARGETS ${CMAKE_PROJECT_NAME} SDL2 FAudio-shared FNA3D netcorehost DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS ${CMAKE_PROJECT_NAME} SDL2 FAudio-shared FNA3D netcorehost netcorehost_manager DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(TARGETS mojoshader theorafile DESTINATION ${CMAKE_INSTALL_LIBDIR})

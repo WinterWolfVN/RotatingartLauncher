@@ -276,9 +276,9 @@
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="12dp"
+                                    android:layout_marginTop="8dp"
                                     android:orientation="vertical"
-                                    android:padding="12dp"
+                                    android:padding="8dp"
                                     android:background="@drawable/bg_rounded_transparent"
                                     android:backgroundTint="?attr/backgroundCard">
 
@@ -287,9 +287,9 @@
                                         android:layout_height="wrap_content"
                                         android:text="程序集路径"
                                         android:textColor="?attr/textPrimary"
-                                        android:textSize="12sp"
+                                        android:textSize="10sp"
                                         android:textStyle="bold"
-                                        android:layout_marginBottom="8dp" />
+                                        android:layout_marginBottom="4dp" />
 
                                     <EditText
                                         android:id="@+id/selectedGamePath"
@@ -297,26 +297,14 @@
                                         android:layout_height="wrap_content"
                                         android:text="游戏路径"
                                         android:textColor="?attr/textPrimary"
-                                        android:textSize="11sp"
+                                        android:textSize="9sp"
                                         android:background="@drawable/bg_rounded_transparent"
                                         android:backgroundTint="?attr/backgroundCard"
-                                        android:padding="10dp"
-                                        android:maxLines="3"
+                                        android:padding="6dp"
+                                        android:maxLines="2"
                                         android:ellipsize="end"
                                         android:inputType="textMultiLine"
-                                        android:textCursorDrawable="@null"
-                                        android:layout_marginBottom="8dp" />
-
-                                    <Button
-                                        android:id="@+id/saveGamePathButton"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="36dp"
-                                        android:text="保存路径"
-                                        android:textColor="?attr/textPrimary"
-                                        android:textSize="12sp"
-                                        android:textStyle="bold"
-                                        android:background="@drawable/bg_rounded_transparent"
-                                        android:backgroundTint="@color/accent_primary" />
+                                        android:textCursorDrawable="@null" />
 
                                 </LinearLayout>
 

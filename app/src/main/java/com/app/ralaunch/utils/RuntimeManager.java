@@ -44,17 +44,27 @@ public final class RuntimeManager {
      */
     public static File getDotnetRoot(Context ctx) {
         String dirName = "dotnet";
-        
+
         File archSpecificDir = new File(ctx.getFilesDir(), dirName);
         if (archSpecificDir.exists()) {
 
             return archSpecificDir;
         }
-        
+
         // 回退到默认 dotnet 目录（向后兼容）
         File defaultDir = new File(ctx.getFilesDir(), "dotnet");
 
         return defaultDir;
+    }
+
+    /**
+     * 获取 .NET 运行时根目录路径字符串
+     *
+     * @param ctx Android 上下文
+     * @return .NET 运行时根目录的绝对路径
+     */
+    public static String getDotnetPath(Context ctx) {
+        return getDotnetRoot(ctx).getAbsolutePath();
     }
 
     /**

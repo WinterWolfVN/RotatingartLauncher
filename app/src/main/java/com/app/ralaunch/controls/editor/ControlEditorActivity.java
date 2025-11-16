@@ -44,7 +44,10 @@ public class ControlEditorActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
+        // 强制使用深色主题
+        setTheme(R.style.Theme_AppCompat);
+
         // 设置全屏沉浸模式并隐藏刘海屏
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -54,13 +57,13 @@ public class ControlEditorActivity extends AppCompatActivity {
             | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         );
-        
+
         // Android P+ 隐藏刘海屏
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            getWindow().getAttributes().layoutInDisplayCutoutMode = 
+            getWindow().getAttributes().layoutInDisplayCutoutMode =
                 android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
-        
+
         setContentView(R.layout.activity_control_editor);
         
         // 获取屏幕尺寸
@@ -95,7 +98,6 @@ public class ControlEditorActivity extends AppCompatActivity {
         String[] menuItems = {
             "添加按键",
             "添加摇杆",
-            "显示/隐藏网格",
             "保存布局",
             "加载布局",
             "重置为默认",
@@ -123,19 +125,16 @@ public class ControlEditorActivity extends AppCompatActivity {
             case 1: // 添加摇杆
                 addJoystick();
                 break;
-            case 2: // 显示/隐藏网格
-                toggleGrid();
-                break;
-            case 3: // 保存布局
+            case 2: // 保存布局
                 saveLayout();
                 break;
-            case 4: // 加载布局
+            case 3: // 加载布局
                 loadLayout();
                 break;
-            case 5: // 重置为默认
+            case 4: // 重置为默认
                 resetToDefault();
                 break;
-            case 6: // 保存并退出
+            case 5: // 保存并退出
                 saveLayout();
                 finish();
                 break;
@@ -295,19 +294,13 @@ public class ControlEditorActivity extends AppCompatActivity {
         ControlData joystick = ControlData.createDefaultJoystick();
         joystick.x = mScreenWidth / 2f;
         joystick.y = mScreenHeight / 2f;
-        
+
         mCurrentConfig.controls.add(joystick);
         displayLayout();
-        
+
         Toast.makeText(this, "已添加摇杆", Toast.LENGTH_SHORT).show();
     }
-    
-    private void toggleGrid() {
-        if (mGridOverlay != null) {
-            mGridOverlay.toggleGrid();
-        }
-    }
-    
+
     private void saveLayout() {
         try {
             File file = new File(getFilesDir(), "custom_layout.json");

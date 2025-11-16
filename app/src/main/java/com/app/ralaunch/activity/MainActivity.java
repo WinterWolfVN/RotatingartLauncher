@@ -252,7 +252,6 @@ public class MainActivity extends AppCompatActivity implements
         runtimeSelectContainer = findViewById(R.id.runtimeSelectContainer);
         btnRuntimeSelector = findViewById(R.id.btnRuntimeSelector);
         tvCurrentRuntime = findViewById(R.id.tvCurrentRuntime);
-        Button saveGamePathButton = findViewById(R.id.saveGamePathButton);
 
         // 初始化RecyclerView
         gameRecyclerView = findViewById(R.id.gameRecyclerView);
@@ -318,32 +317,6 @@ public class MainActivity extends AppCompatActivity implements
         });
 
         // ModLoader 开关监听已移除 - 现在直接启动选中的程序集
-
-        // 保存游戏路径按钮
-        saveGamePathButton.setOnClickListener(v -> {
-            if (selectedGame != null) {
-                String newPath = selectedGamePath.getText().toString().trim();
-                if (newPath.isEmpty()) {
-                    showToast("程序集路径不能为空");
-                    return;
-                }
-                
-                // 验证文件是否存在
-                File assemblyFile = new File(newPath);
-                if (!assemblyFile.exists()) {
-                    showToast("警告: 文件不存在，但已保存路径");
-                }
-                
-                // 更新游戏路径
-                selectedGame.setGamePath(newPath);
-                // 保存到配置文件
-                RaLaunchApplication.getGameDataManager().saveGameList(gameList);
-                showToast("程序集路径已保存");
-
-            } else {
-                showToast("请先选择一个游戏");
-            }
-        });
 
         // 控制布局按钮
         ImageButton controlLayoutButton = findViewById(R.id.controlLayoutButton);

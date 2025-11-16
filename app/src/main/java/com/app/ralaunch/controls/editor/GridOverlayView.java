@@ -12,7 +12,7 @@ public class GridOverlayView extends View {
     private static final int GRID_SIZE = 50; // 网格大小（像素）
     private Paint mGridPaint;
     private Paint mAxisPaint;
-    private boolean mVisible = false;
+    private boolean mVisible = true; // 默认显示网格
 
     public GridOverlayView(Context context) {
         super(context);
