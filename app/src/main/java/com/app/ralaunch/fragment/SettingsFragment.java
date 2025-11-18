@@ -423,54 +423,18 @@ public class SettingsFragment extends Fragment {
     private void setupDeveloperSettings(View rootView) {
         // 获取设置管理器
         SettingsManager settingsManager = SettingsManager.getInstance(requireContext());
-        com.app.ralaunch.console.ConsoleManager consoleManager = 
-            com.app.ralaunch.console.ConsoleManager.getInstance(requireContext());
-        
+
         // 找到卡片和显示文本
-        MaterialCardView consoleEnabledCard = rootView.findViewById(R.id.consoleEnabledCard);
-        TextView tvConsoleEnabledValue = rootView.findViewById(R.id.tvConsoleEnabledValue);
         MaterialCardView verboseLoggingCard = rootView.findViewById(R.id.verboseLoggingCard);
         TextView tvVerboseLoggingValue = rootView.findViewById(R.id.tvVerboseLoggingValue);
         Button btn_enter_debug_page = rootView.findViewById(R.id.btn_enter_debug_page);
-        
+
         if (verboseLoggingCard == null) {
             return;
         }
-        
+
         // 更新显示值
-        updateConsoleEnabledDisplay(consoleManager, tvConsoleEnabledValue);
         updateVerboseLoggingDisplay(settingsManager, tvVerboseLoggingValue);
-        
-        // 设置开发者控制台点击事件
-        if (consoleEnabledCard != null) {
-            consoleEnabledCard.setOnClickListener(v -> {
-                List<OptionSelectorDialog.Option> options = Arrays.asList(
-                    new OptionSelectorDialog.Option("true",
-                        getString(R.string.developer_console_on),
-                        getString(R.string.developer_console_desc_on)),
-                    new OptionSelectorDialog.Option("false",
-                        getString(R.string.developer_console_off),
-                        getString(R.string.developer_console_desc_off))
-                );
-
-                new OptionSelectorDialog()
-                    .setTitle(getString(R.string.developer_console))
-                    .setIcon(R.drawable.ic_bug)
-                    .setOptions(options)
-                    .setCurrentValue(String.valueOf(consoleManager.isConsoleEnabled()))
-                    .setOnOptionSelectedListener(value -> {
-                        boolean enabled = Boolean.parseBoolean(value);
-                        consoleManager.setConsoleEnabled(enabled);
-                        updateConsoleEnabledDisplay(consoleManager, tvConsoleEnabledValue);
-
-                        String message = enabled ?
-                                getString(R.string.developer_console_enabled) :
-                                getString(R.string.developer_console_disabled);
-                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
-                    })
-                    .show(getParentFragmentManager(), "console_enabled");
-            });
-        }
         
         // 设置详细日志点击事件
         verboseLoggingCard.setOnClickListener(v -> {
@@ -508,12 +472,6 @@ public class SettingsFragment extends Fragment {
                 startActivity(new android.content.Intent(requireContext(), com.app.ralaunch.activity.DebugActivity.class));
             });
         }
-    }
-    
-    private void updateConsoleEnabledDisplay(com.app.ralaunch.console.ConsoleManager consoleManager, TextView textView) {
-        textView.setText(consoleManager.isConsoleEnabled() ?
-            getString(R.string.developer_console_on) :
-            getString(R.string.developer_console_off));
     }
 
     private void updateVerboseLoggingDisplay(SettingsManager settingsManager, TextView textView) {

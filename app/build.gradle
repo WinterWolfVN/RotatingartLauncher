@@ -40,8 +40,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     externalNativeBuild {
         cmake {
@@ -102,6 +102,9 @@ dependencies {
     implementation 'org.apache.commons:commons-compress:1.24.0'
 
     implementation project(path: ':ralib')
+
+    // Fishnet 崩溃捕捉库 (使用本地 AAR)
+    implementation files('libs/fishnet-release.aar')
 
     implementation libs.appcompat
     implementation libs.material

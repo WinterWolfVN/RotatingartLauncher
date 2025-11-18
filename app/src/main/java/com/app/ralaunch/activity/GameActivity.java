@@ -168,10 +168,7 @@ public class GameActivity extends SDLActivity {
 
             setBootstrapperParams(gameBasePath, bootstrapperAssemblyPath, bootstrapperEntryPoint, bootstrapperCurrentDir);
         }
-        
-        // 初始化开发者控制台
-        initializeConsole();
-        
+
         // 设置返回键处理器（使用新的 OnBackPressedCallback API）
         setupBackPressedHandler();
     }
@@ -185,31 +182,6 @@ public class GameActivity extends SDLActivity {
         // 对于 SDLActivity, 我们在 onBackPressed() 方法中处理
         // 这里只是一个占位方法,实际逻辑在 onBackPressed() 中
         AppLogger.info(TAG, "Back pressed handler ready (using onBackPressed override)");
-    }
-    
-    /**
-     * 初始化开发者控制台
-     */
-    private void initializeConsole() {
-        try {
-            com.app.ralaunch.console.ConsoleManager consoleManager =
-                com.app.ralaunch.console.ConsoleManager.getInstance(this);
-
-            // 初始化控制台服务
-            consoleManager.initializeService();
-
-            // 如果启用，显示控制台
-            if (consoleManager.isConsoleEnabled()) {
-                // 延迟显示，等待界面完全加载
-                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                    consoleManager.showConsole(this);
-                }, 1000);
-            }
-
-            AppLogger.info(TAG, "Console initialized");
-        } catch (Exception e) {
-            AppLogger.error(TAG, "Failed to initialize console: " + e.getMessage(), e);
-        }
     }
 
     @Override
@@ -537,38 +509,15 @@ public class GameActivity extends SDLActivity {
             case 1: // 编辑控制布局
                 enterEditMode();
                 break;
-            case 2: // 显示控制台
-                toggleConsole();
-                break;
-            case 3: // 快速设置
+            case 2: // 快速设置
                 showQuickSettings();
                 break;
-            case 4: // 退出游戏
+            case 3: // 退出游戏
                 showExitConfirmDialog();
                 break;
         }
     }
     
-    /**
-     * 切换控制台显示/隐藏
-     */
-    private void toggleConsole() {
-        try {
-            com.app.ralaunch.console.ConsoleManager consoleManager = 
-                com.app.ralaunch.console.ConsoleManager.getInstance(this);
-            
-            if (!consoleManager.isConsoleEnabled()) {
-                Toast.makeText(this, "控制台未启用\n请在设置→开发者设置中开启", Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            consoleManager.toggleConsole(this);
-            AppLogger.info(TAG, "Console toggled");
-        } catch (Exception e) {
-            AppLogger.error(TAG, "Failed to toggle console: " + e.getMessage(), e);
-            ErrorHandler.handleError("控制台切换失败", e, false);
-        }
-    }
 
     /**
      * 处理编辑菜单点击事件
@@ -870,16 +819,6 @@ public class GameActivity extends SDLActivity {
     @Override
     protected void onDestroy() {
         AppLogger.info(TAG, "GameActivity.onDestroy() called");
-
-        // 清理控制台
-        try {
-            com.app.ralaunch.console.ConsoleManager consoleManager =
-                com.app.ralaunch.console.ConsoleManager.getInstance(this);
-            consoleManager.shutdown();
-        } catch (Exception e) {
-            AppLogger.error(TAG, "Failed to shutdown console: " + e.getMessage(), e);
-        }
-
         super.onDestroy();
     }
 

@@ -75,7 +75,6 @@
     <string-array name="game_menu_items">
         <item>Toggle Controls</item>
         <item>Edit Control Layout</item>
-        <item>Show Console</item>
         <item>Quick Settings</item>
         <item>Exit Game</item>
     </string-array>

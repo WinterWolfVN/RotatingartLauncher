@@ -6,11 +6,13 @@ import android.content.res.Configuration;
 import com.app.ralaunch.data.GameDataManager;
 import com.app.ralaunch.utils.GamePathResolver;
 import com.app.ralaunch.utils.LocaleManager;
+import com.kyant.fishnet.Fishnet;
+import java.io.File;
 
 /**
  * 应用程序全局 Application 类
  *
- * 提供全局的应用程序 Context，用于在静态方法中访问 Context
+ * 提供全局的应用程序 Context,用于在静态方法中访问 Context
  */
 public class RaLaunchApplication extends Application {
     private static Context appContext;
@@ -20,6 +22,13 @@ public class RaLaunchApplication extends Application {
     public void onCreate() {
         super.onCreate();
         appContext = getApplicationContext();
+
+        // 初始化 Fishnet 崩溃捕捉
+        File logDir = new File(getFilesDir(), "crash_logs");
+        if (!logDir.exists()) {
+            logDir.mkdirs();
+        }
+        Fishnet.init(appContext, logDir.getAbsolutePath());
 
         // 初始化 GameDataManager
         gameDataManager = new GameDataManager(appContext);
