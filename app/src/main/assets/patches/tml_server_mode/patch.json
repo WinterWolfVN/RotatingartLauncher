@@ -1,0 +1,14 @@
+{
+  "id": "tml_server_mode",
+  "name": "tModLoader 服务器模式",
+  "description": "自动启用 tModLoader 服务器模式，允许在 Android 设备上运行专用服务器",
+  "version": "1.0.0",
+  "author": "RA Launcher Team",
+  "dllFileName": "TMLServerPatch.dll",
+  "targetGames": [
+    "tModLoader",
+    "Terraria"
+  ],
+  "priority": 50,
+  "enabled": false
+}

@@ -22,7 +22,7 @@ android {
         externalNativeBuild {
             cmake {
                 targets "main"
-            // 使用 splits.abi.include 控制打包 ABI
+                // 使用 splits.abi.include 控制打包 ABI
             }
         }
     }
@@ -56,6 +56,11 @@ android {
     packagingOptions {
         pickFirst "lib/arm64-v8a/libc++_shared.so"
         pickFirst "lib/arm64-v8a/libnetcorehost.so"
+        // 确保渲染器库被打包
+        jniLibs {
+            useLegacyPackaging = true
+            keepDebugSymbols += ['**/*.so']
+        }
     }
 
     // 临时只针对真机arm64-v8a编译，避免Gradle打包重复资源

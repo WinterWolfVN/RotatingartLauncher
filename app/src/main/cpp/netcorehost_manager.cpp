@@ -9,6 +9,7 @@
 #include <netcorehost/context.hpp>
 #include <netcorehost/error.hpp>
 #include <netcorehost/bindings.hpp>
+#include <netcorehost/delegate_loader.hpp>
 #include <android/log.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +19,7 @@
 #include <memory>
 #include <map>
 #include "app_logger.h"
+#include "corehost_trace_redirect.h"
 
 // 直接声明静态链接的 nethost 函数
 extern "C" {
@@ -37,6 +39,7 @@ static std::string g_dotnet_root;
 static int g_framework_major = 0;
 static bool g_initialized = false;
 static char g_last_error[2048] = {0};
+static bool g_enable_corehost_trace = true;  // 默认启用，用于调试
 
 // 上下文管理（每个程序集一个独立上下文）
 struct AssemblyContext {
@@ -94,9 +97,17 @@ int netcore_init(const char* dotnet_root, int framework_major) {
         LOGI(LOG_TAG, "  滚动策略: 自动（最新版本）");
     }
 
-    // 启用调试输出
-    setenv("COREHOST_TRACE", "1", 1);
-    setenv("COMPlus_DebugWriteToStdErr", "1", 1);
+    // 根据设置决定是否启用 COREHOST_TRACE
+    if (g_enable_corehost_trace) {
+        init_corehost_trace_redirect();
+            LOGI(LOG_TAG, "COREHOST_TRACE重定向已初始化");
+
+            // 启用 COREHOST_TRACE 以便捕获所有 .NET runtime 的 trace 输出
+            setenv("COREHOST_TRACE", "1", 1);
+            LOGI(LOG_TAG, "已启用 COREHOST_TRACE");
+        } else {
+            LOGI(LOG_TAG, "COREHOST_TRACE 已禁用（详细日志已关闭）");
+    }
 
     // 输入相关
     setenv("SDL_TOUCH_MOUSE_EVENTS", "1", 1);
@@ -143,6 +154,9 @@ int netcore_init(const char* dotnet_root, int framework_major) {
 
 /**
  * @brief 运行程序集（调用 Main 入口点）
+ *
+ * 注意：此方法使用 initialize_for_dotnet_command_line，不支持传递命令行参数
+ * 如果需要传递参数，请使用 netcore_run_app_with_args()
  */
 int netcore_run_app(
     const char* app_dir,
@@ -160,6 +174,9 @@ int netcore_run_app(
     LOGI(LOG_TAG, "========================================");
     LOGI(LOG_TAG, "  目录: %s", app_dir);
     LOGI(LOG_TAG, "  参数数量: %d", argc);
+    for (int i = 0; i < argc; i++) {
+        LOGI(LOG_TAG, "    args[%d] = %s", i, argv[i]);
+    }
 
     // 构建完整程序集路径
     std::string app_path = std::string(app_dir) + "/" + std::string(main_assembly);
@@ -183,17 +200,31 @@ int netcore_run_app(
     setenv("HOME", app_dir, 1);
 
     try {
-        // 初始化运行时上下文
+        // 初始化运行时上下文（支持参数传递）
         auto app_path_str = netcorehost::PdCString::from_str(app_path.c_str());
 
         std::unique_ptr<netcorehost::HostfxrContextForCommandLine> context;
 
-        if (!g_dotnet_root.empty()) {
-            auto dotnet_root_str = netcorehost::PdCString::from_str(g_dotnet_root.c_str());
-            context = g_hostfxr->initialize_for_dotnet_command_line_with_dotnet_root(
-                app_path_str, dotnet_root_str);
+        // 根据是否有参数选择合适的初始化方法
+        if (argc > 0 && argv != nullptr) {
+            // 有参数：使用带参数的初始化方法
+            if (!g_dotnet_root.empty()) {
+                auto dotnet_root_str = netcorehost::PdCString::from_str(g_dotnet_root.c_str());
+                context = g_hostfxr->initialize_for_dotnet_command_line_with_args_and_dotnet_root(
+                    app_path_str, argc, argv, dotnet_root_str);
+            } else {
+                context = g_hostfxr->initialize_for_dotnet_command_line_with_args(
+                    app_path_str, argc, argv);
+            }
         } else {
-            context = g_hostfxr->initialize_for_dotnet_command_line(app_path_str);
+            // 无参数：使用原始方法
+            if (!g_dotnet_root.empty()) {
+                auto dotnet_root_str = netcorehost::PdCString::from_str(g_dotnet_root.c_str());
+                context = g_hostfxr->initialize_for_dotnet_command_line_with_dotnet_root(
+                    app_path_str, dotnet_root_str);
+            } else {
+                context = g_hostfxr->initialize_for_dotnet_command_line(app_path_str);
+            }
         }
 
         if (!context) {
@@ -221,6 +252,30 @@ int netcore_run_app(
             g_last_error[0] = '\0';
         }
         LOGI(LOG_TAG, "========================================");
+
+        // ⚠️ 重要：先显式关闭并销毁 context，然后重置 hostfxr
+        // 必须按此顺序：
+        // 1. context->close() 需要调用 hostfxr 的函数，所以必须在 hostfxr 重置之前完成
+        // 2. 销毁 context 后，才能安全地重置 hostfxr 实例
+        LOGI(LOG_TAG, "关闭上下文...");
+        try {
+            context->close();  // 显式关闭上下文
+        } catch (const std::exception& ex) {
+            LOGW(LOG_TAG, "关闭上下文时出错: %s", ex.what());
+        }
+        context.reset();  // 销毁 context unique_ptr
+        LOGI(LOG_TAG, "✓ 上下文已关闭");
+
+        // 现在可以安全地重置 hostfxr 以允许下一次运行
+        // initialize_for_dotnet_command_line 不支持在同一个 hostfxr 实例中连续创建多个上下文
+        LOGI(LOG_TAG, "重置 hostfxr 以允许下一次运行...");
+        g_hostfxr.reset();
+        g_hostfxr = netcorehost::Nethost::load_hostfxr();
+        if (!g_hostfxr) {
+            LOGW(LOG_TAG, "⚠️ hostfxr 重新加载失败");
+        } else {
+            LOGI(LOG_TAG, "✓ hostfxr 重新加载成功");
+        }
 
         return exit_code;
 
@@ -277,13 +332,9 @@ int netcore_load_assembly(
 
         std::unique_ptr<netcorehost::HostfxrContextForRuntimeConfig> runtime_ctx;
 
-        if (!g_dotnet_root.empty()) {
-            auto dotnet_root_str = netcorehost::PdCString::from_str(g_dotnet_root.c_str());
-            runtime_ctx = g_hostfxr->initialize_for_runtime_config_with_dotnet_root(
-                runtimeconfig_str, dotnet_root_str);
-        } else {
-            runtime_ctx = g_hostfxr->initialize_for_runtime_config(runtimeconfig_str);
-        }
+        // 使用 initialize_for_runtime_config 配合 parameters
+        // 注意：runtime config 方法使用 hostfxr_initialize_parameters
+        runtime_ctx = g_hostfxr->initialize_for_runtime_config(runtimeconfig_str);
 
         if (!runtime_ctx) {
             set_error("运行时配置初始化失败");
@@ -354,7 +405,7 @@ int netcore_call_method(
         }
 
         auto load_assembly_and_get_function_pointer =
-            get_delegate_result.value().as_load_assembly_and_get_function_pointer();
+            reinterpret_cast<netcorehost::bindings::load_assembly_and_get_function_pointer_fn>(get_delegate_result);
 
         // 构建程序集完整路径
         std::string assembly_path = ctx->app_dir + "/" + ctx->assembly_name;
@@ -367,12 +418,12 @@ int netcore_call_method(
         if (delegate_type && delegate_type[0] != '\0') {
             // 有返回值（委托）
             auto delegate_type_str = netcorehost::PdCString::from_str(delegate_type);
-            auto call_result = load_assembly_and_get_function_pointer(
-                assembly_path_str, type_name_str, method_name_str,
-                delegate_type_str, nullptr, &method_ptr);
+            int32_t call_result = load_assembly_and_get_function_pointer(
+                assembly_path_str.c_str(), type_name_str.c_str(), method_name_str.c_str(),
+                delegate_type_str.c_str(), nullptr, &method_ptr);
 
-            if (!call_result.is_success()) {
-                set_error("方法调用失败 (code: %d)", call_result.value());
+            if (call_result != 0) {
+                set_error("方法调用失败 (code: %d)", call_result);
                 return -1;
             }
 
@@ -381,12 +432,12 @@ int netcore_call_method(
             }
         } else {
             // 无返回值
-            auto call_result = load_assembly_and_get_function_pointer(
-                assembly_path_str, type_name_str, method_name_str,
+            int32_t call_result = load_assembly_and_get_function_pointer(
+                assembly_path_str.c_str(), type_name_str.c_str(), method_name_str.c_str(),
                 nullptr, nullptr, &method_ptr);
 
-            if (!call_result.is_success()) {
-                set_error("方法调用失败 (code: %d)", call_result.value());
+            if (call_result != 0) {
+                set_error("方法调用失败 (code: %d)", call_result);
                 return -1;
             }
 
@@ -462,4 +513,185 @@ void netcore_cleanup() {
 
     LOGI(LOG_TAG, "✓ 清理完成");
     LOGI(LOG_TAG, "========================================");
+}
+
+/**
+ * @brief 运行工具程序集（使用 runtime config，支持在已加载的 CoreCLR 中运行）
+ *
+ * 此函数专门用于运行工具程序（如 AssemblyChecker、InstallerTools），
+ * 与 netcore_run_app() 的区别：
+ * - netcore_run_app() 使用 initialize_for_dotnet_command_line，会加载 CoreCLR（primary context）
+ * - netcore_run_tool() 使用 initialize_for_runtime_config，可以在已加载的 CoreCLR 中运行（secondary context）
+ *
+ * 重要：如果 CoreCLR 已被 netcore_run_app() 加载，则后续只能使用此函数，不能再用 netcore_run_app()
+ *
+ * @param app_dir 工具程序所在目录
+ * @param tool_assembly 工具程序集名称（如 "AssemblyChecker.dll"）
+ * @param argc 命令行参数数量
+ * @param argv 命令行参数数组
+ * @return 工具程序退出码（Main方法的返回值）
+ */
+int netcore_run_tool(
+    const char* app_dir,
+    const char* tool_assembly,
+    int argc,
+    const char* const* argv) {
+
+    if (!g_initialized) {
+        set_error("未初始化，请先调用 netcore_init()");
+        return -1;
+    }
+
+    LOGI(LOG_TAG, "========================================");
+    LOGI(LOG_TAG, "🔧 运行工具程序: %s", tool_assembly);
+    LOGI(LOG_TAG, "========================================");
+    LOGI(LOG_TAG, "  目录: %s", app_dir);
+    LOGI(LOG_TAG, "  参数数量: %d", argc);
+    for (int i = 0; i < argc; i++) {
+        LOGI(LOG_TAG, "    args[%d] = %s", i, argv[i]);
+    }
+
+    // 构建 runtimeconfig.json 路径
+    std::string assembly_name_str(tool_assembly);
+    std::string base_name = assembly_name_str;
+    size_t dot_pos = base_name.rfind('.');
+    if (dot_pos != std::string::npos) {
+        base_name = base_name.substr(0, dot_pos);
+    }
+
+    std::string runtimeconfig_path = std::string(app_dir) + "/" + base_name + ".runtimeconfig.json";
+    std::string assembly_path = std::string(app_dir) + "/" + tool_assembly;
+
+    // 验证文件存在
+    if (access(runtimeconfig_path.c_str(), F_OK) != 0) {
+        set_error("找不到 runtimeconfig.json: %s", runtimeconfig_path.c_str());
+        return -1;
+    }
+    if (access(assembly_path.c_str(), F_OK) != 0) {
+        set_error("工具程序集不存在: %s", assembly_path.c_str());
+        return -1;
+    }
+
+    // 设置工作目录
+    if (chdir(app_dir) == 0) {
+        LOGI(LOG_TAG, "  工作目录: %s", app_dir);
+    } else {
+        LOGW(LOG_TAG, "  无法设置工作目录");
+    }
+
+    try {
+        // 使用 initialize_for_runtime_config 创建上下文
+        // 这允许在已加载的 CoreCLR 中运行（secondary context）
+        auto runtimeconfig_str = netcorehost::PdCString::from_str(runtimeconfig_path.c_str());
+
+        // C++ netcorehost 库暂时不支持 with_dotnet_root，只能使用基础版本
+        // dotnet_root 已通过环境变量 DOTNET_ROOT 设置，hostfxr 会自动读取
+        auto context = g_hostfxr->initialize_for_runtime_config(runtimeconfig_str);
+
+        if (!context) {
+            set_error("运行时配置初始化失败");
+            return -1;
+        }
+
+        LOGI(LOG_TAG, "运行时配置加载成功 (is_primary: %s)",
+             context->is_primary() ? "true" : "false");
+
+        // 获取委托加载器（不绑定特定程序集，使用默认 AssemblyLoadContext）
+        auto delegate_loader = context->get_delegate_loader();
+
+        if (!delegate_loader) {
+            set_error("无法获取委托加载器");
+            return -1;
+        }
+
+        // 查找并调用 ComponentEntryPoint 方法
+        // 这是一个包装方法，使用 ComponentEntryPoint 签名，内部调用 Main
+        auto assembly_path_str = netcorehost::PdCString::from_str(assembly_path.c_str());
+        auto type_and_assembly = netcorehost::PdCString::from_str(
+            (base_name + ".Program, " + base_name).c_str());
+        auto method_name = netcorehost::PdCString::from_str("ComponentEntryPoint");
+
+        // 将参数序列化为 JSON 并设置到环境变量
+        // C# 代码会从 DOTNET_TOOL_ARGS 环境变量读取参数
+        if (argc > 0 && argv != nullptr) {
+            std::string args_json = "[";
+            for (int i = 0; i < argc; i++) {
+                if (i > 0) args_json += ",";
+                // 简单的 JSON 转义（足够用于路径）
+                std::string arg_escaped = argv[i];
+                // 替换反斜杠和引号
+                size_t pos = 0;
+                while ((pos = arg_escaped.find('\\', pos)) != std::string::npos) {
+                    arg_escaped.replace(pos, 1, "\\\\");
+                    pos += 2;
+                }
+                pos = 0;
+                while ((pos = arg_escaped.find('"', pos)) != std::string::npos) {
+                    arg_escaped.replace(pos, 1, "\\\"");
+                    pos += 2;
+                }
+                args_json += "\"" + arg_escaped + "\"";
+            }
+            args_json += "]";
+            setenv("DOTNET_TOOL_ARGS", args_json.c_str(), 1);
+            LOGI(LOG_TAG, "设置参数环境变量: %s", args_json.c_str());
+        } else {
+            setenv("DOTNET_TOOL_ARGS", "[]", 1);
+        }
+
+        // 使用默认委托签名：int ComponentEntryPoint(IntPtr args, int sizeBytes)
+        // C++ netcorehost 的 get_function_with_default_signature 返回固定类型
+        // 需要显式加载程序集
+        netcorehost::bindings::component_entry_point_fn entry_fn = nullptr;
+        try {
+            entry_fn = delegate_loader->get_function_with_default_signature(
+                assembly_path_str, type_and_assembly, method_name);
+        } catch (const std::exception& ex) {
+            set_error("找不到 ComponentEntryPoint 方法: %s", ex.what());
+            return -1;
+        }
+
+        if (!entry_fn) {
+            set_error("ComponentEntryPoint 方法委托为空");
+            return -1;
+        }
+
+        LOGI(LOG_TAG, "找到 ComponentEntryPoint 方法，开始执行...");
+        LOGI(LOG_TAG, "========================================");
+
+        // 调用 ComponentEntryPoint，它会从环境变量读取参数并调用 Main
+        int32_t exit_code = entry_fn(nullptr, 0);
+
+        // 清理环境变量
+        unsetenv("DOTNET_TOOL_ARGS");
+
+        LOGI(LOG_TAG, "========================================");
+        if (exit_code == 0) {
+            LOGI(LOG_TAG, "✓ 工具程序正常退出");
+            g_last_error[0] = '\0';
+        } else {
+            LOGW(LOG_TAG, "工具程序退出码: %d", exit_code);
+            g_last_error[0] = '\0';
+        }
+        LOGI(LOG_TAG, "========================================");
+
+        // 显式关闭上下文
+        LOGI(LOG_TAG, "关闭工具程序上下文...");
+        try {
+            context->close();
+        } catch (const std::exception& ex) {
+            LOGW(LOG_TAG, "关闭上下文时出错: %s", ex.what());
+        }
+        context.reset();
+        LOGI(LOG_TAG, "✓ 上下文已关闭");
+
+        return exit_code;
+
+    } catch (const netcorehost::HostingException& ex) {
+        set_error("运行失败（托管异常）: %s", ex.what());
+        return -1;
+    } catch (const std::exception& ex) {
+        set_error("运行失败: %s", ex.what());
+        return -1;
+    }
 }

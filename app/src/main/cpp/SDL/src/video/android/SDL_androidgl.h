@@ -23,10 +23,15 @@
 #ifndef SDL_androidgl_h_
 #define SDL_androidgl_h_
 
+int Android_GLES_LoadLibrary(_THIS, const char *path);
+void *Android_GLES_GetProcAddress(_THIS, const char *proc);
+void Android_GLES_UnloadLibrary(_THIS);
 SDL_GLContext Android_GLES_CreateContext(_THIS, SDL_Window *window);
 int Android_GLES_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext context);
+int Android_GLES_SetSwapInterval(_THIS, int interval);
+int Android_GLES_GetSwapInterval(_THIS);
 int Android_GLES_SwapWindow(_THIS, SDL_Window *window);
-int Android_GLES_LoadLibrary(_THIS, const char *path);
+void Android_GLES_DeleteContext(_THIS, SDL_GLContext context);
 
 #endif /* SDL_androidgl_h_ */
 

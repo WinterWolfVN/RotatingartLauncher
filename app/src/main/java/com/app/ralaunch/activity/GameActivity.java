@@ -967,4 +967,6 @@ public class GameActivity extends SDLActivity {
             mainActivity.finish();
         });
     }
+
+
 }

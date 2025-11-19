@@ -317,6 +317,77 @@ Hostfxr::initialize_for_dotnet_command_line_with_dotnet_root(
     );
 }
 
+std::unique_ptr<HostfxrContextForCommandLine>
+Hostfxr::initialize_for_dotnet_command_line_with_args(
+    const PdCString& assembly_path,
+    int argc,
+    const char* const* argv) {
+    bindings::hostfxr_handle handle = nullptr;
+
+    // 构建完整的 argv 数组：argv[0] = 程序集路径，argv[1..n] = 用户参数
+    std::vector<const bindings::char_t*> full_argv;
+    full_argv.push_back(assembly_path.c_str());
+
+    // 添加用户传递的参数
+    for (int i = 0; i < argc; i++) {
+        full_argv.push_back(argv[i]);
+    }
+
+    int32_t result = initialize_for_dotnet_command_line_fn_(
+        full_argv.size(),
+        full_argv.data(),
+        nullptr,
+        &handle
+    );
+
+    auto hosting_result = HostingResult::from_status_code(result);
+    hosting_result.throw_if_error();
+
+    bool is_primary = (hosting_result.get_success() == HostingSuccess::Success);
+
+    return std::unique_ptr<HostfxrContextForCommandLine>(
+        new HostfxrContextForCommandLine(handle, shared_from_this(), is_primary)
+    );
+}
+
+std::unique_ptr<HostfxrContextForCommandLine>
+Hostfxr::initialize_for_dotnet_command_line_with_args_and_dotnet_root(
+    const PdCString& assembly_path,
+    int argc,
+    const char* const* argv,
+    const PdCString& dotnet_root) {
+    bindings::hostfxr_handle handle = nullptr;
+
+    // 构建完整的 argv 数组：argv[0] = 程序集路径，argv[1..n] = 用户参数
+    std::vector<const bindings::char_t*> full_argv;
+    full_argv.push_back(assembly_path.c_str());
+
+    // 添加用户传递的参数
+    for (int i = 0; i < argc; i++) {
+        full_argv.push_back(argv[i]);
+    }
+
+    // 创建 parameters 结构体
+    bindings::hostfxr_initialize_parameters params =
+        bindings::hostfxr_initialize_parameters::with_dotnet_root(dotnet_root.c_str());
+
+    int32_t result = initialize_for_dotnet_command_line_fn_(
+        full_argv.size(),
+        full_argv.data(),
+        &params,
+        &handle
+    );
+
+    auto hosting_result = HostingResult::from_status_code(result);
+    hosting_result.throw_if_error();
+
+    bool is_primary = (hosting_result.get_success() == HostingSuccess::Success);
+
+    return std::unique_ptr<HostfxrContextForCommandLine>(
+        new HostfxrContextForCommandLine(handle, shared_from_this(), is_primary)
+    );
+}
+
 std::string Hostfxr::get_dotnet_root() const {
     #ifdef __ANDROID__
     // 在 Android 上，如果 dotnet_exe_path_ 就是 dotnet_root（没有可执行文件名），直接返回

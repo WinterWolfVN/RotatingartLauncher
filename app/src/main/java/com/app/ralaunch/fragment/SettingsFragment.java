@@ -277,20 +277,42 @@ public class SettingsFragment extends Fragment {
             updateRendererDisplay(settingsManager, tvRendererValue);
 
             rendererCard.setOnClickListener(v -> {
-                List<OptionSelectorDialog.Option> options = Arrays.asList(
-                    new OptionSelectorDialog.Option(RuntimePreference.RENDERER_AUTO,
-                        getString(R.string.renderer_auto),
-                        getString(R.string.renderer_auto_desc)),
-                    new OptionSelectorDialog.Option(RuntimePreference.RENDERER_OPENGLES3,
-                        getString(R.string.renderer_opengles3),
-                        getString(R.string.renderer_opengles3_desc)),
-                    new OptionSelectorDialog.Option(RuntimePreference.RENDERER_OPENGL_GL4ES,
-                        getString(R.string.renderer_opengl),
-                        getString(R.string.renderer_opengl_desc)),
-                    new OptionSelectorDialog.Option(RuntimePreference.RENDERER_VULKAN,
-                        getString(R.string.renderer_vulkan),
-                        getString(R.string.renderer_vulkan_desc))
-                );
+                // 导入 RendererConfig 获取可用渲染器
+                List<com.app.ralaunch.renderer.RendererConfig.RendererInfo> compatibleRenderers =
+                    com.app.ralaunch.renderer.RendererConfig.getCompatibleRenderers(requireContext());
+
+                List<OptionSelectorDialog.Option> options = new ArrayList<>();
+
+                // 添加"自动选择"选项
+                options.add(new OptionSelectorDialog.Option(
+                    RuntimePreference.RENDERER_AUTO,
+                    getString(R.string.renderer_auto),
+                    getString(R.string.renderer_auto_desc)
+                ));
+
+                // 根据兼容的渲染器动态添加选项
+                for (com.app.ralaunch.renderer.RendererConfig.RendererInfo renderer : compatibleRenderers) {
+                    String stringId = "renderer_" + renderer.id;
+                    String descId = "renderer_" + renderer.id + "_desc";
+
+                    int nameResId = getResources().getIdentifier(stringId, "string", requireContext().getPackageName());
+                    int descResId = getResources().getIdentifier(descId, "string", requireContext().getPackageName());
+
+                    if (nameResId != 0 && descResId != 0) {
+                        options.add(new OptionSelectorDialog.Option(
+                            renderer.id,
+                            getString(nameResId),
+                            getString(descResId)
+                        ));
+                    } else {
+                        // 回退到使用 displayName 和 description
+                        options.add(new OptionSelectorDialog.Option(
+                            renderer.id,
+                            renderer.displayName,
+                            renderer.description
+                        ));
+                    }
+                }
 
                 new OptionSelectorDialog()
                     .setTitle(getString(R.string.renderer_title))
@@ -509,21 +531,30 @@ public class SettingsFragment extends Fragment {
     private void updateRendererDisplay(SettingsManager settingsManager, TextView textView) {
         String renderer = RuntimePreference.normalizeRendererValue(settingsManager.getFnaRenderer());
         String display;
-        switch (renderer) {
-            case RuntimePreference.RENDERER_OPENGLES3:
-                display = getString(R.string.renderer_opengles3);
-                break;
-            case RuntimePreference.RENDERER_OPENGL_GL4ES:
-                display = getString(R.string.renderer_opengl);
-                break;
-            case RuntimePreference.RENDERER_VULKAN:
-                display = getString(R.string.renderer_vulkan);
-                break;
-            case RuntimePreference.RENDERER_AUTO:
-            default:
-                display = getString(R.string.renderer_auto);
-                break;
+
+        // 自动选择
+        if (RuntimePreference.RENDERER_AUTO.equals(renderer)) {
+            display = getString(R.string.renderer_auto);
+        } else {
+            // 尝试从字符串资源获取
+            String stringId = "renderer_" + renderer;
+            int resId = getResources().getIdentifier(stringId, "string", requireContext().getPackageName());
+
+            if (resId != 0) {
+                display = getString(resId);
+            } else {
+                // 如果找不到字符串资源，使用渲染器 displayName
+                com.app.ralaunch.renderer.RendererConfig.RendererInfo rendererInfo =
+                    com.app.ralaunch.renderer.RendererConfig.getRendererById(renderer);
+                if (rendererInfo != null) {
+                    display = rendererInfo.displayName;
+                } else {
+                    // 最后回退：直接显示 ID
+                    display = renderer;
+                }
+            }
         }
+
         textView.setText(display);
     }
     

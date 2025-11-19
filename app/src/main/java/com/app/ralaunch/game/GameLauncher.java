@@ -5,6 +5,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.app.ralaunch.utils.RuntimePreference;
+import com.app.ralaunch.netcore.DotNetNativeLibraryLoader;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -129,14 +130,15 @@ public class GameLauncher {
             Log.i(TAG, "  框架版本: " + frameworkMajor + ".x");
             Log.i(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-            // 加载 Crypto 库
-            // TODO: 根据不同平台加载对应的库文件
-            Log.i(TAG, "⏳ 加载加密库 libSystem.Security.Cryptography.Native.Android.so ...");
-            System.load(Paths.get(
-                    dotnetRoot,
-                    "shared/Microsoft.NETCore.App/10.0.0-rc.2.25502.107/libSystem.Security.Cryptography.Native.Android.so").toString());
-            Log.i(TAG, "✅ 加密库加载成功");
-            
+            // 加载所有必需的 .NET Native 库
+            // 包括：System.Native (socket等), Cryptography (TLS/SSL), 等等
+            Log.i(TAG, "⏳ 加载 .NET Native 库...");
+            if (!DotNetNativeLibraryLoader.loadAllLibraries(dotnetRoot)) {
+                Log.e(TAG, "❌ .NET Native 库加载失败！网络和加密功能可能无法使用");
+                // 注意：即使库加载失败，我们仍然尝试启动应用
+                // 因为有些应用可能不需要网络功能
+            }
+
             // 设置启动参数（简化版 - 4个参数）
             int result = netcorehostSetParams(appDir, mainAssembly, dotnetRoot, frameworkMajor);
             

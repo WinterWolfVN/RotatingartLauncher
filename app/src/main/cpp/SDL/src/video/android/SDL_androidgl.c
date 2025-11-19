@@ -77,10 +77,50 @@ int Android_GLES_SwapWindow(_THIS, SDL_Window *window)
 
     return retval;
 }
-
 int Android_GLES_LoadLibrary(_THIS, const char *path)
 {
+    const char* custom_egl_path = NULL;
+
+    /* 检查是否通过 FNA3D_OPENGL_LIBRARY 环境变量指定了自定义 EGL 库
+     * 这个方法参考了 PojavLauncher 的实现,使用环境变量指定库路径绕过 Android 链接器命名空间限制
+     * 参考: PojavLauncher egl_loader.c 的 POJAVEXEC_EGL 实现
+     */
+    custom_egl_path = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+
+    if (custom_egl_path != NULL && custom_egl_path[0] != '\0') {
+        SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+                    "Android_GLES_LoadLibrary: Using custom EGL from FNA3D_OPENGL_LIBRARY: %s",
+                    custom_egl_path);
+        return SDL_EGL_LoadLibrary(_this, custom_egl_path, (NativeDisplayType)0, 0);
+    }
+
+    /* 回退到默认行为(使用系统 libEGL.so) */
     return SDL_EGL_LoadLibrary(_this, path, (NativeDisplayType)0, 0);
+}
+
+void *Android_GLES_GetProcAddress(_THIS, const char *proc)
+{
+    return SDL_EGL_GetProcAddress(_this, proc);
+}
+
+void Android_GLES_UnloadLibrary(_THIS)
+{
+    SDL_EGL_UnloadLibrary(_this);
+}
+
+int Android_GLES_SetSwapInterval(_THIS, int interval)
+{
+    return SDL_EGL_SetSwapInterval(_this, interval);
+}
+
+int Android_GLES_GetSwapInterval(_THIS)
+{
+    return SDL_EGL_GetSwapInterval(_this);
+}
+
+void Android_GLES_DeleteContext(_THIS, SDL_GLContext context)
+{
+    SDL_EGL_DeleteContext(_this, context);
 }
 
 #endif /* SDL_VIDEO_DRIVER_ANDROID */

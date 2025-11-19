@@ -139,12 +139,18 @@
     <string name="renderer_title">渲染器</string>
     <string name="renderer_auto">自动选择（推荐）</string>
     <string name="renderer_auto_desc">自动选择最佳渲染器</string>
-    <string name="renderer_opengles3">OpenGL ES 3（原生）</string>
-    <string name="renderer_opengles3_desc">使用原生 OpenGL ES 3</string>
-    <string name="renderer_opengl">OpenGL (gl4es+)</string>
-    <string name="renderer_opengl_desc">通过 gl4es+ 转换层</string>
-    <string name="renderer_vulkan">Vulkan（实验性）</string>
-    <string name="renderer_vulkan_desc">使用 Vulkan API</string>
+    <string name="renderer_native">Native OpenGL ES</string>
+    <string name="renderer_native_desc">系统原生 EGL/OpenGL ES（最佳兼容性）</string>
+    <string name="renderer_gl4es">Holy GL4ES</string>
+    <string name="renderer_gl4es_desc">OpenGL 2.1 翻译到 OpenGL ES 2.0（兼容性最强）</string>
+    <string name="renderer_angle">ANGLE (Vulkan)</string>
+    <string name="renderer_angle_desc">OpenGL ES over Vulkan（Google官方，需要 Android 7.0+）</string>
+    <string name="renderer_zink">Zink (Mesa)</string>
+    <string name="renderer_zink_desc">OpenGL 4.6 over Vulkan（Mesa Zink，需要 Android 7.0+）</string>
+    <string name="renderer_virgl">VirGL Renderer</string>
+    <string name="renderer_virgl_desc">Gallium3D VirGL（OpenGL 4.3，需要 Android 7.0+）</string>
+    <string name="renderer_freedreno">Freedreno (Adreno)</string>
+    <string name="renderer_freedreno_desc">Mesa Freedreno for Qualcomm Adreno GPU（需要 Android 7.0+）</string>
     <string name="renderer_changed">渲染器已更改</string>
 
     <!-- 开发者设置 -->

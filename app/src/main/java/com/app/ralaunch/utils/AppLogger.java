@@ -2,33 +2,22 @@ package com.app.ralaunch.utils;
 
 import android.util.Log;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Unified logging system for RALaunch
  * Features:
- * - File logging with rotation
+ * - All logs output to logcat
+ * - LogcatReader captures logcat and saves to file
  * - Plain text output (no emojis/graphics)
  * - Minimal debug logs
- * - Async writing for performance
  */
 public class AppLogger {
     private static final String TAG = "RALaunch";
     private static final boolean ENABLE_DEBUG = false; // Disable debug logs
-    private static final boolean ENABLE_FILE_LOGGING = true;
 
-    private static File logFile;
-    private static PrintWriter logWriter;
-    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
-    private static final SimpleDateFormat fileNameFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+    private static LogcatReader logcatReader;
+    private static File logDir;
+    private static boolean initialized = false;
 
     // Log levels
     public enum Level {
@@ -48,75 +37,33 @@ public class AppLogger {
 
     /**
      * Initialize logger with log directory
+     * Starts LogcatReader to capture all logs and save to file
      */
-    public static void init(File logDir) {
-        Log.e(TAG, "==================== AppLogger.init() START ====================");
-        Log.e(TAG, "ENABLE_FILE_LOGGING: " + ENABLE_FILE_LOGGING);
-        Log.e(TAG, "logDir: " + (logDir != null ? logDir.getAbsolutePath() : "NULL"));
-        if (!ENABLE_FILE_LOGGING) return;
+    public static void init(File logDirectory) {
+        if (initialized) {
+            Log.w(TAG, "AppLogger already initialized");
+            return;
+        }
+
+        logDir = logDirectory;
+        Log.i(TAG, "==================== AppLogger.init() START ====================");
+        Log.i(TAG, "logDir: " + (logDir != null ? logDir.getAbsolutePath() : "NULL"));
 
         try {
             if (!logDir.exists()) {
                 logDir.mkdirs();
             }
 
-            // Create log file with date
-            String fileName = "ralaunch_" + fileNameFormat.format(new Date()) + ".log";
-            logFile = new File(logDir, fileName);
+            // Start LogcatReader to capture all logs
+            logcatReader = LogcatReader.getInstance();
+            logcatReader.start(logDir);
 
-            // Rotate old logs (keep last 7 days)
-            Log.e(TAG, "logWriter created: " + (logWriter != null));
-            Log.e(TAG, "logFile path: " + logFile.getAbsolutePath());
-            rotateOldLogs(logDir, 7);
+            initialized = true;
+            Log.i(TAG, "AppLogger.init() completed - LogcatReader started");
+            info("Logger", "Log system initialized: " + logDir.getAbsolutePath());
 
-            logWriter = new PrintWriter(new FileWriter(logFile, true), true);
-
-            // Initialize native logger
-            try {
-                initNativeLogger(logDir.getAbsolutePath());
-            } catch (UnsatisfiedLinkError e) {
-                Log.w(TAG, "Native logger not available: " + e.getMessage());
-            }
-            Log.e(TAG, "AppLogger.init() completed successfully");
-
-            info("Logger", "Log system initialized: " + logFile.getAbsolutePath());
-
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to initialize file logging", e);
-        }
-    }
-
-    /**
-     * Initialize native logger (JNI)
-     */
-    private static native void initNativeLogger(String logDir);
-
-    /**
-     * Close native logger (JNI)
-     */
-    private static native void closeNativeLogger();
-
-    static {
-        try {
-            System.loadLibrary("main");  // 修复：库名称是 main 不是 ralaunch
-        } catch (UnsatisfiedLinkError e) {
-            Log.w(TAG, "Failed to load native logger library: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Rotate old log files
-     */
-    private static void rotateOldLogs(File logDir, int keepDays) {
-        File[] files = logDir.listFiles((dir, name) -> name.startsWith("ralaunch_") && name.endsWith(".log"));
-        if (files == null) return;
-
-        long cutoffTime = System.currentTimeMillis() - (keepDays * 24L * 60 * 60 * 1000);
-
-        for (File file : files) {
-            if (file.lastModified() < cutoffTime) {
-                file.delete();
-            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize logging", e);
         }
     }
 
@@ -124,32 +71,18 @@ public class AppLogger {
      * Close logger and release resources
      */
     public static void close() {
-        // 先刷新并关闭文件写入器（同步执行，避免executor已关闭的问题）
-        if (logWriter != null) {
-            try {
-                logWriter.flush();
-                logWriter.close();
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to close log writer", e);
-            }
+        // Stop LogcatReader
+        if (logcatReader != null) {
+            logcatReader.stop();
+            logcatReader = null;
         }
 
-        // 关闭executor
-        try {
-            executor.shutdown();
-        } catch (Exception e) {
-            // Executor可能已经被关闭
-        }
-
-        // Close native logger
-        try {
-            closeNativeLogger();
-        } catch (UnsatisfiedLinkError e) {
-            // Ignore if native logger not available
-        }
+        initialized = false;
+        Log.i(TAG, "AppLogger closed");
     }
 
-    // Logging methods
+    // Logging methods - all output to logcat only
+    // LogcatReader will capture and save to file
 
     public static void error(String tag, String message) {
         log(Level.ERROR, tag, message, null);
@@ -178,13 +111,14 @@ public class AppLogger {
     }
 
     /**
-     * Main logging method
+     * Main logging method - outputs to logcat only
+     * LogcatReader captures and saves to file
      */
     private static void log(Level level, String tag, String message, Throwable throwable) {
         // Strip emojis and special characters from message
         String cleanMessage = stripEmojis(message);
 
-        // Log to Android logcat (use tag directly without RALaunch prefix)
+        // Log to Android logcat only
         switch (level) {
             case ERROR:
                 if (throwable != null) {
@@ -204,41 +138,6 @@ public class AppLogger {
                     Log.d(tag, cleanMessage);
                 }
                 break;
-        }
-
-        // Log to file asynchronously
-        if (ENABLE_FILE_LOGGING && logWriter != null) {
-            try {
-                executor.execute(() -> writeToFile(level, tag, cleanMessage, throwable));
-            } catch (Exception e) {
-                // Executor已关闭，直接同步写入
-                writeToFile(level, tag, cleanMessage, throwable);
-            }
-        }
-    }
-
-    /**
-     * Write log entry to file
-     */
-    private static void writeToFile(Level level, String tag, String message, Throwable throwable) {
-        if (logWriter == null) return;
-
-        try {
-            String timestamp = dateFormat.format(new Date());
-            String logEntry = String.format("[%s] %s/%s: %s",
-                timestamp, level.tag, tag, message);
-
-            logWriter.println(logEntry);
-
-            if (throwable != null) {
-                logWriter.print("  Exception: ");
-                throwable.printStackTrace(logWriter);
-            }
-
-            logWriter.flush();
-
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to write to log file", e);
         }
     }
 
@@ -263,11 +162,16 @@ public class AppLogger {
     }
 
     /**
-     * Get current log file
+     * Get current log file from LogcatReader
      */
     public static File getLogFile() {
-        return logFile;
+        return logcatReader != null ? logcatReader.getLogFile() : null;
     }
 
-
+    /**
+     * Get LogcatReader instance for setting callbacks
+     */
+    public static LogcatReader getLogcatReader() {
+        return logcatReader;
+    }
 }

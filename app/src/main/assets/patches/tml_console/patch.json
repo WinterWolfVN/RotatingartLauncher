@@ -1,0 +1,14 @@
+{
+  "id": "tml_console",
+  "name": "tModLoader 控制台UI",
+  "description": "在游戏中显示C#控制台,支持输入输出和服务器命令",
+  "version": "1.0.0",
+  "author": "RA Launcher Team",
+  "dllFileName": "TMLConsolePatch.dll",
+  "targetGames": [
+    "tModLoader",
+    "Terraria"
+  ],
+  "priority": 100,
+  "enabled": false
+}

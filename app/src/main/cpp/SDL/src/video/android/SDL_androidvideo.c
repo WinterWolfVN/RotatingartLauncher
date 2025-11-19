@@ -42,6 +42,7 @@
 #include "SDL_androidwindow.h"
 #include "SDL_androidvulkan.h"
 #include "SDL_androidmessagebox.h"
+#include "SDL_androidrenderer.h"  /* Dynamic renderer loading */
 
 /* Include gl4es adapter if enabled */
 #ifdef SDL_VIDEO_OPENGL_GL4ES
@@ -130,106 +131,57 @@ static SDL_VideoDevice *Android_CreateDevice(void)
 
     device->free = Android_DeleteDevice;
 
-    /* GL pointers - Runtime renderer selection
-     * Check environment variable to decide: gl4es or native GLES
-     * Default: native GLES (Android standard)
-     * Set FNA3D_OPENGL_DRIVER=gl4es to use gl4es renderer
+    /* ================================================================
+     * 🔥 Dynamic Renderer Loading (lwjgl3 + PojavLauncher style)
+     * ================================================================
+     *
+     * 支持运行时动态切换渲染器，无需重新编译
+     *
+     * 环境变量：
+     *   SDL_RENDERER 或 FNA3D_OPENGL_DRIVER
+     *     - native: 系统默认 (libEGL.so + libGLESv2.so)
+     *     - gl4es: OpenGL 2.1 翻译层
+     *     - angle: OpenGL ES over Vulkan
+     *     - zink: OpenGL over Vulkan
+     *
+     * 实现原理：
+     *   1. 通过 dlopen(RTLD_GLOBAL) 预加载渲染器库
+     *   2. 通过 LD_PRELOAD 劫持 SDL 的 dlopen("libEGL.so")
+     *   3. 所有渲染器都提供标准 EGL 接口
+     *   4. SDL 无感知，直接使用 Android_GLES_* 函数
      */
-    const char* gl_driver = SDL_getenv("FNA3D_OPENGL_DRIVER");
-    SDL_bool use_gl4es = (gl_driver && SDL_strcasecmp(gl_driver, "gl4es") == 0);
-    
-#if defined(SDL_VIDEO_OPENGL_GL4ES) && defined(SDL_VIDEO_OPENGL_EGL)
-    /* Both gl4es and native GLES available - choose at runtime */
-    if (use_gl4es) {
-        SDL_Log("🎨 Using gl4es renderer (OpenGL 2.1 Compatibility Profile)");
-        device->GL_LoadLibrary = Android_GL4ES_LoadLibrary;
-        device->GL_GetProcAddress = Android_GL4ES_GetProcAddress;
-        device->GL_UnloadLibrary = Android_GL4ES_UnloadLibrary;
-        device->GL_CreateContext = Android_GL4ES_CreateContext;
-        device->GL_MakeCurrent = Android_GL4ES_MakeCurrent;
-        device->GL_SetSwapInterval = Android_GL4ES_SetSwapInterval;
-        device->GL_GetSwapInterval = Android_GL4ES_GetSwapInterval;
-        device->GL_SwapWindow = Android_GL4ES_SwapWindow;
-        device->GL_DeleteContext = Android_GL4ES_DeleteContext;
-        device->GL_GetDrawableSize = Android_GL4ES_GetDrawableSize;
-    } else {
-        SDL_Log("🎨 Using native OpenGL ES renderer (default)");
-        device->GL_LoadLibrary = Android_GLES_LoadLibrary;
-        device->GL_GetProcAddress = Android_GLES_GetProcAddress;
-        device->GL_UnloadLibrary = Android_GLES_UnloadLibrary;
-        device->GL_CreateContext = Android_GLES_CreateContext;
-        device->GL_MakeCurrent = Android_GLES_MakeCurrent;
-        device->GL_SetSwapInterval = Android_GLES_SetSwapInterval;
-        device->GL_GetSwapInterval = Android_GLES_GetSwapInterval;
-        device->GL_SwapWindow = Android_GLES_SwapWindow;
-        device->GL_DeleteContext = Android_GLES_DeleteContext;
+
+    /* 从环境变量读取渲染器配置 */
+    {
+        const char* renderer_name = SDL_getenv("SDL_RENDERER");
+    if (!renderer_name || renderer_name[0] == '\0') {
+        renderer_name = SDL_getenv("FNA3D_OPENGL_DRIVER");
     }
-#elif defined(SDL_VIDEO_OPENGL_GL4ES)
-    /* Only gl4es available */
-    SDL_Log("🎨 Using gl4es renderer (OpenGL 2.1 Compatibility Profile)");
-    device->GL_LoadLibrary = Android_GL4ES_LoadLibrary;
-        SDL_Log("🎨 Using gl4es renderer (OpenGL 2.1 Compatibility Profile)");
-        device->GL_LoadLibrary = Android_GL4ES_LoadLibrary;
-        device->GL_GetProcAddress = Android_GL4ES_GetProcAddress;
-        device->GL_UnloadLibrary = Android_GL4ES_UnloadLibrary;
-        device->GL_CreateContext = Android_GL4ES_CreateContext;
-        device->GL_MakeCurrent = Android_GL4ES_MakeCurrent;
-        device->GL_SetSwapInterval = Android_GL4ES_SetSwapInterval;
-        device->GL_GetSwapInterval = Android_GL4ES_GetSwapInterval;
-        device->GL_SwapWindow = Android_GL4ES_SwapWindow;
-        device->GL_DeleteContext = Android_GL4ES_DeleteContext;
-        device->GL_GetDrawableSize = Android_GL4ES_GetDrawableSize;
-    } else {
-        SDL_Log("🎨 Using native OpenGL ES renderer (default)");
-        device->GL_LoadLibrary = Android_GLES_LoadLibrary;
-        device->GL_GetProcAddress = Android_GLES_GetProcAddress;
-        device->GL_UnloadLibrary = Android_GLES_UnloadLibrary;
-        device->GL_CreateContext = Android_GLES_CreateContext;
-        device->GL_MakeCurrent = Android_GLES_MakeCurrent;
-        device->GL_SetSwapInterval = Android_GLES_SetSwapInterval;
-        device->GL_GetSwapInterval = Android_GLES_GetSwapInterval;
-        device->GL_SwapWindow = Android_GLES_SwapWindow;
-        device->GL_DeleteContext = Android_GLES_DeleteContext;
+    if (!renderer_name || renderer_name[0] == '\0') {
+        renderer_name = "native";  /* 默认使用系统渲染器 */
     }
-#elif defined(SDL_VIDEO_OPENGL_ZINK)
-    /* Only Zink available */
-    SDL_Log("🎨 Using Zink renderer (OpenGL 3.3 on Vulkan via OSMesa)");
-    device->GL_LoadLibrary = Android_ZINK_LoadLibrary;
-    device->GL_GetProcAddress = Android_ZINK_GetProcAddress;
-    device->GL_UnloadLibrary = Android_ZINK_UnloadLibrary;
-    device->GL_CreateContext = Android_ZINK_CreateContext;
-    device->GL_MakeCurrent = Android_ZINK_MakeCurrent;
-    device->GL_SetSwapInterval = Android_ZINK_SetSwapInterval;
-    device->GL_GetSwapInterval = Android_ZINK_GetSwapInterval;
-    device->GL_SwapWindow = Android_ZINK_SwapWindow;
-    device->GL_DeleteContext = Android_ZINK_DeleteContext;
-    device->GL_GetDrawableSize = Android_ZINK_GetDrawableSize;
-#elif defined(SDL_VIDEO_OPENGL_GL4ES)
-    /* Only gl4es available */
-    SDL_Log("🎨 Using gl4es renderer (OpenGL 2.1 Compatibility Profile)");
-    device->GL_LoadLibrary = Android_GL4ES_LoadLibrary;
-    device->GL_GetProcAddress = Android_GL4ES_GetProcAddress;
-    device->GL_UnloadLibrary = Android_GL4ES_UnloadLibrary;
-    device->GL_CreateContext = Android_GL4ES_CreateContext;
-    device->GL_MakeCurrent = Android_GL4ES_MakeCurrent;
-    device->GL_SetSwapInterval = Android_GL4ES_SetSwapInterval;
-    device->GL_GetSwapInterval = Android_GL4ES_GetSwapInterval;
-    device->GL_SwapWindow = Android_GL4ES_SwapWindow;
-    device->GL_DeleteContext = Android_GL4ES_DeleteContext;
-    device->GL_GetDrawableSize = Android_GL4ES_GetDrawableSize;
-#elif defined(SDL_VIDEO_OPENGL_EGL)
-    /* Only native GLES available */
-    SDL_Log("🎨 Using native OpenGL ES renderer");
-    device->GL_LoadLibrary = Android_GLES_LoadLibrary;
-    device->GL_GetProcAddress = Android_GLES_GetProcAddress;
-    device->GL_UnloadLibrary = Android_GLES_UnloadLibrary;
-    device->GL_CreateContext = Android_GLES_CreateContext;
-    device->GL_MakeCurrent = Android_GLES_MakeCurrent;
-    device->GL_SetSwapInterval = Android_GLES_SetSwapInterval;
-    device->GL_GetSwapInterval = Android_GLES_GetSwapInterval;
-    device->GL_SwapWindow = Android_GLES_SwapWindow;
-    device->GL_DeleteContext = Android_GLES_DeleteContext;
-#endif
+
+    /* 动态加载渲染器 */
+    if (!Android_LoadRenderer(renderer_name)) {
+        SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO,
+                    "Failed to load renderer '%s', falling back to native",
+                    renderer_name);
+        Android_LoadRenderer("native");
+    }
+
+    /* 设置 GL 函数指针 */
+    /* 由于使用 LD_PRELOAD，所有渲染器都提供标准 EGL 接口 */
+    if (!Android_SetupGLFunctions(device)) {
+        SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Failed to setup GL functions");
+        SDL_free(data);
+        SDL_free(device);
+        return NULL;
+    }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_VIDEO,
+                "✅ Renderer initialized: %s",
+                Android_GetCurrentRenderer());
+    }
 
 #ifdef SDL_VIDEO_VULKAN
     device->Vulkan_LoadLibrary = Android_Vulkan_LoadLibrary;

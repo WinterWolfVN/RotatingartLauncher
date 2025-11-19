@@ -1,0 +1,274 @@
+package com.app.ralaunch.renderer;
+
+import android.content.Context;
+import com.app.ralaunch.utils.AppLogger;
+
+/**
+ * 渲染器动态加载器 - 基于 dlopen 的实现
+ *
+ * 核心机制（参考 PojavLauncher JREUtils.loadGraphicsLibrary()）：
+ *
+ * 1. **动态库加载**：
+ *    - 使用 dlopen() 在运行时加载渲染器库
+ *    - 无需编译时链接，支持任意渲染器插件
+ *
+ * 2. **LD_PRELOAD 劫持**：
+ *    - 设置 LD_PRELOAD 环境变量
+ *    - 让渲染器库覆盖系统的 libEGL.so 和 libGLESv2.so
+ *    - SDL/FNA3D 调用 dlopen("libEGL.so") 时会自动加载我们的渲染器
+ *
+ * 3. **环境变量控制**：
+ *    - LD_PRELOAD: 指定要预加载的库
+ *    - LD_LIBRARY_PATH: 库搜索路径
+ *    - LIBGL_ES: OpenGL ES 版本 (gl4es)
+ *    - 其他渲染器特定的环境变量
+ *
+ * 工作流程：
+ *   应用启动 → 设置 LD_PRELOAD → dlopen 渲染器库 → SDL 初始化 →
+ *   SDL dlopen("libEGL.so") → linker 加载 LD_PRELOAD 的库 → 使用我们的渲染器
+ */
+public class RendererLoader {
+    private static final String TAG = "RendererLoader";
+
+    private static String sLoadedRenderer = null;
+    private static long sRendererHandle = 0; // dlopen 返回的句柄
+
+    /**
+     * 加载指定的渲染器
+     *
+     * @param context 应用上下文
+     * @param rendererId 渲染器 ID
+     * @return 是否成功
+     */
+    public static boolean loadRenderer(Context context, String rendererId) {
+        AppLogger.info(TAG, "================================================================");
+        AppLogger.info(TAG, "  Loading Renderer: " + rendererId);
+        AppLogger.info(TAG, "================================================================");
+
+        // 检查兼容性
+        if (!RendererConfig.isRendererCompatible(context, rendererId)) {
+            AppLogger.error(TAG, "❌ Renderer not compatible: " + rendererId);
+            return false;
+        }
+
+        // 获取渲染器信息
+        RendererConfig.RendererInfo renderer = RendererConfig.getRendererById(rendererId);
+        if (renderer == null) {
+            AppLogger.error(TAG, "❌ Unknown renderer: " + rendererId);
+            return false;
+        }
+
+        // 卸载之前的渲染器
+        unloadCurrentRenderer();
+
+        // 设置环境变量和加载库
+        boolean success = false;
+        switch (rendererId) {
+            case RendererConfig.RENDERER_NATIVE_GLES:
+                success = setupNativeRenderer();
+                break;
+
+            case RendererConfig.RENDERER_GL4ES:
+                success = setupGL4ESRenderer(context, renderer);
+                break;
+
+            case RendererConfig.RENDERER_ANGLE:
+                success = setupANGLERenderer(context, renderer);
+                break;
+
+            default:
+                AppLogger.error(TAG, "❌ Unsupported renderer: " + rendererId);
+                return false;
+        }
+
+        if (success) {
+            sLoadedRenderer = rendererId;
+            AppLogger.info(TAG, "✅ Renderer loaded successfully: " + rendererId);
+            logEnvironment();
+        } else {
+            AppLogger.error(TAG, "❌ Failed to load renderer: " + rendererId);
+        }
+
+        return success;
+    }
+
+    /**
+     * 设置系统原生渲染器
+     */
+    private static boolean setupNativeRenderer() {
+        AppLogger.info(TAG, "Setting up Native OpenGL ES renderer");
+
+        // 清除所有自定义环境变量，使用系统默认
+        nativeUnsetEnv("LD_PRELOAD");
+        nativeUnsetEnv("LIBGL_ES");
+        nativeUnsetEnv("LIBGL_MIPMAP");
+
+        AppLogger.info(TAG, "  → Using system libEGL.so and libGLESv2.so");
+        return true;
+    }
+
+    /**
+     * 设置 gl4es 渲染器
+     */
+    private static boolean setupGL4ESRenderer(Context context, RendererConfig.RendererInfo renderer) {
+        AppLogger.info(TAG, "Setting up gl4es renderer");
+
+        // 获取 gl4es 库路径
+        String gl4esPath = RendererConfig.getRendererLibraryPath(context, renderer.eglLibrary);
+        if (gl4esPath == null) {
+            AppLogger.error(TAG, "  ❌ gl4es library not found");
+            return false;
+        }
+
+        AppLogger.info(TAG, "  → gl4es library: " + gl4esPath);
+
+        // 使用 dlopen 加载 gl4es
+        sRendererHandle = nativeDlopen(gl4esPath);
+        if (sRendererHandle == 0) {
+            AppLogger.error(TAG, "  ❌ dlopen failed: " + nativeDlerror());
+            return false;
+        }
+
+        AppLogger.info(TAG, "  ✓ dlopen success, handle = 0x" + Long.toHexString(sRendererHandle));
+
+        // 设置 LD_PRELOAD（让 SDL 自动使用 gl4es）
+        nativeSetEnv("LD_PRELOAD", gl4esPath);
+        AppLogger.info(TAG, "  ✓ LD_PRELOAD = " + gl4esPath);
+
+        // gl4es 配置
+        nativeSetEnv("LIBGL_ES", "2");           // 使用 GLES 2.0
+        nativeSetEnv("LIBGL_MIPMAP", "3");       // 启用 mipmap
+        nativeSetEnv("LIBGL_NPOT", "1");         // 支持非 2 的幂次纹理
+        nativeSetEnv("LIBGL_SHRINKPOP", "0");    // 禁用纹理缩小
+
+        AppLogger.info(TAG, "  ✓ gl4es environment configured");
+        return true;
+    }
+
+    /**
+     * 设置 ANGLE 渲染器
+     */
+    private static boolean setupANGLERenderer(Context context, RendererConfig.RendererInfo renderer) {
+        AppLogger.info(TAG, "Setting up ANGLE renderer");
+
+        String eglPath = RendererConfig.getRendererLibraryPath(context, renderer.eglLibrary);
+        String glesPath = RendererConfig.getRendererLibraryPath(context, renderer.glesLibrary);
+
+        if (eglPath == null || glesPath == null) {
+            AppLogger.error(TAG, "  ❌ ANGLE libraries not found");
+            return false;
+        }
+
+        AppLogger.info(TAG, "  → EGL library: " + eglPath);
+        AppLogger.info(TAG, "  → GLES library: " + glesPath);
+
+        // 加载 ANGLE EGL
+        long eglHandle = nativeDlopen(eglPath);
+        if (eglHandle == 0) {
+            AppLogger.error(TAG, "  ❌ Failed to load EGL: " + nativeDlerror());
+            return false;
+        }
+
+        // 加载 ANGLE GLESv2
+        long glesHandle = nativeDlopen(glesPath);
+        if (glesHandle == 0) {
+            AppLogger.error(TAG, "  ❌ Failed to load GLESv2: " + nativeDlerror());
+            nativeDlclose(eglHandle);
+            return false;
+        }
+
+        sRendererHandle = eglHandle; // 保存主句柄
+
+        // 设置 LD_PRELOAD（同时预加载两个库）
+        nativeSetEnv("LD_PRELOAD", eglPath + ":" + glesPath);
+
+        AppLogger.info(TAG, "  ✓ ANGLE loaded successfully");
+        return true;
+    }
+
+    /**
+     * 卸载当前渲染器
+     */
+    private static void unloadCurrentRenderer() {
+        if (sRendererHandle != 0) {
+            AppLogger.info(TAG, "Unloading previous renderer (handle = 0x" +
+                          Long.toHexString(sRendererHandle) + ")");
+            nativeDlclose(sRendererHandle);
+            sRendererHandle = 0;
+        }
+
+        // 清除环境变量
+        nativeUnsetEnv("LD_PRELOAD");
+        nativeUnsetEnv("LIBGL_ES");
+        nativeUnsetEnv("LIBGL_MIPMAP");
+        nativeUnsetEnv("LIBGL_NPOT");
+        nativeUnsetEnv("LIBGL_SHRINKPOP");
+
+        sLoadedRenderer = null;
+    }
+
+    /**
+     * 获取当前加载的渲染器
+     */
+    public static String getLoadedRenderer() {
+        return sLoadedRenderer;
+    }
+
+    /**
+     * 记录当前环境变量
+     */
+    private static void logEnvironment() {
+        AppLogger.info(TAG, "Current environment:");
+        String[] keys = {
+            "LD_PRELOAD",
+            "LD_LIBRARY_PATH",
+            "LIBGL_ES",
+            "LIBGL_MIPMAP",
+            "LIBGL_NPOT",
+            "LIBGL_SHRINKPOP"
+        };
+
+        for (String key : keys) {
+            String value = nativeGetEnv(key);
+            if (value != null && !value.isEmpty()) {
+                AppLogger.info(TAG, "  " + key + " = " + value);
+            }
+        }
+    }
+
+    // ==================== JNI Native Methods ====================
+
+    /**
+     * 使用 dlopen 打开动态库
+     * @param path 库文件路径
+     * @return 库句柄，失败返回 0
+     */
+    private static native long nativeDlopen(String path);
+
+    /**
+     * 使用 dlclose 关闭动态库
+     * @param handle 库句柄
+     * @return 0 表示成功
+     */
+    private static native int nativeDlclose(long handle);
+
+    /**
+     * 获取 dlopen/dlsym 的错误信息
+     */
+    private static native String nativeDlerror();
+
+    /**
+     * 设置环境变量
+     */
+    private static native void nativeSetEnv(String key, String value);
+
+    /**
+     * 取消环境变量
+     */
+    private static native void nativeUnsetEnv(String key);
+
+    /**
+     * 获取环境变量
+     */
+    private static native String nativeGetEnv(String key);
+}

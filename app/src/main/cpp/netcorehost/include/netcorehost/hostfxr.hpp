@@ -51,7 +51,28 @@ public:
         const PdCString& assembly_path,
         const PdCString& dotnet_root
     );
-    
+
+    /**
+     * 为 dotnet 命令行初始化上下文（支持传递参数）
+     * 用于运行应用程序并传递命令行参数到 Main(string[] args)
+     */
+    std::unique_ptr<HostfxrContextForCommandLine> initialize_for_dotnet_command_line_with_args(
+        const PdCString& assembly_path,
+        int argc,
+        const char* const* argv
+    );
+
+    /**
+     * 为 dotnet 命令行初始化上下文（支持传递参数和 dotnet_root）
+     * 用于运行应用程序并传递命令行参数到 Main(string[] args)
+     */
+    std::unique_ptr<HostfxrContextForCommandLine> initialize_for_dotnet_command_line_with_args_and_dotnet_root(
+        const PdCString& assembly_path,
+        int argc,
+        const char* const* argv,
+        const PdCString& dotnet_root
+    );
+
     /**
      * 获取 dotnet 根目录路径
      */

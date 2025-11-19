@@ -387,13 +387,14 @@ public class GameLauncher {
             AppLogger.info(TAG, "Framework major: " + frameworkMajor);
             AppLogger.info(TAG, "================================================");
 
-            // 加载 Crypto 库
-            String cryptoLibPath = Paths.get(
-                    dotnetRoot,
-                    "shared/Microsoft.NETCore.App/" + selectedVersion + "/libSystem.Security.Cryptography.Native.Android.so").toString();
-            AppLogger.info(TAG, "Loading crypto library from: " + cryptoLibPath);
-            System.load(cryptoLibPath);
-            AppLogger.info(TAG, "Crypto library loaded successfully");
+            // 加载所有必需的 .NET Native 库
+            // 包括：System.Native (socket等), Cryptography (TLS/SSL), 等等
+            AppLogger.info(TAG, "Loading .NET Native libraries...");
+            if (!com.app.ralaunch.netcore.DotNetNativeLibraryLoader.loadAllLibraries(dotnetRoot, selectedVersion)) {
+                AppLogger.error(TAG, ".NET Native library loading failed! Network and crypto features may not work");
+                // 注意：即使库加载失败，我们仍然尝试启动应用
+                // 因为有些应用可能不需要网络功能
+            }
 
             // 设置 DOTNET_STARTUP_HOOKS 补丁（在 hostfxr 初始化之前）
             if (enabledPatches != null && !enabledPatches.isEmpty()) {
@@ -428,18 +429,18 @@ public class GameLauncher {
                     }
                 }
 
-                String startupHooksDll = null;
+                // 收集所有启用的补丁DLL路径 (支持多个补丁)
+                java.util.List<String> startupHooksPaths = new java.util.ArrayList<>();
+                boolean harmonyCopied = false;
+
                 for (com.app.ralaunch.model.PatchInfo patch : sortedPatches) {
                     String patchDllPath = patchManager.getPatchLibraryPath(patch);
                     if (patchDllPath != null && !patchDllPath.isEmpty()) {
                         java.io.File patchFile = new java.io.File(patchDllPath);
                         if (patchFile.exists()) {
-                            // 获取补丁所在文件夹
-                            java.io.File patchDir = patchFile.getParentFile();
-
                             try {
-                                // 统一从 patches 根目录复制 0Harmony.dll 到游戏目录
-                                if (sharedHarmonyDll.exists()) {
+                                // 只复制一次 0Harmony.dll 到游戏目录
+                                if (!harmonyCopied && sharedHarmonyDll.exists()) {
                                     java.io.File targetHarmony = new java.io.File(appDir, "0Harmony.dll");
                                     java.nio.file.Files.copy(
                                         sharedHarmonyDll.toPath(),
@@ -447,28 +448,27 @@ public class GameLauncher {
                                         java.nio.file.StandardCopyOption.REPLACE_EXISTING
                                     );
                                     AppLogger.info(TAG, "  Copied: 0Harmony.dll from patches root directory");
-                                } else {
-                                    AppLogger.warn(TAG, "  Shared 0Harmony.dll not found at: " + sharedHarmonyDll.getAbsolutePath());
+                                    harmonyCopied = true;
                                 }
 
-                                // 直接使用外部存储的补丁 DLL 路径（不复制）
-                                startupHooksDll = patchDllPath;
-                                AppLogger.info(TAG, "  Using StartupHook: " + patch.getPatchName());
-                                AppLogger.info(TAG, "  Path: " + startupHooksDll);
-                                break; // 只使用第一个补丁作为 StartupHook
+                                // 添加补丁路径到列表
+                                startupHooksPaths.add(patchDllPath);
+                                AppLogger.info(TAG, "  Added StartupHook: " + patch.getPatchName());
+                                AppLogger.info(TAG, "  Path: " + patchDllPath);
                             } catch (Exception e) {
-                                AppLogger.warn(TAG, "Failed to copy 0Harmony.dll: " + e.getMessage());
+                                AppLogger.warn(TAG, "Failed to process patch " + patch.getPatchName() + ": " + e.getMessage());
                             }
                         }
                     }
                 }
 
-                // 设置 StartupHooks DLL 路径
-                if (startupHooksDll != null) {
+                // 设置 StartupHooks DLL 路径 (用冒号分隔多个路径)
+                if (!startupHooksPaths.isEmpty()) {
+                    String startupHooksDll = String.join(":", startupHooksPaths);
                     netcorehostSetStartupHooks(startupHooksDll);
-                    AppLogger.info(TAG, "DOTNET_STARTUP_HOOKS configured successfully");
+                    AppLogger.info(TAG, "DOTNET_STARTUP_HOOKS configured with " + startupHooksPaths.size() + " patch(es)");
                 } else {
-                    AppLogger.warn(TAG, "No valid StartupHook patch found");
+                    AppLogger.warn(TAG, "No valid StartupHook patches found");
                 }
             } else {
                 AppLogger.info(TAG, "No patches to configure for DOTNET_STARTUP_HOOKS");

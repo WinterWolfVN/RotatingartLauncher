@@ -23,8 +23,8 @@
         <!-- 游戏图标 -->
         <ImageView
             android:id="@+id/ivGameIcon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:scaleType="centerCrop"
             android:background="?attr/colorSurfaceVariant"
             android:contentDescription="Game Icon" />

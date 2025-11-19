@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.app.ralaunch.data.SettingsManager;
+import com.app.ralaunch.renderer.RendererConfig;
+import com.app.ralaunch.renderer.RendererLoader;
 
 /**
  * 运行时框架偏好设置管理
@@ -23,12 +25,17 @@ public final class RuntimePreference {
     private static final String KEY_DOTNET = "dotnet_framework";
     private static final String KEY_VERBOSE_LOGGING = "runtime_verbose_logging";
     private static final String KEY_RENDERER = "fna_renderer";
-    
-    // 渲染器常量
-    public static final String RENDERER_OPENGLES3 = "opengles3";        // 原生 OpenGL ES 3（Android 原生支持，推荐）
-    public static final String RENDERER_OPENGL_GL4ES = "opengl_gl4es";  // 桌面 OpenGL 通过 gl4es 翻译到 GLES
-    public static final String RENDERER_VULKAN = "vulkan";               // Vulkan（实验性）
-    public static final String RENDERER_AUTO = "auto";                   // 自动选择（默认 OpenGL ES 3）
+
+    // 渲染器常量（使用 RendererConfig 的 ID）
+    public static final String RENDERER_AUTO = "auto";  // 自动选择（默认 native）
+
+    // 旧常量（已弃用，仅用于向后兼容）
+    @Deprecated
+    public static final String RENDERER_OPENGLES3 = "opengles3";
+    @Deprecated
+    public static final String RENDERER_OPENGL_GL4ES = "opengl_gl4es";
+    @Deprecated
+    public static final String RENDERER_VULKAN = "vulkan";
 
     private RuntimePreference() {}
 
@@ -107,164 +114,123 @@ public final class RuntimePreference {
 
     /**
      * 获取实际应该使用的渲染器（考虑 auto 模式）
-     * 
+     *
      * @param context Android 上下文
      * @return 实际的渲染器
      */
     public static String getEffectiveRenderer(Context context) {
         String renderer = getRenderer(context);
         if (RENDERER_AUTO.equals(renderer)) {
-            // 默认使用原生 OpenGL ES 3（Android 原生支持，性能最佳）
-            return RENDERER_OPENGLES3;
+            // 默认使用原生渲染器
+            return RendererConfig.RENDERER_NATIVE_GLES;
         }
         return renderer;
     }
 
     /**
-     * 归一化渲染器值，兼容旧版字符串
+     * 归一化渲染器值，将旧的渲染器 ID 映射到新的 RendererConfig ID
      */
     public static String normalizeRendererValue(String value) {
         if (value == null || value.isEmpty()) {
             return RENDERER_AUTO;
         }
-        if ("opengl_native".equals(value)) {
-            return RENDERER_OPENGLES3;
+
+        // 映射旧的渲染器名称到新的 RendererConfig ID
+        switch (value) {
+            case "opengl_native":
+            case RENDERER_OPENGLES3:
+                return RendererConfig.RENDERER_NATIVE_GLES;
+            case RENDERER_OPENGL_GL4ES:
+                return RendererConfig.RENDERER_GL4ES;
+            case RENDERER_VULKAN:
+                return RendererConfig.RENDERER_NATIVE_GLES; // Vulkan 暂不支持
+            default:
+                return value;  // 已经是新的 ID 或 "auto"
         }
-        return value;
     }
 
     /**
-     * 根据设置应用 FNA 渲染器相关的环境变量
+     * 根据设置应用渲染器环境变量
      *
-     * 新的EGL架构说明：
-     * 1. FNA3D_OPENGL_LIBRARY: 指定EGL库路径（默认libEGL.so）
-     * 2. FNA3D_OPENGL_DRIVER: 控制OpenGL绑定类型（native/gl4es/desktop）
-     * 3. LIBGL_ES: 指定OpenGL ES版本（1/2/3）
-     * 4. FORCE_VSYNC: 强制启用垂直同步
+     * 新架构说明（基于 RALCORE 环境变量）：
+     * 1. 使用 RendererConfig 获取渲染器配置
+     * 2. 通过 RendererLoader 设置 RALCORE_RENDERER 和 RALCORE_EGL 环境变量
+     * 3. SDL 层会读取这些环境变量并加载对应的渲染器
+     * 4. 支持多种渲染器：native, gl4es, angle, zink, virgl, freedreno
      */
     public static void applyRendererEnvironment(Context context) {
-        String renderer = getEffectiveRenderer(context);
-        boolean useOpenGLPath = true;
-        String driverValue = "native";
-        String forceDriver = "OpenGL";
-        String eglLibrary = "libEGL.so";  // 默认系统EGL库
+        // 获取用户选择的渲染器偏好
+        String preferredRenderer = getEffectiveRenderer(context);
 
-        switch (renderer) {
-            case RENDERER_OPENGL_GL4ES:
-                // gl4es渲染器：使用gl4es提供的EGL实现
-                // libGL.so 包含了 gl4es 的 EGL + OpenGL ES 实现
-                driverValue = "gl4es";
-                eglLibrary = context.getApplicationInfo().nativeLibraryDir + "/libGL.so";
-                android.util.Log.i(TAG, "使用 gl4es 渲染器: " + eglLibrary);
+        // 将渲染器配置映射到 RendererConfig ID
+        String rendererId = mapRendererToConfigId(preferredRenderer);
+
+        // 使用新的 RendererLoader 加载渲染器
+        boolean success = RendererLoader.loadRenderer(context, rendererId);
+
+        if (success) {
+            android.util.Log.i(TAG, "========================================");
+            android.util.Log.i(TAG, "渲染器环境变量已应用 (RALCORE Backend)");
+            android.util.Log.i(TAG, "  渲染器偏好: " + preferredRenderer);
+            android.util.Log.i(TAG, "  渲染器 ID: " + rendererId);
+            android.util.Log.i(TAG, "  当前渲染器: " + RendererLoader.getCurrentRenderer());
+            android.util.Log.i(TAG, "========================================");
+        } else {
+            android.util.Log.e(TAG, "Failed to load renderer: " + rendererId);
+        }
+
+        // ===== 设置 SDL 渲染器选择环境变量 =====
+        // SDL 会在 Android_CreateDevice() 中读取这个变量来决定加载哪个渲染器
+        setEnv("FNA3D_OPENGL_DRIVER", rendererId);
+        android.util.Log.i(TAG, "FNA3D_OPENGL_DRIVER = " + rendererId);
+
+        // ===== 设置 FNA3D 环境变量（根据渲染器类型） =====
+        setEnv("FNA3D_FORCE_DRIVER", "OpenGL");
+
+        // 根据渲染器设置不同的 OpenGL 版本
+        switch (rendererId) {
+            case RendererConfig.RENDERER_GL4ES:
+                // gl4es 使用 OpenGL ES 2.0
+                setEnv("FNA3D_OPENGL_FORCE_ES3", "0");
+                setEnv("FNA3D_OPENGL_FORCE_VER_MAJOR", "2");
+                setEnv("FNA3D_OPENGL_FORCE_VER_MINOR", "0");
+                android.util.Log.i(TAG, "FNA3D configured for gl4es (GLES 2.0)");
                 break;
 
-            case RENDERER_VULKAN:
-                // Vulkan渲染器
-                useOpenGLPath = false;
-                driverValue = null;
-                forceDriver = "Vulkan";
-                break;
-
-            case RENDERER_OPENGLES3:
+            case RendererConfig.RENDERER_NATIVE_GLES:
             default:
-                // 原生OpenGL ES 3渲染器（Android系统自带）
-                driverValue = "native";
-                eglLibrary = "libEGL.so";  // 系统的 EGL 实现
-                android.util.Log.i(TAG, "使用原生渲染器: " + eglLibrary);
+                // Native 和其他渲染器使用 OpenGL ES 3.0
+                setEnv("FNA3D_OPENGL_FORCE_ES3", "1");
+                setEnv("FNA3D_OPENGL_FORCE_VER_MAJOR", "3");
+                setEnv("FNA3D_OPENGL_FORCE_VER_MINOR", "0");
+                android.util.Log.i(TAG, "FNA3D configured for native (GLES 3.0)");
                 break;
         }
 
-        // ===== 设置FNA3D核心环境变量 =====
+        // VSync 设置
+        setEnv("FORCE_VSYNC", "true");
 
-        // 强制使用的驱动类型（OpenGL或Vulkan）
-        if (forceDriver != null) {
-            setEnv("FNA3D_FORCE_DRIVER", forceDriver);
-        } else {
-            unsetEnv("FNA3D_FORCE_DRIVER");
+        // 同步到 System Property
+        System.setProperty("fna.renderer", preferredRenderer);
+    }
+
+    /**
+     * 将用户选择的渲染器配置映射到 RendererConfig ID
+     *
+     * @param rendererPreference 用户偏好的渲染器
+     * @return RendererConfig ID
+     */
+    private static String mapRendererToConfigId(String rendererPreference) {
+        // 优先使用 normalizeRendererValue 进行归一化
+        String normalized = normalizeRendererValue(rendererPreference);
+
+        // 如果是 "auto"，返回默认渲染器
+        if (RENDERER_AUTO.equals(normalized)) {
+            return RendererConfig.RENDERER_NATIVE_GLES;
         }
 
-        // OpenGL驱动实现类型（native/gl4es/desktop）
-        if (driverValue != null) {
-            setEnv("FNA3D_OPENGL_DRIVER", driverValue);
-        } else {
-            unsetEnv("FNA3D_OPENGL_DRIVER");
-        }
-
-        // ===== EGL库路径（SDL会读取此变量加载正确的EGL实现） =====
-        if (eglLibrary != null && useOpenGLPath) {
-            setEnv("FNA3D_OPENGL_LIBRARY", eglLibrary);
-        } else {
-            unsetEnv("FNA3D_OPENGL_LIBRARY");
-        }
-
-        // ===== OpenGL相关环境变量 =====
-        if (useOpenGLPath) {
-            // FNA3D OpenGL配置
-            setEnv("FNA3D_OPENGL_FORCE_CORE_PROFILE", "0");
-            setEnv("FNA3D_OPENGL_FORCE_ES3", "1");
-            setEnv("FNA3D_OPENGL_FORCE_VER_MAJOR", "3");
-            setEnv("FNA3D_OPENGL_FORCE_VER_MINOR", "0");
-            setEnv("FNA3D_OPENGL_FORCE_COMPATIBILITY_PROFILE", "1");
-
-            // gl4es特定配置（如果使用gl4es）
-            if ("gl4es".equals(driverValue)) {
-                setEnv("LIBGL_ES", "3");           // OpenGL ES 3.0
-                setEnv("LIBGL_GL", "30");          // 模拟OpenGL 3.0
-                setEnv("LIBGL_LOGERR", "1");       // 启用错误日志
-                setEnv("LIBGL_DEBUG", "0");        // 调试模式（0=关闭，1=基础，2=详细）
-
-                // gl4es性能优化选项
-                setEnv("LIBGL_BATCH", "1");        // 启用批处理（提升性能）
-                setEnv("LIBGL_NOERROR", "0");      // 不忽略错误
-                setEnv("LIBGL_NODEPTHTEX", "0");   // 支持深度纹理
-            } else {
-                // 原生渲染器：设置OpenGL ES版本
-                setEnv("LIBGL_ES", "3");           // 使用OpenGL ES 3.0
-
-                // 清除gl4es特定变量
-                unsetEnv("LIBGL_GL");
-                unsetEnv("LIBGL_LOGERR");
-                unsetEnv("LIBGL_DEBUG");
-                unsetEnv("LIBGL_BATCH");
-                unsetEnv("LIBGL_NOERROR");
-                unsetEnv("LIBGL_NODEPTHTEX");
-            }
-        } else {
-            // Vulkan路径：清除所有OpenGL相关变量
-            unsetEnv("FNA3D_OPENGL_FORCE_CORE_PROFILE");
-            unsetEnv("FNA3D_OPENGL_FORCE_ES3");
-            unsetEnv("FNA3D_OPENGL_FORCE_VER_MAJOR");
-            unsetEnv("FNA3D_OPENGL_FORCE_VER_MINOR");
-            unsetEnv("FNA3D_OPENGL_FORCE_COMPATIBILITY_PROFILE");
-            unsetEnv("LIBGL_ES");
-            unsetEnv("LIBGL_GL");
-            unsetEnv("LIBGL_LOGERR");
-            unsetEnv("LIBGL_DEBUG");
-            unsetEnv("LIBGL_BATCH");
-            unsetEnv("LIBGL_NOERROR");
-            unsetEnv("LIBGL_NODEPTHTEX");
-        }
-
-        // ===== VSync设置 =====
-        // 可以从设置中读取VSync偏好
-        boolean enableVsync = true;  // 默认启用
-        if (enableVsync) {
-            setEnv("FORCE_VSYNC", "true");
-        } else {
-            unsetEnv("FORCE_VSYNC");
-        }
-
-        // ===== 同步到 System Property（供 GameLauncher 预加载使用） =====
-        System.setProperty("fna.renderer", renderer);
-
-        android.util.Log.i(TAG, "========================================");
-        android.util.Log.i(TAG, "渲染器环境变量已应用 (EGL Backend)");
-        android.util.Log.i(TAG, "  渲染器: " + renderer);
-        android.util.Log.i(TAG, "  驱动类型: " + driverValue);
-        android.util.Log.i(TAG, "  EGL库: " + eglLibrary);
-        android.util.Log.i(TAG, "  使用OpenGL: " + useOpenGLPath);
-        android.util.Log.i(TAG, "  VSync: " + enableVsync);
-        android.util.Log.i(TAG, "========================================");
+        // 直接返回归一化后的值（已经是 RendererConfig ID）
+        return normalized;
     }
 
     private static void setEnv(String key, String value) {

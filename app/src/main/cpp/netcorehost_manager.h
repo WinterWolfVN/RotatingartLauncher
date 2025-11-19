@@ -32,7 +32,9 @@ int netcore_init(const char* dotnet_root, int framework_major);
  * @param argv 命令行参数数组（NULL 表示无参数）
  * @return 应用程序退出码（0 表示成功）
  *
- * 注意：此函数会阻塞直到程序集执行完毕
+ * 注意：
+ * - 此函数会阻塞直到程序集执行完毕
+ * - 当 argc > 0 且 argv 非空时，参数会被传递到 C# Main(string[] args) 方法
  */
 int netcore_run_app(
     const char* app_dir,
@@ -108,6 +110,28 @@ int netcore_get_property(
  * @param context_handle 要关闭的上下文句柄
  */
 void netcore_close_context(void* context_handle);
+
+/**
+ * @brief 运行工具程序集（使用 runtime config，支持在已加载的 CoreCLR 中运行）
+ *
+ * 此函数专门用于运行工具程序（如 AssemblyChecker、InstallerTools），
+ * 与 netcore_run_app() 的区别：
+ * - netcore_run_app() 使用 initialize_for_dotnet_command_line，会加载 CoreCLR（primary context）
+ * - netcore_run_tool() 使用 initialize_for_runtime_config，可以在已加载的 CoreCLR 中运行（secondary context）
+ *
+ * 重要：如果 CoreCLR 已被 netcore_run_app() 加载，则后续只能使用此函数，不能再用 netcore_run_app()
+ *
+ * @param app_dir 工具程序所在目录
+ * @param tool_assembly 工具程序集名称（如 "AssemblyChecker.dll"）
+ * @param argc 命令行参数数量
+ * @param argv 命令行参数数组
+ * @return 工具程序退出码（Main方法的返回值）
+ */
+int netcore_run_tool(
+    const char* app_dir,
+    const char* tool_assembly,
+    int argc,
+    const char* const* argv);
 
 /**
  * @brief 获取最后一次错误的详细消息

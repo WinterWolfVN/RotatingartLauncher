@@ -68,7 +68,7 @@ Java_com_app_ralaunch_netcore_NetCoreManager_nativeInit(
 }
 
 /**
- * @brief 运行程序集
+ * @brief 运行程序集（通用方法，支持参数传递）
  */
 JNIEXPORT jint JNICALL
 Java_com_app_ralaunch_netcore_NetCoreManager_nativeRunApp(
@@ -88,6 +88,11 @@ Java_com_app_ralaunch_netcore_NetCoreManager_nativeRunApp(
     if (argc > 0 && argv) {
         args_vec = jarray_to_vector(env, argv);
         args_carray = vector_to_carray(args_vec);
+
+        // 打印参数
+        for (int i = 0; i < argc; i++) {
+            LOGI(LOG_TAG, "  argv[%d] = %s", i, args_vec[i].c_str());
+        }
     }
 
     return netcore_run_app(
@@ -221,6 +226,42 @@ Java_com_app_ralaunch_netcore_NetCoreManager_nativeGetLastError(
     }
 
     return env->NewStringUTF(error);
+}
+
+/**
+ * @brief 运行工具程序（使用 runtime config）
+ */
+JNIEXPORT jint JNICALL
+Java_com_app_ralaunch_netcore_NetCoreManager_nativeRunTool(
+    JNIEnv* env, jclass clazz,
+    jstring appDir, jstring assemblyName, jint argc, jobjectArray argv) {
+
+    std::string app_dir = jstring_to_string(env, appDir);
+    std::string assembly_name = jstring_to_string(env, assemblyName);
+
+    LOGI(LOG_TAG, "JNI: nativeRunTool(appDir=%s, assembly=%s, argc=%d)",
+         app_dir.c_str(), assembly_name.c_str(), argc);
+
+    // 转换参数数组
+    std::vector<std::string> args_vec;
+    std::vector<const char*> args_carray;
+
+    if (argc > 0 && argv) {
+        args_vec = jarray_to_vector(env, argv);
+        args_carray = vector_to_carray(args_vec);
+
+        // 打印参数
+        for (int i = 0; i < argc; i++) {
+            LOGI(LOG_TAG, "  argv[%d] = %s", i, args_vec[i].c_str());
+        }
+    }
+
+    return netcore_run_tool(
+        app_dir.c_str(),
+        assembly_name.c_str(),
+        argc,
+        argc > 0 ? args_carray.data() : nullptr
+    );
 }
 
 /**

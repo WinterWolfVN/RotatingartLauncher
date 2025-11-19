@@ -18,10 +18,10 @@ public class NetCoreManager {
     // 加载 native 库
     static {
         try {
-            System.loadLibrary("netcorehost_manager");
-            AppLogger.info(TAG, "netcorehost_manager 库加载成功");
+            System.loadLibrary("main");
+            AppLogger.info(TAG, "main 库加载成功");
         } catch (UnsatisfiedLinkError e) {
-            AppLogger.error(TAG, "无法加载 netcorehost_manager 库", e);
+            AppLogger.error(TAG, "无法加载 main 库", e);
         }
     }
 
@@ -89,9 +89,11 @@ public class NetCoreManager {
     /**
      * 运行程序集（调用 Main 入口点）
      *
+     * 此方法会将参数传递到 C# Main(string[] args) 方法
+     *
      * @param appDir 程序集所在目录
      * @param assemblyName 程序集名称（如 "MyGame.dll"）
-     * @param args 命令行参数
+     * @param args 命令行参数（会传递到 C# Main 方法）
      * @return 退出码（0 表示成功）
      */
     public static int runApp(String appDir, String assemblyName, String[] args) {
@@ -102,6 +104,9 @@ public class NetCoreManager {
 
         AppLogger.info(TAG, "运行程序集: " + assemblyName);
         AppLogger.info(TAG, "  目录: " + appDir);
+        if (args != null && args.length > 0) {
+            AppLogger.info(TAG, "  参数数量: " + args.length);
+        }
 
         int result = nativeRunApp(appDir, assemblyName, args != null ? args.length : 0, args);
 
@@ -232,6 +237,52 @@ public class NetCoreManager {
     }
 
     /**
+     * 运行工具程序（使用 runtime config，支持在已加载的 CoreCLR 中运行）
+     *
+     * 此方法专门用于运行工具程序（如 AssemblyChecker、InstallerTools），
+     * 与 runApp() 的区别：
+     * - runApp() 使用 initialize_for_dotnet_command_line，会加载 CoreCLR（primary context）
+     * - runTool() 使用 initialize_for_runtime_config，可以在已加载的 CoreCLR 中运行（secondary context）
+     *
+     * 重要：如果 CoreCLR 已被 runApp() 加载，则后续只能使用此方法，不能再用 runApp()
+     *
+     * @param appDir 工具程序所在目录
+     * @param toolAssembly 工具程序集名称（如 "AssemblyChecker.dll"）
+     * @param args 命令行参数
+     * @return 工具程序退出码（Main方法的返回值）
+     */
+    public static int runTool(String appDir, String toolAssembly, String[] args) {
+        if (!initialized) {
+            AppLogger.error(TAG, "未初始化，请先调用 initialize()");
+            return -1;
+        }
+
+        AppLogger.info(TAG, "运行工具程序: " + toolAssembly);
+        AppLogger.info(TAG, "  目录: " + appDir);
+        if (args != null && args.length > 0) {
+            AppLogger.info(TAG, "  参数数量: " + args.length);
+        }
+
+        int result = nativeRunTool(appDir, toolAssembly, args != null ? args.length : 0, args);
+
+        if (result != 0) {
+            String error = nativeGetLastError();
+            if (error != null) {
+                AppLogger.error(TAG, "运行失败: " + error);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 运行工具程序（无参数）
+     */
+    public static int runTool(String appDir, String toolAssembly) {
+        return runTool(appDir, toolAssembly, null);
+    }
+
+    /**
      * 清理所有资源
      */
     public static synchronized void cleanup() {
@@ -244,12 +295,13 @@ public class NetCoreManager {
 
     // ========== Native 方法 ==========
 
-    private static native int nativeInit(String dotnetRoot, int frameworkMajor);
-    private static native int nativeRunApp(String appDir, String assemblyName, int argc, String[] argv);
-    private static native long nativeLoadAssembly(String appDir, String assemblyName);
-    private static native long nativeCallMethod(long contextHandle, String typeName, String methodName, String delegateType);
-    private static native long nativeGetProperty(long contextHandle, String typeName, String propertyName, String delegateType);
-    private static native void nativeCloseContext(long contextHandle);
-    private static native String nativeGetLastError();
-    private static native void nativeCleanup();
+    public static native int nativeInit(String dotnetRoot, int frameworkMajor);
+    public static native int nativeRunApp(String appDir, String assemblyName, int argc, String[] argv);
+    public static native int nativeRunTool(String appDir, String toolAssembly, int argc, String[] argv);
+    public static native long nativeLoadAssembly(String appDir, String assemblyName);
+    public static native long nativeCallMethod(long contextHandle, String typeName, String methodName, String delegateType);
+    public static native long nativeGetProperty(long contextHandle, String typeName, String propertyName, String delegateType);
+    public static native void nativeCloseContext(long contextHandle);
+    public static native String nativeGetLastError();
+    public static native void nativeCleanup();
 }
