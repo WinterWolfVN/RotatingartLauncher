@@ -115,50 +115,27 @@ public class AppLogger {
      * LogcatReader captures and saves to file
      */
     private static void log(Level level, String tag, String message, Throwable throwable) {
-        // Strip emojis and special characters from message
-        String cleanMessage = stripEmojis(message);
-
         // Log to Android logcat only
         switch (level) {
             case ERROR:
                 if (throwable != null) {
-                    Log.e(tag, cleanMessage, throwable);
+                    Log.e(tag, message, throwable);
                 } else {
-                    Log.e(tag, cleanMessage);
+                    Log.e(tag, message);
                 }
                 break;
             case WARN:
-                Log.w(tag, cleanMessage);
+                Log.w(tag, message);
                 break;
             case INFO:
-                Log.i(tag, cleanMessage);
+                Log.i(tag, message);
                 break;
             case DEBUG:
                 if (ENABLE_DEBUG) {
-                    Log.d(tag, cleanMessage);
+                    Log.d(tag, message);
                 }
                 break;
         }
-    }
-
-    /**
-     * Remove emojis and graphics from text
-     */
-    private static String stripEmojis(String text) {
-        if (text == null) return "";
-
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-
-            // Keep only basic printable ASCII and common whitespace
-            if ((c >= 32 && c <= 126) || c == '\n' || c == '\r' || c == '\t') {
-                result.append(c);
-            }
-            // Skip all other characters (emojis, special symbols, etc.)
-        }
-
-        return result.toString();
     }
 
     /**
