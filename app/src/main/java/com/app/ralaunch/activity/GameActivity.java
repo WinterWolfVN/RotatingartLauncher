@@ -101,7 +101,7 @@ public class GameActivity extends SDLActivity {
 
         // 强制横屏，防止 SDL 在运行时将方向改为 FULL_SENSOR 导致旋转为竖屏
         try {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
             AppLogger.info(TAG, "Screen orientation set to landscape");
         } catch (Exception e) {
             AppLogger.warn(TAG, "Failed to set orientation onCreate: " + e.getMessage());
@@ -187,18 +187,24 @@ public class GameActivity extends SDLActivity {
         AppLogger.info(TAG, "Back pressed handler ready (using onBackPressed override)");
     }
 
+//    @Override
+//    public void onConfigurationChanged(Configuration newConfig) {
+//        super.onConfigurationChanged(newConfig);
+//        // 若系统因为 SDL 的请求发生了旋转，这里立即拉回横屏
+//        try {
+//            if (newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE) {
+//                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+//                AppLogger.info(TAG, "Orientation enforced back to landscape");
+//            }
+//        } catch (Exception e) {
+//            AppLogger.warn(TAG, "Failed to enforce landscape in onConfigurationChanged: " + e.getMessage());
+//        }
+//    }
+
     @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        // 若系统因为 SDL 的请求发生了旋转，这里立即拉回横屏
-        try {
-            if (newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE) {
-                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-                AppLogger.info(TAG, "Orientation enforced back to landscape");
-            }
-        } catch (Exception e) {
-            AppLogger.warn(TAG, "Failed to enforce landscape in onConfigurationChanged: " + e.getMessage());
-        }
+    public void setOrientationBis(int w, int h, boolean resizable, String hint) {
+        // lets force orientation to be landscape
+        super.setOrientationBis(w, h, resizable, "LandscapeLeft LandscapeRight");
     }
 
     @Override
