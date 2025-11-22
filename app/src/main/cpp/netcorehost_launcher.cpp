@@ -87,29 +87,29 @@ int netcorehost_set_params(
     g_app_path = str_dup(app_path_str.c_str());
 
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "📝 启动参数已设置");
+    LOGI(LOG_TAG, "📝 Launch parameters set");
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "  应用目录: %s", app_dir);
-    LOGI(LOG_TAG, "  主程序集: %s", main_assembly);
-    LOGI(LOG_TAG, "  完整路径: %s", g_app_path);
-    LOGI(LOG_TAG, "  .NET路径: %s", g_dotnet_path ? g_dotnet_path : "(自动检测)");
-    LOGI(LOG_TAG, "  框架版本: %d.x (仅供参考)", framework_major);
+    LOGI(LOG_TAG, "  App directory: %s", app_dir);
+    LOGI(LOG_TAG, "  Main assembly: %s", main_assembly);
+    LOGI(LOG_TAG, "  Full path: %s", g_app_path);
+    LOGI(LOG_TAG, "  .NET path: %s", g_dotnet_path ? g_dotnet_path : "(auto-detect)");
+    LOGI(LOG_TAG, "  Framework version: %d.x (reference only)", framework_major);
     LOGI(LOG_TAG, "========================================");
 
     // 3. 验证程序集存在
     if (access(g_app_path, F_OK) != 0) {
-        LOGE(LOG_TAG, "程序集文件不存在: %s", g_app_path);
+        LOGE(LOG_TAG, "Assembly file does not exist: %s", g_app_path);
         return -1;
     }
 
     // 4. 设置 DOTNET_ROOT 环境变量（如果提供）
     if (g_dotnet_path) {
         setenv("DOTNET_ROOT", g_dotnet_path, 1);
-        LOGI(LOG_TAG, "DOTNET_ROOT 环境变量已设置: %s", g_dotnet_path);
+        LOGI(LOG_TAG, "DOTNET_ROOT environment variable set: %s", g_dotnet_path);
     }
 
     // 5. 根据用户选择的框架版本设置运行时策略
-    LOGI(LOG_TAG, "📋 框架版本参数: framework_major=%d", framework_major);
+    LOGI(LOG_TAG, "📋 Framework version parameter: framework_major=%d", framework_major);
 
     if (framework_major > 0) {
         // 策略：通过修改 DOTNET_ROOT 指向特定版本的运行时
@@ -122,14 +122,14 @@ int netcorehost_set_params(
         setenv("DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX", "2", 1);
         setenv("DOTNET_ROLL_FORWARD_TO_PRERELEASE", "1", 1);
 
-        LOGI(LOG_TAG, "已设置强制使用最新运行时模式: 将使用 net%d.x", framework_major);
-        LOGI(LOG_TAG, "   （LatestMajor: 强制使用最高可用版本）");
+        LOGI(LOG_TAG, "Set forced latest runtime mode: will use net%d.x", framework_major);
+        LOGI(LOG_TAG, "   (LatestMajor: force use highest available version)");
     } else {
         // 自动模式，允许使用任何兼容版本
         setenv("DOTNET_ROLL_FORWARD", "LatestMajor", 1);
         setenv("DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX", "2", 1);
         setenv("DOTNET_ROLL_FORWARD_TO_PRERELEASE", "1", 1);
-        LOGI(LOG_TAG, "已设置自动版本模式（使用最新可用运行时，包括预发布版本）");
+        LOGI(LOG_TAG, "Set automatic version mode (use latest available runtime, including prerelease)");
     }
 
     setenv("COMPlus_DebugWriteToStdErr", "1", 1);
@@ -156,15 +156,15 @@ int netcorehost_set_params(
  */
 int netcorehost_launch() {
     if (!g_app_path) {
-        LOGE(LOG_TAG, "错误：未设置应用路径！请先调用 netcorehostSetParams()");
+        LOGE(LOG_TAG, "Error: Application path not set! Please call netcorehostSetParams() first");
         return -1;
     }
 
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "🚀 开始启动 .NET 应用");
+    LOGI(LOG_TAG, "🚀 Starting .NET application");
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "  程序集: %s", g_app_path);
-    LOGI(LOG_TAG, "  .NET路径: %s", g_dotnet_path ? g_dotnet_path : "(环境变量)");
+    LOGI(LOG_TAG, "  Assembly: %s", g_app_path);
+    LOGI(LOG_TAG, "  .NET path: %s", g_dotnet_path ? g_dotnet_path : "(environment variable)");
 
     // 设置工作目录为程序集所在目录，以便 .NET 能找到依赖的程序集
     std::string app_dir = g_app_path;
@@ -172,9 +172,9 @@ int netcorehost_launch() {
     if (last_slash != std::string::npos) {
         app_dir = app_dir.substr(0, last_slash);
         if (chdir(app_dir.c_str()) == 0) {
-            LOGI(LOG_TAG, "  工作目录: %s", app_dir.c_str());
+            LOGI(LOG_TAG, "  Working directory: %s", app_dir.c_str());
         } else {
-            LOGW(LOG_TAG, "无法设置工作目录: %s", app_dir.c_str());
+            LOGW(LOG_TAG, "Cannot set working directory: %s", app_dir.c_str());
         }
     }
 
@@ -207,39 +207,39 @@ int netcorehost_launch() {
         // 根据设置决定是否初始化 COREHOST_TRACE 重定向
         if (g_enable_corehost_trace) {
             init_corehost_trace_redirect();
-            LOGI(LOG_TAG, "COREHOST_TRACE重定向已初始化");
+            LOGI(LOG_TAG, "COREHOST_TRACE redirect initialized");
 
             // 启用 COREHOST_TRACE 以便捕获所有 .NET runtime 的 trace 输出
             setenv("COREHOST_TRACE", "1", 1);
-            LOGI(LOG_TAG, "已启用 COREHOST_TRACE");
+            LOGI(LOG_TAG, "COREHOST_TRACE enabled");
         } else {
-            LOGI(LOG_TAG, "COREHOST_TRACE 已禁用（详细日志已关闭）");
+            LOGI(LOG_TAG, "COREHOST_TRACE disabled (verbose logging off)");
         }
 
         // ======== 重要：在 hostfxr 初始化之前设置 DOTNET_STARTUP_HOOKS ========
         // 如果 Java 层传递了 startup hooks DLL 路径，设置环境变量
         if (g_startup_hooks_dll != nullptr && strlen(g_startup_hooks_dll) > 0) {
             setenv("DOTNET_STARTUP_HOOKS", g_startup_hooks_dll, 1);
-            LOGI(LOG_TAG, "已设置 DOTNET_STARTUP_HOOKS=%s", g_startup_hooks_dll);
-            LOGI(LOG_TAG, "StartupHook 补丁将在应用 Main() 之前自动执行");
+            LOGI(LOG_TAG, "Set DOTNET_STARTUP_HOOKS=%s", g_startup_hooks_dll);
+            LOGI(LOG_TAG, "StartupHook patch will execute automatically before app Main()");
         } else {
-            LOGI(LOG_TAG, "未设置 DOTNET_STARTUP_HOOKS，跳过补丁加载");
+            LOGI(LOG_TAG, "DOTNET_STARTUP_HOOKS not set, skipping patch loading");
         }
         // ======== DOTNET_STARTUP_HOOKS 设置完成 ========
 
         // 加载 hostfxr（自动从 DOTNET_ROOT 环境变量读取）
-        LOGI(LOG_TAG, "加载 hostfxr...");
+        LOGI(LOG_TAG, "Loading hostfxr...");
         hostfxr = netcorehost::Nethost::load_hostfxr();
 
         if (!hostfxr) {
-            LOGE(LOG_TAG, "hostfxr 加载失败：返回空指针");
+            LOGE(LOG_TAG, "hostfxr loading failed: returned null pointer");
             return -1;
         }
 
-        LOGI(LOG_TAG, "hostfxr 加载成功");
+        LOGI(LOG_TAG, "hostfxr loaded successfully");
 
         // 初始化 .NET 运行时
-        LOGI(LOG_TAG, "初始化 .NET 运行时...");
+        LOGI(LOG_TAG, "Initializing .NET runtime...");
         auto app_path_str = netcorehost::PdCString::from_str(g_app_path);
 
         std::unique_ptr<netcorehost::HostfxrContextForCommandLine> context;
@@ -253,19 +253,19 @@ int netcorehost_launch() {
         }
 
         if (!context) {
-            LOGE(LOG_TAG, ".NET 运行时初始化失败");
+            LOGE(LOG_TAG, ".NET runtime initialization failed");
             return -1;
         }
 
-        LOGI(LOG_TAG, ".NET 运行时初始化成功");
+        LOGI(LOG_TAG, ".NET runtime initialized successfully");
 
         // 获取委托加载器（用于加载游戏）
-        LOGI(LOG_TAG, "获取委托加载器...");
+        LOGI(LOG_TAG, "Getting delegate loader...");
         auto loader = context->get_delegate_loader();
 
         // 运行应用程序
         LOGI(LOG_TAG, "========================================");
-        LOGI(LOG_TAG, "运行应用程序...");
+        LOGI(LOG_TAG, "Running application...");
         LOGI(LOG_TAG, "========================================");
 
         auto app_result = context->run_app();
@@ -274,17 +274,17 @@ int netcorehost_launch() {
         LOGI(LOG_TAG, "========================================");
 
         if (exit_code == 0) {
-            LOGI(LOG_TAG, "应用程序正常退出");
+            LOGI(LOG_TAG, "Application exited normally");
             g_last_error[0] = '\0';  // 清空错误消息
         } else if (exit_code < 0) {
             auto hosting_result = app_result.as_hosting_result();
             std::string error_msg = hosting_result.get_error_message();
-            LOGE(LOG_TAG, "托管错误 (code: %d)", exit_code);
+            LOGE(LOG_TAG, "Hosting error (code: %d)", exit_code);
             LOGE(LOG_TAG, "  %s", error_msg.c_str());
             // 保存错误消息
             snprintf(g_last_error, sizeof(g_last_error), "%s", error_msg.c_str());
         } else {
-            LOGW(LOG_TAG, "应用退出码: %d", exit_code);
+            LOGW(LOG_TAG, "Application exit code: %d", exit_code);
             g_last_error[0] = '\0';  // 清空错误消息
         }
 
@@ -294,21 +294,21 @@ int netcorehost_launch() {
 
     } catch (const netcorehost::HostingException& ex) {
         LOGE(LOG_TAG, "========================================");
-        LOGE(LOG_TAG, "托管错误");
+        LOGE(LOG_TAG, "Hosting error");
         LOGE(LOG_TAG, "========================================");
         LOGE(LOG_TAG, "  %s", ex.what());
         LOGE(LOG_TAG, "========================================");
         // 保存错误消息
-        snprintf(g_last_error, sizeof(g_last_error), "托管错误: %s", ex.what());
+        snprintf(g_last_error, sizeof(g_last_error), "Hosting error: %s", ex.what());
         return -1;
     } catch (const std::exception& ex) {
         LOGE(LOG_TAG, "========================================");
-        LOGE(LOG_TAG, "意外错误");
+        LOGE(LOG_TAG, "Unexpected error");
         LOGE(LOG_TAG, "========================================");
         LOGE(LOG_TAG, "  %s", ex.what());
         LOGE(LOG_TAG, "========================================");
         // 保存错误消息
-        snprintf(g_last_error, sizeof(g_last_error), "意外错误: %s", ex.what());
+        snprintf(g_last_error, sizeof(g_last_error), "Unexpected error: %s", ex.what());
         return -2;
     }
 }
@@ -373,9 +373,9 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostSetStartupHooks(
         g_startup_hooks_dll = str_dup(dll_path);
         env->ReleaseStringUTFChars(startupHooksDll, dll_path);
 
-        LOGI(LOG_TAG, "已设置 StartupHooks DLL: %s", g_startup_hooks_dll);
+        LOGI(LOG_TAG, "Set StartupHooks DLL: %s", g_startup_hooks_dll);
     } else {
-        LOGI(LOG_TAG, "清除 StartupHooks DLL");
+        LOGI(LOG_TAG, "Clear StartupHooks DLL");
     }
 }
 
@@ -386,7 +386,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_app_ralaunch_core_GameLauncher_netcorehostSetCorehostTrace(
         JNIEnv *env, jclass clazz, jboolean enabled) {
     g_enable_corehost_trace = (enabled == JNI_TRUE);
-    LOGI(LOG_TAG, "COREHOST_TRACE 设置: %s", g_enable_corehost_trace ? "启用" : "禁用");
+    LOGI(LOG_TAG, "COREHOST_TRACE setting: %s", g_enable_corehost_trace ? "enabled" : "disabled");
 }
 
 /**
@@ -419,12 +419,12 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostCallMethod(
     const char *method_name_str = env->GetStringUTFChars(methodName, nullptr);
 
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "🔧 调用补丁方法");
+    LOGI(LOG_TAG, "🔧 Calling patch method");
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "  应用目录: %s", app_dir_str);
-    LOGI(LOG_TAG, "  程序集: %s", assembly_name_str);
-    LOGI(LOG_TAG, "  类型: %s", type_name_str);
-    LOGI(LOG_TAG, "  方法: %s", method_name_str);
+    LOGI(LOG_TAG, "  App directory: %s", app_dir_str);
+    LOGI(LOG_TAG, "  Assembly: %s", assembly_name_str);
+    LOGI(LOG_TAG, "  Type: %s", type_name_str);
+    LOGI(LOG_TAG, "  Method: %s", method_name_str);
     LOGI(LOG_TAG, "========================================");
 
     int result = -1;
@@ -433,33 +433,33 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostCallMethod(
         // 构建程序集完整路径
         std::string assembly_path = std::string(app_dir_str) + "/" + std::string(assembly_name_str);
 
-        LOGI(LOG_TAG, "程序集路径: %s", assembly_path.c_str());
+        LOGI(LOG_TAG, "Assembly path: %s", assembly_path.c_str());
 
         // 验证程序集文件存在
         if (access(assembly_path.c_str(), F_OK) != 0) {
-            LOGE(LOG_TAG, "程序集文件不存在: %s", assembly_path.c_str());
+            LOGE(LOG_TAG, "Assembly file does not exist: %s", assembly_path.c_str());
             result = -1;
             goto cleanup;
         }
 
         // 加载 hostfxr
-        LOGI(LOG_TAG, "加载 hostfxr...");
+        LOGI(LOG_TAG, "Loading hostfxr...");
         auto hostfxr = netcorehost::Nethost::load_hostfxr();
 
         if (!hostfxr) {
-            LOGE(LOG_TAG, "hostfxr 加载失败");
+            LOGE(LOG_TAG, "hostfxr loading failed");
             result = -2;
             goto cleanup;
         }
 
-        LOGI(LOG_TAG, "hostfxr 加载成功");
+        LOGI(LOG_TAG, "hostfxr loaded successfully");
 
         // 初始化运行时上下文
-        LOGI(LOG_TAG, "初始化运行时上下文...");
+        LOGI(LOG_TAG, "Initializing runtime context...");
 
         // 设置 Core Host 跟踪日志
         setenv("COREHOST_TRACEFILE", "/sdcard/Android/data/com.app.ralaunch/files/patches/corehost_trace.log", 1);
-        LOGI(LOG_TAG, "已设置 COREHOST_TRACEFILE 环境变量");
+        LOGI(LOG_TAG, "Set COREHOST_TRACEFILE environment variable");
 
         auto assembly_path_pdc = netcorehost::PdCString::from_str(assembly_path.c_str());
 
@@ -468,19 +468,19 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostCallMethod(
         context = hostfxr->initialize_for_runtime_config(assembly_path_pdc);
 
         if (!context) {
-            LOGE(LOG_TAG, "运行时上下文初始化失败");
+            LOGE(LOG_TAG, "Runtime context initialization failed");
             result = -3;
             goto cleanup;
         }
 
-        LOGI(LOG_TAG, "运行时上下文初始化成功");
+        LOGI(LOG_TAG, "Runtime context initialized successfully");
 
         // 获取委托加载器
-        LOGI(LOG_TAG, "获取委托加载器...");
+        LOGI(LOG_TAG, "Getting delegate loader...");
         auto loader = context->get_delegate_loader();
 
         if (!loader) {
-            LOGE(LOG_TAG, "委托加载器获取失败");
+            LOGE(LOG_TAG, "Failed to get delegate loader");
             result = -4;
             goto cleanup;
         }
@@ -494,8 +494,8 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostCallMethod(
 
         std::string full_type_name = std::string(type_name_str) + ", " + assembly_name_without_ext;
 
-        LOGI(LOG_TAG, "完整类型名: %s", full_type_name.c_str());
-        LOGI(LOG_TAG, "方法名: %s", method_name_str);
+        LOGI(LOG_TAG, "Full type name: %s", full_type_name.c_str());
+        LOGI(LOG_TAG, "Method name: %s", method_name_str);
 
         auto type_name_pdc = netcorehost::PdCString::from_str(full_type_name.c_str());
         auto method_name_pdc = netcorehost::PdCString::from_str(method_name_str);
@@ -511,43 +511,43 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostCallMethod(
                     method_name_pdc
             );
         } catch (const netcorehost::HostingException& ex) {
-            LOGE(LOG_TAG, "获取方法指针失败: %s", ex.what());
+            LOGE(LOG_TAG, "Failed to get method pointer: %s", ex.what());
             result = -5;
             goto cleanup;
         }
 
         if (!patch_method) {
-            LOGE(LOG_TAG, "方法指针为空");
+            LOGE(LOG_TAG, "Method pointer is null");
             result = -6;
             goto cleanup;
         }
 
-        LOGI(LOG_TAG, "方法指针获取成功");
+        LOGI(LOG_TAG, "Method pointer obtained successfully");
 
         // 调用补丁方法
         LOGI(LOG_TAG, "========================================");
-        LOGI(LOG_TAG, "调用补丁方法: %s.%s()", type_name_str, method_name_str);
+        LOGI(LOG_TAG, "Calling patch method: %s.%s()", type_name_str, method_name_str);
         LOGI(LOG_TAG, "========================================");
 
         int call_result = patch_method(nullptr, 0);
 
         LOGI(LOG_TAG, "========================================");
-        LOGI(LOG_TAG, "补丁方法调用成功，返回值: %d", call_result);
+        LOGI(LOG_TAG, "Patch method called successfully, return value: %d", call_result);
         LOGI(LOG_TAG, "========================================");
 
         result = 0;
 
         // 显式关闭上下文，确保 hostfxr 状态被清理
-        LOGI(LOG_TAG, "关闭运行时上下文...");
+        LOGI(LOG_TAG, "Closing runtime context...");
         context->close();
         context.reset();  // 显式销毁 context
-        LOGI(LOG_TAG, "运行时上下文已关闭");
+        LOGI(LOG_TAG, "Runtime context closed");
 
     } catch (const netcorehost::HostingException& ex) {
-        LOGE(LOG_TAG, "托管错误: %s", ex.what());
+        LOGE(LOG_TAG, "Hosting error: %s", ex.what());
         result = -100;
     } catch (const std::exception& ex) {
-        LOGE(LOG_TAG, "意外错误: %s", ex.what());
+        LOGE(LOG_TAG, "Unexpected error: %s", ex.what());
         result = -101;
     }
 

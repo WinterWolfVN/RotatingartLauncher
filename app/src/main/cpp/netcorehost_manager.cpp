@@ -67,15 +67,15 @@ static void set_error(const char* format, ...) {
  */
 int netcore_init(const char* dotnet_root, int framework_major) {
     if (g_initialized) {
-        LOGI(LOG_TAG, "已经初始化，跳过");
+        LOGI(LOG_TAG, "Already initialized, skipping");
         return 0;
     }
 
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "🔧 初始化 .NET Core Host Manager");
+    LOGI(LOG_TAG, "🔧 Initializing .NET Core Host Manager");
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "  DOTNET_ROOT: %s", dotnet_root ? dotnet_root : "(自动检测)");
-    LOGI(LOG_TAG, "  框架版本: %d.x", framework_major);
+    LOGI(LOG_TAG, "  DOTNET_ROOT: %s", dotnet_root ? dotnet_root : "(auto-detect)");
+    LOGI(LOG_TAG, "  Framework version: %d.x", framework_major);
 
     // 保存配置
     if (dotnet_root) {
@@ -89,31 +89,31 @@ int netcore_init(const char* dotnet_root, int framework_major) {
         setenv("DOTNET_ROLL_FORWARD", "LatestMajor", 1);
         setenv("DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX", "2", 1);
         setenv("DOTNET_ROLL_FORWARD_TO_PRERELEASE", "1", 1);
-        LOGI(LOG_TAG, "  滚动策略: LatestMajor (net%d.x)", framework_major);
+        LOGI(LOG_TAG, "  Roll forward policy: LatestMajor (net%d.x)", framework_major);
     } else {
         setenv("DOTNET_ROLL_FORWARD", "LatestMajor", 1);
         setenv("DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX", "2", 1);
         setenv("DOTNET_ROLL_FORWARD_TO_PRERELEASE", "1", 1);
-        LOGI(LOG_TAG, "  滚动策略: 自动（最新版本）");
+        LOGI(LOG_TAG, "  Roll forward policy: automatic (latest version)");
     }
 
     // 根据设置决定是否启用 COREHOST_TRACE
     if (g_enable_corehost_trace) {
         init_corehost_trace_redirect();
-            LOGI(LOG_TAG, "COREHOST_TRACE重定向已初始化");
+            LOGI(LOG_TAG, "COREHOST_TRACE redirect initialized");
 
             // 启用 COREHOST_TRACE 以便捕获所有 .NET runtime 的 trace 输出
             setenv("COREHOST_TRACE", "1", 1);
-            LOGI(LOG_TAG, "已启用 COREHOST_TRACE");
+            LOGI(LOG_TAG, "COREHOST_TRACE enabled");
         } else {
-            LOGI(LOG_TAG, "COREHOST_TRACE 已禁用（详细日志已关闭）");
+            LOGI(LOG_TAG, "COREHOST_TRACE disabled (verbose logging off)");
     }
 
     // 输入相关
     setenv("SDL_TOUCH_MOUSE_EVENTS", "1", 1);
 
     // 初始化 JNI Bridge
-    LOGI(LOG_TAG, "初始化 JNI Bridge...");
+    LOGI(LOG_TAG, "Initializing JNI Bridge...");
     JavaVM* jvm = Bridge_GetJavaVM();
     JNIEnv* env = nullptr;
     if (jvm) {
@@ -121,33 +121,33 @@ int netcore_init(const char* dotnet_root, int framework_major) {
         if (env) {
             LOGI(LOG_TAG, "  JNI Bridge OK (JVM: %p, Env: %p)", jvm, env);
         } else {
-            LOGW(LOG_TAG, "  无法获取 JNIEnv");
+            LOGW(LOG_TAG, "  Cannot get JNIEnv");
         }
     } else {
-        LOGW(LOG_TAG, "  JavaVM 未初始化");
+        LOGW(LOG_TAG, "  JavaVM not initialized");
     }
 
     try {
         // 加载 hostfxr
-        LOGI(LOG_TAG, "加载 hostfxr...");
+        LOGI(LOG_TAG, "Loading hostfxr...");
         g_hostfxr = netcorehost::Nethost::load_hostfxr();
 
         if (!g_hostfxr) {
-            set_error("hostfxr 加载失败");
+            set_error("hostfxr loading failed");
             return -1;
         }
 
-        LOGI(LOG_TAG, "✓ hostfxr 加载成功");
+        LOGI(LOG_TAG, "✓ hostfxr loaded successfully");
         LOGI(LOG_TAG, "========================================");
         g_initialized = true;
         g_last_error[0] = '\0';
         return 0;
 
     } catch (const netcorehost::HostingException& ex) {
-        set_error("初始化失败（托管异常）: %s", ex.what());
+        set_error("Initialization failed (hosting exception): %s", ex.what());
         return -1;
     } catch (const std::exception& ex) {
-        set_error("初始化失败: %s", ex.what());
+        set_error("Initialization failed: %s", ex.what());
         return -1;
     }
 }
@@ -165,15 +165,15 @@ int netcore_run_app(
     const char* const* argv) {
 
     if (!g_initialized) {
-        set_error("未初始化，请先调用 netcore_init()");
+        set_error("Not initialized, please call netcore_init() first");
         return -1;
     }
 
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "🚀 运行程序集: %s", main_assembly);
+    LOGI(LOG_TAG, "🚀 Running assembly: %s", main_assembly);
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "  目录: %s", app_dir);
-    LOGI(LOG_TAG, "  参数数量: %d", argc);
+    LOGI(LOG_TAG, "  Directory: %s", app_dir);
+    LOGI(LOG_TAG, "  Argument count: %d", argc);
     for (int i = 0; i < argc; i++) {
         LOGI(LOG_TAG, "    args[%d] = %s", i, argv[i]);
     }
@@ -183,15 +183,15 @@ int netcore_run_app(
 
     // 验证文件存在
     if (access(app_path.c_str(), F_OK) != 0) {
-        set_error("程序集不存在: %s", app_path.c_str());
+        set_error("Assembly does not exist: %s", app_path.c_str());
         return -1;
     }
 
     // 设置工作目录
     if (chdir(app_dir) == 0) {
-        LOGI(LOG_TAG, "  工作目录: %s", app_dir);
+        LOGI(LOG_TAG, "  Working directory: %s", app_dir);
     } else {
-        LOGW(LOG_TAG, "  无法设置工作目录");
+        LOGW(LOG_TAG, "  Cannot set working directory");
     }
 
     // 设置环境变量
@@ -228,11 +228,11 @@ int netcore_run_app(
         }
 
         if (!context) {
-            set_error("运行时初始化失败");
+            set_error("Runtime initialization failed");
             return -1;
         }
 
-        LOGI(LOG_TAG, "运行时初始化成功，开始执行...");
+        LOGI(LOG_TAG, "Runtime initialized successfully, starting execution...");
         LOGI(LOG_TAG, "========================================");
 
         // 运行应用
@@ -241,14 +241,14 @@ int netcore_run_app(
 
         LOGI(LOG_TAG, "========================================");
         if (exit_code == 0) {
-            LOGI(LOG_TAG, "✓ 程序正常退出");
+            LOGI(LOG_TAG, "✓ Application exited normally");
             g_last_error[0] = '\0';
         } else if (exit_code < 0) {
             auto hosting_result = result.as_hosting_result();
             std::string error_msg = hosting_result.get_error_message();
-            set_error("托管错误 (code: %d): %s", exit_code, error_msg.c_str());
+            set_error("Hosting error (code: %d): %s", exit_code, error_msg.c_str());
         } else {
-            LOGW(LOG_TAG, "程序退出码: %d", exit_code);
+            LOGW(LOG_TAG, "Application exit code: %d", exit_code);
             g_last_error[0] = '\0';
         }
         LOGI(LOG_TAG, "========================================");
@@ -257,33 +257,33 @@ int netcore_run_app(
         // 必须按此顺序：
         // 1. context->close() 需要调用 hostfxr 的函数，所以必须在 hostfxr 重置之前完成
         // 2. 销毁 context 后，才能安全地重置 hostfxr 实例
-        LOGI(LOG_TAG, "关闭上下文...");
+        LOGI(LOG_TAG, "Closing context...");
         try {
             context->close();  // 显式关闭上下文
         } catch (const std::exception& ex) {
-            LOGW(LOG_TAG, "关闭上下文时出错: %s", ex.what());
+            LOGW(LOG_TAG, "Error while closing context: %s", ex.what());
         }
         context.reset();  // 销毁 context unique_ptr
-        LOGI(LOG_TAG, "✓ 上下文已关闭");
+        LOGI(LOG_TAG, "✓ Context closed");
 
         // 现在可以安全地重置 hostfxr 以允许下一次运行
         // initialize_for_dotnet_command_line 不支持在同一个 hostfxr 实例中连续创建多个上下文
-        LOGI(LOG_TAG, "重置 hostfxr 以允许下一次运行...");
+        LOGI(LOG_TAG, "Resetting hostfxr to allow next run...");
         g_hostfxr.reset();
         g_hostfxr = netcorehost::Nethost::load_hostfxr();
         if (!g_hostfxr) {
-            LOGW(LOG_TAG, "⚠️ hostfxr 重新加载失败");
+            LOGW(LOG_TAG, "⚠️ hostfxr reload failed");
         } else {
-            LOGI(LOG_TAG, "✓ hostfxr 重新加载成功");
+            LOGI(LOG_TAG, "✓ hostfxr reloaded successfully");
         }
 
         return exit_code;
 
     } catch (const netcorehost::HostingException& ex) {
-        set_error("运行失败（托管异常）: %s", ex.what());
+        set_error("Run failed (hosting exception): %s", ex.what());
         return -1;
     } catch (const std::exception& ex) {
-        set_error("运行失败: %s", ex.what());
+        set_error("Run failed: %s", ex.what());
         return -1;
     }
 }
@@ -297,13 +297,13 @@ int netcore_load_assembly(
     void** context_handle) {
 
     if (!g_initialized) {
-        set_error("未初始化，请先调用 netcore_init()");
+        set_error("Not initialized, please call netcore_init() first");
         return -1;
     }
 
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "📦 加载程序集: %s", assembly_name);
-    LOGI(LOG_TAG, "  目录: %s", app_dir);
+    LOGI(LOG_TAG, "📦 Loading assembly: %s", assembly_name);
+    LOGI(LOG_TAG, "  Directory: %s", app_dir);
 
     // 构建 runtimeconfig.json 路径
     std::string assembly_name_str(assembly_name);
@@ -317,13 +317,13 @@ int netcore_load_assembly(
 
     // 验证 runtimeconfig.json 存在
     if (access(runtimeconfig_path.c_str(), F_OK) != 0) {
-        set_error("找不到 runtimeconfig.json: %s", runtimeconfig_path.c_str());
+        set_error("Cannot find runtimeconfig.json: %s", runtimeconfig_path.c_str());
         return -1;
     }
 
     // 设置工作目录
     if (chdir(app_dir) == 0) {
-        LOGI(LOG_TAG, "  工作目录: %s", app_dir);
+        LOGI(LOG_TAG, "  Working directory: %s", app_dir);
     }
 
     try {
@@ -337,7 +337,7 @@ int netcore_load_assembly(
         runtime_ctx = g_hostfxr->initialize_for_runtime_config(runtimeconfig_str);
 
         if (!runtime_ctx) {
-            set_error("运行时配置初始化失败");
+            set_error("Runtime config initialization failed");
             return -1;
         }
 
@@ -346,7 +346,7 @@ int netcore_load_assembly(
             netcorehost::bindings::hostfxr_delegate_type::hdt_load_assembly_and_get_function_pointer);
 
         if (!get_delegate_result) {
-            set_error("无法获取运行时委托");
+            set_error("Cannot get runtime delegate");
             return -1;
         }
 
@@ -361,16 +361,16 @@ int netcore_load_assembly(
         g_contexts[handle] = std::move(ctx);
         *context_handle = handle;
 
-        LOGI(LOG_TAG, "✓ 程序集加载成功 (handle: %p)", handle);
+        LOGI(LOG_TAG, "✓ Assembly loaded successfully (handle: %p)", handle);
         LOGI(LOG_TAG, "========================================");
         g_last_error[0] = '\0';
         return 0;
 
     } catch (const netcorehost::HostingException& ex) {
-        set_error("加载失败（托管异常）: %s", ex.what());
+        set_error("Load failed (hosting exception): %s", ex.what());
         return -1;
     } catch (const std::exception& ex) {
-        set_error("加载失败: %s", ex.what());
+        set_error("Load failed: %s", ex.what());
         return -1;
     }
 }
@@ -387,12 +387,12 @@ int netcore_call_method(
 
     auto it = g_contexts.find(context_handle);
     if (it == g_contexts.end()) {
-        set_error("无效的上下文句柄");
+        set_error("Invalid context handle");
         return -1;
     }
 
     auto& ctx = it->second;
-    LOGI(LOG_TAG, "🔧 调用方法: %s::%s", type_name, method_name);
+    LOGI(LOG_TAG, "🔧 Calling method: %s::%s", type_name, method_name);
 
     try {
         // 获取 load_assembly_and_get_function_pointer 委托
@@ -400,7 +400,7 @@ int netcore_call_method(
             netcorehost::bindings::hostfxr_delegate_type::hdt_load_assembly_and_get_function_pointer);
 
         if (!get_delegate_result) {
-            set_error("无法获取运行时委托");
+            set_error("Cannot get runtime delegate");
             return -1;
         }
 
@@ -423,7 +423,7 @@ int netcore_call_method(
                 delegate_type_str.c_str(), nullptr, &method_ptr);
 
             if (call_result != 0) {
-                set_error("方法调用失败 (code: %d)", call_result);
+                set_error("Method call failed (code: %d)", call_result);
                 return -1;
             }
 
@@ -437,7 +437,7 @@ int netcore_call_method(
                 nullptr, nullptr, &method_ptr);
 
             if (call_result != 0) {
-                set_error("方法调用失败 (code: %d)", call_result);
+                set_error("Method call failed (code: %d)", call_result);
                 return -1;
             }
 
@@ -448,15 +448,15 @@ int netcore_call_method(
             }
         }
 
-        LOGI(LOG_TAG, "✓ 方法调用成功");
+        LOGI(LOG_TAG, "✓ Method called successfully");
         g_last_error[0] = '\0';
         return 0;
 
     } catch (const netcorehost::HostingException& ex) {
-        set_error("调用失败（托管异常）: %s", ex.what());
+        set_error("Call failed (hosting exception): %s", ex.what());
         return -1;
     } catch (const std::exception& ex) {
-        set_error("调用失败: %s", ex.what());
+        set_error("Call failed: %s", ex.what());
         return -1;
     }
 }
@@ -483,7 +483,7 @@ int netcore_get_property(
 void netcore_close_context(void* context_handle) {
     auto it = g_contexts.find(context_handle);
     if (it != g_contexts.end()) {
-        LOGI(LOG_TAG, "关闭上下文: %p", context_handle);
+        LOGI(LOG_TAG, "Closing context: %p", context_handle);
         g_contexts.erase(it);
     }
 }
@@ -503,15 +503,15 @@ const char* netcore_get_last_error() {
  */
 void netcore_cleanup() {
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "🧹 清理资源");
-    LOGI(LOG_TAG, "  关闭 %zu 个上下文", g_contexts.size());
+    LOGI(LOG_TAG, "🧹 Cleaning up resources");
+    LOGI(LOG_TAG, "  Closing %zu context(s)", g_contexts.size());
 
     g_contexts.clear();
     g_hostfxr.reset();
     g_initialized = false;
     g_last_error[0] = '\0';
 
-    LOGI(LOG_TAG, "✓ 清理完成");
+    LOGI(LOG_TAG, "✓ Cleanup complete");
     LOGI(LOG_TAG, "========================================");
 }
 
@@ -538,15 +538,15 @@ int netcore_run_tool(
     const char* const* argv) {
 
     if (!g_initialized) {
-        set_error("未初始化，请先调用 netcore_init()");
+        set_error("Not initialized, please call netcore_init() first");
         return -1;
     }
 
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "🔧 运行工具程序: %s", tool_assembly);
+    LOGI(LOG_TAG, "🔧 Running tool: %s", tool_assembly);
     LOGI(LOG_TAG, "========================================");
-    LOGI(LOG_TAG, "  目录: %s", app_dir);
-    LOGI(LOG_TAG, "  参数数量: %d", argc);
+    LOGI(LOG_TAG, "  Directory: %s", app_dir);
+    LOGI(LOG_TAG, "  Argument count: %d", argc);
     for (int i = 0; i < argc; i++) {
         LOGI(LOG_TAG, "    args[%d] = %s", i, argv[i]);
     }
@@ -564,19 +564,19 @@ int netcore_run_tool(
 
     // 验证文件存在
     if (access(runtimeconfig_path.c_str(), F_OK) != 0) {
-        set_error("找不到 runtimeconfig.json: %s", runtimeconfig_path.c_str());
+        set_error("Cannot find runtimeconfig.json: %s", runtimeconfig_path.c_str());
         return -1;
     }
     if (access(assembly_path.c_str(), F_OK) != 0) {
-        set_error("工具程序集不存在: %s", assembly_path.c_str());
+        set_error("Tool assembly does not exist: %s", assembly_path.c_str());
         return -1;
     }
 
     // 设置工作目录
     if (chdir(app_dir) == 0) {
-        LOGI(LOG_TAG, "  工作目录: %s", app_dir);
+        LOGI(LOG_TAG, "  Working directory: %s", app_dir);
     } else {
-        LOGW(LOG_TAG, "  无法设置工作目录");
+        LOGW(LOG_TAG, "  Cannot set working directory");
     }
 
     try {
@@ -589,18 +589,18 @@ int netcore_run_tool(
         auto context = g_hostfxr->initialize_for_runtime_config(runtimeconfig_str);
 
         if (!context) {
-            set_error("运行时配置初始化失败");
+            set_error("Runtime config initialization failed");
             return -1;
         }
 
-        LOGI(LOG_TAG, "运行时配置加载成功 (is_primary: %s)",
+        LOGI(LOG_TAG, "Runtime config loaded successfully (is_primary: %s)",
              context->is_primary() ? "true" : "false");
 
         // 获取委托加载器（不绑定特定程序集，使用默认 AssemblyLoadContext）
         auto delegate_loader = context->get_delegate_loader();
 
         if (!delegate_loader) {
-            set_error("无法获取委托加载器");
+            set_error("Cannot get delegate loader");
             return -1;
         }
 
@@ -634,7 +634,7 @@ int netcore_run_tool(
             }
             args_json += "]";
             setenv("DOTNET_TOOL_ARGS", args_json.c_str(), 1);
-            LOGI(LOG_TAG, "设置参数环境变量: %s", args_json.c_str());
+            LOGI(LOG_TAG, "Set argument environment variable: %s", args_json.c_str());
         } else {
             setenv("DOTNET_TOOL_ARGS", "[]", 1);
         }
@@ -647,16 +647,16 @@ int netcore_run_tool(
             entry_fn = delegate_loader->get_function_with_default_signature(
                 assembly_path_str, type_and_assembly, method_name);
         } catch (const std::exception& ex) {
-            set_error("找不到 ComponentEntryPoint 方法: %s", ex.what());
+            set_error("Cannot find ComponentEntryPoint method: %s", ex.what());
             return -1;
         }
 
         if (!entry_fn) {
-            set_error("ComponentEntryPoint 方法委托为空");
+            set_error("ComponentEntryPoint method delegate is null");
             return -1;
         }
 
-        LOGI(LOG_TAG, "找到 ComponentEntryPoint 方法，开始执行...");
+        LOGI(LOG_TAG, "Found ComponentEntryPoint method, starting execution...");
         LOGI(LOG_TAG, "========================================");
 
         // 调用 ComponentEntryPoint，它会从环境变量读取参数并调用 Main
@@ -667,31 +667,31 @@ int netcore_run_tool(
 
         LOGI(LOG_TAG, "========================================");
         if (exit_code == 0) {
-            LOGI(LOG_TAG, "✓ 工具程序正常退出");
+            LOGI(LOG_TAG, "✓ Tool exited normally");
             g_last_error[0] = '\0';
         } else {
-            LOGW(LOG_TAG, "工具程序退出码: %d", exit_code);
+            LOGW(LOG_TAG, "Tool exit code: %d", exit_code);
             g_last_error[0] = '\0';
         }
         LOGI(LOG_TAG, "========================================");
 
         // 显式关闭上下文
-        LOGI(LOG_TAG, "关闭工具程序上下文...");
+        LOGI(LOG_TAG, "Closing tool context...");
         try {
             context->close();
         } catch (const std::exception& ex) {
-            LOGW(LOG_TAG, "关闭上下文时出错: %s", ex.what());
+            LOGW(LOG_TAG, "Error while closing context: %s", ex.what());
         }
         context.reset();
-        LOGI(LOG_TAG, "✓ 上下文已关闭");
+        LOGI(LOG_TAG, "✓ Context closed");
 
         return exit_code;
 
     } catch (const netcorehost::HostingException& ex) {
-        set_error("运行失败（托管异常）: %s", ex.what());
+        set_error("Run failed (hosting exception): %s", ex.what());
         return -1;
     } catch (const std::exception& ex) {
-        set_error("运行失败: %s", ex.what());
+        set_error("Run failed: %s", ex.what());
         return -1;
     }
 }
