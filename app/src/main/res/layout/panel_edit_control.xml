@@ -266,7 +266,7 @@
                 android:text="应用更改"
                 android:textColor="?attr/textPrimary"
                 android:textSize="14sp"
-                android:background="@color/accent_primary"
+                android:background="?attr/colorPrimary"
                 android:layout_marginBottom="8dp" />
 
             <Button

@@ -27,7 +27,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_settings"
-                app:tint="@color/accent_primary"
+                app:tint="?attr/colorPrimary"
                 android:layout_marginEnd="12dp" />
 
             <TextView
@@ -75,7 +75,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:text=".NET 8.0.0"
-                android:textColor="@color/accent_primary"
+                android:textColor="?attr/colorPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -83,7 +83,7 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_check_circle"
-                app:tint="@color/accent_primary" />
+                app:tint="?attr/colorPrimary" />
 
         </LinearLayout>
 
@@ -131,7 +131,7 @@
                 android:text="确定"
                 android:textColor="?attr/textPrimary"
                 android:background="@drawable/bg_rounded_transparent"
-                android:backgroundTint="@color/accent_primary"
+                android:backgroundTint="?attr/colorPrimary"
                 android:paddingHorizontal="32dp"
                 android:elevation="2dp" />
 

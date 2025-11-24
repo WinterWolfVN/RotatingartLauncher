@@ -53,6 +53,11 @@
     <string name="theme_color">主题颜色</string>
     <string name="theme_color_desc">自定义应用主题颜色</string>
     <string name="theme_color_changed">主题颜色已更改，重启应用后生效</string>
+    <string name="background_settings">背景设置</string>
+    <string name="background_settings_desc">自定义应用背景</string>
+    <string name="background_default">默认</string>
+    <string name="background_color">纯色</string>
+    <string name="background_image">图片</string>
     <string name="language_settings">语言设置</string>
     <string name="language_system">跟随系统</string>
     <string name="language_english">English</string>
@@ -154,6 +159,12 @@
     <string name="renderer_virgl_desc">Gallium3D VirGL（OpenGL 4.3，需要 Android 7.0+）</string>
     <string name="renderer_freedreno">Freedreno (Adreno)</string>
     <string name="renderer_freedreno_desc">Mesa Freedreno for Qualcomm Adreno GPU（需要 Android 7.0+）</string>
+    <string name="renderer_opengl">OpenGL (gl4es+)</string>
+    <string name="renderer_opengl_desc">通过 gl4es+ 翻译层</string>
+    <string name="renderer_opengles3">OpenGL ES 3 (Native)</string>
+    <string name="renderer_opengles3_desc">使用原生 OpenGL ES 3</string>
+    <string name="renderer_vulkan">Vulkan (实验性)</string>
+    <string name="renderer_vulkan_desc">使用 Vulkan API</string>
     <string name="renderer_changed">渲染器已更改</string>
 
     <!-- 开发者设置 -->

@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
+    android:background="?android:attr/colorBackground"
     tools:context=".fragment.SettingsMiscFragment">
 
     <!-- 设置内容 -->
@@ -35,8 +35,8 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -50,7 +50,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_settings"
-                        app:tint="@color/text_primary"
+                        app:tint="?attr/textPrimary"
                         android:layout_marginEnd="16dp" />
 
                     <LinearLayout
@@ -63,7 +63,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/theme_settings"
-                            android:textColor="@color/text_primary"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -71,7 +71,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="切换应用主题外观"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
 
@@ -83,7 +83,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:text="跟随系统"
-                        android:textColor="@color/accent_primary"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -91,66 +91,117 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 主题颜色设置卡片 - Material 3 Filled -->
+            <!-- 主题颜色设置卡片 - 现代化紧凑设计 -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/themeColorCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:foreground="?attr/selectableItemBackground"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="20dp"
-                    android:paddingVertical="16dp">
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_settings"
-                        app:tint="@color/text_primary"
-                        android:layout_marginEnd="16dp" />
-
+                    <!-- 标题行 -->
                     <LinearLayout
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_settings"
+                            app:tint="?attr/colorOnSurfaceVariant"
+                            android:layout_marginEnd="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="@string/theme_color"
-                            android:textColor="@color/text_primary"
-                            android:textSize="15sp"
-                            android:textStyle="bold" />
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/theme_color_desc"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/theme_color"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
 
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/theme_color_desc"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:textSize="12sp"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <View
+                            android:id="@+id/colorPreview"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="12dp"
+                            android:background="@drawable/ralib_bg_circle"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackgroundBorderless" />
                     </LinearLayout>
 
-                    <View
-                        android:id="@+id/colorPreview"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:layout_marginStart="16dp"
-                        android:background="@drawable/ralib_bg_circle" />
+                    <!-- 颜色值显示 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="HEX: "
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="4dp" />
+
+                        <TextView
+                            android:id="@+id/tvHexValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="#9C7AE8"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="11sp"
+                            android:fontFamily="monospace" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RGB: "
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="11sp"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="4dp" />
+
+                        <TextView
+                            android:id="@+id/tvRgbValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="156, 122, 232"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="11sp"
+                            android:fontFamily="monospace" />
+                    </LinearLayout>
 
                 </LinearLayout>
 
@@ -168,8 +219,8 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -183,7 +234,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_language"
-                        app:tint="@color/text_primary"
+                        app:tint="?attr/textPrimary"
                         android:layout_marginEnd="16dp" />
 
                     <LinearLayout
@@ -196,7 +247,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/language_settings"
-                            android:textColor="@color/text_primary"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -204,7 +255,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="选择应用界面语言"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
 
@@ -216,7 +267,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:text="跟随系统"
-                        android:textColor="@color/accent_primary"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
@@ -224,6 +275,70 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 背景设置卡片 - Material 3 Filled -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/backgroundCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="16dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_settings"
+                        app:tint="?attr/textPrimary"
+                        android:layout_marginEnd="16dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/background_settings"
+                            android:textColor="?attr/textPrimary"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/background_settings_desc"
+                            android:textColor="?attr/textSecondary"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvBackgroundValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:text="默认"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- 应用信息卡片 - Material 3 Filled -->
             <com.google.android.material.card.MaterialCardView
@@ -233,8 +348,8 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -253,7 +368,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_info"
-                            app:tint="@color/text_primary"
+                            app:tint="?attr/textPrimary"
                             android:layout_marginEnd="16dp" />
 
                         <TextView
@@ -261,7 +376,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/app_info"
-                            android:textColor="@color/text_primary"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -271,7 +386,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/app_version"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="?attr/textSecondary"
                         android:textSize="13sp"
                         android:layout_marginStart="40dp"
                         android:layout_marginBottom="4dp" />
@@ -280,7 +395,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/app_description"
-                        android:textColor="@color/text_hint"
+                        android:textColor="?attr/textHint"
                         android:textSize="12sp"
                         android:lineSpacingExtra="4dp"
                         android:layout_marginStart="40dp" />

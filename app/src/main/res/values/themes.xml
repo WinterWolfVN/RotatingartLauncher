@@ -1,61 +1,67 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Material Design 3 浅色主题（默认） -->
     <style name="Theme.raLaunch" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Material 3 主要颜色 -->
-        <item name="colorPrimary">@color/accent_primary</item>
-        <item name="colorPrimaryVariant">@color/accent_secondary</item>
-        <item name="colorOnPrimary">@android:color/white</item>
-        <item name="colorPrimaryContainer">@color/background_card</item>
-        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+        <!-- Material 3 主要颜色 (Primary) -->
+        <item name="colorPrimary">@color/md_theme_light_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_light_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_light_onPrimaryContainer</item>
 
-        <!-- Material 3 次要颜色 -->
-        <item name="colorSecondary">@color/accent_secondary</item>
-        <item name="colorSecondaryVariant">@color/accent_primary</item>
-        <item name="colorOnSecondary">@android:color/white</item>
-        <item name="colorSecondaryContainer">@color/background_secondary</item>
-        <item name="colorOnSecondaryContainer">@color/text_primary</item>
+        <!-- Material 3 次要颜色 (Secondary) -->
+        <item name="colorSecondary">@color/md_theme_light_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_light_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_light_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_light_onSecondaryContainer</item>
 
-        <!-- Material 3 表面颜色 -->
-        <item name="colorSurface">@color/background_card</item>
-        <item name="colorOnSurface">@color/text_primary</item>
-        <item name="colorSurfaceVariant">@color/background_secondary</item>
-        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <!-- Material 3 三级色 (Tertiary) -->
+        <item name="colorTertiary">@color/md_theme_light_tertiary</item>
+        <item name="colorOnTertiary">@color/md_theme_light_onTertiary</item>
+        <item name="colorTertiaryContainer">@color/md_theme_light_tertiaryContainer</item>
+        <item name="colorOnTertiaryContainer">@color/md_theme_light_onTertiaryContainer</item>
 
-        <!-- Material 3 背景色 -->
-        <item name="android:colorBackground">@color/background_primary</item>
-        <item name="colorOnBackground">@color/text_primary</item>
+        <!-- Material 3 错误颜色 (Error) -->
+        <item name="colorError">@color/md_theme_light_error</item>
+        <item name="colorOnError">@color/md_theme_light_onError</item>
+        <item name="colorErrorContainer">@color/md_theme_light_errorContainer</item>
+        <item name="colorOnErrorContainer">@color/md_theme_light_onErrorContainer</item>
+
+        <!-- Material 3 背景色 (Background) -->
+        <item name="android:colorBackground">@color/md_theme_light_background</item>
+        <item name="colorOnBackground">@color/md_theme_light_onBackground</item>
         <item name="android:windowBackground">@drawable/bg_main</item>
 
+        <!-- Material 3 表面颜色 (Surface) -->
+        <item name="colorSurface">@color/md_theme_light_surface</item>
+        <item name="colorOnSurface">@color/md_theme_light_onSurface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_light_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_light_onSurfaceVariant</item>
+
+        <!-- Material 3 轮廓颜色 (Outline) -->
+        <item name="colorOutline">@color/md_theme_light_outline</item>
+        <item name="colorOutlineVariant">@color/md_theme_light_outlineVariant</item>
+
         <!-- 状态栏和导航栏 -->
-        <item name="android:statusBarColor">@color/background_secondary</item>
-        <item name="android:navigationBarColor">@color/background_primary</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
 
-        <!-- Material 3 轮廓颜色 -->
-        <item name="colorOutline">@color/divider</item>
-        <item name="colorOutlineVariant">@color/divider</item>
-
-        <!-- Material 3 错误颜色 -->
-        <item name="colorError">#B00020</item>
-        <item name="colorOnError">@android:color/white</item>
-
-        <!-- Material 文本颜色 -->
-        <item name="android:textColorPrimary">@color/text_primary</item>
-        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <!-- Material 文本颜色（向后兼容） -->
+        <item name="android:textColorPrimary">?attr/colorOnSurface</item>
+        <item name="android:textColorSecondary">?attr/colorOnSurfaceVariant</item>
 
         <!-- Material 强调色 (向后兼容) -->
-        <item name="colorAccent">@color/accent_primary</item>
+        <item name="colorAccent">?attr/colorPrimary</item>
 
-        <!-- 自定义主题属性 -->
-        <item name="backgroundPrimary">@color/background_primary</item>
-        <item name="backgroundSecondary">@color/background_secondary</item>
-        <item name="backgroundCard">@color/background_card</item>
-        <item name="backgroundSidebar">@color/background_sidebar</item>
-        <item name="textPrimary">@color/text_primary</item>
-        <item name="textSecondary">@color/text_secondary</item>
-        <item name="textHint">@color/text_hint</item>
-        <item name="dividerColor">@color/divider</item>
+        <!-- 自定义主题属性（映射到MD3标准属性） -->
+        <item name="backgroundPrimary">?android:attr/colorBackground</item>
+        <item name="backgroundSecondary">?attr/colorSurfaceVariant</item>
+        <item name="backgroundCard">?attr/colorSurface</item>
+        <item name="backgroundSidebar">?attr/colorSurfaceVariant</item>
+        <item name="textPrimary">?attr/colorOnSurface</item>
+        <item name="textSecondary">?attr/colorOnSurfaceVariant</item>
+        <item name="textHint">?attr/colorOnSurfaceVariant</item>
+        <item name="dividerColor">?attr/colorOutline</item>
 
         <!-- Material 3 形状 -->
         <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.Medium</item>

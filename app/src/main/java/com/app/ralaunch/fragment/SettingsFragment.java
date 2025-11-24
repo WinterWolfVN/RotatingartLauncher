@@ -213,22 +213,57 @@ public class SettingsFragment extends Fragment {
         // 主题颜色设置
         MaterialCardView themeColorCard = rootView.findViewById(R.id.themeColorCard);
         View colorPreview = rootView.findViewById(R.id.colorPreview);
+        TextView tvHexValue = rootView.findViewById(R.id.tvHexValue);
+        TextView tvRgbValue = rootView.findViewById(R.id.tvRgbValue);
 
         if (themeColorCard != null && colorPreview != null) {
-            // 更新颜色预览
+            // 更新颜色预览和文本
             int currentColor = settingsManager.getThemeColor();
-            colorPreview.setBackgroundColor(currentColor);
+            updateColorPreview(colorPreview, currentColor);
+            updateColorValueText(tvHexValue, tvRgbValue, currentColor);
 
-            themeColorCard.setOnClickListener(v -> {
+            // 颜色预览点击打开完整颜色选择器
+            colorPreview.setOnClickListener(v -> {
                 com.app.ralib.dialog.ColorPickerDialog dialog =
                     com.app.ralib.dialog.ColorPickerDialog.newInstance(currentColor);
 
+                // 设置颜色变化监听器，实时更新预览和文本
+                dialog.setOnColorChangedListener(color -> {
+                    updateColorPreview(colorPreview, color);
+                    updateColorValueText(tvHexValue, tvRgbValue, color);
+                });
+
                 dialog.setOnColorSelectedListener(color -> {
                     // 用户点击确定后保存新颜色
+                    int oldColor = settingsManager.getThemeColor();
                     settingsManager.setThemeColor(color);
-
-                    // 更新预览显示
-                    colorPreview.setBackgroundColor(color);
+                    
+                    // 更新预览显示和文本
+                    updateColorPreview(colorPreview, color);
+                    updateColorValueText(tvHexValue, tvRgbValue, color);
+                    
+                    // 如果颜色有变化，刷新Activity以应用新主题颜色
+                    if (color != oldColor) {
+                        // 延迟刷新Activity，等待对话框关闭动画完成
+                        new android.os.Handler().postDelayed(() -> {
+                            if (isAdded() && getActivity() != null) {
+                                // 确保所有对话框都已关闭
+                                androidx.fragment.app.FragmentManager fm = getParentFragmentManager();
+                                for (androidx.fragment.app.Fragment fragment : fm.getFragments()) {
+                                    if (fragment instanceof androidx.fragment.app.DialogFragment) {
+                                        ((androidx.fragment.app.DialogFragment) fragment).dismissAllowingStateLoss();
+                                    }
+                                }
+                                
+                                // 再延迟一点点，确保对话框完全移除
+                                new android.os.Handler().postDelayed(() -> {
+                                    if (isAdded() && getActivity() != null) {
+                                        requireActivity().recreate();
+                                    }
+                                }, 50);
+                            }
+                        }, 300);
+                    }
                 });
 
                 dialog.show(getParentFragmentManager(), "color_picker_dialog");
@@ -287,6 +322,61 @@ public class SettingsFragment extends Fragment {
                         }
                     });
                 dialog.show(getParentFragmentManager(), "language_dialog");
+            });
+        }
+
+        // 背景设置
+        MaterialCardView backgroundCard = rootView.findViewById(R.id.backgroundCard);
+        TextView tvBackgroundValue = rootView.findViewById(R.id.tvBackgroundValue);
+
+        if (backgroundCard != null && tvBackgroundValue != null) {
+            updateBackgroundDisplay(settingsManager, tvBackgroundValue);
+
+            backgroundCard.setOnClickListener(v -> {
+                com.app.ralib.dialog.BackgroundPickerDialog dialog =
+                    com.app.ralib.dialog.BackgroundPickerDialog.newInstance(
+                        settingsManager.getBackgroundType(),
+                        settingsManager.getBackgroundColor(),
+                        settingsManager.getBackgroundImagePath()
+                    );
+
+                dialog.setOnBackgroundSelectedListener((type, color, imagePath) -> {
+                    String oldType = settingsManager.getBackgroundType();
+                    int oldColor = settingsManager.getBackgroundColor();
+                    String oldImagePath = settingsManager.getBackgroundImagePath();
+
+                    settingsManager.setBackgroundType(type);
+                    settingsManager.setBackgroundColor(color);
+                    settingsManager.setBackgroundImagePath(imagePath);
+
+                    updateBackgroundDisplay(settingsManager, tvBackgroundValue);
+
+                    // 如果背景有变化，刷新Activity以应用新背景
+                    if (!type.equals(oldType) || color != oldColor || 
+                        (imagePath != null && !imagePath.equals(oldImagePath))) {
+                        // 延迟刷新Activity，等待对话框关闭动画完成
+                        new android.os.Handler().postDelayed(() -> {
+                            if (isAdded() && getActivity() != null) {
+                                // 确保所有对话框都已关闭
+                                androidx.fragment.app.FragmentManager fm = getParentFragmentManager();
+                                for (androidx.fragment.app.Fragment fragment : fm.getFragments()) {
+                                    if (fragment instanceof androidx.fragment.app.DialogFragment) {
+                                        ((androidx.fragment.app.DialogFragment) fragment).dismissAllowingStateLoss();
+                                    }
+                                }
+                                
+                                // 再延迟一点点，确保对话框完全移除
+                                new android.os.Handler().postDelayed(() -> {
+                                    if (isAdded() && getActivity() != null) {
+                                        requireActivity().recreate();
+                                    }
+                                }, 50);
+                            }
+                        }, 300);
+                    }
+                });
+
+                dialog.show(getParentFragmentManager(), "background_picker_dialog");
             });
         }
         
@@ -638,6 +728,26 @@ public class SettingsFragment extends Fragment {
         String displayName = LocaleManager.getLanguageDisplayName(language);
         textView.setText(displayName);
     }
+
+    private void updateBackgroundDisplay(SettingsManager settingsManager, TextView textView) {
+        String type = settingsManager.getBackgroundType();
+        String display;
+        switch (type) {
+            case "default":
+                display = getString(R.string.background_default);
+                break;
+            case "color":
+                display = getString(R.string.background_color);
+                break;
+            case "image":
+                display = getString(R.string.background_image);
+                break;
+            default:
+                display = getString(R.string.background_default);
+                break;
+        }
+        textView.setText(display);
+    }
     
     private void updateRendererDisplay(SettingsManager settingsManager, TextView textView) {
         String renderer = RuntimePreference.normalizeRendererValue(settingsManager.getFnaRenderer());
@@ -686,6 +796,36 @@ public class SettingsFragment extends Fragment {
         textView.setText(settingsManager.isTieredCompilation() ?
             getString(R.string.coreclr_tiered_compilation_on) :
             getString(R.string.coreclr_tiered_compilation_off));
+    }
+
+
+    /**
+     * 更新颜色预览
+     */
+    private void updateColorPreview(View colorPreview, int color) {
+        if (colorPreview != null) {
+            android.graphics.drawable.GradientDrawable drawable = new android.graphics.drawable.GradientDrawable();
+            drawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            drawable.setColor(color);
+            colorPreview.setBackground(drawable);
+        }
+    }
+
+    /**
+     * 更新颜色值文本（HEX和RGB）
+     */
+    private void updateColorValueText(TextView tvHex, TextView tvRgb, int color) {
+        if (tvHex != null) {
+            // 移除透明度，只显示RGB
+            int rgbColor = color & 0x00FFFFFF;
+            tvHex.setText(String.format("#%06X", rgbColor));
+        }
+        if (tvRgb != null) {
+            int r = android.graphics.Color.red(color);
+            int g = android.graphics.Color.green(color);
+            int b = android.graphics.Color.blue(color);
+            tvRgb.setText(String.format("%d, %d, %d", r, g, b));
+        }
     }
 
 }

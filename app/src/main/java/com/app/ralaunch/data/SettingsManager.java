@@ -40,6 +40,9 @@ public class SettingsManager {
         public static final String THEME_MODE = "theme_mode";
         public static final String APP_LANGUAGE = "app_language";
         public static final String THEME_COLOR = "theme_color";
+        public static final String BACKGROUND_TYPE = "background_type"; // "default", "color", "image"
+        public static final String BACKGROUND_COLOR = "background_color"; // 颜色值（int）
+        public static final String BACKGROUND_IMAGE_PATH = "background_image_path"; // 图片路径
 
         // 运行时设置
         public static final String DOTNET_FRAMEWORK = "dotnet_framework";
@@ -65,6 +68,9 @@ public class SettingsManager {
         public static final int THEME_MODE = 2; // 亮色主题
         public static final int APP_LANGUAGE = 0; // 跟随系统
         public static final int THEME_COLOR = 0xFF4CAF50; // 默认绿色
+        public static final String BACKGROUND_TYPE = "default"; // 默认背景
+        public static final int BACKGROUND_COLOR = 0xFFFFFFFF; // 默认白色
+        public static final String BACKGROUND_IMAGE_PATH = ""; // 默认无图片
         public static final String DOTNET_FRAMEWORK = "auto";
         public static final String RUNTIME_ARCHITECTURE = "auto";
         public static final boolean VERBOSE_LOGGING = false;
@@ -213,6 +219,31 @@ public class SettingsManager {
 
     public void setThemeColor(int color) {
         putInt(Keys.THEME_COLOR, color);
+    }
+
+    // 背景设置
+    public String getBackgroundType() {
+        return getString(Keys.BACKGROUND_TYPE, Defaults.BACKGROUND_TYPE);
+    }
+
+    public void setBackgroundType(String type) {
+        putString(Keys.BACKGROUND_TYPE, type);
+    }
+
+    public int getBackgroundColor() {
+        return getInt(Keys.BACKGROUND_COLOR, Defaults.BACKGROUND_COLOR);
+    }
+
+    public void setBackgroundColor(int color) {
+        putInt(Keys.BACKGROUND_COLOR, color);
+    }
+
+    public String getBackgroundImagePath() {
+        return getString(Keys.BACKGROUND_IMAGE_PATH, Defaults.BACKGROUND_IMAGE_PATH);
+    }
+
+    public void setBackgroundImagePath(String path) {
+        putString(Keys.BACKGROUND_IMAGE_PATH, path);
     }
 
     // 运行时设置

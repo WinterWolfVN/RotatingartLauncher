@@ -6,12 +6,10 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="4dp"
-    app:strokeWidth="0dp"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground">
+    android:foreground="?android:attr/selectableItemBackground"
+    style="@style/Widget.App.CardView.GameItem">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -34,13 +32,11 @@
             android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"
             android:layout_margin="8dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="#30000000"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackgroundBorderless"
-            android:alpha="0.7">
+            android:alpha="0.7"
+            style="@style/Widget.App.CardView.DeleteButton">
 
             <ImageView
                 android:layout_width="16dp"
@@ -73,10 +69,7 @@
                 android:layout_width="76dp"
                 android:layout_height="76dp"
                 android:layout_gravity="center"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="8dp"
-                app:strokeWidth="2dp"
-                app:strokeColor="@android:color/white">
+                style="@style/Widget.App.CardView.Icon">
 
                 <ImageView
                     android:id="@+id/gameImage"
@@ -104,13 +97,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="游戏名称"
-                android:textColor="?attr/textPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:gravity="center"
                 android:maxLines="1"
                 android:ellipsize="end"
-                android:fontFamily="sans-serif-medium" />
+                android:fontFamily="sans-serif-medium"
+                android:textColor="?attr/textPrimary" />
 
             <!-- 游戏描述/路径 -->
             <TextView
@@ -119,12 +112,12 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="游戏描述"
-                android:textColor="?attr/textSecondary"
                 android:textSize="11sp"
                 android:gravity="center"
                 android:maxLines="1"
                 android:ellipsize="middle"
-                android:fontFamily="sans-serif" />
+                android:fontFamily="sans-serif"
+                android:textColor="?attr/textSecondary" />
 
             <!-- 标签容器（可选） -->
             <LinearLayout
@@ -141,7 +134,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="FNA"
-                    android:textColor="@color/accent_primary"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:paddingStart="10dp"

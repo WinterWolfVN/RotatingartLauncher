@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
+    android:background="?android:attr/colorBackground"
     tools:context=".fragment.SettingsDeveloperFragment">
 
     <!-- 设置内容 -->
@@ -27,7 +27,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/coreclr_settings"
-                android:textColor="@color/text_primary"
+                android:textColor="?attr/textPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp"
@@ -45,8 +45,8 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -71,7 +71,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/coreclr_server_gc"
-                                android:textColor="@color/text_primary"
+                                android:textColor="?attr/textPrimary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
 
@@ -79,7 +79,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/coreclr_server_gc_desc"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="?attr/textSecondary"
                                 android:textSize="12sp"
                                 android:layout_marginTop="2dp" />
 
@@ -91,7 +91,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
                             android:text="@string/coreclr_server_gc_off"
-                            android:textColor="@color/accent_primary"
+                            android:textColor="?attr/colorPrimary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -111,8 +111,8 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -137,7 +137,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/coreclr_concurrent_gc"
-                                android:textColor="@color/text_primary"
+                                android:textColor="?attr/textPrimary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
 
@@ -145,7 +145,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/coreclr_concurrent_gc_desc"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="?attr/textSecondary"
                                 android:textSize="12sp"
                                 android:layout_marginTop="2dp" />
 
@@ -157,7 +157,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
                             android:text="@string/coreclr_concurrent_gc_on"
-                            android:textColor="@color/accent_primary"
+                            android:textColor="?attr/colorPrimary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -177,8 +177,8 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -203,7 +203,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/coreclr_tiered_compilation"
-                                android:textColor="@color/text_primary"
+                                android:textColor="?attr/textPrimary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
 
@@ -211,7 +211,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/coreclr_tiered_compilation_desc"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="?attr/textSecondary"
                                 android:textSize="12sp"
                                 android:layout_marginTop="2dp" />
 
@@ -223,7 +223,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
                             android:text="@string/coreclr_tiered_compilation_on"
-                            android:textColor="@color/accent_primary"
+                            android:textColor="?attr/colorPrimary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -236,7 +236,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="调试选项"
-                android:textColor="@color/text_primary"
+                android:textColor="?attr/textPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:layout_marginTop="16dp"
@@ -254,8 +254,8 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp"
-                app:cardBackgroundColor="@color/background_card"
-                style="@style/Widget.Material3.CardView.Filled">
+                app:cardBackgroundColor="?attr/colorSurface"
+                style="@style/Widget.App.CardView.Standard">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -269,7 +269,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_bug"
-                        app:tint="@color/text_primary"
+                        app:tint="?attr/textPrimary"
                         android:layout_marginEnd="16dp" />
 
                     <LinearLayout
@@ -282,7 +282,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/verbose_logging"
-                            android:textColor="@color/text_primary"
+                            android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -290,7 +290,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/verbose_logging_desc_on"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
 
@@ -302,7 +302,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:text="@string/verbose_logging_off"
-                        android:textColor="@color/accent_primary"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
 

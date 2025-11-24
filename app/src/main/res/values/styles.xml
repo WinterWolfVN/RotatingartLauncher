@@ -39,12 +39,22 @@
         <item name="android:windowAnimationStyle">@style/DialogAnimation</item>
 
         <!-- 继承主题颜色属性 -->
-        <item name="backgroundPrimary">@color/background_primary</item>
-        <item name="backgroundSecondary">@color/background_secondary</item>
-        <item name="backgroundCard">@color/background_card</item>
-        <item name="textPrimary">@color/text_primary</item>
-        <item name="textSecondary">@color/text_secondary</item>
-        <item name="colorOutline">@color/divider</item>
+        <item name="backgroundPrimary">?attr/backgroundPrimary</item>
+        <item name="backgroundSecondary">?attr/backgroundSecondary</item>
+        <item name="backgroundCard">?attr/backgroundCard</item>
+        <item name="textPrimary">?attr/textPrimary</item>
+        <item name="textSecondary">?attr/textSecondary</item>
+        <item name="colorOutline">?attr/colorOutline</item>
+    </style>
+
+    <!-- Widget 命名空间基础样式 -->
+    <style name="Widget">
+        <!-- 基础样式，用于命名空间 -->
+    </style>
+
+    <!-- Widget 命名空间基础样式 -->
+    <style name="Widget.App" parent="Widget">
+        <!-- 基础样式，用于命名空间 -->
     </style>
 
     <!-- Material 3 按钮样式 -->
@@ -98,6 +108,201 @@
     <style name="RoundedImageView16" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- Material 3 图标按钮样式 - 统一工具栏按钮 -->
+    <style name="Widget.App.Button.ToolbarIcon" parent="Widget.Material3.Button.IconButton">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">0dp</item>
+        <item name="iconTint">?attr/colorOnSurface</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 标准卡片 -->
+    <style name="Widget.App.CardView.Standard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">1dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurface</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 小卡片 -->
+    <style name="Widget.App.CardView.Small" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurface</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">?attr/colorOutline</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 轻量卡片 -->
+    <style name="Widget.App.CardView.Light" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceVariant</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- 文本样式 - 命名空间基础样式 -->
+    <style name="TextAppearance">
+        <item name="android:textColor">?attr/textPrimary</item>
+    </style>
+
+    <!-- 文本样式 - 基础样式 -->
+    <style name="TextAppearance.App" parent="TextAppearance">
+        <item name="android:textColor">?attr/textPrimary</item>
+    </style>
+
+    <!-- 文本样式 - 主标题 -->
+    <style name="TextAppearance.App.Title" parent="TextAppearance.App">
+        <item name="android:textColor">?attr/textPrimary</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- 文本样式 - 副标题 -->
+    <style name="TextAppearance.App.Subtitle" parent="TextAppearance.App">
+        <item name="android:textColor">?attr/textSecondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- 文本样式 - 提示文本 -->
+    <style name="TextAppearance.App.Hint" parent="TextAppearance.App">
+        <item name="android:textColor">?attr/textHint</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- 文本样式 - 小文本 -->
+    <style name="TextAppearance.App.Small" parent="TextAppearance.App">
+        <item name="android:textColor">?attr/textSecondary</item>
+        <item name="android:textSize">10sp</item>
+    </style>
+
+    <!-- 文本样式 - 中等文本 -->
+    <style name="TextAppearance.App.Medium" parent="TextAppearance.App">
+        <item name="android:textColor">?attr/textPrimary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- 文本样式 - 大文本 -->
+    <style name="TextAppearance.App.Large" parent="TextAppearance.App">
+        <item name="android:textColor">?attr/textPrimary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 列表项卡片 -->
+    <style name="Widget.App.CardView.ListItem" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">10dp</item>
+        <item name="cardElevation">1dp</item>
+        <item name="cardBackgroundColor">?attr/backgroundCard</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 图标容器卡片 -->
+    <style name="Widget.App.CardView.IconContainer" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">8dp</item>
+        <item name="cardElevation">0dp</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 搜索框卡片 -->
+    <style name="Widget.App.CardView.SearchBox" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">?attr/dividerColor</item>
+        <item name="cardBackgroundColor">?attr/backgroundCard</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 路径显示卡片 -->
+    <style name="Widget.App.CardView.PathDisplay" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">6dp</item>
+        <item name="cardElevation">1dp</item>
+        <item name="cardBackgroundColor">?attr/backgroundCard</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 文件列表卡片 -->
+    <style name="Widget.App.CardView.FileList" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">10dp</item>
+        <item name="cardElevation">3dp</item>
+        <item name="cardBackgroundColor">?attr/backgroundCard</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 游戏卡片 -->
+    <style name="Widget.App.CardView.GameItem" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 删除按钮卡片 -->
+    <style name="Widget.App.CardView.DeleteButton" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceVariant</item>
+    </style>
+
+    <!-- Material 3 卡片样式 - 图标卡片 -->
+    <style name="Widget.App.CardView.Icon" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">8dp</item>
+        <item name="strokeWidth">2dp</item>
+        <item name="strokeColor">@android:color/white</item>
+    </style>
+
+    <!-- ImageButton 样式 - 基础样式 -->
+    <style name="Widget.App.ImageButton">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+    </style>
+
+    <!-- ImageButton 样式 - 返回按钮 -->
+    <style name="Widget.App.ImageButton.Back" parent="Widget.App.ImageButton">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+        <item name="android:tint">?attr/textPrimary</item>
+    </style>
+
+    <!-- ImageButton 样式 - 工具栏按钮 -->
+    <style name="Widget.App.ImageButton.Toolbar" parent="Widget.App.ImageButton">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+    </style>
+
+    <!-- MaterialButton 样式 - 小图标按钮（44dp） -->
+    <style name="Widget.App.Button.SmallIcon" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">0dp</item>
+        <item name="iconSize">20dp</item>
+        <item name="cornerRadius">14dp</item>
+    </style>
+
+    <!-- MaterialButton 样式 - 文本按钮（小图标） -->
+    <style name="Widget.App.Button.TextIcon" parent="Widget.Material3.Button.TextButton">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">0dp</item>
+        <item name="iconSize">20dp</item>
+        <item name="cornerRadius">14dp</item>
     </style>
 
 </resources>

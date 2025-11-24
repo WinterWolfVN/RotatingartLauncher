@@ -8,45 +8,16 @@
     android:padding="4dp">
 
     <!-- 顶部标题栏 - 更紧凑 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="20dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="8dp">
-
-        <ImageButton
-            android:id="@+id/backButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_arrow_back"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="返回"
-            app:tint="?attr/textPrimary" />
-
-        <TextView
-            android:id="@+id/pageTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="文件浏览器"
-            android:textColor="?attr/textPrimary"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
-
-    </LinearLayout>
+    <include
+        layout="@layout/include_fragment_header_compact"
+        android:id="@+id/header" />
 
     <!-- 当前路径显示 - 更紧凑 -->
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="36dp"
-        app:cardCornerRadius="6dp"
-        app:cardElevation="1dp"
-        app:cardBackgroundColor="?attr/backgroundCard"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.App.CardView.PathDisplay">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -59,7 +30,7 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_folder"
-                app:tint="@color/accent_primary"
+                app:tint="?attr/colorPrimary"
                 android:layout_marginEnd="6dp" />
 
             <TextView
@@ -68,10 +39,10 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="/storage/emulated/0/Download"
-                android:textColor="?attr/textSecondary"
                 android:textSize="11sp"
                 android:maxLines="1"
-                android:ellipsize="middle" />
+                android:ellipsize="middle"
+                android:textColor="?attr/textSecondary" />
 
         </LinearLayout>
 
@@ -90,11 +61,7 @@
             android:layout_width="0dp"
             android:layout_height="32dp"
             android:layout_weight="1"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/dividerColor"
-            app:cardBackgroundColor="?attr/backgroundCard">
+            style="@style/Widget.App.CardView.SearchBox">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -131,13 +98,11 @@
         <!-- 排序按钮 -->
         <ImageButton
             android:id="@+id/sortButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
             android:layout_marginStart="6dp"
             android:src="@drawable/ic_sort"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="排序"
-            app:tint="@color/accent_primary" />
+            app:tint="?attr/colorPrimary"
+            style="@style/Widget.App.ImageButton.Toolbar" />
 
     </LinearLayout>
 
@@ -146,39 +111,14 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        app:cardCornerRadius="10dp"
-        app:cardElevation="3dp"
-        app:cardBackgroundColor="?attr/backgroundCard"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="8dp"
+        style="@style/Widget.App.CardView.FileList">
 
         <!-- 空状态 -->
-        <LinearLayout
-            android:id="@+id/emptyState"
+        <include
+            layout="@layout/include_empty_state"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="30dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_folder_open"
-                app:tint="@color/accent_primary"
-                android:layout_marginBottom="12dp" />
-
-            <TextView
-                android:id="@+id/emptyText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="当前目录为空"
-                android:textColor="?attr/textHint"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-        </LinearLayout>
+            android:layout_height="match_parent" />
         <!-- 权限拒绝状态 -->
         <LinearLayout
             android:id="@+id/permissionDeniedState"
@@ -193,7 +133,7 @@
                 android:layout_width="64dp"
                 android:layout_height="64dp"
                 android:src="@drawable/ic_permission_denied"
-                app:tint="@color/delete_button_bg"
+                app:tint="?attr/colorError"
                 android:layout_marginBottom="16dp" />
 
             <TextView
@@ -201,19 +141,20 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="需要存储权限"
-                android:textColor="?attr/textPrimary"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="8dp"
+                android:textColor="?attr/textPrimary" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="请授予存储权限以浏览文件"
-                android:textColor="?attr/textSecondary"
                 android:textSize="14sp"
-                android:layout_marginBottom="20dp" />
+                android:layout_marginBottom="20dp"
+                style="@style/TextAppearance.App.Medium"
+                android:textColor="?attr/textSecondary" />
 
             <Button
                 android:id="@+id/grantPermissionButton"
@@ -224,7 +165,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:background="@drawable/bg_card_8dp"
-                android:backgroundTint="@color/accent_primary"
+                android:backgroundTint="?attr/colorPrimary"
                 android:paddingStart="24dp"
                 android:paddingEnd="24dp" />
 
@@ -250,7 +191,7 @@
         android:textSize="8sp"
         android:textStyle="bold"
         android:background="@drawable/bg_card_8dp"
-        android:backgroundTint="#5C6BC0"
+        android:backgroundTint="?attr/colorSecondary"
         android:enabled="false" />
 
 </LinearLayout>

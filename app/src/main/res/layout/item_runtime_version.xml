@@ -29,7 +29,7 @@
             android:background="@drawable/bg_circle"
             android:backgroundTint="?attr/backgroundCard"
             android:padding="8dp"
-            app:tint="@color/accent_primary"
+            app:tint="?attr/colorPrimary"
             android:layout_marginEnd="16dp" />
 
         <LinearLayout
@@ -63,7 +63,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_check_circle"
-            app:tint="@color/accent_primary"
+            app:tint="?attr/colorPrimary"
             android:visibility="gone" />
 
     </LinearLayout>

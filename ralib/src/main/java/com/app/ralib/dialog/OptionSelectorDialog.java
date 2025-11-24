@@ -29,9 +29,7 @@ import java.util.List;
 public class OptionSelectorDialog extends DialogFragment {
 
     private RecyclerView rvOptions;
-    private TextView tvCurrentValue;
     private TextView tvTitle;
-    private TextView tvSubtitle;
     private ImageView ivIcon;
     private ImageButton btnClose;
     
@@ -44,9 +42,7 @@ public class OptionSelectorDialog extends DialogFragment {
     
     // 配置参数
     private String dialogTitle = "选择选项";
-    private String dialogSubtitle = null;
     private int dialogIconRes = 0;
-    private boolean showCurrentValue = true;
     private boolean autoCloseOnSelect = true;
     private int autoCloseDelay = 300;
     private int dialogStyleRes = 0;
@@ -98,11 +94,6 @@ public class OptionSelectorDialog extends DialogFragment {
         return this;
     }
     
-    public OptionSelectorDialog setSubtitle(String subtitle) {
-        this.dialogSubtitle = subtitle;
-        return this;
-    }
-    
     public OptionSelectorDialog setIcon(int iconRes) {
         this.dialogIconRes = iconRes;
         return this;
@@ -116,11 +107,6 @@ public class OptionSelectorDialog extends DialogFragment {
     public OptionSelectorDialog setCurrentValue(String currentValue) {
         this.currentValue = currentValue;
         this.selectedValue = currentValue;
-        return this;
-    }
-    
-    public OptionSelectorDialog setShowCurrentValue(boolean show) {
-        this.showCurrentValue = show;
         return this;
     }
     
@@ -197,12 +183,9 @@ public class OptionSelectorDialog extends DialogFragment {
 
         // 初始化视图
         rvOptions = view.findViewById(R.id.rvOptions);
-        tvCurrentValue = view.findViewById(R.id.tvCurrentValue);
         tvTitle = view.findViewById(R.id.tvTitle);
-        tvSubtitle = view.findViewById(R.id.tvSubtitle);
         ivIcon = view.findViewById(R.id.ivIcon);
         btnClose = view.findViewById(R.id.btnClose);
-        View currentValueContainer = view.findViewById(R.id.currentValueContainer);
 
         // 设置标题和图标
         tvTitle.setText(dialogTitle);
@@ -211,30 +194,6 @@ public class OptionSelectorDialog extends DialogFragment {
             ivIcon.setVisibility(View.VISIBLE);
         } else {
             ivIcon.setVisibility(View.GONE);
-        }
-        
-        // 设置副标题
-        if (dialogSubtitle != null && !dialogSubtitle.isEmpty()) {
-            tvSubtitle.setVisibility(View.VISIBLE);
-            tvSubtitle.setText(dialogSubtitle);
-        } else {
-            tvSubtitle.setVisibility(View.GONE);
-        }
-        
-        // 设置当前值显示
-        if (showCurrentValue && currentValue != null) {
-            currentValueContainer.setVisibility(View.VISIBLE);
-            // 查找对应的 label
-            String currentLabel = currentValue;
-            for (Option option : options) {
-                if (option.getValue().equals(currentValue)) {
-                    currentLabel = option.getLabel();
-                    break;
-                }
-            }
-            tvCurrentValue.setText(currentLabel);
-        } else {
-            currentValueContainer.setVisibility(View.GONE);
         }
 
         // 初始化 RecyclerView
@@ -320,7 +279,6 @@ public class OptionSelectorDialog extends DialogFragment {
             MaterialCardView cardOption;
             ImageView ivOptionIcon;
             TextView tvOptionLabel;
-            TextView tvOptionDescription;
             ImageView ivCheckmark;
 
             ViewHolder(View itemView) {
@@ -328,20 +286,11 @@ public class OptionSelectorDialog extends DialogFragment {
                 cardOption = (MaterialCardView) itemView;
                 ivOptionIcon = itemView.findViewById(R.id.ivOptionIcon);
                 tvOptionLabel = itemView.findViewById(R.id.tvOptionLabel);
-                tvOptionDescription = itemView.findViewById(R.id.tvOptionDescription);
                 ivCheckmark = itemView.findViewById(R.id.ivCheckmark);
             }
 
             void bind(Option option) {
                 tvOptionLabel.setText(option.getLabel());
-                
-                // 设置描述
-                if (option.getDescription() != null && !option.getDescription().isEmpty()) {
-                    tvOptionDescription.setVisibility(View.VISIBLE);
-                    tvOptionDescription.setText(option.getDescription());
-                } else {
-                    tvOptionDescription.setVisibility(View.GONE);
-                }
                 
                 // 设置图标
                 if (option.getIconRes() > 0) {
@@ -355,12 +304,15 @@ public class OptionSelectorDialog extends DialogFragment {
                 boolean isSelected = option.getValue().equals(selectedValue);
                 ivCheckmark.setVisibility(isSelected ? View.VISIBLE : View.GONE);
                 
-                if (isSelected && getContext() != null) {
-                    cardOption.setStrokeColor(getContext().getColor(R.color.accent_primary));
-                    cardOption.setStrokeWidth(4);
+                // 选中状态：使用主色调背景，未选中：使用表面变体
+                if (isSelected) {
+                    // 选中：使用主色调容器背景（浅紫色）
+                    cardOption.setCardBackgroundColor(0xFFF3EDF7); // primaryContainer
+                    tvOptionLabel.setTextColor(0xFF4A148C); // onPrimaryContainer
                 } else {
-                    cardOption.setStrokeColor(android.graphics.Color.TRANSPARENT);
-                    cardOption.setStrokeWidth(0);
+                    // 未选中：使用表面变体背景（浅灰色）
+                    cardOption.setCardBackgroundColor(0xFFF5F5F5); // surfaceVariant
+                    tvOptionLabel.setTextColor(0xFF1C1B1F); // onSurface
                 }
 
                 // 点击事件

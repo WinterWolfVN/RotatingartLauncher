@@ -4,14 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary">
+    android:background="?attr/backgroundPrimary">
 
     <!-- Material 3 Top App Bar -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/background_primary"
+        android:background="?attr/backgroundPrimary"
         app:elevation="0dp">
 
         <LinearLayout
@@ -25,11 +25,11 @@
                 android:layout_width="0dp"
                 android:layout_height="?attr/actionBarSize"
                 android:layout_weight="1"
-                android:background="@color/background_primary"
+                android:background="?attr/backgroundPrimary"
                 app:title="控制布局"
-                app:titleTextColor="@color/text_primary"
+                app:titleTextColor="?attr/textPrimary"
                 app:navigationIcon="@drawable/ic_arrow_back"
-                app:navigationIconTint="@color/text_primary"
+                app:navigationIconTint="?attr/textPrimary"
                 style="@style/Widget.Material3.Toolbar" />
 
             <!-- 导入预设配置按钮 -->
@@ -81,14 +81,14 @@
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:src="@drawable/ic_controller"
-            app:tint="@color/text_hint"
+            app:tint="?attr/textHint"
             android:alpha="0.3" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="暂无控制布局"
-            android:textColor="@color/text_secondary"
+            android:textColor="?attr/textSecondary"
             android:textSize="16sp"
             android:layout_marginTop="16dp" />
 
@@ -96,7 +96,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="点击右下角按钮创建新布局"
-            android:textColor="@color/text_hint"
+            android:textColor="?attr/textHint"
             android:textSize="13sp"
             android:layout_marginTop="8dp" />
 
@@ -112,7 +112,7 @@
         android:text="新建布局"
         android:contentDescription="添加布局"
         app:icon="@drawable/ic_add"
-        app:backgroundTint="@color/accent_primary"
+        app:backgroundTint="?attr/colorPrimary"
         app:iconTint="@android:color/white"
         android:textColor="@android:color/white"
         style="@style/Widget.Material3.ExtendedFloatingActionButton.Primary" />

@@ -9,6 +9,9 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
 import com.app.ralaunch.utils.AppLogger;
+import com.app.ralaunch.utils.ControlLayoutManager;
+import com.app.ralaunch.model.ControlElement;
+import com.app.ralaunch.controls.ControlDataConverter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,24 +90,52 @@ public class ControlLayout extends FrameLayout {
     }
     
     /**
-     * 加载自定义布局（如果存在），否则加载默认布局
+     * 从 ControlLayoutManager 加载布局（统一方式）
+     * 优先使用当前布局，如果不存在则使用默认布局
      */
-    public void loadCustomOrDefaultLayout() {
+    public void loadLayoutFromManager() {
         try {
-            // 尝试加载自定义布局
-            java.io.File customFile = new java.io.File(getContext().getFilesDir(), "custom_layout.json");
-            if (customFile.exists()) {
-                String json = new String(java.nio.file.Files.readAllBytes(customFile.toPath()));
-                ControlConfig config = new com.google.gson.Gson().fromJson(json, ControlConfig.class);
+            ControlLayoutManager manager = new ControlLayoutManager(getContext());
+            com.app.ralaunch.model.ControlLayout layout = manager.getCurrentLayout();
+            
+            if (layout != null && !layout.getElements().isEmpty()) {
+                // 转换 ControlElement 列表为 ControlConfig
+                ControlConfig config = new ControlConfig();
+                config.name = layout.getName();
+                config.version = 1;
+                config.controls = new ArrayList<>();
+                
+                DisplayMetrics metrics = getResources().getDisplayMetrics();
+                int screenWidth = metrics.widthPixels;
+                int screenHeight = metrics.heightPixels;
+                
+                for (ControlElement element : layout.getElements()) {
+                    ControlData data = ControlDataConverter.elementToData(element, screenWidth, screenHeight);
+                    if (data != null) {
+                        config.controls.add(data);
+                    }
+                }
+                
                 loadLayout(config);
+                AppLogger.info(TAG, "Loaded layout from ControlLayoutManager: " + layout.getName());
                 return;
             }
         } catch (Exception e) {
-            AppLogger.warn(TAG, "Failed to load custom layout, falling back to default", e);
+            AppLogger.warn(TAG, "Failed to load layout from ControlLayoutManager, falling back to default", e);
         }
         
-        // 如果自定义布局不存在或加载失败，使用默认布局
+        // 如果加载失败，使用默认布局
         loadDefaultLayout();
+    }
+    
+    /**
+     * 加载自定义布局（如果存在），否则加载默认布局
+     * @deprecated 使用 loadLayoutFromManager() 替代，统一使用 ControlLayoutManager
+     */
+    @Deprecated
+    public void loadCustomOrDefaultLayout() {
+        // 优先尝试从 ControlLayoutManager 加载
+        loadLayoutFromManager();
     }
     
     /**

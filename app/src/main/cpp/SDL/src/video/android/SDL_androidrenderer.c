@@ -50,9 +50,9 @@ static const SDL_RendererBackend RENDERER_BACKENDS[] = {
 
     /* MobileGlues (OpenGL 4.6 翻译到 GLES 3.2) */
     {
-        .name = "mobileglues",
-        .egl_library = "libmobileglues.so",
-        .gles_library = "libmobileglues.so",
+        .name = "mobilegl",
+        .egl_library = "libMobileGL.so",
+        .gles_library = "libMobileGL.so",
         .need_preload = SDL_TRUE
     },
 
@@ -111,8 +111,8 @@ static const char* GetRendererFromEnv(void)
         /* 映射 RALCORE_RENDERER 值到渲染器名称 */
         if (SDL_strcmp(ralcore_renderer, "opengles2") == 0) {
             return "gl4es";
-        } else if (SDL_strcmp(ralcore_renderer, "mobileglues") == 0) {
-            return "mobileglues";
+        } else if (SDL_strcmp(ralcore_renderer, "mobilegl") == 0) {
+            return "mobilegl";
         } else if (SDL_strcmp(ralcore_renderer, "vulkan_zink") == 0) {
             return "zink";
         } else if (SDL_strcmp(ralcore_renderer, "gallium_virgl") == 0) {

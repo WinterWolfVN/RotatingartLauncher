@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/backgroundPrimary">
+        android:background="?android:attr/colorBackground">
 
     <!-- 左侧导航栏 -->
     <LinearLayout
@@ -13,7 +13,7 @@
         android:layout_width="100dp"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="?attr/backgroundSidebar"
+        android:background="?attr/colorSurfaceVariant"
         android:clickable="true"
         android:focusable="true"
         app:layout_constraintStart_toStartOf="parent"
@@ -64,7 +64,7 @@
         app:layout_constraintStart_toEndOf="@id/sidebarContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:background="?attr/backgroundPrimary">
+        android:background="?android:attr/colorBackground">
 
         <!-- 外观设置内容 -->
 

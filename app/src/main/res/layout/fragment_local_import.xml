@@ -7,49 +7,12 @@
     android:orientation="vertical">
 
     <!-- 顶部标题栏 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="16dp">
-
-        <ImageButton
-            android:id="@+id/backButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_arrow_back"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="返回"
-            app:tint="?attr/textPrimary" />
-
-        <TextView
-            android:id="@+id/pageTitle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="正在导入游戏"
-            android:textColor="?attr/textPrimary"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
-
-        <!-- 占位，保持标题居中 -->
-        <View
-            android:layout_width="40dp"
-            android:layout_height="40dp" />
-
-    </LinearLayout>
+    <include
+        layout="@layout/include_fragment_header"
+        android:id="@+id/header" />
 
     <!-- 分隔线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
+    <include layout="@layout/include_divider" />
 
     <!-- 占位元素 - 为了兼容代码中的 findViewById -->
     <TextView
@@ -97,7 +60,7 @@
             android:id="@+id/modernProgressBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:progressColor="@color/accent_primary"
+            app:progressColor="?attr/colorPrimary"
             app:showPercentage="true" />
 
     </LinearLayout>

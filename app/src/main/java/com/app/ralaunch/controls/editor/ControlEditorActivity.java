@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.app.ralaunch.R;
 import com.app.ralaunch.controls.*;
+import com.app.ralaunch.controls.ControlDataConverter;
+import com.app.ralaunch.controls.editor.ControlEditorOperations;
 
 import java.io.File;
 import java.io.InputStream;
@@ -200,13 +202,13 @@ public class ControlEditorActivity extends AppCompatActivity {
             // 如果布局为空或不存在，加载默认布局
             loadDefaultLayout();
         } else {
-            // 转换 ControlElement 列表为 ControlData 列表
+            // 使用统一的转换器转换 ControlElement 列表为 ControlData 列表
             mCurrentConfig = new ControlConfig();
             mCurrentConfig.name = layout.getName();
             mCurrentConfig.controls = new java.util.ArrayList<>();
 
             for (com.app.ralaunch.model.ControlElement element : layout.getElements()) {
-                ControlData control = convertElementToData(element);
+                ControlData control = ControlDataConverter.elementToData(element, mScreenWidth, mScreenHeight);
                 if (control != null) {
                     mCurrentConfig.controls.add(control);
                 }
@@ -214,127 +216,6 @@ public class ControlEditorActivity extends AppCompatActivity {
         }
 
         displayLayout();
-    }
-
-    /**
-     * 将 ControlElement 转换为 ControlData
-     */
-    private ControlData convertElementToData(com.app.ralaunch.model.ControlElement element) {
-        ControlData data = new ControlData();
-
-        // 基本属性
-        data.name = element.getName();
-        data.x = element.getX() * mScreenWidth;  // 相对坐标转绝对坐标
-        data.y = element.getY() * mScreenHeight;
-        data.width = element.getWidth();
-        data.height = element.getHeight();
-        data.opacity = element.getOpacity();
-        data.visible = true;
-
-        // 根据类型设置
-        switch (element.getType()) {
-            case BUTTON:
-                data.type = ControlData.TYPE_BUTTON;
-                data.keycode = element.getKeyCode();
-                data.isToggle = element.isToggle();
-
-                // 判断按钮模式（根据keycode范围）
-                if (data.keycode <= -200 && data.keycode >= -221) {
-                    data.buttonMode = ControlData.BUTTON_MODE_GAMEPAD;
-                } else {
-                    data.buttonMode = ControlData.BUTTON_MODE_KEYBOARD;
-                }
-                break;
-
-            case JOYSTICK:
-                data.type = ControlData.TYPE_JOYSTICK;
-                int keyCode = element.getKeyCode();
-
-                // 根据keycode判断摇杆模式
-                if (keyCode == -300) {
-                    // 左摇杆（SDL控制器模式）
-                    data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
-                    data.xboxUseRightStick = false;
-                } else if (keyCode == -301) {
-                    // 右摇杆（SDL控制器模式）
-                    data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
-                    data.xboxUseRightStick = true;
-                } else {
-                    // 键盘模式
-                    data.joystickMode = ControlData.JOYSTICK_MODE_KEYBOARD;
-                    data.joystickKeys = new int[]{
-                        ControlData.SDL_SCANCODE_W,
-                        ControlData.SDL_SCANCODE_D,
-                        ControlData.SDL_SCANCODE_S,
-                        ControlData.SDL_SCANCODE_A
-                    };
-                }
-                break;
-
-            case CROSS_KEY:
-                // 十字键暂时不支持，跳过
-                return null;
-
-            default:
-                return null;
-        }
-
-        // 外观属性
-        data.bgColor = element.getBackgroundColor();
-        data.strokeColor = element.getBorderColor();
-        data.strokeWidth = element.getBorderWidth();
-        data.cornerRadius = element.getCornerRadius();
-
-        return data;
-    }
-
-    /**
-     * 将 ControlData 转换为 ControlElement
-     */
-    private com.app.ralaunch.model.ControlElement convertDataToElement(ControlData data) {
-        com.app.ralaunch.model.ControlElement.ElementType type;
-
-        if (data.type == ControlData.TYPE_BUTTON) {
-            type = com.app.ralaunch.model.ControlElement.ElementType.BUTTON;
-        } else if (data.type == ControlData.TYPE_JOYSTICK) {
-            type = com.app.ralaunch.model.ControlElement.ElementType.JOYSTICK;
-        } else {
-            type = com.app.ralaunch.model.ControlElement.ElementType.BUTTON;
-        }
-
-        com.app.ralaunch.model.ControlElement element = new com.app.ralaunch.model.ControlElement(
-            data.name != null ? data.name : "控件",
-            type,
-            data.name != null ? data.name : "控件"
-        );
-
-        // 位置和大小（绝对坐标转相对坐标）
-        element.setX(data.x / mScreenWidth);
-        element.setY(data.y / mScreenHeight);
-        element.setWidth(data.width);
-        element.setHeight(data.height);
-        element.setOpacity(data.opacity);
-
-        // 按键设置
-        if (type == com.app.ralaunch.model.ControlElement.ElementType.BUTTON) {
-            element.setKeyCode(data.keycode);
-            element.setToggle(data.isToggle);
-        } else if (type == com.app.ralaunch.model.ControlElement.ElementType.JOYSTICK) {
-            // 摇杆模式转换
-            if (data.joystickMode == ControlData.JOYSTICK_MODE_SDL_CONTROLLER) {
-                element.setKeyCode(data.xboxUseRightStick ? -301 : -300);
-            } else {
-                element.setKeyCode(data.joystickKeys != null && data.joystickKeys.length > 0 ? data.joystickKeys[0] : 0);
-            }
-        }
-
-        // 外观属性
-        element.setBackgroundColor(data.bgColor);
-        element.setBorderColor(data.strokeColor);
-        element.setBorderWidth(data.strokeWidth);
-        element.setCornerRadius(data.cornerRadius);
-
-        return element;
     }
 
     private void loadOrCreateLayout() {
@@ -518,55 +399,33 @@ public class ControlEditorActivity extends AppCompatActivity {
     }
     
     private void addButton() {
-        ControlData button = new ControlData();
-        button.name = "新按键";
-        button.type = ControlData.TYPE_BUTTON;
-        button.x = mScreenWidth / 2f;
-        button.y = mScreenHeight / 2f;
-        button.width = 100;
-        button.height = 100;
-        button.opacity = 0.7f;
-        button.visible = true;
-        button.keycode = 62; // Space
+        if (mCurrentConfig == null) {
+            mCurrentConfig = new ControlConfig();
+            mCurrentConfig.controls = new java.util.ArrayList<>();
+        }
         
-        mCurrentConfig.controls.add(button);
-        displayLayout();
-        
-        Toast.makeText(this, "已添加按键", Toast.LENGTH_SHORT).show();
+        ControlData button = ControlEditorOperations.addButton(mCurrentConfig, mScreenWidth, mScreenHeight);
+        if (button != null) {
+            displayLayout();
+            Toast.makeText(this, "已添加按键", Toast.LENGTH_SHORT).show();
+        }
     }
     
     private void addJoystick() {
-        ControlData joystick = ControlData.createDefaultJoystick();
-        joystick.x = mScreenWidth / 2f;
-        joystick.y = mScreenHeight / 2f;
-
-        mCurrentConfig.controls.add(joystick);
-        displayLayout();
-
-        Toast.makeText(this, "已添加摇杆", Toast.LENGTH_SHORT).show();
+        if (mCurrentConfig == null) {
+            mCurrentConfig = new ControlConfig();
+            mCurrentConfig.controls = new java.util.ArrayList<>();
+        }
+        
+        ControlData joystick = ControlEditorOperations.addJoystick(mCurrentConfig, mScreenWidth, mScreenHeight);
+        if (joystick != null) {
+            displayLayout();
+            Toast.makeText(this, "已添加摇杆", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void saveLayout() {
-        try {
-            // 创建或更新布局
-            com.app.ralaunch.model.ControlLayout layout = new com.app.ralaunch.model.ControlLayout(mCurrentLayoutName);
-
-            // 转换所有控件为 ControlElement
-            for (ControlData data : mCurrentConfig.controls) {
-                com.app.ralaunch.model.ControlElement element = convertDataToElement(data);
-                if (element != null) {
-                    layout.addElement(element);
-                }
-            }
-
-            // 保存到 ControlLayoutManager
-            mLayoutManager.saveLayout(layout);
-
-            Toast.makeText(this, "布局已保存", Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to save layout", e);
-            Toast.makeText(this, "保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
+        ControlEditorOperations.saveLayout(this, mCurrentConfig, mCurrentLayoutName);
     }
     
     private void loadLayout() {
@@ -598,16 +457,9 @@ public class ControlEditorActivity extends AppCompatActivity {
     }
     
     private void resetToDefault() {
-        new AlertDialog.Builder(this)
-            .setTitle("重置布局")
-            .setMessage("确定要重置为默认布局吗？当前布局将丢失。")
-            .setPositiveButton("确定", (dialog, which) -> {
-                loadDefaultLayout();
-                displayLayout();
-                Toast.makeText(this, "已重置为默认布局", Toast.LENGTH_SHORT).show();
-            })
-            .setNegativeButton("取消", null)
-            .show();
+        ControlEditorOperations.resetToDefaultLayout(this, mPreviewLayout, () -> {
+            displayLayout();
+        });
     }
 
 
@@ -615,100 +467,9 @@ public class ControlEditorActivity extends AppCompatActivity {
      * 显示摇杆模式批量设置对话框
      */
     private void showJoystickModeDialog() {
-        // 统计当前布局中的摇杆数量
-        int joystickCount = 0;
-        for (ControlData control : mCurrentConfig.controls) {
-            if (control.type == ControlData.TYPE_JOYSTICK) {
-                joystickCount++;
-            }
-        }
-
-        if (joystickCount == 0) {
-            Toast.makeText(this, "当前布局中没有摇杆", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // 创建选项列表
-        java.util.List<com.app.ralib.dialog.OptionSelectorDialog.Option> options = new java.util.ArrayList<>();
-        options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
-            String.valueOf(ControlData.JOYSTICK_MODE_KEYBOARD),
-            "键盘按键模式",
-            "使用 WASD 等按键控制移动"
-        ));
-        options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
-            String.valueOf(ControlData.JOYSTICK_MODE_MOUSE),
-            "鼠标移动模式",
-            "控制鼠标指针移动（用于瞄准）"
-        ));
-        options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
-            String.valueOf(ControlData.JOYSTICK_MODE_SDL_CONTROLLER),
-            "SDL 控制器模式",
-            "模拟真实游戏手柄摇杆"
-        ));
-
-        // 显示 MD3 风格选择对话框
-        new com.app.ralib.dialog.OptionSelectorDialog()
-            .setTitle("摇杆模式设置")
-            .setSubtitle("将为所有 " + joystickCount + " 个摇杆设置统一模式")
-            .setOptions(options)
-            .setAutoCloseOnSelect(true)
-            .setOnOptionSelectedListener(value -> {
-                int newMode = Integer.parseInt(value);
-                String modeName;
-
-                switch (newMode) {
-                    case ControlData.JOYSTICK_MODE_KEYBOARD:
-                        modeName = "键盘按键模式";
-                        break;
-                    case ControlData.JOYSTICK_MODE_MOUSE:
-                        modeName = "鼠标移动模式";
-                        break;
-                    case ControlData.JOYSTICK_MODE_SDL_CONTROLLER:
-                        modeName = "SDL控制器模式";
-                        break;
-                    default:
-                        return;
-                }
-
-                // 批量更新所有摇杆的模式
-                int updatedCount = 0;
-                for (ControlData control : mCurrentConfig.controls) {
-                    if (control.type == ControlData.TYPE_JOYSTICK) {
-                        control.joystickMode = newMode;
-
-                        // 根据模式设置合适的默认值
-                        if (newMode == ControlData.JOYSTICK_MODE_KEYBOARD) {
-                            // 键盘模式：确保有按键映射
-                            if (control.joystickKeys == null || control.joystickKeys.length < 4) {
-                                control.joystickKeys = new int[]{
-                                    ControlData.SDL_SCANCODE_W,  // up
-                                    ControlData.SDL_SCANCODE_D,  // right
-                                    ControlData.SDL_SCANCODE_S,  // down
-                                    ControlData.SDL_SCANCODE_A   // left
-                                };
-                            }
-                        } else if (newMode == ControlData.JOYSTICK_MODE_MOUSE) {
-                            // 鼠标模式：清除按键映射
-                            control.joystickKeys = null;
-                        } else {
-                            // SDL控制器模式：清除按键映射，设置默认为左摇杆
-                            control.joystickKeys = null;
-                            if (!control.name.contains("右")) {
-                                control.xboxUseRightStick = false;
-                            }
-                        }
-                        updatedCount++;
-                    }
-                }
-
-                // 刷新显示
-                displayLayout();
-
-                Toast.makeText(this,
-                    "已将 " + updatedCount + " 个摇杆设置为" + modeName,
-                    Toast.LENGTH_SHORT).show();
-            })
-            .show(getSupportFragmentManager(), "joystick_mode_selector");
+        ControlEditorOperations.showJoystickModeDialog(this, mCurrentConfig, () -> {
+            displayLayout();
+        });
     }
 
     

@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="按键属性"
-            android:textColor="@color/accent_primary"
+            android:textColor="?attr/colorPrimary"
             android:textSize="18sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -41,7 +41,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="基本属性"
-                    android:textColor="@color/accent_primary"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -153,7 +153,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="按键映射"
-                    android:textColor="@color/accent_primary"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -232,7 +232,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="触发设置"
-                    android:textColor="@color/accent_primary"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -308,7 +308,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="外观设置"
-                    android:textColor="@color/accent_primary"
+                    android:textColor="?attr/colorPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp" />
@@ -339,7 +339,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="70%"
-                            android:textColor="@color/accent_primary"
+                            android:textColor="?attr/colorPrimary"
                             android:textSize="12sp" />
 
                     </LinearLayout>

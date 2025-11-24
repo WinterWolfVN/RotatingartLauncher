@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 空状态视图 - 可复用组件 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/emptyState"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:visibility="gone"
+    android:padding="30dp">
+
+    <ImageView
+        android:id="@+id/emptyIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_folder_open"
+        app:tint="?attr/colorPrimary"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:id="@+id/emptyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="当前目录为空"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="?attr/textHint" />
+
+    <TextView
+        android:id="@+id/emptySubtext"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text=""
+        android:textSize="12sp"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        android:textColor="?attr/textHint" />
+
+</LinearLayout>
+

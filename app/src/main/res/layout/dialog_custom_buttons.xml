@@ -23,7 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="确定"
-        android:textColor="@color/accent_green"
+        android:textColor="?attr/colorTertiary"
         android:background="@android:color/transparent"
         android:paddingStart="16dp"
         android:paddingEnd="16dp" />

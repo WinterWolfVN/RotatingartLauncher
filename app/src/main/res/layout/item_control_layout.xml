@@ -64,7 +64,7 @@
                     android:layout_marginStart="8dp"
                     app:chipMinHeight="20dp"
                     app:chipCornerRadius="10dp"
-                    app:chipBackgroundColor="@color/accent_primary"
+                    app:chipBackgroundColor="?attr/colorPrimary"
                     style="@style/Widget.Material3.Chip.Assist" />
 
             </LinearLayout>

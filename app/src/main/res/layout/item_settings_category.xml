@@ -13,7 +13,7 @@
     app:cardElevation="0dp"
     app:strokeWidth="0dp"
     app:cardBackgroundColor="@android:color/transparent"
-    app:rippleColor="?attr/colorPrimary"
+    app:rippleColor="?attr/colorPrimaryContainer"
     style="@style/Widget.Material3.CardView.Filled">
 
     <LinearLayout

@@ -31,9 +31,11 @@ import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.controls.ControlConfig;
 import com.app.ralaunch.controls.ControlData;
 import com.app.ralaunch.controls.editor.ControlEditorActivity;
-import com.app.ralaunch.controls.editor.SideEditDialog;
 import com.app.ralaunch.utils.RuntimePreference;
 import com.app.ralib.error.ErrorHandler;
+import com.app.ralaunch.manager.GameControlEditorManager;
+import com.app.ralaunch.manager.GameMenuManager;
+import com.app.ralaunch.manager.GameFullscreenManager;
 
 import com.app.ralaunch.core.GameLauncher;
 import com.app.ralaunch.controls.ControlLayout;
@@ -67,11 +69,12 @@ public class GameActivity extends SDLActivity {
     private ListView mGameMenu;
     private ImageButton mDrawerButton;
     private ImageView mEditorSettingsButton; // 编辑模式设置按钮
-    private ArrayAdapter<String> mGameMenuAdapter;
-    private boolean mIsInEditor = false; // 是否处于编辑模式
-    private boolean mHasUnsavedChanges = false; // 是否有未保存的修改
-    private SideEditDialog mSideEditDialog; // 控件编辑对话框
-    private com.app.ralaunch.controls.editor.GameEditorSettingsDialog mEditorSettingsDialog; // 编辑器设置弹窗
+    private FrameLayout mContentFrame; // 内容框架
+    
+    // 统一管理器
+    private GameControlEditorManager mControlEditorManager;
+    private GameMenuManager mMenuManager;
+    private GameFullscreenManager mFullscreenManager;
 
     // gl4es加载：已禁用静态预加载以避免EGL冲突
     // 现在由SDL通过SDL_VIDEO_GL_DRIVER环境变量在需要时延迟加载
@@ -107,22 +110,10 @@ public class GameActivity extends SDLActivity {
             AppLogger.warn(TAG, "Failed to set orientation onCreate: " + e.getMessage());
         }
 
-        // 设置全屏模式，隐藏状态栏和导航栏
-        try {
-            enableFullscreen();
-            AppLogger.info(TAG, "Fullscreen mode enabled");
-        } catch (Exception e) {
-            AppLogger.warn(TAG, "Failed to enable fullscreen: " + e.getMessage());
-        }
-
-        // 允许窗口与输入法交互，避免 SurfaceView 阻止 IME（清除 ALT_FOCUSABLE_IM）
-        try {
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-            getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
-            AppLogger.info(TAG, "Window IME flags configured");
-        } catch (Throwable t) {
-            AppLogger.warn(TAG, "Failed to adjust window flags for IME: " + t.getMessage());
-        }
+        // 初始化全屏管理器
+        mFullscreenManager = new GameFullscreenManager(this);
+        mFullscreenManager.enableFullscreen();
+        mFullscreenManager.configureIME();
 
         // 键盘交互改由 SDL/MonoGame 层处理，这里不再添加任何 UI 或手动逻辑
 
@@ -131,6 +122,9 @@ public class GameActivity extends SDLActivity {
 
         // 设置游戏内菜单（需要在虚拟控制初始化后）
         setupGameMenu();
+        
+        // 初始化控件编辑器管理器（需要在菜单设置后，因为需要 contentFrame）
+        // 注意：这里只是确保管理器存在，实际初始化在 setupGameMenu 中完成
 
         // 获取传递的游戏信息
         String gameName = getIntent().getStringExtra("GAME_NAME");
@@ -338,33 +332,12 @@ public class GameActivity extends SDLActivity {
         }
     }
 
-    /**
-     * 启用全屏沉浸模式
-     * 隐藏状态栏和导航栏，提供完整的游戏画面
-     */
-    private void enableFullscreen() {
-        View decorView = getWindow().getDecorView();
-        int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-        decorView.setSystemUiVisibility(uiOptions);
-
-    }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
-            // 当窗口获得焦点时重新应用全屏模式
-            // 这确保用户从其他应用返回时仍保持全屏
-            try {
-                enableFullscreen();
-            } catch (Exception e) {
-                AppLogger.warn(TAG, "Failed to re-enable fullscreen: " + e.getMessage());
-            }
+        if (mFullscreenManager != null) {
+            mFullscreenManager.onWindowFocusChanged(hasFocus);
         }
     }
 
@@ -382,8 +355,8 @@ public class GameActivity extends SDLActivity {
             mControlLayout = new ControlLayout(this);
             mControlLayout.setInputBridge(mInputBridge);
 
-            // 优先加载自定义布局，如果不存在则加载默认布局
-            mControlLayout.loadCustomOrDefaultLayout();
+            // 统一从 ControlLayoutManager 加载布局
+            mControlLayout.loadLayoutFromManager();
 
             // 统一禁用所有视图裁剪，确保控件边框完整显示
             disableClippingRecursive(mControlLayout);
@@ -459,13 +432,13 @@ public class GameActivity extends SDLActivity {
             mDrawerLayout = drawerView.findViewById(R.id.game_drawer_layout);
             mGameMenu = drawerView.findViewById(R.id.game_navigation_view);
             mDrawerButton = drawerView.findViewById(R.id.game_drawer_button);
-            FrameLayout contentFrame = drawerView.findViewById(R.id.game_content_frame);
+            mContentFrame = drawerView.findViewById(R.id.game_content_frame);
 
             // 将SDL的内容移到DrawerLayout的内容区域
             if (rootView.getParent() != null) {
                 ((ViewGroup) rootView.getParent()).removeView(rootView);
             }
-            contentFrame.addView(rootView, 0, new FrameLayout.LayoutParams(
+            mContentFrame.addView(rootView, 0, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             ));
@@ -495,429 +468,138 @@ public class GameActivity extends SDLActivity {
             // 初始化编辑模式设置按钮
             mEditorSettingsButton = drawerView.findViewById(R.id.game_editor_settings_button);
             mEditorSettingsButton.setOnClickListener(v -> {
-                if (mEditorSettingsDialog != null) {
-                    mEditorSettingsDialog.show();
+                if (mControlEditorManager != null) {
+                    mControlEditorManager.showEditorSettingsDialog();
                 }
             });
 
-            // 设置菜单项
-            String[] menuItems = getResources().getStringArray(R.array.game_menu_items);
-            mGameMenuAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, menuItems);
-            mGameMenu.setAdapter(mGameMenuAdapter);
+            // 初始化控件编辑器管理器（需要在控件布局初始化后）
+            initializeControlEditorManager();
 
-            // 设置菜单项点击事件（只处理游戏菜单）
-            mGameMenu.setOnItemClickListener((parent, view, position, id) -> {
-                handleGameMenuClick(position);
-                mDrawerLayout.closeDrawers();
+            // 初始化菜单管理器
+            mMenuManager = new GameMenuManager(this, mDrawerLayout, mGameMenu);
+            mMenuManager.setOnMenuItemClickListener(new GameMenuManager.OnMenuItemClickListener() {
+                @Override
+                public void onToggleControls() {
+                    toggleVirtualControls();
+                }
+
+                @Override
+                public void onEditControls() {
+                    if (mControlEditorManager != null) {
+                        mControlEditorManager.enterEditMode();
+                    }
+                }
+
+                @Override
+                public void onQuickSettings() {
+                    if (mMenuManager != null) {
+                        mMenuManager.showQuickSettings();
+                    }
+                }
+
+                @Override
+                public void onExitGame() {
+                    if (mMenuManager != null) {
+                        mMenuManager.showExitConfirmDialog();
+                    }
+                }
             });
-
-            AppLogger.info(TAG, "Game menu setup successfully");
+            mMenuManager.setupMenu();
         } catch (Exception e) {
             AppLogger.error(TAG, "Failed to setup game menu", e);
         }
     }
 
     /**
-     * 处理游戏菜单点击事件
+     * 初始化控件编辑器管理器
      */
-    private void handleGameMenuClick(int position) {
-        switch (position) {
-            case 0: // 切换控制显示
-                toggleVirtualControls();
-                break;
-            case 1: // 编辑控制布局
-                enterEditMode();
-                break;
-            case 2: // 快速设置
-                showQuickSettings();
-                break;
-            case 3: // 退出游戏
-                showExitConfirmDialog();
-                break;
+    private void initializeControlEditorManager() {
+        if (mControlLayout == null || mContentFrame == null) return;
+        
+        mControlEditorManager = new GameControlEditorManager(
+            this, mControlLayout, mContentFrame, mEditorSettingsButton, mDrawerButton);
+    }
+    
+    /**
+     * 进入编辑模式（已废弃，使用 GameControlEditorManager）
+     */
+    @Deprecated
+    private void enterEditMode() {
+        if (mControlEditorManager != null) {
+            mControlEditorManager.enterEditMode();
         }
     }
     
 
-
     /**
-     * 进入编辑模式
+     * 退出编辑模式（已废弃，使用 GameControlEditorManager）
      */
-    private void enterEditMode() {
-        if (mControlLayout == null) return;
-
-        mIsInEditor = true;
-        mHasUnsavedChanges = false; // 重置未保存标志
-        mControlLayout.setModifiable(true);
-
-        // 初始化编辑对话框
-        if (mSideEditDialog == null) {
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            // 获取控制布局的容器
-            ViewGroup controlParent = (ViewGroup) mControlLayout.getParent();
-            if (controlParent == null) {
-                controlParent = (ViewGroup) findViewById(R.id.game_content_frame);
-            }
-            mSideEditDialog = new SideEditDialog(this, controlParent,
-                metrics.widthPixels, metrics.heightPixels);
-
-            // 注意：所有更改都已实时生效，无需应用按钮
-            // 只有点击"保存布局"才会保存到JSON文件
-
-            // 设置删除和复制监听器
-            mSideEditDialog.setOnControlDeletedListener(control -> {
-                if (mControlLayout != null) {
-                    ControlConfig config = mControlLayout.getConfig();
-                    if (config != null && config.controls != null) {
-                        config.controls.remove(control);
-                        mControlLayout.loadLayout(config);
-
-                        // 统一禁用所有视图裁剪，确保控件边框完整显示
-                        disableClippingRecursive(mControlLayout);
-
-                        mHasUnsavedChanges = true;
-                    }
-                }
-            });
-
-            mSideEditDialog.setOnControlDuplicatedListener(newControl -> {
-                if (mControlLayout != null) {
-                    ControlConfig config = mControlLayout.getConfig();
-                    if (config != null && config.controls != null) {
-                        config.controls.add(newControl);
-                        mControlLayout.loadLayout(config);
-
-                        // 统一禁用所有视图裁剪，确保控件边框完整显示
-                        disableClippingRecursive(mControlLayout);
-
-                        mHasUnsavedChanges = true;
-                    }
-                }
-            });
-        }
-
-        // 设置控件点击监听器
-        mControlLayout.setEditControlListener(data -> {
-            // 点击控件时显示编辑对话框
-            if (mSideEditDialog != null) {
-                mSideEditDialog.show(data);
-            }
-        });
-
-        // 设置控件修改监听器（拖动时）
-        mControlLayout.setOnControlChangedListener(() -> {
-            mHasUnsavedChanges = true;
-        });
-
-        // 初始化 MD3 风格编辑器设置弹窗
-        if (mEditorSettingsDialog == null) {
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            ViewGroup contentFrame = findViewById(R.id.game_content_frame);
-            mEditorSettingsDialog = new com.app.ralaunch.controls.editor.GameEditorSettingsDialog(
-                this, contentFrame, metrics.widthPixels);
-
-            mEditorSettingsDialog.setOnMenuItemClickListener(new com.app.ralaunch.controls.editor.GameEditorSettingsDialog.OnMenuItemClickListener() {
-                @Override
-                public void onAddButton() {
-                    addButton();
-                }
-
-                @Override
-                public void onAddJoystick() {
-                    addJoystick();
-                }
-
-                @Override
-                public void onJoystickModeSettings() {
-                    showJoystickModeDialog();
-                }
-
-                @Override
-                public void onSaveLayout() {
-                    saveControlLayout();
-                }
-
-                @Override
-                public void onLoadLayout() {
-                    loadControlLayout();
-                }
-
-                @Override
-                public void onResetDefault() {
-                    resetToDefaultLayout();
-                }
-
-                @Override
-                public void onExitEditor() {
-                    exitEditMode();
-                }
-            });
-        }
-
-        // 显示编辑模式设置按钮，隐藏普通菜单按钮
-        if (mEditorSettingsButton != null) {
-            mEditorSettingsButton.setVisibility(View.VISIBLE);
-        }
-        if (mDrawerButton != null) {
-            mDrawerButton.setVisibility(View.GONE);
-        }
-
-        // 确保控制可见
-        mControlLayout.setControlsVisible(true);
-
-        // 统一禁用所有视图裁剪，确保控件边框完整显示
-        disableClippingRecursive(mControlLayout);
-
-        Toast.makeText(this, R.string.editor_mode_on, Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * 退出编辑模式
-     */
+    @Deprecated
     private void exitEditMode() {
-        // 如果有未保存的修改，弹出确认对话框
-        if (mHasUnsavedChanges) {
-            new AlertDialog.Builder(this)
-                .setTitle(R.string.editor_exit_confirm)
-                .setMessage(R.string.editor_exit_message)
-                .setPositiveButton(R.string.game_menu_yes, (dialog, which) -> {
-                    performExitEditMode();
-                })
-                .setNegativeButton(R.string.game_menu_no, null)
-                .show();
-        } else {
-            // 没有未保存的修改，直接退出
-            performExitEditMode();
+        if (mControlEditorManager != null) {
+            mControlEditorManager.exitEditMode();
         }
     }
 
     /**
-     * 执行退出编辑模式
+     * 添加按钮（已废弃，使用 GameControlEditorManager）
      */
-    private void performExitEditMode() {
-        if (mControlLayout == null) return;
-
-        mIsInEditor = false;
-        mControlLayout.setModifiable(false);
-
-        // 重新加载布局
-        mControlLayout.loadCustomOrDefaultLayout();
-
-        // 统一禁用所有视图裁剪，确保控件边框完整显示
-        disableClippingRecursive(mControlLayout);
-
-        // 隐藏编辑模式设置按钮，显示普通菜单按钮
-        if (mEditorSettingsButton != null) {
-            mEditorSettingsButton.setVisibility(View.GONE);
-        }
-        if (mDrawerButton != null) {
-            mDrawerButton.setVisibility(View.VISIBLE);
-        }
-
-        Toast.makeText(this, R.string.editor_mode_off, Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * 添加按钮
-     */
+    @Deprecated
     private void addButton() {
-        if (mControlLayout == null) return;
-
-        // 创建新按钮
-        ControlData button = new ControlData("按钮", ControlData.TYPE_BUTTON);
-        android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-        button.x = metrics.widthPixels / 2f;
-        button.y = metrics.heightPixels / 2f;
-        button.width = 100;
-        button.height = 100;
-        button.opacity = 0.7f;
-        button.visible = true;
-        button.keycode = 62; // Space键
-
-        // 添加到当前配置
-        ControlConfig config = mControlLayout.getConfig();
-        if (config != null && config.controls != null) {
-            config.controls.add(button);
-            mControlLayout.loadLayout(config);
-
-            // 统一禁用所有视图裁剪，确保控件边框完整显示
-            disableClippingRecursive(mControlLayout);
-
-            mHasUnsavedChanges = true; // 标记为有修改
-            Toast.makeText(this, "已添加按钮", Toast.LENGTH_SHORT).show();
+        if (mControlEditorManager != null) {
+            mControlEditorManager.addButton();
         }
     }
 
     /**
-     * 添加摇杆
+     * 添加摇杆（已废弃，使用 GameControlEditorManager）
      */
+    @Deprecated
     private void addJoystick() {
-        if (mControlLayout == null) return;
-
-        ControlData joystick = ControlData.createDefaultJoystick();
-        android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-        joystick.x = metrics.widthPixels / 2f;
-        joystick.y = metrics.heightPixels / 2f;
-
-        ControlConfig config = mControlLayout.getConfig();
-        if (config != null && config.controls != null) {
-            config.controls.add(joystick);
-            mControlLayout.loadLayout(config);
-
-            // 统一禁用所有视图裁剪，确保控件边框完整显示
-            disableClippingRecursive(mControlLayout);
-
-            mHasUnsavedChanges = true; // 标记为有修改
-            Toast.makeText(this, "已添加摇杆", Toast.LENGTH_SHORT).show();
+        if (mControlEditorManager != null) {
+            mControlEditorManager.addJoystick();
         }
     }
 
     /**
-     * 显示摇杆模式批量设置对话框
+     * 显示摇杆模式批量设置对话框（已废弃，使用 GameControlEditorManager）
      */
+    @Deprecated
     private void showJoystickModeDialog() {
-        if (mControlLayout == null) return;
-
-        ControlConfig config = mControlLayout.getConfig();
-        if (config == null || config.controls == null) return;
-
-        // 统计当前布局中的摇杆数量
-        int joystickCount = 0;
-        for (ControlData control : config.controls) {
-            if (control.type == ControlData.TYPE_JOYSTICK) {
-                joystickCount++;
-            }
+        if (mControlEditorManager != null) {
+            mControlEditorManager.showJoystickModeDialog();
         }
-
-        if (joystickCount == 0) {
-            Toast.makeText(this, "当前布局中没有摇杆", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        final String[] modes = {
-            "键盘按键模式\n使用 WASD 等按键控制移动",
-            "鼠标移动模式\n控制鼠标指针移动（用于瞄准）",
-            "SDL 控制器模式\n模拟真实游戏手柄摇杆"
-        };
-
-        new AlertDialog.Builder(this)
-            .setTitle("摇杆模式设置")
-            .setMessage("将为所有 " + joystickCount + " 个摇杆设置统一模式")
-            .setItems(modes, (dialog, which) -> {
-                int newMode;
-                String modeName;
-
-                switch (which) {
-                    case 0:
-                        newMode = ControlData.JOYSTICK_MODE_KEYBOARD;
-                        modeName = "键盘按键模式";
-                        break;
-                    case 1:
-                        newMode = ControlData.JOYSTICK_MODE_MOUSE;
-                        modeName = "鼠标移动模式";
-                        break;
-                    case 2:
-                        newMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
-                        modeName = "SDL控制器模式";
-                        break;
-                    default:
-                        return;
-                }
-
-                // 批量更新所有摇杆的模式
-                int updatedCount = 0;
-                for (ControlData control : config.controls) {
-                    if (control.type == ControlData.TYPE_JOYSTICK) {
-                        control.joystickMode = newMode;
-
-                        // 根据模式设置合适的默认值
-                        if (newMode == ControlData.JOYSTICK_MODE_KEYBOARD) {
-                            // 键盘模式：确保有按键映射
-                            if (control.joystickKeys == null || control.joystickKeys.length < 4) {
-                                control.joystickKeys = new int[]{
-                                    ControlData.SDL_SCANCODE_W,  // up
-                                    ControlData.SDL_SCANCODE_D,  // right
-                                    ControlData.SDL_SCANCODE_S,  // down
-                                    ControlData.SDL_SCANCODE_A   // left
-                                };
-                            }
-                        } else if (newMode == ControlData.JOYSTICK_MODE_MOUSE) {
-                            // 鼠标模式：清除按键映射
-                            control.joystickKeys = null;
-                        } else {
-                            // SDL控制器模式：清除按键映射，设置默认为左摇杆
-                            control.joystickKeys = null;
-                            if (!control.name.contains("右")) {
-                                control.xboxUseRightStick = false;
-                            }
-                        }
-                        updatedCount++;
-                    }
-                }
-
-                // 刷新显示
-                mControlLayout.loadLayout(config);
-                disableClippingRecursive(mControlLayout);
-
-                mHasUnsavedChanges = true; // 标记为有修改
-
-                Toast.makeText(this,
-                    "已将 " + updatedCount + " 个摇杆设置为" + modeName,
-                    Toast.LENGTH_SHORT).show();
-            })
-            .setNegativeButton("取消", null)
-            .show();
     }
 
     /**
-     * 保存控制布局
+     * 保存控制布局（已废弃，使用 GameControlEditorManager）
      */
+    @Deprecated
     private void saveControlLayout() {
-        if (mControlLayout == null) return;
-
-        try {
-            ControlConfig config = mControlLayout.getConfig();
-            if (config == null) {
-                Toast.makeText(this, "没有布局可保存", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            File file = new File(getFilesDir(), "custom_layout.json");
-            String json = new com.google.gson.Gson().toJson(config);
-            java.nio.file.Files.write(file.toPath(), json.getBytes());
-
-            // 保存成功后清除未保存标志
-            mHasUnsavedChanges = false;
-
-            Toast.makeText(this, "布局已保存", Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to save layout", e);
-            ErrorHandler.handleError("保存布局失败", e, false);
+        if (mControlEditorManager != null) {
+            mControlEditorManager.saveControlLayout();
         }
     }
 
     /**
-     * 加载控制布局（TODO: 实现文件选择器）
+     * 加载控制布局（已废弃，使用 GameControlEditorManager）
      */
+    @Deprecated
     private void loadControlLayout() {
-        Toast.makeText(this, "加载布局功能开发中...", Toast.LENGTH_SHORT).show();
-
+        if (mControlEditorManager != null) {
+            mControlEditorManager.loadControlLayout();
+        }
     }
 
     /**
-     * 重置为默认控制布局
+     * 重置为默认控制布局（已废弃，使用 GameControlEditorManager）
      */
+    @Deprecated
     private void resetToDefaultLayout() {
-        new AlertDialog.Builder(this)
-            .setTitle("重置为默认布局")
-            .setMessage("确定要重置为默认布局吗？")
-            .setPositiveButton(R.string.game_menu_yes, (dialog, which) -> {
-                if (mControlLayout != null) {
-                    mControlLayout.loadDefaultLayout();
-                    Toast.makeText(this, "已重置为默认布局", Toast.LENGTH_SHORT).show();
-                }
-            })
-            .setNegativeButton(R.string.game_menu_no, null)
-            .show();
+        if (mControlEditorManager != null) {
+            mControlEditorManager.resetToDefaultLayout();
+        }
     }
 
     /**
@@ -935,25 +617,23 @@ public class GameActivity extends SDLActivity {
     }
 
     /**
-     * 显示快速设置（TODO: 实现快速设置对话框）
+     * 显示快速设置（已废弃，使用 GameMenuManager）
      */
+    @Deprecated
     private void showQuickSettings() {
-        Toast.makeText(this, "快速设置功能开发中...", Toast.LENGTH_SHORT).show();
-
+        if (mMenuManager != null) {
+            mMenuManager.showQuickSettings();
+        }
     }
 
     /**
-     * 显示退出确认对话框
+     * 显示退出确认对话框（已废弃，使用 GameMenuManager）
      */
+    @Deprecated
     private void showExitConfirmDialog() {
-        new AlertDialog.Builder(this)
-            .setTitle(R.string.game_menu_exit_confirm)
-            .setMessage(R.string.game_menu_exit_message)
-            .setPositiveButton(R.string.game_menu_yes, (dialog, which) -> {
-                finish();
-            })
-            .setNegativeButton(R.string.game_menu_no, null)
-            .show();
+        if (mMenuManager != null) {
+            mMenuManager.showExitConfirmDialog();
+        }
     }
 
     @Override
@@ -962,7 +642,7 @@ public class GameActivity extends SDLActivity {
         if (requestCode == CONTROL_EDITOR_REQUEST_CODE && resultCode == RESULT_OK) {
             // 从控制编辑器返回，重新加载布局
             if (mControlLayout != null) {
-                mControlLayout.loadCustomOrDefaultLayout();
+                mControlLayout.loadLayoutFromManager();
 
                 // 统一禁用所有视图裁剪，确保控件边框完整显示
                 disableClippingRecursive(mControlLayout);
@@ -980,23 +660,25 @@ public class GameActivity extends SDLActivity {
         AppLogger.debug(TAG, "onBackPressed() called - handling back button");
 
         // 如果抽屉菜单打开,先关闭它
-        if (mDrawerLayout != null && mGameMenu != null && mDrawerLayout.isDrawerOpen(mGameMenu)) {
+        if (mMenuManager != null && mMenuManager.isMenuOpen()) {
             AppLogger.debug(TAG, "Closing drawer menu");
-            mDrawerLayout.closeDrawers();
+            mMenuManager.closeMenu();
             return;
         }
 
         // 如果在编辑模式,提示退出编辑
-        if (mIsInEditor) {
+        if (mControlEditorManager != null && mControlEditorManager.isInEditor()) {
             AppLogger.debug(TAG, "Exiting edit mode");
-            exitEditMode();
+            mControlEditorManager.exitEditMode();
             return;
         }
 
         // 否则显示退出确认对话框
         // 关键: 这里不调用 super.onBackPressed(), 这样可以阻止 SDLActivity 和 Activity 的默认 finish() 行为
         AppLogger.debug(TAG, "Showing exit confirmation dialog");
-        showExitConfirmDialog();
+        if (mMenuManager != null) {
+            mMenuManager.showExitConfirmDialog();
+        }
         // 绝对不要调用 super.onBackPressed() !!!
     }
 

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
-    app:cardBackgroundColor="@color/background_secondary"
+    app:cardBackgroundColor="?attr/backgroundSecondary"
     app:cardCornerRadius="12dp"
     app:cardElevation="4dp">
 
@@ -27,7 +27,7 @@
                 android:layout_height="24dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_check_circle"
-                android:tint="@color/text_hint"
+                android:tint="?attr/textHint"
                 android:contentDescription="组件状态图标" />
 
         </FrameLayout>
@@ -45,7 +45,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="组件名称"
-                android:textColor="@color/text_primary"
+                android:textColor="?attr/textPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="4dp" />
@@ -56,7 +56,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="组件描述"
-                android:textColor="@color/text_secondary"
+                android:textColor="?attr/textSecondary"
                 android:textSize="13sp"
                 android:layout_marginBottom="8dp" />
 
@@ -66,8 +66,8 @@
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="6dp"
-                android:progressTint="@color/accent_primary"
-                android:progressBackgroundTint="@color/background_dark"
+                android:progressTint="?attr/colorPrimary"
+                android:progressBackgroundTint="?android:attr/colorBackground"
                 android:max="100"
                 android:progress="0" />
 
@@ -80,7 +80,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="0%"
-            android:textColor="@color/accent_primary"
+            android:textColor="?attr/colorPrimary"
             android:textSize="14sp"
             android:textStyle="bold"
             android:minWidth="48dp"

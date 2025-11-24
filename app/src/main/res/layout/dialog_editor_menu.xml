@@ -97,7 +97,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:text="保存"
-        android:textColor="@color/accent_primary"
+        android:textColor="?attr/colorPrimary"
         android:textSize="15sp"
         android:gravity="center"
         android:clickable="true"
