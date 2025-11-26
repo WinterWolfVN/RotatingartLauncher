@@ -211,15 +211,12 @@ public class GameMenuManager {
     }
     
     /**
-     * 显示快速设置
+     * 显示快速设置（已废弃，使用编辑器设置）
      */
+    @Deprecated
     public void showQuickSettings() {
-        // 创建简单的 AlertDialog
-        AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
-        builder.setTitle(R.string.game_menu_quick_settings);
-        builder.setMessage("游戏设置功能开发中...");
-        builder.setPositiveButton(android.R.string.ok, null);
-        builder.show();
+        // 已废弃，不再显示快速设置
+        // 游戏内设置统一使用编辑器设置界面
     }
 }
 

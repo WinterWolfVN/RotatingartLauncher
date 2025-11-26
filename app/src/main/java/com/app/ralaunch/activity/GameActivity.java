@@ -416,23 +416,19 @@ public class GameActivity extends SDLActivity {
             // 锁定抽屉，只能通过按钮打开
             mDrawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
 
-            // 设置可拖动的悬浮按钮
+            // 设置可拖动的悬浮按钮（与外部编辑器一致，直接打开编辑器设置对话框）
             setupDraggableButton(mDrawerButton, () -> {
-                if (mDrawerLayout != null && mGameMenu != null) {
-                    mDrawerLayout.openDrawer(mGameMenu);
+                if (mControlEditorManager != null) {
+                    mControlEditorManager.showEditorSettingsDialog();
                 }
             });
 
             // 延迟显示菜单按钮（等待布局完成）
             mDrawerButton.postDelayed(() -> mDrawerButton.setVisibility(View.VISIBLE), 500);
 
-            // 初始化编辑模式设置按钮
+            // 初始化编辑模式设置按钮（现在与 game_drawer_button 功能相同，统一使用同一个按钮）
             mEditorSettingsButton = drawerView.findViewById(R.id.game_editor_settings_button);
-            setupDraggableButton(mEditorSettingsButton, () -> {
-                if (mControlEditorManager != null) {
-                    mControlEditorManager.showEditorSettingsDialog();
-                }
-            });
+            // 不再单独设置点击事件，因为 game_drawer_button 已经处理了
 
             // 初始化控件编辑器管理器（需要在控件布局初始化后）
             initializeControlEditorManager();
@@ -454,8 +450,9 @@ public class GameActivity extends SDLActivity {
 
                 @Override
                 public void onQuickSettings() {
-                    if (mMenuManager != null) {
-                        mMenuManager.showQuickSettings();
+                    // 快速设置已废弃，直接显示编辑器设置
+                    if (mControlEditorManager != null) {
+                        mControlEditorManager.showEditorSettingsDialog();
                     }
                 }
 

@@ -35,16 +35,21 @@ public class UnifiedEditorSettingsDialog {
 
     // UI元素
     private TextView mTvDialogTitle;
+    private View mItemToggleEditMode;
     private View mItemAddButton;
     private View mItemAddJoystick;
     private View mItemAddText;
     private View mItemAddTextGroup;
+    private ViewGroup mAddControlsSection; // 添加控件区域
     private View mItemSaveLayout;
     private View mItemLoadLayout;
     private View mItemResetDefault;
     private View mItemLastAction;
     private ImageView mIvLastActionIcon;
     private TextView mTvLastActionText;
+    
+    // 编辑模式状态
+    private boolean mIsEditModeEnabled = false;
 
     // 监听器
     private OnMenuItemClickListener mListener;
@@ -76,6 +81,7 @@ public class UnifiedEditorSettingsDialog {
      * 菜单项点击监听器
      */
     public interface OnMenuItemClickListener {
+        void onToggleEditMode(); // 切换编辑模式
         void onAddButton();
         void onAddJoystick();
         void onAddText();
@@ -288,15 +294,22 @@ public class UnifiedEditorSettingsDialog {
 
         // 绑定UI元素
         mTvDialogTitle = mDialogLayout.findViewById(R.id.tv_dialog_title);
+        mItemToggleEditMode = mDialogLayout.findViewById(R.id.item_toggle_edit_mode);
         mItemAddButton = mDialogLayout.findViewById(R.id.item_add_button);
         mItemAddJoystick = mDialogLayout.findViewById(R.id.item_add_joystick);
         mItemAddText = mDialogLayout.findViewById(R.id.item_add_text);
+        mAddControlsSection = mDialogLayout.findViewById(R.id.section_add_controls);
         mItemSaveLayout = mDialogLayout.findViewById(R.id.item_save_layout);
         mItemLoadLayout = mDialogLayout.findViewById(R.id.item_load_layout);
         mItemResetDefault = mDialogLayout.findViewById(R.id.item_reset_default);
         mItemLastAction = mDialogLayout.findViewById(R.id.item_last_action);
         mIvLastActionIcon = mDialogLayout.findViewById(R.id.iv_last_action_icon);
         mTvLastActionText = mDialogLayout.findViewById(R.id.tv_last_action_text);
+
+        // 初始状态：编辑模式关闭，添加控件区域隐藏
+        if (mAddControlsSection != null) {
+            mAddControlsSection.setVisibility(View.GONE);
+        }
 
         // 配置UI元素
         configureUIForMode();
@@ -330,6 +343,15 @@ public class UnifiedEditorSettingsDialog {
 
         // 菜单项点击
         if (mListener != null) {
+            // 切换编辑模式
+            if (mItemToggleEditMode != null) {
+                mItemToggleEditMode.setOnClickListener(v -> {
+                    mIsEditModeEnabled = !mIsEditModeEnabled;
+                    updateEditModeVisibility();
+                    mListener.onToggleEditMode();
+                });
+            }
+
             mItemAddButton.setOnClickListener(v -> {
                 mListener.onAddButton();
                 hide();
@@ -364,6 +386,25 @@ public class UnifiedEditorSettingsDialog {
                 mListener.onLastAction();
                 // 不自动隐藏，让回调函数决定是否需要隐藏
             });
+        }
+    }
+
+    /**
+     * 更新编辑模式可见性
+     */
+    private void updateEditModeVisibility() {
+        if (mAddControlsSection != null) {
+            mAddControlsSection.setVisibility(mIsEditModeEnabled ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    /**
+     * 设置编辑模式状态
+     */
+    public void setEditModeEnabled(boolean enabled) {
+        mIsEditModeEnabled = enabled;
+        if (mDialogLayout != null) {
+            updateEditModeVisibility();
         }
     }
 }

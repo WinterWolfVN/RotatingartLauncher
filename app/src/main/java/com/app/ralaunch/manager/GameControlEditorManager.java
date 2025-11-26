@@ -98,15 +98,21 @@ public class GameControlEditorManager {
             mHasUnsavedChanges = true;
         });
         
-        // 初始化编辑器设置弹窗
+        // 初始化编辑器设置弹窗（如果还没有初始化）
         initEditorSettingsDialog();
         
-        // 显示编辑模式设置按钮，隐藏普通菜单按钮
+        // 设置编辑模式为启用状态，显示添加控件区域
+        if (mEditorSettingsDialog != null) {
+            mEditorSettingsDialog.setEditModeEnabled(true);
+        }
+        
+        // 统一使用 game_drawer_button，不再切换按钮
+        // 编辑模式和普通模式都使用同一个按钮（game_drawer_button）
         if (mEditorSettingsButton != null) {
-            mEditorSettingsButton.setVisibility(View.VISIBLE);
+            mEditorSettingsButton.setVisibility(View.GONE); // 隐藏编辑模式专用按钮
         }
         if (mDrawerButton != null) {
-            mDrawerButton.setVisibility(View.GONE);
+            mDrawerButton.setVisibility(View.VISIBLE); // 始终显示统一的工具栏按钮
         }
         
         // 确保控制可见
@@ -150,18 +156,23 @@ public class GameControlEditorManager {
         mIsInEditor = false;
         mControlLayout.setModifiable(false);
         
+        // 设置编辑模式为禁用状态，隐藏添加控件区域
+        if (mEditorSettingsDialog != null) {
+            mEditorSettingsDialog.setEditModeEnabled(false);
+        }
+        
         // 重新加载布局
         mControlLayout.loadLayoutFromManager();
         
         // 禁用视图裁剪
         disableClippingRecursive(mControlLayout);
         
-        // 隐藏编辑模式设置按钮，显示普通菜单按钮
+        // 统一使用 game_drawer_button，始终显示
         if (mEditorSettingsButton != null) {
-            mEditorSettingsButton.setVisibility(View.GONE);
+            mEditorSettingsButton.setVisibility(View.GONE); // 隐藏编辑模式专用按钮
         }
         if (mDrawerButton != null) {
-            mDrawerButton.setVisibility(View.VISIBLE);
+            mDrawerButton.setVisibility(View.VISIBLE); // 始终显示统一的工具栏按钮
         }
         
         Toast.makeText(mContext, R.string.editor_mode_off, Toast.LENGTH_SHORT).show();
@@ -237,7 +248,7 @@ public class GameControlEditorManager {
 
         DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
         mEditorSettingsDialog = new UnifiedEditorSettingsDialog(
-            mContext, mContentFrame, metrics.widthPixels, UnifiedEditorSettingsDialog.DialogMode.GAME);
+            mContext, mContentFrame, metrics.widthPixels, UnifiedEditorSettingsDialog.DialogMode.EDITOR);
 
         mEditorSettingsDialog.setOnMenuItemClickListener(new UnifiedEditorSettingsDialog.OnMenuItemClickListener() {
             @Override
@@ -273,6 +284,12 @@ public class GameControlEditorManager {
             @Override
             public void onLastAction() {
                 exitEditMode();
+            }
+
+            @Override
+            public void onToggleEditMode() {
+                // 切换编辑模式：进入编辑模式
+                enterEditMode();
             }
         });
     }
@@ -387,8 +404,18 @@ public class GameControlEditorManager {
     
     /**
      * 显示编辑器设置对话框
+     * 如果还没有进入编辑模式，先进入编辑模式
      */
     public void showEditorSettingsDialog() {
+        // 如果还没有进入编辑模式，先进入编辑模式
+        if (!mIsInEditor) {
+            enterEditMode();
+        }
+        
+        // 初始化编辑器设置对话框（如果还没有初始化）
+        initEditorSettingsDialog();
+        
+        // 显示对话框
         if (mEditorSettingsDialog != null) {
             mEditorSettingsDialog.show();
         }

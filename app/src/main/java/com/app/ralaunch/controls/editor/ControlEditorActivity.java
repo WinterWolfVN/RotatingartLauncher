@@ -271,6 +271,11 @@ public class ControlEditorActivity extends AppCompatActivity {
                 saveLayout();
                 finish();
             }
+
+            @Override
+            public void onToggleEditMode() {
+                // 外部编辑器始终处于编辑模式，无需切换
+            }
         });
     }
     
