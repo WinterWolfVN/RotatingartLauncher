@@ -3,9 +3,12 @@ package com.app.ralaunch;
 import android.app.Application;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.util.Log;
+
 import com.app.ralaunch.data.GameDataManager;
 import com.app.ralaunch.utils.GamePathResolver;
 import com.app.ralaunch.utils.LocaleManager;
+import com.app.ralib.patch.PatchManager;
 import com.kyant.fishnet.Fishnet;
 import java.io.File;
 
@@ -15,8 +18,11 @@ import java.io.File;
  * 提供全局的应用程序 Context,用于在静态方法中访问 Context
  */
 public class RaLaunchApplication extends Application {
+    private static final String TAG = "RaLaunchApplication";
+
     private static Context appContext;
     private static GameDataManager gameDataManager;
+    private static PatchManager patchManager;
 
     @Override
     public void onCreate() {
@@ -50,14 +56,21 @@ public class RaLaunchApplication extends Application {
         }
         Fishnet.init(appContext, logDir.getAbsolutePath());
 
+        // 初始化 ralib
+        com.app.ralib.Shared.init(appContext);
+
         // 初始化 GameDataManager
         gameDataManager = new GameDataManager(appContext);
 
+        // 初始化 PatchManager
+        try {
+            patchManager = new PatchManager(null);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize PatchManager", e);
+        }
+
         // 初始化 GamePathResolver
         GamePathResolver.initialize(appContext);
-
-        // 初始化 ralib
-        com.app.ralib.Shared.init(appContext);
     }
 
     @Override
@@ -89,5 +102,14 @@ public class RaLaunchApplication extends Application {
      */
     public static GameDataManager getGameDataManager() {
         return gameDataManager;
+    }
+
+    /**
+     * 获取全局 PatchManager 实例
+     *
+     * @return PatchManager 实例
+     */
+    public static PatchManager getPatchManager() {
+        return patchManager;
     }
 }

@@ -35,17 +35,16 @@ public class TemporaryFileAcquirer implements Closeable {
 
     public void cleanupTempFiles() {
         for (Path tmpFilePath : tmpFilePaths) {
-            try {
-                Files.deleteIfExists(tmpFilePath);
-            } catch (IOException e) {
-                Log.w(TAG, "Failed to delete temp file: " + tmpFilePath, e);
+            var isSuccessful = FileUtils.deleteDirectoryRecursively(tmpFilePath);
+            if (!isSuccessful) {
+                Log.w(TAG, "Failed to delete temporary file or directory: " + tmpFilePath);
             }
         }
         tmpFilePaths.clear();
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         cleanupTempFiles();
     }
 }

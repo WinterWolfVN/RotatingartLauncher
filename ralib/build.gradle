@@ -37,5 +37,6 @@ dependencies {
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.github.omicronapps:7-Zip-JBinding-4Android:Release-16.02-2.03'
+    implementation 'com.google.code.gson:gson:2.13.2'
 }
 

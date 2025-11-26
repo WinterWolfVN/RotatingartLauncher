@@ -3,7 +3,6 @@ package com.app.ralaunch.game;
 import android.content.Context;
 import android.content.res.AssetManager;
 
-import com.app.ralaunch.model.PatchInfo;
 import com.app.ralaunch.utils.AppLogger;
 
 import java.io.File;
@@ -35,34 +34,22 @@ public class AssemblyPatcher {
     // 这会强制删除所有旧的补丁程序集并重新安装
     private static final int PATCH_VERSION = 3; // ← 更新 MonoMod 后增加这个数字（跳过 Mono.Cecil）
     private static final String VERSION_FILE = ".monomod_patch_version";
-    
-    /**
-     * 应用补丁到游戏目录（旧版本，保持向后兼容）
-     *
-     * @param context Android上下文
-     * @param gameDirectory 游戏目录路径
-     * @return 替换的程序集数量
-     */
-    public static int applyPatches(Context context, String gameDirectory) {
-        return applyPatches(context, gameDirectory, null);
-    }
 
     /**
-     * 应用补丁到游戏目录（新版本，支持配置）
+     * 应用 MonoMod 补丁到游戏目录
      *
      * @param context Android上下文
      * @param gameDirectory 游戏目录路径
-     * @param enabledPatches 启用的补丁列表（如果为null则应用所有补丁）
      * @return 替换的程序集数量
      */
-    public static int applyPatches(Context context, String gameDirectory, List<PatchInfo> enabledPatches) {
+    public static int applyMonoModPatches(Context context, String gameDirectory) {
         // [OK] 检查是否需要强制更新
         if (shouldForceUpdate(gameDirectory)) {
-            AppLogger.warn(TAG, "🔄 检测到补丁版本更新，强制清理旧版本补丁...");
+            AppLogger.warn(TAG, "🔄 检测到 MonoMod 补丁版本更新，强制清理旧版本补丁...");
             cleanOldPatches(gameDirectory);
         }
         AppLogger.info(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        AppLogger.info(TAG, "🔧 开始应用补丁");
+        AppLogger.info(TAG, "🔧 开始应用 MonoMod 补丁");
         AppLogger.info(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         AppLogger.info(TAG, "  游戏目录: " + gameDirectory);
 
@@ -70,13 +57,9 @@ public class AssemblyPatcher {
             // 1. 从 assets 加载 MonoMod 补丁归档
             Map<String, byte[]> monoModAssemblies = loadPatchArchive(context);
 
-            // 2. 加载启用的自定义补丁程序集
-            Map<String, byte[]> customPatchAssemblies = loadCustomPatches(context, enabledPatches);
-
             // 3. 合并所有补丁
             Map<String, byte[]> allPatchAssemblies = new HashMap<>();
             allPatchAssemblies.putAll(monoModAssemblies);
-            allPatchAssemblies.putAll(customPatchAssemblies);
 
             if (allPatchAssemblies.isEmpty()) {
                 AppLogger.warn(TAG, "未找到任何补丁程序集");
@@ -86,9 +69,6 @@ public class AssemblyPatcher {
             AppLogger.info(TAG, "已加载 " + allPatchAssemblies.size() + " 个补丁程序集:");
             for (String assemblyName : monoModAssemblies.keySet()) {
                 AppLogger.info(TAG, "   - [MonoMod] " + assemblyName);
-            }
-            for (String assemblyName : customPatchAssemblies.keySet()) {
-                AppLogger.info(TAG, "   - [自定义] " + assemblyName);
             }
             
             // 4. 扫描游戏目录中的程序集
@@ -150,72 +130,6 @@ public class AssemblyPatcher {
             AppLogger.error(TAG, "应用补丁失败", e);
             return -1;
         }
-    }
-    
-    /**
-     * 加载自定义补丁程序集
-     * 优先从外部存储加载，如果不存在则从 assets 加载
-     *
-     * @param context Android上下文
-     * @param enabledPatches 启用的补丁列表
-     * @return 程序集名称 -> 程序集字节数据的映射
-     */
-    private static Map<String, byte[]> loadCustomPatches(Context context, List<PatchInfo> enabledPatches) {
-        Map<String, byte[]> assemblies = new HashMap<>();
-
-        if (enabledPatches == null || enabledPatches.isEmpty()) {
-            return assemblies;
-        }
-
-        // 获取外部补丁目录
-        File externalFilesDir = context.getExternalFilesDir(null);
-        if (externalFilesDir == null) {
-            externalFilesDir = context.getFilesDir();
-        }
-        File externalPatchesDir = new File(externalFilesDir, "patches");
-
-        AppLogger.info(TAG, "加载 " + enabledPatches.size() + " 个自定义补丁:");
-        AppLogger.info(TAG, "  外部补丁目录: " + externalPatchesDir.getAbsolutePath());
-
-        for (PatchInfo patch : enabledPatches) {
-            AppLogger.info(TAG, "  - " + patch.getPatchName() + " (" + patch.getDllFileName() + ")");
-
-            byte[] assemblyData = null;
-
-            // 1. 尝试从外部存储加载（用户自定义补丁）
-            File externalPatchFile = new File(externalPatchesDir, patch.getDllFileName());
-            if (externalPatchFile.exists()) {
-                try {
-                    java.io.FileInputStream fis = new java.io.FileInputStream(externalPatchFile);
-                    assemblyData = readAllBytes(fis);
-                    fis.close();
-                    AppLogger.info(TAG, "    ✅ 从外部存储加载: " + patch.getDllFileName() + " (" + assemblyData.length + " bytes)");
-                } catch (IOException e) {
-                    AppLogger.warn(TAG, "    ⚠️  外部补丁加载失败，尝试从 assets 加载: " + e.getMessage());
-                    assemblyData = null;
-                }
-            }
-
-            // 2. 如果外部存储不存在，从 assets 加载（内置补丁）
-            if (assemblyData == null) {
-                try {
-                    String assetPath = "patches/" + patch.getDllFileName();
-                    InputStream inputStream = context.getAssets().open(assetPath);
-                    assemblyData = readAllBytes(inputStream);
-                    inputStream.close();
-                    AppLogger.info(TAG, "    ✅ 从 assets 加载: " + patch.getDllFileName() + " (" + assemblyData.length + " bytes)");
-                } catch (IOException e) {
-                    AppLogger.warn(TAG, "    ❌ 无法加载补丁: " + patch.getDllFileName() + " - " + e.getMessage());
-                }
-            }
-
-            // 3. 添加到映射
-            if (assemblyData != null) {
-                assemblies.put(patch.getDllFileName(), assemblyData);
-            }
-        }
-
-        return assemblies;
     }
 
     /**

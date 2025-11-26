@@ -8,7 +8,6 @@ import com.app.ralaunch.utils.RuntimePreference;
 import com.app.ralaunch.netcore.DotNetNativeLibraryLoader;
 
 import java.io.File;
-import java.nio.file.Paths;
 
 /**
  * .NET 游戏启动器（简化版）
@@ -108,7 +107,7 @@ public class GameLauncher {
             // Step 1: 应用 MonoMod 补丁
             Log.i(TAG, "");
             Log.i(TAG, "⏳ 步骤 1/2: 应用 MonoMod 补丁");
-            int patchedCount = AssemblyPatcher.applyPatches(context, appDir);
+            int patchedCount = AssemblyPatcher.applyMonoModPatches(context, appDir);
             
             if (patchedCount < 0) {
                 Log.w(TAG, "⚠️  补丁应用失败，但将继续启动");

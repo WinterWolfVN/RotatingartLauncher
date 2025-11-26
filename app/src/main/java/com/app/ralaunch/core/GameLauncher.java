@@ -2,15 +2,16 @@ package com.app.ralaunch.core;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.util.Log;
 
 import com.app.ralaunch.game.AssemblyPatcher;
 import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.utils.RuntimeManager;
 import com.app.ralaunch.utils.RuntimePreference;
+import com.app.ralib.patch.Patch;
+import com.app.ralib.patch.PatchManager;
 
 import java.io.File;
-import java.nio.file.Paths;
+import java.util.List;
 
 /**
  * .NET 游戏启动器（简化版）
@@ -173,7 +174,7 @@ public class GameLauncher {
      * @return 0 表示参数设置成功，-1 表示失败
      */
     @SuppressLint("UnsafeDynamicallyLoadedCode")
-    public static int launchAssemblyDirect(Context context, String assemblyPath, java.util.List<com.app.ralaunch.model.PatchInfo> enabledPatches) {
+    public static int launchAssemblyDirect(Context context, String assemblyPath, List<Patch> enabledPatches) {
         AppLogger.info(TAG, "================================================");
         AppLogger.info(TAG, "Preparing to launch assembly directly");
         AppLogger.info(TAG, "================================================");
@@ -200,12 +201,12 @@ public class GameLauncher {
             AppLogger.info(TAG, "Step 1/3: Applying patch files");
             if (enabledPatches != null && !enabledPatches.isEmpty()) {
                 AppLogger.info(TAG, "Enabled custom patches: " + enabledPatches.size());
-                for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
-                    AppLogger.info(TAG, "  - " + patch.getPatchName());
+                for (Patch patch : enabledPatches) {
+                    AppLogger.info(TAG, String.format("  - %s (id: %s)", patch.manifest.name, patch.manifest.id));
                 }
             }
 
-            int patchedCount = AssemblyPatcher.applyPatches(context, appDir, enabledPatches);
+            AssemblyPatcher.applyMonoModPatches(context, appDir);
 
 
             // Step 2: 执行补丁程序集入口点（在游戏启动前）
@@ -218,146 +219,7 @@ public class GameLauncher {
             AppLogger.info(TAG, "  Details: Cannot call initialize_for_runtime_config then initialize_for_dotnet_command_line");
             AppLogger.info(TAG, "  Status: Patches will be loaded after game runtime is initialized");
 
-            if (false && enabledPatches != null && !enabledPatches.isEmpty()) {
-                // 调试：检查传入的补丁信息
-                for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
-                    AppLogger.info(TAG, "DEBUG: Received patch: " + patch.getPatchName());
-                    AppLogger.info(TAG, "  hasEntryPoint: " + patch.hasEntryPoint());
-                    AppLogger.info(TAG, "  entryTypeName: " + patch.getEntryTypeName());
-                    AppLogger.info(TAG, "  entryMethodName: " + patch.getEntryMethodName());
-                }
-
-                // 按优先级排序（优先级高的先执行）
-                java.util.List<com.app.ralaunch.model.PatchInfo> sortedPatches = new java.util.ArrayList<>(enabledPatches);
-                java.util.Collections.sort(sortedPatches, (p1, p2) -> Integer.compare(p2.getPriority(), p1.getPriority()));
-
-                // 获取运行时信息
-                String dotnetRoot = RuntimePreference.getDotnetRootPath();
-                String selectedVersion = RuntimeManager.getSelectedVersion(context);
-                int frameworkMajor = 8; // 默认值
-                if (selectedVersion != null && !selectedVersion.isEmpty()) {
-                    try {
-                        frameworkMajor = Integer.parseInt(selectedVersion.split("\\.")[0]);
-                    } catch (Exception e) {
-                        AppLogger.warn(TAG, "Failed to parse framework version, using default .NET 8");
-                    }
-                }
-
-                // 创建 PatchManager 以获取补丁路径
-                com.app.ralaunch.utils.PatchManager patchManager = new com.app.ralaunch.utils.PatchManager(context);
-
-                // 执行每个补丁的入口点
-                for (com.app.ralaunch.model.PatchInfo patch : sortedPatches) {
-                    if (patch.hasEntryPoint()) {
-                        AppLogger.info(TAG, "Executing patch: " + patch.getPatchName() + " (priority: " + patch.getPriority() + ")");
-                        AppLogger.info(TAG, "  Type: " + patch.getEntryTypeName());
-                        AppLogger.info(TAG, "  Method: " + patch.getEntryMethodName());
-
-                        // 获取补丁DLL的完整路径
-                        String patchDllPath = patchManager.getPatchLibraryPath(patch);
-                        if (patchDllPath == null || patchDllPath.isEmpty()) {
-                            AppLogger.error(TAG, "Failed to get patch DLL path for: " + patch.getPatchName());
-                            continue;
-                        }
-
-                        // 将补丁DLL和runtimeconfig.json复制到游戏目录
-                        java.io.File patchFile = new java.io.File(patchDllPath);
-                        java.io.File patchDir = patchFile.getParentFile();
-                        String patchFileName = patchFile.getName();
-
-                        // 目标:游戏目录
-                        java.io.File targetDll = new java.io.File(appDir, patchFileName);
-
-                        // 尝试查找运行时配置文件,优先 .json,其次 .runtimeconfig.json
-                        String simpleConfigName = patchFileName.replace(".dll", ".json");
-                        java.io.File sourceRuntimeConfig = new java.io.File(patchDir, simpleConfigName);
-
-                        if (!sourceRuntimeConfig.exists()) {
-                            // 如果 .json 不存在,尝试 .runtimeconfig.json
-                            String runtimeConfigName = patchFileName.replace(".dll", ".runtimeconfig.json");
-                            sourceRuntimeConfig = new java.io.File(patchDir, runtimeConfigName);
-                        }
-
-                        try {
-                            // 复制DLL
-                            java.nio.file.Files.copy(
-                                patchFile.toPath(),
-                                targetDll.toPath(),
-                                java.nio.file.StandardCopyOption.REPLACE_EXISTING
-                            );
-                            AppLogger.info(TAG, "  Copied DLL to game dir: " + targetDll.getAbsolutePath());
-
-                            // 复制 runtime config 文件（如果存在）
-                            // hostfxr 查找 TModLoaderPatch.json (不带 .runtimeconfig)
-                            if (sourceRuntimeConfig.exists()) {
-                                java.io.File targetConfigJson = new java.io.File(appDir, simpleConfigName);
-                                java.nio.file.Files.copy(
-                                    sourceRuntimeConfig.toPath(),
-                                    targetConfigJson.toPath(),
-                                    java.nio.file.StandardCopyOption.REPLACE_EXISTING
-                                );
-                                AppLogger.info(TAG, "  Copied runtime config: " + simpleConfigName);
-                            }
-
-                            // 复制 0Harmony.dll 依赖库
-                            java.io.File harmonySource = new java.io.File(patchDir.getParentFile(), "0Harmony.dll");
-                            if (harmonySource.exists()) {
-                                java.io.File harmonyTarget = new java.io.File(appDir, "0Harmony.dll");
-                                java.nio.file.Files.copy(
-                                    harmonySource.toPath(),
-                                    harmonyTarget.toPath(),
-                                    java.nio.file.StandardCopyOption.REPLACE_EXISTING
-                                );
-                                AppLogger.info(TAG, "  Copied 0Harmony.dll to game dir");
-                            } else {
-                                AppLogger.warn(TAG, "  0Harmony.dll not found at: " + harmonySource.getAbsolutePath());
-                            }
-                        } catch (Exception e) {
-                            AppLogger.error(TAG, "Failed to copy patch files: " + e.getMessage());
-                            continue;
-                        }
-
-                        // 先设置参数初始化 hostfxr
-                        AppLogger.info(TAG, "  Setting netcorehost params for patch execution...");
-                        int setParamsResult = netcorehostSetParams(
-                            appDir,
-                            patchFileName,
-                            dotnetRoot,
-                            frameworkMajor
-                        );
-
-                        if (setParamsResult != 0) {
-                            AppLogger.error(TAG, "Failed to set params for patch: " + patch.getPatchName() + " (code: " + setParamsResult + ")");
-                            continue;
-                        }
-
-                        // 调用补丁方法
-                        AppLogger.info(TAG, "  Calling patch method...");
-                        int result = netcorehostCallMethod(
-                            appDir,
-                            patchFileName,
-                            patch.getEntryTypeName(),
-                            patch.getEntryMethodName(),
-                            dotnetRoot,
-                            frameworkMajor
-                        );
-
-                        if (result != 0) {
-                            AppLogger.warn(TAG, "Patch execution failed: " + patch.getPatchName() + " (code: " + result + ")");
-                        } else {
-                            AppLogger.info(TAG, "✅ Patch executed successfully: " + patch.getPatchName());
-                        }
-
-                        // 清理 hostfxr 实例,避免与游戏启动时的初始化冲突
-                        netcorehostCleanup();
-                        AppLogger.info(TAG, "  Cleaned up hostfxr after patch execution");
-                    } else {
-                        AppLogger.info(TAG, "Skipping " + patch.getPatchName() + " (no entry point configured)");
-                    }
-                }
-            } else {
-                AppLogger.info(TAG, "No patch entry points to execute");
-            }
+            AppLogger.info(TAG, "No patch entry points to execute, skipped");
 
             // Step 3: 设置游戏启动参数
             AppLogger.info(TAG, "");
@@ -411,80 +273,15 @@ public class GameLauncher {
 
             // 设置 DOTNET_STARTUP_HOOKS 补丁（在 hostfxr 初始化之前）
             if (enabledPatches != null && !enabledPatches.isEmpty()) {
-                AppLogger.info(TAG, "");
                 AppLogger.info(TAG, "Configuring DOTNET_STARTUP_HOOKS patches...");
 
-                // 创建 PatchManager 以获取补丁路径
-                com.app.ralaunch.utils.PatchManager patchManager = new com.app.ralaunch.utils.PatchManager(context);
+                var startupHooksEnvVar = PatchManager.constructStartupHooksEnvVar(enabledPatches);
 
-                // 查找并复制启用的补丁 DLL（依赖由 AssemblyResolve 自动加载）
-                java.util.List<com.app.ralaunch.model.PatchInfo> sortedPatches = new java.util.ArrayList<>(enabledPatches);
-                java.util.Collections.sort(sortedPatches, (p1, p2) -> Integer.compare(p2.getPriority(), p1.getPriority()));
-
-                // 确保共享依赖存在于 patches 根目录
-                java.io.File patchesRootDir = patchManager.getExternalPatchesDirectory();
-                java.io.File sharedHarmonyDll = new java.io.File(patchesRootDir, "0Harmony.dll");
-                if (!sharedHarmonyDll.exists()) {
-                    // 从 assets 复制 0Harmony.dll 到 patches 根目录
-                    try {
-                        java.io.InputStream inputStream = context.getAssets().open("patches/0Harmony.dll");
-                        java.io.FileOutputStream fos = new java.io.FileOutputStream(sharedHarmonyDll);
-                        byte[] buffer = new byte[8192];
-                        int len;
-                        while ((len = inputStream.read(buffer)) > 0) {
-                            fos.write(buffer, 0, len);
-                        }
-                        fos.close();
-                        inputStream.close();
-                        AppLogger.info(TAG, "  Extracted 0Harmony.dll from assets to patches root");
-                    } catch (Exception e) {
-                        AppLogger.warn(TAG, "  Failed to extract 0Harmony.dll from assets: " + e.getMessage());
-                    }
-                }
-
-                // 收集所有启用的补丁DLL路径 (支持多个补丁)
-                java.util.List<String> startupHooksPaths = new java.util.ArrayList<>();
-                boolean harmonyCopied = false;
-
-                for (com.app.ralaunch.model.PatchInfo patch : sortedPatches) {
-                    String patchDllPath = patchManager.getPatchLibraryPath(patch);
-                    if (patchDllPath != null && !patchDllPath.isEmpty()) {
-                        java.io.File patchFile = new java.io.File(patchDllPath);
-                        if (patchFile.exists()) {
-                            try {
-                                // 只复制一次 0Harmony.dll 到游戏目录
-                                if (!harmonyCopied && sharedHarmonyDll.exists()) {
-                                    java.io.File targetHarmony = new java.io.File(appDir, "0Harmony.dll");
-                                    java.nio.file.Files.copy(
-                                        sharedHarmonyDll.toPath(),
-                                        targetHarmony.toPath(),
-                                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
-                                    );
-                                    AppLogger.info(TAG, "  Copied: 0Harmony.dll from patches root directory");
-                                    harmonyCopied = true;
-                                }
-
-                                // 添加补丁路径到列表
-                                startupHooksPaths.add(patchDllPath);
-                                AppLogger.info(TAG, "  Added StartupHook: " + patch.getPatchName());
-                                AppLogger.info(TAG, "  Path: " + patchDllPath);
-                            } catch (Exception e) {
-                                AppLogger.warn(TAG, "Failed to process patch " + patch.getPatchName() + ": " + e.getMessage());
-                            }
-                        }
-                    }
-                }
-
-                // 设置 StartupHooks DLL 路径 (用冒号分隔多个路径)
-                if (!startupHooksPaths.isEmpty()) {
-                    String startupHooksDll = String.join(":", startupHooksPaths);
-                    netcorehostSetStartupHooks(startupHooksDll);
-                    AppLogger.info(TAG, "DOTNET_STARTUP_HOOKS configured with " + startupHooksPaths.size() + " patch(es)");
-                } else {
-                    AppLogger.warn(TAG, "No valid StartupHook patches found");
-                }
+                AppLogger.info(TAG, "DOTNET_STARTUP_HOOKS: " + startupHooksEnvVar);
+                netcorehostSetStartupHooks(startupHooksEnvVar);
             } else {
                 AppLogger.info(TAG, "No patches to configure for DOTNET_STARTUP_HOOKS");
+                netcorehostSetStartupHooks("");
             }
 
             // 应用 CoreCLR 配置（GC 和 JIT 设置）

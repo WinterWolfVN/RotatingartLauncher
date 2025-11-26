@@ -2,17 +2,26 @@ package com.app.ralaunch.manager;
 
 import android.content.Context;
 import android.content.Intent;
+
+import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralaunch.activity.GameActivity;
 import com.app.ralaunch.model.GameItem;
 import com.app.ralaunch.utils.AppLogger;
-import com.app.ralaunch.utils.PatchManager;
+import com.app.ralib.patch.Patch;
+import com.app.ralib.patch.PatchManager;
+
 import java.io.File;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 /**
  * 游戏启动管理器
  * 负责处理游戏启动逻辑
  */
 public class GameLaunchManager {
+    private static final String TAG = "GameLaunchManager";
+    
     private final Context context;
     
     public GameLaunchManager(Context context) {
@@ -28,21 +37,21 @@ public class GameLaunchManager {
         File assemblyFile = new File(assemblyPath);
         
         if (!assemblyFile.exists() || !assemblyFile.isFile()) {
-            AppLogger.error("GameLaunchManager", "Assembly file not found: " + assemblyPath);
+            AppLogger.error(TAG, "Assembly file not found: " + assemblyPath);
             return false;
         }
         
-        AppLogger.info("GameLaunchManager", "Launching game: " + game.getGameName());
-        AppLogger.info("GameLaunchManager", "Assembly path: " + assemblyPath);
+        AppLogger.info(TAG, "Launching game: " + game.getGameName());
+        AppLogger.info(TAG, "Assembly path: " + assemblyPath);
         
         // 获取启用的补丁列表
-        PatchManager patchManager = new PatchManager(context);
-        java.util.List<com.app.ralaunch.model.PatchInfo> enabledPatches = patchManager.getEnabledPatches(game);
+        PatchManager patchManager = RaLaunchApplication.getPatchManager();
+        List<Patch> enabledPatches = patchManager.getEnabledPatches(assemblyFile.toPath());
         
         if (!enabledPatches.isEmpty()) {
-            AppLogger.info("GameLaunchManager", "Enabled patches for this game:");
-            for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
-                AppLogger.info("GameLaunchManager", "  - " + patch.getPatchName());
+            AppLogger.info(TAG, "Enabled patches for this game:");
+            for (Patch patch : enabledPatches) {
+                AppLogger.info(TAG, String.format("  - %s (id: %s)", patch.manifest.name, patch.manifest.id));
             }
         }
         
@@ -55,18 +64,11 @@ public class GameLaunchManager {
         
         // 传递启用的补丁ID列表
         if (!enabledPatches.isEmpty()) {
-            java.util.ArrayList<String> patchIds = new java.util.ArrayList<>();
-            for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
-                patchIds.add(patch.getPatchId());
-            }
-            intent.putStringArrayListExtra("ENABLED_PATCH_IDS", patchIds);
-        }
-        
-        // 如果有 Bootstrapper 配置，传递相关参数
-        if (game.isBootstrapperPresent() && game.getBootstrapperBasePath() != null) {
-            intent.putExtra("USE_BOOTSTRAPPER", true);
-            intent.putExtra("GAME_BASE_PATH", game.getGameBasePath());
-            intent.putExtra("BOOTSTRAPPER_BASE_PATH", game.getBootstrapperBasePath());
+            intent.putStringArrayListExtra(
+                    "ENABLED_PATCH_IDS",
+                    enabledPatches.stream()
+                            .map(p -> p.manifest.id)
+                            .collect(Collectors.toCollection(ArrayList::new)));
         }
         
         context.startActivity(intent);
@@ -83,7 +85,7 @@ public class GameLaunchManager {
      */
     public boolean launchAssembly(File assemblyFile) {
         if (assemblyFile == null || !assemblyFile.exists()) {
-            AppLogger.error("GameLaunchManager", "Assembly file is null or does not exist");
+            AppLogger.error(TAG, "Assembly file is null or does not exist");
             return false;
         }
         

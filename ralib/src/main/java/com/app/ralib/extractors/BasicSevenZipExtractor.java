@@ -167,7 +167,9 @@ public class BasicSevenZipExtractor implements ExtractorCollection.IExtractor {
                 }
 
                 float progress = (totalBytes > 0) ? (float) totalBytesExtracted / totalBytes : 0f;
-                extractionListener.onProgress(String.format("正在解压: %s", filePath.toString()), progress, state);
+                if (extractionListener != null) {
+                    extractionListener.onProgress(String.format("正在解压: %s", filePath.toString()), progress, state);
+                }
 
                 // 返回输出流
                 return new SequentialFileOutputStream(targetFilePath);

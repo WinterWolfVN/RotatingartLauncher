@@ -15,16 +15,17 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.app.ralaunch.R;
+import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralaunch.model.GameItem;
-import com.app.ralaunch.model.PatchInfo;
 import com.app.ralaunch.data.GameDataManager;
-import com.app.ralaunch.utils.PatchManager;
+import com.app.ralib.patch.Patch;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -34,7 +35,6 @@ import java.util.List;
 public class PatchManagementDialog {
 
     private final Context context;
-    private final PatchManager patchManager;
     private final GameDataManager gameDataManager;
 
     private RecyclerView recyclerViewGames;
@@ -47,7 +47,6 @@ public class PatchManagementDialog {
 
     public PatchManagementDialog(Context context) {
         this.context = context;
-        this.patchManager = new PatchManager(context);
         this.gameDataManager = new GameDataManager(context);
     }
 
@@ -103,7 +102,7 @@ public class PatchManagementDialog {
         selectedGame = game;
 
         // 获取适用于该游戏的补丁
-        List<PatchInfo> patches = patchManager.getApplicablePatches(game);
+        List<Patch> patches = RaLaunchApplication.getPatchManager().getApplicablePatches(game.getGameName());
 
         if (patches.isEmpty()) {
             // 没有可用补丁
@@ -205,13 +204,13 @@ public class PatchManagementDialog {
      */
     private class PatchAdapter extends RecyclerView.Adapter<PatchAdapter.PatchViewHolder> {
 
-        private List<PatchInfo> patches;
+        private List<Patch> patches;
 
         public PatchAdapter() {
             this.patches = List.of(); // 空列表
         }
 
-        public void setPatches(List<PatchInfo> patches) {
+        public void setPatches(List<Patch> patches) {
             this.patches = patches;
             notifyDataSetChanged();
         }
@@ -226,7 +225,7 @@ public class PatchManagementDialog {
 
         @Override
         public void onBindViewHolder(@NonNull PatchViewHolder holder, int position) {
-            PatchInfo patch = patches.get(position);
+            Patch patch = patches.get(position);
             holder.bind(patch);
         }
 
@@ -247,10 +246,10 @@ public class PatchManagementDialog {
                 switchPatch = itemView.findViewById(R.id.switchPatch);
             }
 
-            public void bind(PatchInfo patch) {
+            public void bind(Patch patch) {
                 // 设置补丁信息
-                tvPatchName.setText(patch.getPatchName());
-                tvPatchDescription.setText(patch.getPatchDescription());
+                tvPatchName.setText(patch.manifest.name);
+                tvPatchDescription.setText(patch.manifest.description);
 
                 if (selectedGame == null) {
                     switchPatch.setEnabled(false);
@@ -259,8 +258,8 @@ public class PatchManagementDialog {
                 }
 
                 // 获取当前补丁状态
-                String gameId = selectedGame.getGamePath();
-                boolean isEnabled = patchManager.isPatchEnabled(gameId, patch.getPatchId());
+                var gameAsmPath = Paths.get(selectedGame.getGamePath());
+                boolean isEnabled = RaLaunchApplication.getPatchManager().isPatchEnabled(gameAsmPath, patch.manifest.id);
 
                 switchPatch.setEnabled(true);
                 switchPatch.setOnCheckedChangeListener(null); // 先移除监听器避免触发
@@ -268,9 +267,9 @@ public class PatchManagementDialog {
 
                 // 设置监听器
                 switchPatch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    patchManager.setPatchEnabled(gameId, patch.getPatchId(), isChecked);
+                    RaLaunchApplication.getPatchManager().setPatchEnabled(gameAsmPath, patch.manifest.id, isChecked);
                     Toast.makeText(context,
-                        selectedGame.getGameName() + " - " + patch.getPatchName() + ": " +
+                        selectedGame.getGameName() + " - " + patch.manifest.name + ": " +
                         (isChecked ? context.getString(R.string.patch_enabled) : context.getString(R.string.patch_disabled)),
                         Toast.LENGTH_SHORT).show();
                 });

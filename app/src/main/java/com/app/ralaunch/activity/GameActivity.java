@@ -1,5 +1,6 @@
 package com.app.ralaunch.activity;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -41,10 +42,13 @@ import com.app.ralaunch.manager.GameFullscreenManager;
 import com.app.ralaunch.core.GameLauncher;
 import com.app.ralaunch.controls.ControlLayout;
 import com.app.ralaunch.controls.SDLInputBridge;
+import com.app.ralib.patch.Patch;
+import com.app.ralib.patch.PatchManager;
 
 import org.libsdl.app.SDLActivity;
 
 import java.io.File;
+import java.util.ArrayList;
 
 /**
  * 游戏运行Activity
@@ -155,38 +159,20 @@ public class GameActivity extends SDLActivity {
         boolean modLoaderEnabled = getIntent().getBooleanExtra("MOD_LOADER_ENABLED", true); // ModLoader 开关状态
         String runtimePref = getIntent().getStringExtra("DOTNET_FRAMEWORK"); // 可选："net6"、"net8"、"net10"、"auto"
 
-        boolean isBootstrapper = getIntent().getBooleanExtra("IS_BOOTSTRAPPER", false); // 是否为引导程序
-        String gameBasePath = getIntent().getStringExtra("GAME_BASE_PATH"); // 游戏根目录路径（仅引导程序使用）
-        String bootstrapperAssemblyPath = getIntent().getStringExtra("BOOTSTRAPPER_ASSEMBLY_PATH"); // 引导程序程序集路径（仅引导程序使用）
-        String bootstrapperEntryPoint = getIntent().getStringExtra("BOOTSTRAPPER_ENTRY_POINT"); // 引导程序入口点（仅引导程序使用）
-        String bootstrapperCurrentDir = getIntent().getStringExtra("BOOTSTRAPPER_CURRENT_DIR"); // 引导程序工作目录（仅引导程序使用）
+        AppLogger.info(TAG, "Normal game launch mode");
 
-        if (!isBootstrapper){
-            AppLogger.info(TAG, "Normal game launch mode");
-
-            // 如有按次覆盖的运行时偏好，从 Intent 写入到 app_prefs 供本次启动解析
-            if (runtimePref != null && !runtimePref.isEmpty()) {
-                try {
-                    RuntimePreference.setDotnetFramework(this, runtimePref);
-                    AppLogger.info(TAG, "Runtime preference set: " + runtimePref);
-                }
-                catch (Throwable t) {
-                    AppLogger.warn(TAG, "Failed to apply runtime preference from intent: " + t.getMessage());
-                }
+        // 如有按次覆盖的运行时偏好，从 Intent 写入到 app_prefs 供本次启动解析
+        if (runtimePref != null && !runtimePref.isEmpty()) {
+            try {
+                RuntimePreference.setDotnetFramework(this, runtimePref);
+                AppLogger.info(TAG, "Runtime preference set: " + runtimePref);
             }
-
-            setLaunchParams();
-        } else {
-            AppLogger.info(TAG, "Bootstrapper launch mode");
-
-            if (gameBasePath == null || bootstrapperAssemblyPath == null || bootstrapperEntryPoint == null || bootstrapperCurrentDir == null) {
-                AppLogger.error(TAG, "Bootstrapper parameters incomplete");
-                runOnUiThread(() -> ErrorHandler.showWarning("Bootstrapper 启动失败", "启动参数不完整"));
-                finish();
+            catch (Throwable t) {
+                AppLogger.warn(TAG, "Failed to apply runtime preference from intent: " + t.getMessage());
             }
-
-            setBootstrapperParams(gameBasePath, bootstrapperAssemblyPath, bootstrapperEntryPoint, bootstrapperCurrentDir);
         }
+
+        setLaunchParams();
 
         // 设置返回键处理器（使用新的 OnBackPressedCallback API）
         setupBackPressedHandler();
@@ -276,37 +262,18 @@ public class GameActivity extends SDLActivity {
             AppLogger.info(TAG, "================================================");
 
             // 获取启用的补丁配置
-            java.util.ArrayList<String> patchIds = getIntent().getStringArrayListExtra("ENABLED_PATCH_IDS");
+            // TODO: 这个 patchIds 何意味
+            java.util.ArrayList<String> enabledPatchIds = getIntent().getStringArrayListExtra("ENABLED_PATCH_IDS");
 
-            java.util.List<com.app.ralaunch.model.PatchInfo> enabledPatches = null;
-            if (patchIds != null && !patchIds.isEmpty()) {
-                // 从游戏路径重新加载 GameItem
-                String gamePath = getIntent().getStringExtra("GAME_PATH");
-                if (gamePath != null) {
-                    // 从游戏列表中查找 GameItem
-                    java.util.List<com.app.ralaunch.model.GameItem> gameList =
-                        RaLaunchApplication.getGameDataManager().loadGameList();
-                    com.app.ralaunch.model.GameItem gameItem = null;
-                    for (com.app.ralaunch.model.GameItem item : gameList) {
-                        if (item.getGamePath().equals(gamePath)) {
-                            gameItem = item;
-                            break;
-                        }
-                    }
+            @Nullable ArrayList<Patch> enabledPatches = null;
+            if (enabledPatchIds != null && !enabledPatchIds.isEmpty()) {
+                // 从 PatchManager 重新加载完整的补丁信息
+                PatchManager patchManager = RaLaunchApplication.getPatchManager();
+                enabledPatches = patchManager.getPatchesByIds(enabledPatchIds);
 
-                    if (gameItem != null) {
-                        // 从 PatchManager 重新加载完整的补丁信息
-                        com.app.ralaunch.utils.PatchManager patchManager = new com.app.ralaunch.utils.PatchManager(this);
-                        enabledPatches = patchManager.getEnabledPatches(gameItem);
-
-                        AppLogger.info(TAG, "Enabled patches: " + enabledPatches.size());
-                        for (com.app.ralaunch.model.PatchInfo patch : enabledPatches) {
-                            AppLogger.info(TAG, "  - " + patch.getPatchName());
-                            if (patch.hasEntryPoint()) {
-                                AppLogger.info(TAG, "    Entry: " + patch.getEntryTypeName() + "." + patch.getEntryMethodName());
-                            }
-                        }
-                    }
+                AppLogger.info(TAG, "Enabled patches: " + enabledPatches.size());
+                for (Patch patch : enabledPatches) {
+                    AppLogger.info(TAG, String.format("  - %s (id: %s)", patch.manifest.name, patch.manifest.id));
                 }
             }
 
@@ -326,34 +293,6 @@ public class GameActivity extends SDLActivity {
             finish();
         }
     }
-
-    private void setBootstrapperParams(String gameBasePath, String bootstrapperAssemblyPath, String bootstrapperEntryPoint, String bootstrapperCurrentDir) {
-        try {
-            // 验证引导程序程序集文件是否存在
-            File assemblyFile = new File(bootstrapperAssemblyPath);
-            if (!assemblyFile.exists() || !assemblyFile.isFile()) {
-                AppLogger.error(TAG, "Bootstrapper assembly file not found: " + bootstrapperAssemblyPath);
-                runOnUiThread(() -> ErrorHandler.showWarning("引导程序启动失败", "程序集文件不存在: " + bootstrapperAssemblyPath));
-                return;
-            }
-
-            AppLogger.info(TAG, "Launching bootstrapper: " + bootstrapperAssemblyPath);
-
-            // 直接启动引导程序程序集
-            int result = GameLauncher.launchAssemblyDirect(this, bootstrapperAssemblyPath);
-
-            if (result == 0) {
-                AppLogger.info(TAG, "Bootstrapper parameters set successfully");
-            } else {
-                AppLogger.error(TAG, "Failed to set bootstrapper parameters: " + result);
-                runOnUiThread(() -> ErrorHandler.showWarning("引导程序启动失败", "设置参数失败: " + result));
-            }
-        } catch (Exception e) {
-            AppLogger.error(TAG, "Error setting bootstrapper parameters: " + e.getMessage(), e);
-            runOnUiThread(() -> ErrorHandler.handleError("引导程序启动失败", e, false));
-        }
-    }
-
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
