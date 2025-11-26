@@ -63,8 +63,14 @@ public class RendererLoader {
                     String value = entry.getValue();
 
                     try {
-                        Os.setenv(key, value, true);
-                        AppLogger.info(TAG, "  " + key + " = " + value);
+                        if (value != null) {
+                            Os.setenv(key, value, true);
+                            AppLogger.info(TAG, "  " + key + " = " + value);
+                        }
+                        else {
+                            Os.unsetenv(key);
+                            AppLogger.info(TAG, "  " + key + " unset");
+                        }
                     } catch (ErrnoException e) {
                         AppLogger.error(TAG, "Failed to set " + key + ": " + e.getMessage());
                     }

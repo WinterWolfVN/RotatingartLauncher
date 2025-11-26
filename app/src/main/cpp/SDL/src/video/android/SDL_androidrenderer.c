@@ -109,7 +109,7 @@ static const char* GetRendererFromEnv(void)
 
     if (ralcore_renderer != NULL) {
         /* 映射 RALCORE_RENDERER 值到渲染器名称 */
-        if (SDL_strcmp(ralcore_renderer, "opengles2") == 0) {
+        if (SDL_strcmp(ralcore_renderer, "gl4es") == 0) {
             return "gl4es";
         } else if (SDL_strcmp(ralcore_renderer, "mobilegl") == 0) {
             return "mobilegl";

@@ -28,14 +28,15 @@ public class RendererConfig {
     private static final String TAG = "RendererConfig";
 
     // 渲染器 ID
-    public static final String RENDERER_NATIVE_GLES = "native";           // 系统原生 EGL/GLES
-    public static final String RENDERER_GL4ES = "gl4es";                  // GL4ES
-    public static final String RENDERER_MOBILEGL = "mobilegl";      // MobileGlues
-    public static final String RENDERER_ANGLE = "angle";                  // ANGLE
-    public static final String RENDERER_ZINK = "zink";                    // Zink (Mesa)
-    public static final String RENDERER_ZINK_25 = "zink25";               // Zink (Mesa 25)
-    public static final String RENDERER_VIRGL = "virgl";                  // VirGL
-    public static final String RENDERER_FREEDRENO = "freedreno";          // Freedreno
+    public static final String RENDERER_NATIVE_GLES = "native";             // 系统原生 EGL/GLES
+    public static final String RENDERER_GL4ES = "gl4es";                    // GL4ES
+    public static final String RENDERER_GL4ES_ANGLE = "gl4es+angle";        // GL4ES + ANGLE
+    public static final String RENDERER_MOBILEGL = "mobilegl";              // MobileGlues
+    public static final String RENDERER_ANGLE = "angle";                    // ANGLE
+    public static final String RENDERER_ZINK = "zink";                      // Zink (Mesa)
+    public static final String RENDERER_ZINK_25 = "zink25";                 // Zink (Mesa 25)
+    public static final String RENDERER_VIRGL = "virgl";                    // VirGL
+    public static final String RENDERER_FREEDRENO = "freedreno";            // Freedreno
 
     // 默认渲染器
     public static final String DEFAULT_RENDERER = RENDERER_NATIVE_GLES;
@@ -81,8 +82,19 @@ public class RendererConfig {
         // gl4es 渲染器
         new RendererInfo(
             RENDERER_GL4ES,
-            "Holy GL4ES",
+            "GL4ES",
             "OpenGL 2.1 翻译至 OpenGL ES 2.0（兼容性最强）",
+            "libEGL_gl4es.so",
+            "libGL_gl4es.so",
+            true,
+            0
+        ),
+
+        // gl4es + angle 渲染器
+        new RendererInfo(
+            RENDERER_GL4ES_ANGLE,
+            "GL4ES + ANGLE",
+            "OpenGL 2.1 翻译至 OpenGL ES 2.0 再翻译至 Vulkan（兼容性强+性能强）",
             "libEGL_gl4es.so",
             "libGL_gl4es.so",
             true,
@@ -269,13 +281,27 @@ public class RendererConfig {
 
         switch (rendererId) {
             case RENDERER_GL4ES:
-                envMap.put("RALCORE_RENDERER", "opengles2");
+                envMap.put("RALCORE_RENDERER", "gl4es");
                 // NG-GL4ES defaults to ES3 backend (DEFAULT_ES=3) for better compatibility
                 envMap.put("LIBGL_ES", "3");
                 envMap.put("LIBGL_MIPMAP", "3");
                 envMap.put("LIBGL_NORMALIZE", "1");
                 envMap.put("LIBGL_NOINTOVLHACK", "1");
                 envMap.put("LIBGL_NOERROR", "1");
+                envMap.put("LIBGL_EGL", null); // 强制 unset，避免上次启动遗留设置影响
+                envMap.put("LIBGL_GLES", null); // 强制 unset，避免上次启动遗留设置影响
+                break;
+
+            case RENDERER_GL4ES_ANGLE:
+                envMap.put("RALCORE_RENDERER", "gl4es");
+                // NG-GL4ES defaults to ES3 backend (DEFAULT_ES=3) for better compatibility
+                envMap.put("LIBGL_ES", "3");
+                envMap.put("LIBGL_MIPMAP", "3");
+                envMap.put("LIBGL_NORMALIZE", "1");
+                envMap.put("LIBGL_NOINTOVLHACK", "1");
+                envMap.put("LIBGL_NOERROR", "1");
+                envMap.put("LIBGL_EGL", "libEGL_angle.so");
+                envMap.put("LIBGL_GLES", "libGLESv2_angle.so");
                 break;
 
             case RENDERER_MOBILEGL:
