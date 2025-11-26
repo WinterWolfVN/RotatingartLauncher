@@ -43,6 +43,12 @@ public class ControlEditDialogDataFiller {
         ControlShapeManager.updateShapeDisplay(refs.getCurrentData(), tvControlShape, 
             view.findViewById(R.id.item_control_shape));
         
+        // 摇杆模式显示（仅摇杆类型显示）
+        TextView tvJoystickMode = view.findViewById(R.id.tv_joystick_mode);
+        if (tvJoystickMode != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
+            ControlJoystickModeManager.updateModeDisplay(refs.getCurrentData(), tvJoystickMode);
+        }
+        
         if (etName != null && refs.getCurrentData().name != null) {
             etName.setText(refs.getCurrentData().name);
         }

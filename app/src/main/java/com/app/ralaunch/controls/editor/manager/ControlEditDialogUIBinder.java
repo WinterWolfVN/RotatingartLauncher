@@ -68,6 +68,21 @@ public class ControlEditDialogUIBinder {
             });
         }
         
+        // 摇杆模式选择（仅摇杆类型显示）
+        MaterialCardView itemJoystickMode = view.findViewById(R.id.item_joystick_mode);
+        TextView tvJoystickMode = view.findViewById(R.id.tv_joystick_mode);
+        if (itemJoystickMode != null) {
+            itemJoystickMode.setOnClickListener(v -> {
+                ControlJoystickModeManager.showModeSelectDialog(dialog.getContext(), refs.getCurrentData(), 
+                    (data) -> {
+                        ControlJoystickModeManager.updateModeDisplay(data, tvJoystickMode);
+                        // 模式改变时，更新摇杆左右选择的可见性
+                        ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(view, data);
+                        refs.notifyUpdate();
+                    });
+            });
+        }
+        
         if (etName != null) {
             etName.addTextChangedListener(new android.text.TextWatcher() {
                 @Override

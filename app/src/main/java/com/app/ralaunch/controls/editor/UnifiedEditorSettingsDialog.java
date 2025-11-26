@@ -39,7 +39,6 @@ public class UnifiedEditorSettingsDialog {
     private View mItemAddJoystick;
     private View mItemAddText;
     private View mItemAddTextGroup;
-    private View mItemJoystickMode;
     private View mItemSaveLayout;
     private View mItemLoadLayout;
     private View mItemResetDefault;
@@ -80,7 +79,6 @@ public class UnifiedEditorSettingsDialog {
         void onAddButton();
         void onAddJoystick();
         void onAddText();
-        void onJoystickModeSettings();
         void onSaveLayout();
         void onLoadLayout();
         void onResetDefault();
@@ -293,7 +291,6 @@ public class UnifiedEditorSettingsDialog {
         mItemAddButton = mDialogLayout.findViewById(R.id.item_add_button);
         mItemAddJoystick = mDialogLayout.findViewById(R.id.item_add_joystick);
         mItemAddText = mDialogLayout.findViewById(R.id.item_add_text);
-        mItemJoystickMode = mDialogLayout.findViewById(R.id.item_joystick_mode);
         mItemSaveLayout = mDialogLayout.findViewById(R.id.item_save_layout);
         mItemLoadLayout = mDialogLayout.findViewById(R.id.item_load_layout);
         mItemResetDefault = mDialogLayout.findViewById(R.id.item_reset_default);
@@ -345,11 +342,6 @@ public class UnifiedEditorSettingsDialog {
 
             mItemAddText.setOnClickListener(v -> {
                 mListener.onAddText();
-                hide();
-            });
-
-            mItemJoystickMode.setOnClickListener(v -> {
-                mListener.onJoystickModeSettings();
                 hide();
             });
 

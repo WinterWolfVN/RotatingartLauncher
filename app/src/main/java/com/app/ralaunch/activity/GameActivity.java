@@ -665,16 +665,7 @@ public class GameActivity extends SDLActivity {
         }
     }
 
-    /**
-     * 显示摇杆模式批量设置对话框（已废弃，使用 GameControlEditorManager）
-     */
-    @Deprecated
-    private void showJoystickModeDialog() {
-        if (mControlEditorManager != null) {
-            mControlEditorManager.showJoystickModeDialog();
-        }
-    }
-
+    
     /**
      * 保存控制布局（已废弃，使用 GameControlEditorManager）
      */

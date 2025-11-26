@@ -256,11 +256,6 @@ public class GameControlEditorManager {
             }
 
             @Override
-            public void onJoystickModeSettings() {
-                showJoystickModeDialog();
-            }
-
-            @Override
             public void onSaveLayout() {
                 saveControlLayout();
             }
@@ -357,21 +352,6 @@ public class GameControlEditorManager {
         }
     }
     
-    /**
-     * 显示摇杆模式批量设置对话框
-     */
-    public void showJoystickModeDialog() {
-        if (mControlLayout == null) return;
-        
-        ControlConfig config = mControlLayout.getConfig();
-        if (config == null || config.controls == null) return;
-        
-        ControlEditorOperations.showJoystickModeDialog(mContext, config, () -> {
-            mControlLayout.loadLayout(config);
-            disableClippingRecursive(mControlLayout);
-            mHasUnsavedChanges = true;
-        });
-    }
     
     /**
      * 保存控制布局

@@ -252,11 +252,6 @@ public class ControlEditorActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onJoystickModeSettings() {
-                showJoystickModeDialog();
-            }
-
-            @Override
             public void onSaveLayout() {
                 saveLayout();
             }
@@ -591,12 +586,6 @@ public class ControlEditorActivity extends AppCompatActivity {
     /**
      * 显示摇杆模式批量设置对话框
      */
-    private void showJoystickModeDialog() {
-        ControlEditorOperations.showJoystickModeDialog(this, mCurrentConfig, () -> {
-            displayLayout();
-        });
-    }
-
     
     @Override
     public void onBackPressed() {

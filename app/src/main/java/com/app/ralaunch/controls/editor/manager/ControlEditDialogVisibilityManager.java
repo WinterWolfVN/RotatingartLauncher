@@ -102,6 +102,13 @@ public class ControlEditDialogVisibilityManager {
             itemTextContent.setVisibility(isText ? View.VISIBLE : View.GONE);
         }
         
+        // 摇杆模式选择：仅摇杆类型显示
+        View itemJoystickMode = view.findViewById(R.id.item_joystick_mode);
+        if (itemJoystickMode != null) {
+            boolean isJoystick = (data.type == ControlData.TYPE_JOYSTICK);
+            itemJoystickMode.setVisibility(isJoystick ? View.VISIBLE : View.GONE);
+        }
+        
         // 摇杆左右选择：仅摇杆类型且为SDL控制器模式时显示
         View itemJoystickStickSelect = view.findViewById(R.id.item_joystick_stick_select);
         if (itemJoystickStickSelect != null) {
