@@ -93,7 +93,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         app_logger.c
         app_logger_jni.c
         renderer_loader.c
-
+        thread_affinity_manager.cpp
 )
 
 # 链接库

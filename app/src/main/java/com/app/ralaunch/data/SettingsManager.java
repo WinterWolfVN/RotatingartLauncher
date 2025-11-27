@@ -55,6 +55,7 @@ public class SettingsManager {
 
         // 开发者设置
         public static final String VERBOSE_LOGGING = "verbose_logging";
+        public static final String SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED = "set_thread_affinity_to_big_core_enabled";
         // FNA设置
         public static final String FNA_RENDERER = "fna_renderer";
 
@@ -81,6 +82,7 @@ public class SettingsManager {
         public static final String DOTNET_FRAMEWORK = "auto";
         public static final String RUNTIME_ARCHITECTURE = "auto";
         public static final boolean VERBOSE_LOGGING = false;
+        public static final boolean SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED = false;
         public static final String FNA_RENDERER = "auto";
 
         // 控制设置
@@ -306,7 +308,15 @@ public class SettingsManager {
     public void setVerboseLogging(boolean enabled) {
         putBoolean(Keys.VERBOSE_LOGGING, enabled);
     }
-    
+
+    public boolean getSetThreadAffinityToBigCoreEnabled() {
+        return getBoolean(Keys.SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED, Defaults.SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED);
+    }
+
+    public void setSetThreadAffinityToBigCoreEnabled(boolean enabled) {
+        putBoolean(Keys.SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED, enabled);
+    }
+
     // FNA设置
     public String getFnaRenderer() {
         return getString(Keys.FNA_RENDERER, Defaults.FNA_RENDERER);

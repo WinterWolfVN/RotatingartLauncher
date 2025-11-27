@@ -8,6 +8,7 @@
 
 #include "netcorehost_launcher.h"
 #include "corehost_trace_redirect.h"
+#include "thread_affinity_manager.h"
 #include <netcorehost/nethost.hpp>
 #include <netcorehost/hostfxr.hpp>
 #include <netcorehost/context.hpp>
@@ -73,6 +74,11 @@ static std::string get_package_name() {
     const char *package_name_cstr = getenv("PACKAGE_NAME"); // RaLaunchApplication.java 中设置了
     assert(package_name_cstr != nullptr);
     return {package_name_cstr};
+}
+
+static bool is_set_thread_affinity_to_big_core() {
+    const char *env_value = getenv("SET_THREAD_AFFINITY_TO_BIG_CORE");
+    return (env_value != nullptr) && (strcmp(env_value, "1") == 0);
 }
 
 /**
@@ -168,6 +174,11 @@ int netcorehost_launch() {
     if (!g_app_path) {
         LOGE(LOG_TAG, "Error: Application path not set! Please call netcorehostSetParams() first");
         return -1;
+    }
+
+    if (is_set_thread_affinity_to_big_core()) {
+        LOGI(LOG_TAG, "Setting thread affinity to big cores");
+        setThreadAffinityToBigCores();
     }
 
     LOGI(LOG_TAG, "========================================");

@@ -167,6 +167,11 @@
     <string name="verbose_logging_enabled">Verbose logging enabled, restart app to apply</string>
     <string name="verbose_logging_disabled">Verbose logging disabled</string>
 
+    <string name="thread_affinity_big_core">Thread Affinity - Big Core</string>
+    <string name="thread_affinity_big_core_desc">Bind main thread to big cores for better performance</string>
+    <string name="thread_affinity_big_core_enabled">Big core thread affinity enabled</string>
+    <string name="thread_affinity_big_core_disabled">Big core thread affinity disabled</string>
+
     <!-- Patch Management -->
     <string name="patch_management">Patch Management</string>
     <string name="patch_management_desc">Manage game patch enable/disable status</string>

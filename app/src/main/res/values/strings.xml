@@ -184,6 +184,11 @@
     <string name="verbose_logging_enabled">已启用详细日志，重启应用后生效</string>
     <string name="verbose_logging_disabled">已禁用详细日志</string>
 
+    <string name="thread_affinity_big_core">线程亲和性 - 大核心</string>
+    <string name="thread_affinity_big_core_desc">将主线程绑定到大核心以提升性能</string>
+    <string name="thread_affinity_big_core_enabled">已启用大核心线程亲和性</string>
+    <string name="thread_affinity_big_core_disabled">已禁用大核心线程亲和性</string>
+
     <!-- 补丁管理 -->
     <string name="patch_management">补丁管理</string>
     <string name="patch_management_desc">管理游戏补丁的启用状态</string>

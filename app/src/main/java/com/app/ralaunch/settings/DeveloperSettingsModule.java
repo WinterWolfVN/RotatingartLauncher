@@ -23,6 +23,7 @@ public class DeveloperSettingsModule implements SettingsModule {
         this.settingsManager = SettingsManager.getInstance(fragment.requireContext());
         
         setupVerboseLogging();
+        setupThreadAffinityToBigCore();
         setupServerGC();
         setupConcurrentGC();
         setupTieredCompilation();
@@ -41,7 +42,21 @@ public class DeveloperSettingsModule implements SettingsModule {
             });
         }
     }
-    
+
+    private void setupThreadAffinityToBigCore() {
+        MaterialSwitch switchThreadAffinityToBigCore = rootView.findViewById(R.id.switchThreadAffinityToBigCore);
+        if (switchThreadAffinityToBigCore != null) {
+            switchThreadAffinityToBigCore.setChecked(settingsManager.getSetThreadAffinityToBigCoreEnabled());
+            switchThreadAffinityToBigCore.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                settingsManager.setSetThreadAffinityToBigCoreEnabled(isChecked);
+                String message = isChecked ?
+                        fragment.getString(R.string.thread_affinity_big_core_enabled) :
+                        fragment.getString(R.string.thread_affinity_big_core_disabled);
+                Toast.makeText(fragment.requireContext(), message, Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
     private void setupServerGC() {
         MaterialSwitch switchServerGC = rootView.findViewById(R.id.switchServerGC);
         if (switchServerGC != null) {

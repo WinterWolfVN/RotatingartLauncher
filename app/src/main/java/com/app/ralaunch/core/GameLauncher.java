@@ -2,6 +2,7 @@ package com.app.ralaunch.core;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.system.Os;
 
 import com.app.ralaunch.game.AssemblyPatcher;
 import com.app.ralaunch.utils.AppLogger;
@@ -290,10 +291,21 @@ public class GameLauncher {
             com.app.ralaunch.utils.CoreCLRConfig.applyConfig(context);
 
             // 设置 COREHOST_TRACE（根据详细日志设置）
-            com.app.ralaunch.utils.SettingsManager settingsManager = com.app.ralaunch.utils.SettingsManager.getInstance(context);
-            boolean enableVerboseLogging = settingsManager.isVerboseLogging();
+            com.app.ralaunch.utils.SettingsManager utilsSettingsManager = com.app.ralaunch.utils.SettingsManager.getInstance(context);
+            boolean enableVerboseLogging = utilsSettingsManager.isVerboseLogging();
             netcorehostSetCorehostTrace(enableVerboseLogging);
             AppLogger.info(TAG, "COREHOST_TRACE: " + (enableVerboseLogging ? "启用" : "禁用"));
+
+            // 设置 线程亲和性
+            com.app.ralaunch.data.SettingsManager dataSettingsManager = com.app.ralaunch.data.SettingsManager.getInstance(context);
+            if (dataSettingsManager.getSetThreadAffinityToBigCoreEnabled()) {
+                Os.setenv("SET_THREAD_AFFINITY_TO_BIG_CORE", "1", true);
+                AppLogger.info(TAG, "SET_THREAD_AFFINITY_TO_BIG_CORE: 启用");
+            }
+            else {
+                Os.unsetenv("SET_THREAD_AFFINITY_TO_BIG_CORE");
+                AppLogger.info(TAG, "SET_THREAD_AFFINITY_TO_BIG_CORE: 禁用");
+            }
 
             // 设置启动参数（简化版 - 4个参数）
             int result = netcorehostSetParams(appDir, mainAssembly, dotnetRoot, frameworkMajor);
