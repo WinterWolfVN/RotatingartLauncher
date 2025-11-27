@@ -46,7 +46,7 @@ public class VirtualJoystick extends View implements ControlView {
     private boolean mIsTouching = false;
 
     // 死区（防止漂移） - 优化为更小的死区提升灵敏度
-    private static final float DEADZONE_PERCENT = 0.12f;
+    private static final float DEADZONE_PERCENT = 0.1f;
     
     // 8方向角度映射表（从角度计算结果映射到实际方向）
     // 角度计算：0度=正右, 90度=正上, 180度=正左, 270度=正下

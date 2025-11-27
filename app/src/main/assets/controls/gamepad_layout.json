@@ -60,7 +60,7 @@
       "buttonMode": 1
     },
     {
-      "name": "RB",
+      "name": "RT",
       "type": 0,
       "x": 2048.917,
       "y": 20.0,
@@ -74,7 +74,7 @@
       "cornerRadius": 2.0,
       "visible": true,
       "shape": 0,
-      "keycode": -210,
+      "keycode": -221,
       "isToggle": false,
       "buttonMode": 1
     },
@@ -98,7 +98,7 @@
       "buttonMode": 1
     },
     {
-      "name": "RT",
+      "name": "RB",
       "type": 0,
       "x": 2049.6147,
       "y": 143.0,
@@ -112,7 +112,7 @@
       "cornerRadius": 2.0,
       "visible": true,
       "shape": 0,
-      "keycode": -221,
+      "keycode": -210,
       "isToggle": false,
       "buttonMode": 1
     },
