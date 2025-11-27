@@ -467,6 +467,25 @@
                         android:lineSpacingExtra="4dp"
                         android:layout_marginStart="40dp" />
 
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_authors"
+                        android:textColor="?attr/textHint"
+                        android:textSize="12sp"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginStart="40dp" />
+
+                    <TextView
+                        android:id="@+id/tvAuthorLink"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="&lt;a href=&quot;https://github.com/FireworkSky&quot;&gt;FireworkSky&lt;/a&gt;&lt;br /&gt;&lt;a href=&quot;https://github.com/LaoSparrow&quot;&gt;LaoSparrow&lt;/a&gt;"
+                        android:textColor="?attr/textHint"
+                        android:textSize="12sp"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginStart="40dp"/>
+
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>

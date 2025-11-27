@@ -2,6 +2,8 @@ package com.app.ralaunch.settings;
 
 import android.app.Activity;
 import android.net.Uri;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -56,6 +58,7 @@ public class AppearanceSettingsModule implements SettingsModule {
         setupThemeColorSettings();
         setupBackgroundSettings();
         setupLanguageSettings();
+        setupAuthorLink();
     }
     
     private void setupThemeSettings() {
@@ -274,6 +277,15 @@ public class AppearanceSettingsModule implements SettingsModule {
         }
     }
     
+    private void setupAuthorLink() {
+        TextView tvAuthorLink = rootView.findViewById(R.id.tvAuthorLink);
+        if (tvAuthorLink != null) {
+            // Set the HTML text and make links clickable
+            tvAuthorLink.setText(Html.fromHtml(tvAuthorLink.getText().toString(), Html.FROM_HTML_MODE_LEGACY));
+            tvAuthorLink.setMovementMethod(LinkMovementMethod.getInstance());
+        }
+    }
+
     private void updateThemeDisplay(TextView textView) {
         int theme = settingsManager.getThemeMode();
         String display;

@@ -111,7 +111,8 @@ Rotating Art Launcher 是一个专为 Android 平台设计的游戏启动器，�
 
 ## 👥 作者
 
-**Fireworkshh** - [GitHub](https://github.com/Fireworkshh)
+**FireworkSky** - [GitHub](https://github.com/FireworkSky)
+**LaoSparrow** - [GitHub](https://github.com/LaoSparrow)
 
 ## 🙏 致谢
 

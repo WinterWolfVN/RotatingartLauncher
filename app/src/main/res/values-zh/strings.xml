@@ -12,8 +12,9 @@
     <string name="language_english">English</string>
     <string name="language_chinese">中文</string>
     <string name="app_info">应用信息</string>
-    <string name="app_version">版本 1.0.0</string>
+    <string name="app_version">版本 0.1.0-beta</string>
     <string name="app_description">Rotating art Launcher - 游戏启动器</string>
+    <string name="app_authors">作者:</string>
     <string name="restart_required">重启应用</string>
     <string name="restart_app_message">语言设置已更改，需要重启应用才能生效</string>
     <string name="ok">确定</string>
