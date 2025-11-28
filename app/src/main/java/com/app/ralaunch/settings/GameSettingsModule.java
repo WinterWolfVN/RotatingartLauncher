@@ -11,6 +11,7 @@ import com.app.ralaunch.renderer.RendererConfig;
 import com.app.ralaunch.utils.RuntimePreference;
 import com.app.ralib.dialog.OptionSelectorDialog;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ public class GameSettingsModule implements SettingsModule {
         this.settingsManager = SettingsManager.getInstance(fragment.requireContext());
         
         setupRendererSettings();
+        setupVulkanDriverSettings();
         setupPatchManagement();
     }
     
@@ -87,6 +89,35 @@ public class GameSettingsModule implements SettingsModule {
                     })
                     .show(fragment.getParentFragmentManager(), "renderer");
             });
+        }
+    }
+    
+    private void setupVulkanDriverSettings() {
+        // 检查是否为 Adreno GPU
+        com.app.ralaunch.utils.GLInfoUtils.GLInfo glInfo = com.app.ralaunch.utils.GLInfoUtils.getGlInfo();
+        boolean isAdreno = glInfo.isAdreno();
+        
+        MaterialCardView turnipDriverCard = rootView.findViewById(R.id.turnipDriverCard);
+        if (turnipDriverCard != null) {
+            // 只在 Adreno GPU 上显示 Turnip 驱动选项
+            if (isAdreno) {
+                turnipDriverCard.setVisibility(View.VISIBLE);
+                
+                SwitchMaterial switchTurnip = rootView.findViewById(R.id.switchTurnipDriver);
+                if (switchTurnip != null) {
+                    boolean turnipEnabled = settingsManager.isVulkanDriverTurnip();
+                    switchTurnip.setChecked(turnipEnabled);
+                    
+                    switchTurnip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                        settingsManager.setVulkanDriverTurnip(isChecked);
+                        Toast.makeText(fragment.requireContext(), 
+                            isChecked ? "已启用 Turnip 驱动" : "已禁用 Turnip 驱动（使用系统驱动）", 
+                            Toast.LENGTH_SHORT).show();
+                    });
+                }
+            } else {
+                turnipDriverCard.setVisibility(View.GONE);
+            }
         }
     }
     

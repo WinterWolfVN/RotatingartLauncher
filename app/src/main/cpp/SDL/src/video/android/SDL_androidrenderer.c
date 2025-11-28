@@ -114,6 +114,11 @@ static const char* GetRendererFromEnv(void)
         } else if (SDL_strcmp(ralcore_renderer, "mobilegl") == 0) {
             return "mobilegl";
         } else if (SDL_strcmp(ralcore_renderer, "vulkan_zink") == 0) {
+            // 检查是否是 zink25（通过 FNA3D_OPENGL_DRIVER 环境变量）
+            const char *fna3d_driver = SDL_getenv("FNA3D_OPENGL_DRIVER");
+            if (fna3d_driver && SDL_strcasecmp(fna3d_driver, "zink25") == 0) {
+                return "zink";  // zink25 也使用 "zink" 作为渲染器名称
+            }
             return "zink";
         } else if (SDL_strcmp(ralcore_renderer, "gallium_virgl") == 0) {
             return "virgl";
@@ -235,6 +240,9 @@ SDL_bool Android_LoadRenderer(const char *renderer_name)
  * gl4es: 使用专用的 Android_GL4ES_* 函数（通过 AGL 接口）
  * 其他渲染器: 使用标准 EGL 接口
  */
+/* Forward declaration for OSMesa drawable size */
+extern void Android_GLES_GetDrawableSize(SDL_VideoDevice *_this, SDL_Window *window, int *w, int *h);
+
 SDL_bool Android_SetupGLFunctions(SDL_VideoDevice *device)
 {
     const char *renderer_name;
@@ -259,6 +267,7 @@ SDL_bool Android_SetupGLFunctions(SDL_VideoDevice *device)
     device->GL_GetSwapInterval = Android_GLES_GetSwapInterval;
     device->GL_SwapWindow = Android_GLES_SwapWindow;
     device->GL_DeleteContext = Android_GLES_DeleteContext;
+    device->GL_GetDrawableSize = Android_GLES_GetDrawableSize; /* CRITICAL for OSMesa */
 
     LOGI("✓ GL functions configured");
 

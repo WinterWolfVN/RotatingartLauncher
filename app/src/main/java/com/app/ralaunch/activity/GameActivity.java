@@ -44,8 +44,13 @@ import com.app.ralaunch.controls.ControlLayout;
 import com.app.ralaunch.controls.SDLInputBridge;
 import com.app.ralib.patch.Patch;
 import com.app.ralib.patch.PatchManager;
+import com.app.ralaunch.renderer.OSMRenderer;
+import com.app.ralaunch.renderer.RendererConfig;
+import com.app.ralaunch.renderer.RendererLoader;
+import com.app.ralaunch.renderer.OSMSurface;
 
 import org.libsdl.app.SDLActivity;
+import android.view.Surface;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -94,6 +99,35 @@ public class GameActivity extends SDLActivity {
             AppLogger.warn(TAG, "Failed to apply renderer environment before loading libraries: " + e.getMessage());
         }
         super.loadLibraries();
+    }
+
+    /**
+     * 创建 SDL Surface（使用 OSMesa-aware Surface）
+     * 当选择 zink 渲染器时，使用 OSMSurface 以自动初始化 OSMesa
+     */
+    @Override
+    protected org.libsdl.app.SDLSurface createSDLSurface(Context context) {
+        try {
+            String currentRenderer = RendererLoader.getCurrentRenderer();
+            AppLogger.info(TAG, "Current renderer from environment: " + currentRenderer);
+            
+            // 检查是否是 zink 渲染器（RALCORE_RENDERER 可能是 "vulkan_zink"）
+            boolean isZink = RendererConfig.RENDERER_ZINK.equals(currentRenderer) || 
+                            RendererConfig.RENDERER_ZINK_25.equals(currentRenderer) ||
+                            "vulkan_zink".equals(currentRenderer);
+            
+            if (isZink) {
+                AppLogger.info(TAG, "Creating OSMesa-aware SDL Surface for zink renderer");
+                return new OSMSurface(context);
+            } else {
+                AppLogger.info(TAG, "Using standard SDL Surface for renderer: " + currentRenderer);
+            }
+        } catch (Exception e) {
+            AppLogger.warn(TAG, "Failed to check renderer, using default SDL Surface: " + e.getMessage());
+        }
+        
+        // 默认使用标准 SDL Surface
+        return super.createSDLSurface(context);
     }
 
     @Override
@@ -715,6 +749,21 @@ public class GameActivity extends SDLActivity {
     @Override
     protected void onDestroy() {
         AppLogger.info(TAG, "GameActivity.onDestroy() called");
+        
+        // 清理 OSMesa 渲染器
+        try {
+            String currentRenderer = RendererLoader.getCurrentRenderer();
+            if (RendererConfig.RENDERER_ZINK.equals(currentRenderer) || 
+                RendererConfig.RENDERER_ZINK_25.equals(currentRenderer)) {
+                if (OSMRenderer.isInitialized()) {
+                    AppLogger.info(TAG, "Cleaning up OSMesa renderer...");
+                    OSMRenderer.cleanup();
+                }
+            }
+        } catch (Exception e) {
+            AppLogger.warn(TAG, "Failed to cleanup OSMesa renderer: " + e.getMessage());
+        }
+        
         super.onDestroy();
     }
 

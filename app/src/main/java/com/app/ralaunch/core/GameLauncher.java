@@ -291,8 +291,8 @@ public class GameLauncher {
             com.app.ralaunch.utils.CoreCLRConfig.applyConfig(context);
 
             // 设置 COREHOST_TRACE（根据详细日志设置）
-            com.app.ralaunch.utils.SettingsManager utilsSettingsManager = com.app.ralaunch.utils.SettingsManager.getInstance(context);
-            boolean enableVerboseLogging = utilsSettingsManager.isVerboseLogging();
+            com.app.ralaunch.data.SettingsManager settingsManager = com.app.ralaunch.data.SettingsManager.getInstance(context);
+            boolean enableVerboseLogging = settingsManager.isVerboseLogging();
             netcorehostSetCorehostTrace(enableVerboseLogging);
             AppLogger.info(TAG, "COREHOST_TRACE: " + (enableVerboseLogging ? "启用" : "禁用"));
 

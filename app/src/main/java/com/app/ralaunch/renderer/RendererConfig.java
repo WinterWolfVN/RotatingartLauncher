@@ -278,6 +278,21 @@ public class RendererConfig {
      */
     public static Map<String, String> getRendererEnv(Context context, String rendererId) {
         Map<String, String> envMap = new HashMap<>();
+        
+        // 检查是否需要加载 Turnip 驱动（Adreno GPU）
+        com.app.ralaunch.utils.GLInfoUtils.GLInfo glInfo = com.app.ralaunch.utils.GLInfoUtils.getGlInfo();
+        boolean isAdreno = glInfo.isAdreno();
+        if (isAdreno) {
+            com.app.ralaunch.data.SettingsManager settingsManager = 
+                com.app.ralaunch.data.SettingsManager.getInstance(context);
+            boolean useTurnip = settingsManager.isVulkanDriverTurnip();
+            if (useTurnip) {
+                envMap.put("POJAV_LOAD_TURNIP", "1");
+                AppLogger.info(TAG, "Turnip Vulkan driver enabled for Adreno GPU");
+            } else {
+                AppLogger.info(TAG, "Using system Vulkan driver for Adreno GPU");
+            }
+        }
 
         switch (rendererId) {
             case RENDERER_GL4ES:
@@ -327,6 +342,12 @@ public class RendererConfig {
                 envMap.put("force_glsl_extensions_warn", "true");
                 envMap.put("allow_higher_compat_version", "true");
                 envMap.put("allow_glsl_extension_directive_midshader", "true");
+                // 注意：不要设置 LIBGL_ALWAYS_SOFTWARE=1，因为它会强制 zink 查找 CPU 设备
+                // 而 Android 设备通常没有 CPU Vulkan 设备，会导致 "CPU device requested but none found!" 错误
+                // zink 本身已经是软件渲染器（通过 Vulkan），不需要 LIBGL_ALWAYS_SOFTWARE
+                // 参考 PojavLauncher：不设置 MESA_VK_DEVICE_SELECT，让 zink 自动选择
+                // 但添加 ZINK_DESCRIPTORS 优化
+                envMap.put("ZINK_DESCRIPTORS", "auto");
                 break;
 
             case RENDERER_ZINK_25:
@@ -346,6 +367,13 @@ public class RendererConfig {
                 envMap.put("MESA_EXTENSION_MAX_YEAR", "2025");
                 // 修复 OSMesa EGL 配置问题 - 跳过 EGL_RENDERABLE_TYPE
                 envMap.put("SDL_EGL_SKIP_RENDERABLE_TYPE", "1");
+                // 注意：不要设置 LIBGL_ALWAYS_SOFTWARE=1，因为它会强制 zink 查找 CPU 设备
+                // 而 Android 设备通常没有 CPU Vulkan 设备，会导致 "CPU device requested but none found!" 错误
+                // zink 本身已经是软件渲染器（通过 Vulkan），不需要 LIBGL_ALWAYS_SOFTWARE
+                // zink Vulkan 设备选择：优先使用 GPU，避免 CPU 设备错误
+                // MESA_VK_DEVICE_SELECT: 0=第一个设备, 1=第二个设备, 等等
+                // 设置为 0 使用第一个可用设备（通常是 GPU）
+                envMap.put("MESA_VK_DEVICE_SELECT", "0");
                 break;
 
             case RENDERER_VIRGL:

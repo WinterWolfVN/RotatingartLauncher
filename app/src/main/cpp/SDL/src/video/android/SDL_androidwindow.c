@@ -93,17 +93,29 @@ int Android_CreateWindow(_THIS, SDL_Window *window)
 
     /* Do not create EGLSurface for Vulkan window since it will then make the window
        incompatible with vkCreateAndroidSurfaceKHR */
+    /* Also skip EGLSurface for OSMesa since OSMesa uses ANativeWindow_lock directly */
 #ifdef SDL_VIDEO_OPENGL_EGL
-    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "SDL_VIDEO_OPENGL_EGL is defined, creating EGL surface...");
-    if (window->flags & SDL_WINDOW_OPENGL) {
-        data->egl_surface = SDL_EGL_CreateSurface(_this, (NativeWindowType)data->native_window);
+    {
+        const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+        SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
+        
+        if (is_osmesa) {
+            __android_log_print(ANDROID_LOG_INFO, "SDL_Window", 
+                "OSMesa detected, skipping EGL surface creation (OSMesa uses ANativeWindow_lock)");
+            data->egl_surface = EGL_NO_SURFACE;
+        } else {
+            __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "SDL_VIDEO_OPENGL_EGL is defined, creating EGL surface...");
+            if (window->flags & SDL_WINDOW_OPENGL) {
+                data->egl_surface = SDL_EGL_CreateSurface(_this, (NativeWindowType)data->native_window);
 
-        if (data->egl_surface == EGL_NO_SURFACE) {
-            __android_log_print(ANDROID_LOG_ERROR, "SDL_Window", "❌ Failed to create EGL surface!");
-            ANativeWindow_release(data->native_window);
-            SDL_free(data);
-            retval = -1;
-            goto endfunction;
+                if (data->egl_surface == EGL_NO_SURFACE) {
+                    __android_log_print(ANDROID_LOG_ERROR, "SDL_Window", "❌ Failed to create EGL surface!");
+                    ANativeWindow_release(data->native_window);
+                    SDL_free(data);
+                    retval = -1;
+                    goto endfunction;
+                }
+            }
         }
     }
 #else

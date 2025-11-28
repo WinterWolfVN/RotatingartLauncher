@@ -90,6 +90,14 @@ public class RendererLoader {
                     Os.setenv("FNA3D_OPENGL_LIBRARY", eglLibPath, true);
                     AppLogger.info(TAG, "✓ FNA3D_OPENGL_LIBRARY = " + eglLibPath);
 
+                    // 对于 OSMesa 渲染器（zink），还需要设置 SDL_VIDEO_GL_DRIVER
+                    // 这样 SDL 的 opengl_dll_handle 就会指向 OSMesa 库，glGetString() 就会返回 zink 信息
+                    if (RendererConfig.RENDERER_ZINK.equals(rendererId) || 
+                        RendererConfig.RENDERER_ZINK_25.equals(rendererId)) {
+                        Os.setenv("SDL_VIDEO_GL_DRIVER", eglLibPath, true);
+                        AppLogger.info(TAG, "✓ SDL_VIDEO_GL_DRIVER = " + eglLibPath + " (for OSMesa zink)");
+                    }
+
                     // NOTE: Java 层不预加载渲染器库，让 C 层的 SDL_Android_LoadEGL 负责加载
                     // 原因：C 层需要使用 RTLD_GLOBAL 标志加载 ANGLE 以使符号全局可见
                     // Java 的 System.loadLibrary 使用 RTLD_LOCAL，导致 dlsym 无法找到 GL 函数
@@ -99,6 +107,46 @@ public class RendererLoader {
                     AppLogger.error(TAG, "Failed to preload renderer library: " + e.getMessage());
                 } catch (ErrnoException e) {
                     AppLogger.error(TAG, "Failed to set FNA3D_OPENGL_LIBRARY: " + e.getMessage());
+                }
+            }
+
+            // 设置 POJAV_NATIVEDIR 环境变量（Turnip 加载需要）
+            try {
+                String nativeLibDir = context.getApplicationInfo().nativeLibraryDir;
+                Os.setenv("POJAV_NATIVEDIR", nativeLibDir, true);
+                AppLogger.info(TAG, "✓ POJAV_NATIVEDIR = " + nativeLibDir);
+            } catch (ErrnoException e) {
+                AppLogger.error(TAG, "Failed to set POJAV_NATIVEDIR: " + e.getMessage());
+            }
+            
+            // 加载 Turnip Vulkan 驱动（如果启用且是 Adreno GPU）
+            loadTurnipDriverIfNeeded(context);
+            
+            // 对于 zink 渲染器，先加载 Vulkan（必须在 OSMesa 初始化之前）
+            if (RendererConfig.RENDERER_ZINK.equals(rendererId) || 
+                RendererConfig.RENDERER_ZINK_25.equals(rendererId)) {
+                try {
+                    AppLogger.info(TAG, "Zink renderer detected, loading Vulkan library...");
+                    
+                    // 加载 Vulkan 库（通过 native 方法）
+                    // 这必须在 OSMesa 初始化之前完成
+                    boolean vulkanLoaded = OSMRenderer.nativeLoadVulkan();
+                    if (vulkanLoaded) {
+                        AppLogger.info(TAG, "✓ Vulkan library loaded successfully");
+                    } else {
+                        AppLogger.warn(TAG, "⚠ Failed to load Vulkan library, zink may not work correctly");
+                    }
+                    
+                    // 检查 OSMesa 可用性
+                    boolean osmAvailable = OSMRenderer.isAvailable();
+                    if (osmAvailable) {
+                        AppLogger.info(TAG, "✓ OSMesa is available, will be initialized when Surface is ready");
+                        // OSMesa 初始化将在 GameActivity 中 Surface 创建后进行
+                    } else {
+                        AppLogger.warn(TAG, "⚠ OSMesa is not available, zink may fallback to EGL");
+                    }
+                } catch (Exception e) {
+                    AppLogger.error(TAG, "Failed to initialize zink renderer: " + e.getMessage());
                 }
             }
 
@@ -149,6 +197,37 @@ public class RendererLoader {
             AppLogger.info(TAG, "Renderer environment variables cleared");
         } catch (ErrnoException e) {
             AppLogger.error(TAG, "Failed to clear env: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 加载 Turnip Vulkan 驱动（如果启用）
+     */
+    private static void loadTurnipDriverIfNeeded(Context context) {
+        try {
+            // 检查是否为 Adreno GPU
+            com.app.ralaunch.utils.GLInfoUtils.GLInfo glInfo = 
+                com.app.ralaunch.utils.GLInfoUtils.getGlInfo();
+            if (!glInfo.isAdreno()) {
+                AppLogger.debug(TAG, "Not Adreno GPU, skipping Turnip loading");
+                return;
+            }
+            
+            // 检查设置
+            com.app.ralaunch.data.SettingsManager settingsManager = 
+                com.app.ralaunch.data.SettingsManager.getInstance(context);
+            boolean useTurnip = settingsManager.isVulkanDriverTurnip();
+            
+            if (useTurnip) {
+                AppLogger.info(TAG, "Loading Turnip Vulkan driver for Adreno GPU...");
+                // Turnip 加载在 native 层通过环境变量 POJAV_LOAD_TURNIP=1 触发
+                // 这里只需要确保环境变量已设置（已在 RendererConfig.getRendererEnv 中设置）
+                AppLogger.info(TAG, "Turnip driver will be loaded by native layer");
+            } else {
+                AppLogger.info(TAG, "Turnip driver disabled, using system Vulkan driver");
+            }
+        } catch (Exception e) {
+            AppLogger.error(TAG, "Failed to check Turnip driver settings: " + e.getMessage());
         }
     }
 }

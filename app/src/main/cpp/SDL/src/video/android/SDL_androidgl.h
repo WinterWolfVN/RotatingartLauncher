@@ -32,6 +32,7 @@ int Android_GLES_SetSwapInterval(_THIS, int interval);
 int Android_GLES_GetSwapInterval(_THIS);
 int Android_GLES_SwapWindow(_THIS, SDL_Window *window);
 void Android_GLES_DeleteContext(_THIS, SDL_GLContext context);
+void Android_GLES_GetDrawableSize(_THIS, SDL_Window *window, int *w, int *h);
 
 #endif /* SDL_androidgl_h_ */
 

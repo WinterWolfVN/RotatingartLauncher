@@ -58,6 +58,9 @@ public class SettingsManager {
         public static final String SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED = "set_thread_affinity_to_big_core_enabled";
         // FNA设置
         public static final String FNA_RENDERER = "fna_renderer";
+        
+        // Vulkan 驱动设置
+        public static final String VULKAN_DRIVER_TURNIP = "vulkan_driver_turnip"; // 是否使用 Turnip 驱动（Adreno GPU）
 
         // CoreCLR 运行时配置
         public static final String CORECLR_SERVER_GC = "coreclr_server_gc";
@@ -84,6 +87,9 @@ public class SettingsManager {
         public static final boolean VERBOSE_LOGGING = false;
         public static final boolean SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED = false;
         public static final String FNA_RENDERER = "auto";
+        
+        // Vulkan 驱动默认值
+        public static final boolean VULKAN_DRIVER_TURNIP = true; // 默认启用 Turnip（如果支持）
 
         // 控制设置
         public static final boolean CONTROLS_VIBRATION_ENABLED = true; // 默认开启振动反馈
@@ -324,6 +330,15 @@ public class SettingsManager {
 
     public void setFnaRenderer(String renderer) {
         putString(Keys.FNA_RENDERER, renderer);
+    }
+
+    // Vulkan 驱动设置
+    public boolean isVulkanDriverTurnip() {
+        return getBoolean(Keys.VULKAN_DRIVER_TURNIP, Defaults.VULKAN_DRIVER_TURNIP);
+    }
+
+    public void setVulkanDriverTurnip(boolean enabled) {
+        putBoolean(Keys.VULKAN_DRIVER_TURNIP, enabled);
     }
 
     // CoreCLR GC 设置

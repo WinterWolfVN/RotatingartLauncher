@@ -22,6 +22,8 @@
 
 #if defined(SDL_VIDEO_DRIVER_ANDROID) && defined(SDL_VIDEO_OPENGL_EGL)
 
+#include <unistd.h> // for usleep
+
 /* Android SDL video driver implementation */
 
 #include "SDL_video.h"
@@ -33,12 +35,117 @@
 #include "../../core/android/SDL_android.h"
 
 #include <android/log.h>
+#include <android/native_window.h>
 
 #include <dlfcn.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../../SDL_internal.h"  // SDL_bool is defined here
+#include "SDL_androidwindow.h"  // For SDL_WindowData
 
 int Android_GLES_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext context)
 {
     if (window && context) {
+        /* For OSMesa zink, create OSMesa context when SDL context is made current
+         * This ensures OSMesa context is ready before FNA3D calls glGetString()
+         */
+#ifdef __ANDROID__
+        const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+        SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
+
+        __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+            "MakeCurrent: FNA3D_OPENGL_LIBRARY=%s, is_osmesa=%d",
+            fna3d_gl_lib ? fna3d_gl_lib : "(null)", is_osmesa);
+
+        if (is_osmesa) {
+            /* Try to load osm_renderer_init from the main library using dlopen/dlsym
+             * Try multiple possible library names
+             */
+            static bool osm_initialized = false;
+            if (!osm_initialized) {
+                const char* lib_names[] = {"libralaunch.so", "libmain.so", NULL};
+                void *main_lib = NULL;
+                int i = 0;
+
+                while (lib_names[i] != NULL && main_lib == NULL) {
+                    main_lib = dlopen(lib_names[i], RTLD_LAZY | RTLD_LOCAL);
+                    if (main_lib) {
+                        __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                            "✓ Loaded library: %s", lib_names[i]);
+                    } else {
+                        __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                            "⚠ Failed to load %s: %s", lib_names[i], dlerror());
+                    }
+                    i++;
+                }
+
+                if (main_lib) {
+                    typedef bool (*osm_renderer_init_func)(ANativeWindow*);
+                    typedef bool (*osm_renderer_is_available_func)(void);
+                    typedef bool (*osm_renderer_is_initialized_func)(void);
+                    
+                    osm_renderer_is_available_func osm_is_available = (osm_renderer_is_available_func)
+                        dlsym(main_lib, "osm_renderer_is_available");
+                    osm_renderer_is_initialized_func osm_is_initialized = (osm_renderer_is_initialized_func)
+                        dlsym(main_lib, "osm_renderer_is_initialized");
+                    osm_renderer_init_func osm_init = (osm_renderer_init_func)
+                        dlsym(main_lib, "osm_renderer_init");
+
+                    __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                        "OSMesa function pointers: is_available=%p, is_initialized=%p, init=%p",
+                        osm_is_available, osm_is_initialized, osm_init);
+
+                    if (osm_is_available && osm_is_initialized && osm_init) {
+                        __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                            "All OSMesa functions loaded successfully");
+
+                        if (osm_is_available() && !osm_is_initialized()) {
+                            SDL_WindowData *data = (SDL_WindowData *)window->driverdata;
+                            ANativeWindow *native_window = data->native_window;
+
+                            if (native_window != NULL) {
+                                __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                                    "Creating OSMesa context when SDL context is made current...");
+                                if (osm_init(native_window)) {
+                                    __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                                        "✓ OSMesa context created and made current");
+                                    
+                                    // CRITICAL: Wait a bit for OSMesa context to be fully ready
+                                    // This ensures glGetString() will work when FNA3D initializes
+                                    // zink needs time to initialize the Vulkan device and OpenGL context
+                                    __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                                        "Waiting for OSMesa context to be fully ready...");
+                                    usleep(150000); // 150ms delay for zink initialization
+                                    
+                                    osm_initialized = true;
+                                } else {
+                                    __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                                        "⚠ Failed to create OSMesa context, will use EGL fallback");
+                                }
+                            } else {
+                                __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                                    "⚠ Native window is NULL, cannot create OSMesa context");
+                            }
+                        } else if (osm_is_initialized()) {
+                            osm_initialized = true;
+                        }
+                    } else {
+                        __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                            "⚠ Failed to load OSMesa functions from library");
+                    }
+                    // Don't close main_lib, we need the symbols to remain available
+                } else {
+                    __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                        "⚠ Failed to load any OSMesa-compatible library");
+                }
+            }
+            
+            /* For OSMesa, don't call SDL_EGL_MakeCurrent - OSMesa manages its own context */
+            __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                "OSMesa mode: returning success without EGL MakeCurrent");
+            return 0;
+        }
+#endif
         return SDL_EGL_MakeCurrent(_this, ((SDL_WindowData *)window->driverdata)->egl_surface, context);
     } else {
         return SDL_EGL_MakeCurrent(_this, NULL, NULL);
@@ -50,6 +157,23 @@ SDL_GLContext Android_GLES_CreateContext(_THIS, SDL_Window *window)
     SDL_GLContext ret;
 
     Android_ActivityMutex_Lock_Running();
+
+#ifdef __ANDROID__
+    /* For OSMesa, return a dummy context since OSMesa manages its own OpenGL context */
+    const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+    SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
+    
+    if (is_osmesa) {
+        __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+            "OSMesa detected, returning dummy GL context (OSMesa manages its own context)");
+        /* Return a non-NULL dummy pointer to indicate success
+         * OSMesa context is managed separately via osm_init_context()
+         * We use (void*)1 as a sentinel value to indicate "OSMesa mode"
+         */
+        SDL_UnlockMutex(Android_ActivityMutex);
+        return (SDL_GLContext)(void*)1;
+    }
+#endif
 
     ret = SDL_EGL_CreateContext(_this, ((SDL_WindowData *)window->driverdata)->egl_surface);
 
@@ -63,6 +187,41 @@ int Android_GLES_SwapWindow(_THIS, SDL_Window *window)
     int retval;
 
     SDL_LockMutex(Android_ActivityMutex);
+
+#ifdef __ANDROID__
+    /* For OSMesa/zink rendering, use OSMesa swap buffers instead of EGL
+     * OSMesa renders to a software buffer that needs to be copied to the native window
+     */
+    const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+    SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
+    
+    if (is_osmesa) {
+        /* Try to call osm_swap_buffers from the main library */
+        static void (*osm_swap_buffers_fn)(void) = NULL;
+        static SDL_bool osm_swap_init_attempted = SDL_FALSE;
+        
+        if (!osm_swap_init_attempted) {
+            osm_swap_init_attempted = SDL_TRUE;
+            void* main_lib = dlopen("libmain.so", RTLD_LAZY | RTLD_LOCAL);
+            if (main_lib) {
+                osm_swap_buffers_fn = (void (*)(void)) dlsym(main_lib, "osm_swap_buffers");
+                if (osm_swap_buffers_fn) {
+                    __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                        "✓ Found osm_swap_buffers function for OSMesa rendering");
+                }
+            }
+        }
+        
+        if (osm_swap_buffers_fn) {
+            osm_swap_buffers_fn();
+            SDL_UnlockMutex(Android_ActivityMutex);
+            return 0;
+        } else {
+            __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                "⚠ osm_swap_buffers not found, falling back to EGL swap");
+        }
+    }
+#endif
 
     /* The following two calls existed in the original Java code
      * If you happen to have a device that's affected by their removal,
@@ -103,7 +262,57 @@ int Android_GLES_LoadLibrary(_THIS, const char *path)
         __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
                     "Renderer '%s' already preloaded, passing library path to SDL_EGL_LoadLibrary",
                     current_renderer);
-        /* 传递库路径让 SDL_EGL_LoadLibrary 使用预加载的库 */
+        
+        /* 对于 zink 渲染器，在加载 EGL 库之前先加载 Vulkan
+         * zink 需要 Vulkan 在创建 OSMesa 上下文之前可用
+         * 注意：Vulkan 加载应该已经在 Java 层的 RendererLoader 中完成
+         * 这里只是确保 VULKAN_PTR 环境变量已设置
+         */
+        // 检查是否是 zink 渲染器（包括 zink25）
+        const char *fna3d_driver = SDL_getenv("FNA3D_OPENGL_DRIVER");
+        SDL_bool is_zink = (current_renderer && (SDL_strcmp(current_renderer, "zink") == 0 || 
+                                                 SDL_strstr(current_renderer, "vulkan_zink") != NULL)) ||
+                           (fna3d_driver && (SDL_strcasecmp(fna3d_driver, "zink") == 0 ||
+                                            SDL_strcasecmp(fna3d_driver, "zink25") == 0));
+        
+        if (is_zink) {
+            __android_log_print(ANDROID_LOG_INFO, "Android_GLES", 
+                        "Zink renderer detected, checking Vulkan availability...");
+            
+            /* 检查 VULKAN_PTR 环境变量（由 Java 层设置） */
+            const char* vulkan_ptr = SDL_getenv("VULKAN_PTR");
+            if (vulkan_ptr != NULL && vulkan_ptr[0] != '\0') {
+                __android_log_print(ANDROID_LOG_INFO, "Android_GLES", 
+                            "✓ Vulkan library already loaded (VULKAN_PTR=%s)", vulkan_ptr);
+            } else {
+                /* 如果 Java 层没有加载，尝试在这里加载 */
+                __android_log_print(ANDROID_LOG_WARN, "Android_GLES", 
+                            "⚠ VULKAN_PTR not set, attempting to load Vulkan...");
+                void* vulkan_handle = dlopen("libvulkan.so", RTLD_LAZY | RTLD_LOCAL);
+                if (vulkan_handle != NULL) {
+                    char envval[64];
+                    SDL_snprintf(envval, sizeof(envval), "%p", vulkan_handle);
+                    SDL_setenv("VULKAN_PTR", envval, 1);
+                    __android_log_print(ANDROID_LOG_INFO, "Android_GLES", 
+                                "✓ Vulkan library loaded: %s", envval);
+                } else {
+                    __android_log_print(ANDROID_LOG_WARN, "Android_GLES", 
+                                "⚠ Failed to load Vulkan library: %s", dlerror());
+                }
+            }
+        }
+        
+        /* 传递库路径让 SDL_EGL_LoadLibrary 使用预加载的库
+         * 注意：如果 egl_lib_path 是相对路径，需要检查 FNA3D_OPENGL_LIBRARY 环境变量
+         */
+        const char* fna3d_ogl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+        if (fna3d_ogl_lib && fna3d_ogl_lib[0] != '\0') {
+            __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                        "Using FNA3D_OPENGL_LIBRARY: %s", fna3d_ogl_lib);
+            return SDL_EGL_LoadLibrary(_this, fna3d_ogl_lib, (NativeDisplayType)0, 0);
+        }
+        
+        /* 回退到 egl_lib_path（可能是相对路径） */
         return SDL_EGL_LoadLibrary(_this, egl_lib_path, (NativeDisplayType)0, 0);
     }
     #endif
@@ -127,6 +336,52 @@ int Android_GLES_LoadLibrary(_THIS, const char *path)
 
 void *Android_GLES_GetProcAddress(_THIS, const char *proc)
 {
+#ifdef __ANDROID__
+    /* For OSMesa, use OSMesaGetProcAddress instead of EGL */
+    const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+    SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
+    
+    if (is_osmesa) {
+        /* Try to get OSMesaGetProcAddress from the OSMesa library */
+        static void* (*OSMesaGetProcAddress_fn)(const char*) = NULL;
+        static SDL_bool osmesa_proc_init_attempted = SDL_FALSE;
+        static int log_count = 0;
+        
+        if (!osmesa_proc_init_attempted) {
+            osmesa_proc_init_attempted = SDL_TRUE;
+            void* osmesa_lib = dlopen(fna3d_gl_lib, RTLD_LAZY | RTLD_LOCAL);
+            if (osmesa_lib) {
+                OSMesaGetProcAddress_fn = (void* (*)(const char*)) dlsym(osmesa_lib, "OSMesaGetProcAddress");
+                if (OSMesaGetProcAddress_fn) {
+                    __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                        "✓ OSMesaGetProcAddress loaded for GL function lookup from %s", fna3d_gl_lib);
+                } else {
+                    __android_log_print(ANDROID_LOG_ERROR, "Android_GLES",
+                        "✗ OSMesaGetProcAddress NOT found in %s", fna3d_gl_lib);
+                }
+            } else {
+                __android_log_print(ANDROID_LOG_ERROR, "Android_GLES",
+                    "✗ Failed to dlopen OSMesa library: %s - %s", fna3d_gl_lib, dlerror());
+            }
+        }
+        
+        if (OSMesaGetProcAddress_fn) {
+            void* result = OSMesaGetProcAddress_fn(proc);
+            /* Log first 20 function lookups */
+            if (log_count < 20) {
+                __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                    "GetProcAddress(%s) -> OSMesa: %p", proc, result);
+                log_count++;
+            }
+            if (result) {
+                return result;
+            }
+            /* Fall through to EGL if OSMesa doesn't have the function */
+            __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                "OSMesaGetProcAddress returned NULL for %s, falling back to EGL", proc);
+        }
+    }
+#endif
     return SDL_EGL_GetProcAddress(_this, proc);
 }
 
@@ -147,7 +402,50 @@ int Android_GLES_GetSwapInterval(_THIS)
 
 void Android_GLES_DeleteContext(_THIS, SDL_GLContext context)
 {
+#ifdef __ANDROID__
+    /* For OSMesa, the context is a dummy pointer - don't call EGL delete */
+    const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+    SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
+    
+    if (is_osmesa) {
+        __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+            "OSMesa mode: skipping EGL DeleteContext (OSMesa manages its own context)");
+        return;
+    }
+#endif
     SDL_EGL_DeleteContext(_this, context);
+}
+
+void Android_GLES_GetDrawableSize(_THIS, SDL_Window *window, int *w, int *h)
+{
+#ifdef __ANDROID__
+    const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+    SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
+    
+    if (is_osmesa) {
+        /* For OSMesa, get the drawable size from the native window */
+        SDL_WindowData *data = (SDL_WindowData *)window->driverdata;
+        if (data && data->native_window) {
+            int native_w = ANativeWindow_getWidth(data->native_window);
+            int native_h = ANativeWindow_getHeight(data->native_window);
+            if (native_w > 0 && native_h > 0) {
+                if (w) *w = native_w;
+                if (h) *h = native_h;
+                __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                    "OSMesa GetDrawableSize: %dx%d (from ANativeWindow)", native_w, native_h);
+                return;
+            }
+        }
+        /* Fall back to window size */
+        if (w) *w = window->w;
+        if (h) *h = window->h;
+        __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+            "OSMesa GetDrawableSize: %dx%d (fallback to window size)", window->w, window->h);
+        return;
+    }
+#endif
+    /* Default: use window size in pixels */
+    SDL_GetWindowSizeInPixels(window, w, h);
 }
 
 #endif /* SDL_VIDEO_DRIVER_ANDROID */

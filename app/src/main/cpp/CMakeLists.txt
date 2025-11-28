@@ -94,6 +94,15 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         app_logger_jni.c
         renderer_loader.c
         thread_affinity_manager.cpp
+        # OSMesa integration
+        osmesa/osmesa_loader.c
+        osmesa/osm_bridge.c
+        osmesa/osm_renderer.c
+        osmesa/osm_renderer_jni.c
+        osmesa/vulkan_loader.c
+        vulkan_turnip_loader.c
+        driver_helper/nsbypass.c
+        utils/loader_dlopen.c
 )
 
 # 链接库
@@ -116,10 +125,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 # 包含 SDL、FNA3D 和 netcorehost 头文件
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${SDL_SOURCE_DIR}/include
-
         ${FNA3D_SOURCE_DIR}/include
         ${NETCOREHOST_SOURCE_DIR}/include
         ${LGOG_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}  # For GL/osmesa.h and other local headers
 )
 
 install(TARGETS ${CMAKE_PROJECT_NAME} SDL2 FAudio-shared FNA3D netcorehost DESTINATION ${CMAKE_INSTALL_LIBDIR})

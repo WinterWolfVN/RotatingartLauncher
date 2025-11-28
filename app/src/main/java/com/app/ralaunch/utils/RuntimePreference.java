@@ -190,7 +190,8 @@ public final class RuntimePreference {
         // 根据渲染器类型设置 OpenGL 配置
         // gl4es 和 zink 需要桌面 OpenGL，native 和 angle 使用 OpenGL ES 3.0
         if (RendererConfig.RENDERER_GL4ES.equals(rendererId) ||
-            RendererConfig.RENDERER_ZINK.equals(rendererId)) {
+            RendererConfig.RENDERER_ZINK.equals(rendererId) ||
+            RendererConfig.RENDERER_ZINK_25.equals(rendererId)) {
             // gl4es: OpenGL 2.1 Compatibility Profile
             // zink: OpenGL 4.6 Core/Compatibility Profile
             // 不设置 FNA3D_OPENGL_FORCE_ES3，让 FNA3D 使用桌面 OpenGL
@@ -200,8 +201,14 @@ public final class RuntimePreference {
 
             if (RendererConfig.RENDERER_GL4ES.equals(rendererId)) {
                 android.util.Log.i(TAG, "FNA3D configured for Desktop OpenGL 2.1 Compatibility Profile (renderer: gl4es)");
-            } else {
-                android.util.Log.i(TAG, "FNA3D configured for Desktop OpenGL 4.6 (renderer: zink)");
+            } else if (RendererConfig.RENDERER_ZINK.equals(rendererId) || RendererConfig.RENDERER_ZINK_25.equals(rendererId)) {
+                android.util.Log.i(TAG, "FNA3D configured for Desktop OpenGL 4.6 (renderer: " + rendererId + ")");
+                
+                // 强制使用 glsles3 shader profile 以避免 glspirv 被选择
+                // glspirv 需要 GL_ARB_gl_spirv 扩展，但大多数实现不支持
+                // glsles3 可以正常工作，因为 zink 会将所有内容转换为 Vulkan SPIR-V
+                setEnv("FNA3D_MOJOSHADER_PROFILE", "glsles3");
+                android.util.Log.i(TAG, "FNA3D_MOJOSHADER_PROFILE = glsles3 (forced for zink to avoid glspirv)");
             }
         } else {
             // native 和 angle 使用 OpenGL ES 3.0
