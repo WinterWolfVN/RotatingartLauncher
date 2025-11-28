@@ -1,6 +1,5 @@
 //
 // Namespace bypass for loading Turnip Vulkan driver
-// Based on PojavLauncher's implementation by maks
 //
 
 #include "nsbypass.h"

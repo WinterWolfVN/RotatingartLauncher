@@ -129,7 +129,7 @@ static SDL_VideoDevice *Android_CreateDevice(void)
     device->free = Android_DeleteDevice;
 
     /* ================================================================
-     * 🔥 Dynamic Renderer Loading (lwjgl3 + PojavLauncher style)
+     * 🔥 Dynamic Renderer Loading
      * ================================================================
      *
      * 支持运行时动态切换渲染器，无需重新编译

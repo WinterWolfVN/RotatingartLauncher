@@ -4,7 +4,6 @@
  * 渲染器动态加载 JNI 实现
  *
  * 提供 dlopen/dlclose/dlsym 和环境变量操作的 JNI 接口
- * 参考 PojavLauncher 的 JREUtils native 实现
  */
 
 #include <jni.h>

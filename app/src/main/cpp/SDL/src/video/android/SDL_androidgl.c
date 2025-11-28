@@ -260,20 +260,20 @@ int Android_GLES_LoadLibrary(_THIS, const char *path)
 
     if (current_renderer && SDL_strcmp(current_renderer, "native") != 0 && SDL_strcmp(current_renderer, "none") != 0) {
         __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
-                    "Renderer '%s' already preloaded, passing library path to SDL_EGL_LoadLibrary",
-                    current_renderer);
+                    "Renderer '%s' already preloaded", current_renderer);
         
-        /* 对于 zink 渲染器，在加载 EGL 库之前先加载 Vulkan
-         * zink 需要 Vulkan 在创建 OSMesa 上下文之前可用
-         * 注意：Vulkan 加载应该已经在 Java 层的 RendererLoader 中完成
-         * 这里只是确保 VULKAN_PTR 环境变量已设置
+        /* 检查是否是 OSMesa 渲染器（zink/virgl 等）
+         * OSMesa 渲染器需要使用 OSMesa 库路径
+         * 其他渲染器（gl4es 等）使用系统 EGL + 自定义 GL 库
          */
-        // 检查是否是 zink 渲染器（包括 zink25）
+        const char* fna3d_ogl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
+        SDL_bool is_osmesa = (fna3d_ogl_lib && SDL_strcasestr(fna3d_ogl_lib, "osmesa"));
+        
+        // 检查是否是 zink 渲染器
         const char *fna3d_driver = SDL_getenv("FNA3D_OPENGL_DRIVER");
         SDL_bool is_zink = (current_renderer && (SDL_strcmp(current_renderer, "zink") == 0 || 
                                                  SDL_strstr(current_renderer, "vulkan_zink") != NULL)) ||
-                           (fna3d_driver && (SDL_strcasecmp(fna3d_driver, "zink") == 0 ||
-                                            SDL_strcasecmp(fna3d_driver, "zink25") == 0));
+                           (fna3d_driver && SDL_strcasecmp(fna3d_driver, "zink") == 0);
         
         if (is_zink) {
             __android_log_print(ANDROID_LOG_INFO, "Android_GLES", 
@@ -302,24 +302,27 @@ int Android_GLES_LoadLibrary(_THIS, const char *path)
             }
         }
         
-        /* 传递库路径让 SDL_EGL_LoadLibrary 使用预加载的库
-         * 注意：如果 egl_lib_path 是相对路径，需要检查 FNA3D_OPENGL_LIBRARY 环境变量
+        /* 对于 OSMesa 渲染器，传递 OSMesa 库路径给 SDL_EGL_LoadLibrary
+         * OSMesa 不使用真正的 EGL，但需要加载库以获取 GL 函数
          */
-        const char* fna3d_ogl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
-        if (fna3d_ogl_lib && fna3d_ogl_lib[0] != '\0') {
+        if (is_osmesa && fna3d_ogl_lib) {
             __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
-                        "Using FNA3D_OPENGL_LIBRARY: %s", fna3d_ogl_lib);
+                        "OSMesa renderer: Using OSMesa library: %s", fna3d_ogl_lib);
             return SDL_EGL_LoadLibrary(_this, fna3d_ogl_lib, (NativeDisplayType)0, 0);
         }
         
-        /* 回退到 egl_lib_path（可能是相对路径） */
-        return SDL_EGL_LoadLibrary(_this, egl_lib_path, (NativeDisplayType)0, 0);
+        /* 对于非 OSMesa 渲染器（gl4es 等），使用系统 EGL
+         * GL 函数将通过 eglGetProcAddress 或 dlsym 从预加载的 GL 库获取
+         */
+        __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                    "Non-OSMesa renderer '%s': Using system EGL with preloaded GL library",
+                    current_renderer);
+        return SDL_EGL_LoadLibrary(_this, NULL, (NativeDisplayType)0, 0);
     }
     #endif
 
     /* 检查是否通过 FNA3D_OPENGL_LIBRARY 环境变量指定了自定义 EGL 库
-     * 这个方法参考了 PojavLauncher 的实现,使用环境变量指定库路径绕过 Android 链接器命名空间限制
-     * 参考: PojavLauncher egl_loader.c 的 POJAVEXEC_EGL 实现
+     * 使用环境变量指定库路径绕过 Android 链接器命名空间限制
      */
     custom_egl_path = SDL_getenv("FNA3D_OPENGL_LIBRARY");
 
@@ -337,12 +340,11 @@ int Android_GLES_LoadLibrary(_THIS, const char *path)
 void *Android_GLES_GetProcAddress(_THIS, const char *proc)
 {
 #ifdef __ANDROID__
-    /* For OSMesa, use OSMesaGetProcAddress instead of EGL */
     const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
     SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
     
+    /* For OSMesa, use OSMesaGetProcAddress */
     if (is_osmesa) {
-        /* Try to get OSMesaGetProcAddress from the OSMesa library */
         static void* (*OSMesaGetProcAddress_fn)(const char*) = NULL;
         static SDL_bool osmesa_proc_init_attempted = SDL_FALSE;
         static int log_count = 0;
@@ -367,7 +369,6 @@ void *Android_GLES_GetProcAddress(_THIS, const char *proc)
         
         if (OSMesaGetProcAddress_fn) {
             void* result = OSMesaGetProcAddress_fn(proc);
-            /* Log first 20 function lookups */
             if (log_count < 20) {
                 __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
                     "GetProcAddress(%s) -> OSMesa: %p", proc, result);
@@ -376,9 +377,47 @@ void *Android_GLES_GetProcAddress(_THIS, const char *proc)
             if (result) {
                 return result;
             }
-            /* Fall through to EGL if OSMesa doesn't have the function */
             __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
                 "OSMesaGetProcAddress returned NULL for %s, falling back to EGL", proc);
+        }
+    }
+    
+    /* For custom GL libraries (gl4es, etc.), try dlsym first
+     * These libraries provide their own GL implementations
+     */
+    if (fna3d_gl_lib && !is_osmesa) {
+        static void* custom_gl_lib = NULL;
+        static SDL_bool custom_gl_init_attempted = SDL_FALSE;
+        static int custom_log_count = 0;
+        
+        if (!custom_gl_init_attempted) {
+            custom_gl_init_attempted = SDL_TRUE;
+            /* Open with RTLD_NOLOAD to get the already-loaded library handle */
+            custom_gl_lib = dlopen(fna3d_gl_lib, RTLD_LAZY | RTLD_NOLOAD);
+            if (!custom_gl_lib) {
+                /* Try opening it normally */
+                custom_gl_lib = dlopen(fna3d_gl_lib, RTLD_LAZY | RTLD_LOCAL);
+            }
+            if (custom_gl_lib) {
+                __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                    "✓ Custom GL library loaded for function lookup: %s", fna3d_gl_lib);
+            } else {
+                __android_log_print(ANDROID_LOG_WARN, "Android_GLES",
+                    "⚠ Failed to load custom GL library: %s - %s", fna3d_gl_lib, dlerror());
+            }
+        }
+        
+        if (custom_gl_lib) {
+            void* result = dlsym(custom_gl_lib, proc);
+            if (result) {
+                if (custom_log_count < 20) {
+                    __android_log_print(ANDROID_LOG_INFO, "Android_GLES",
+                        "GetProcAddress(%s) -> Custom GL: %p", proc, result);
+                    custom_log_count++;
+                }
+                return result;
+            }
+            /* Fall through to EGL if custom library doesn't have the function */
         }
     }
 #endif

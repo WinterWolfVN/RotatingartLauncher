@@ -50,7 +50,6 @@ public class OSMSurface extends SDLSurface {
             
             // 检查是否是 zink 渲染器（RALCORE_RENDERER 可能是 "vulkan_zink"）
             boolean isZink = RendererConfig.RENDERER_ZINK.equals(currentRenderer) || 
-                            RendererConfig.RENDERER_ZINK_25.equals(currentRenderer) ||
                             "vulkan_zink".equals(currentRenderer);
             
             if (isZink) {

@@ -18,9 +18,8 @@ static __thread osm_render_window_t* currentBundle = NULL;
 // Global context pointer (not thread-local) for cross-thread access
 static osm_render_window_t* g_global_context = NULL;
 // Dummy buffer for rendering when there's nowhere to render
-// Use a small buffer (1x1) like PojavLauncher does
-// Even a 1x1 buffer is enough to initialize OSMesa context with zink
-static char dummy_buffer[4]; // RGBA, 1x1 (same as PojavLauncher)
+// Use a small buffer (1x1) - even a 1x1 buffer is enough to initialize OSMesa context with zink
+static char dummy_buffer[4]; // RGBA, 1x1
 // Track if buffer is currently locked (per-thread)
 static __thread bool buffer_is_locked = false;
 
@@ -114,9 +113,7 @@ osm_render_window_t* osm_init_context(osm_render_window_t* share) {
 }
 
 void osm_set_no_render_buffer(ANativeWindow_Buffer* buffer) {
-    // Use a small dummy buffer (like PojavLauncher does)
-    // Even a 1x1 buffer is enough to initialize OSMesa context
-    // PojavLauncher uses a 1x1 buffer successfully with zink
+    // Use a small dummy buffer - even a 1x1 buffer is enough to initialize OSMesa context
     buffer->bits = dummy_buffer;
     buffer->width = 1;
     buffer->height = 1;
@@ -211,7 +208,7 @@ void osm_make_current(osm_render_window_t* bundle) {
     
     currentBundle = bundle;
     
-    // CRITICAL: PojavLauncher pattern - use a small dummy buffer FIRST to initialize context
+    // CRITICAL: Use a small dummy buffer FIRST to initialize context
     // This ensures OSMesa context is ready even before native surface is available
     // Surface management is handled by osm_swap_buffers, not here
     osm_set_no_render_buffer(&bundle->buffer);

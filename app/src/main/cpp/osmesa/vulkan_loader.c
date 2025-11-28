@@ -69,7 +69,7 @@ bool vulkan_loader_load(void) {
 
     LOGI("Vulkan library loaded successfully: %p", g_vulkan_handle);
     
-    // Store pointer in environment variable (for compatibility with PojavLauncher approach)
+    // Store pointer in environment variable
     set_vulkan_ptr(g_vulkan_handle);
     
     return true;

@@ -113,7 +113,6 @@ public class GameActivity extends SDLActivity {
             
             // 检查是否是 zink 渲染器（RALCORE_RENDERER 可能是 "vulkan_zink"）
             boolean isZink = RendererConfig.RENDERER_ZINK.equals(currentRenderer) || 
-                            RendererConfig.RENDERER_ZINK_25.equals(currentRenderer) ||
                             "vulkan_zink".equals(currentRenderer);
             
             if (isZink) {
@@ -753,8 +752,7 @@ public class GameActivity extends SDLActivity {
         // 清理 OSMesa 渲染器
         try {
             String currentRenderer = RendererLoader.getCurrentRenderer();
-            if (RendererConfig.RENDERER_ZINK.equals(currentRenderer) || 
-                RendererConfig.RENDERER_ZINK_25.equals(currentRenderer)) {
+            if (RendererConfig.RENDERER_ZINK.equals(currentRenderer)) {
                 if (OSMRenderer.isInitialized()) {
                     AppLogger.info(TAG, "Cleaning up OSMesa renderer...");
                     OSMRenderer.cleanup();

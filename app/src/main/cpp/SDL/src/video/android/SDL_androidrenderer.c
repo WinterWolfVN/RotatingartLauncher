@@ -48,14 +48,6 @@ static const SDL_RendererBackend RENDERER_BACKENDS[] = {
         .need_preload = SDL_TRUE
     },
 
-    /* MobileGlues (OpenGL 4.6 翻译到 GLES 3.2) */
-    {
-        .name = "mobilegl",
-        .egl_library = "libMobileGL.so",
-        .gles_library = "libMobileGL.so",
-        .need_preload = SDL_TRUE
-    },
-
     /* ANGLE (OpenGL ES over Vulkan) */
     {
         .name = "angle",
@@ -67,8 +59,8 @@ static const SDL_RendererBackend RENDERER_BACKENDS[] = {
     /* Zink (OpenGL over Vulkan via OSMesa) */
     {
         .name = "zink",
-        .egl_library = "libOSMesa_25.so",
-        .gles_library = "libOSMesa_25.so",
+        .egl_library = "libOSMesa.so",
+        .gles_library = "libOSMesa.so",
         .need_preload = SDL_TRUE
     },
 
@@ -111,14 +103,7 @@ static const char* GetRendererFromEnv(void)
         /* 映射 RALCORE_RENDERER 值到渲染器名称 */
         if (SDL_strcmp(ralcore_renderer, "gl4es") == 0) {
             return "gl4es";
-        } else if (SDL_strcmp(ralcore_renderer, "mobilegl") == 0) {
-            return "mobilegl";
         } else if (SDL_strcmp(ralcore_renderer, "vulkan_zink") == 0) {
-            // 检查是否是 zink25（通过 FNA3D_OPENGL_DRIVER 环境变量）
-            const char *fna3d_driver = SDL_getenv("FNA3D_OPENGL_DRIVER");
-            if (fna3d_driver && SDL_strcasecmp(fna3d_driver, "zink25") == 0) {
-                return "zink";  // zink25 也使用 "zink" 作为渲染器名称
-            }
             return "zink";
         } else if (SDL_strcmp(ralcore_renderer, "gallium_virgl") == 0) {
             return "virgl";

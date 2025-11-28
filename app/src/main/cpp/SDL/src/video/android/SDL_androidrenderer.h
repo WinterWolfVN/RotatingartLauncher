@@ -23,8 +23,7 @@
  * @file SDL_androidrenderer.h
  *
  * Android Dynamic Renderer Loading
- *
- * 参考 lwjgl3 的 SharedLibrary 和 PojavLauncher 的动态加载机制
+
  * 实现运行时动态切换渲染器，无需重新编译
  */
 

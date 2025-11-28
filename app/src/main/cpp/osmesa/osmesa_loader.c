@@ -24,8 +24,8 @@ void (*glReadPixels_p) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum 
 void* (*OSMesaGetProcAddress_p)(const char* funcName);
 
 bool dlsym_OSMesa(void) {
-    // Try to load libOSMesa_25.so first (for Mesa 25), then fallback to libOSMesa.so
-    void* dl_handle = loader_dlopen("libOSMesa_25.so", "libOSMesa.so", RTLD_LOCAL | RTLD_LAZY);
+    // Load libOSMesa.so
+    void* dl_handle = loader_dlopen("libOSMesa.so", NULL, RTLD_LOCAL | RTLD_LAZY);
     if (dl_handle == NULL) {
         return false;
     }

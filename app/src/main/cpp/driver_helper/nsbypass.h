@@ -1,6 +1,5 @@
 //
 // Namespace bypass for loading Turnip Vulkan driver
-// Based on PojavLauncher's implementation
 //
 
 #ifndef RALAUNCH_NSBYPASS_H

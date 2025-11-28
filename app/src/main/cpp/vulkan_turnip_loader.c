@@ -42,9 +42,9 @@ static void set_vulkan_ptr(void* ptr) {
  */
 bool vulkan_turnip_loader_load(void) {
     // 检查环境变量
-    const char* load_turnip = getenv("POJAV_LOAD_TURNIP");
+    const char* load_turnip = getenv("RALCORE_LOAD_TURNIP");
     if (load_turnip == NULL || strcmp(load_turnip, "1") != 0) {
-        LOGI("POJAV_LOAD_TURNIP not set or disabled, skipping Turnip loading");
+        LOGI("RALCORE_LOAD_TURNIP not set or disabled, skipping Turnip loading");
         return false;
     }
 
@@ -58,7 +58,7 @@ bool vulkan_turnip_loader_load(void) {
     LOGI("========================================");
 
     // 获取 native 库目录
-    const char* native_dir = getenv("POJAV_NATIVEDIR");
+    const char* native_dir = getenv("RALCORE_NATIVEDIR");
     if (native_dir == NULL) {
         native_dir = getenv("ANDROID_APP_NATIVE_LIB_DIR");
     }

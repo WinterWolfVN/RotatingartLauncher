@@ -190,8 +190,7 @@ public final class RuntimePreference {
         // 根据渲染器类型设置 OpenGL 配置
         // gl4es 和 zink 需要桌面 OpenGL，native 和 angle 使用 OpenGL ES 3.0
         if (RendererConfig.RENDERER_GL4ES.equals(rendererId) ||
-            RendererConfig.RENDERER_ZINK.equals(rendererId) ||
-            RendererConfig.RENDERER_ZINK_25.equals(rendererId)) {
+            RendererConfig.RENDERER_ZINK.equals(rendererId)) {
             // gl4es: OpenGL 2.1 Compatibility Profile
             // zink: OpenGL 4.6 Core/Compatibility Profile
             // 不设置 FNA3D_OPENGL_FORCE_ES3，让 FNA3D 使用桌面 OpenGL
@@ -201,7 +200,7 @@ public final class RuntimePreference {
 
             if (RendererConfig.RENDERER_GL4ES.equals(rendererId)) {
                 android.util.Log.i(TAG, "FNA3D configured for Desktop OpenGL 2.1 Compatibility Profile (renderer: gl4es)");
-            } else if (RendererConfig.RENDERER_ZINK.equals(rendererId) || RendererConfig.RENDERER_ZINK_25.equals(rendererId)) {
+            } else if (RendererConfig.RENDERER_ZINK.equals(rendererId)) {
                 android.util.Log.i(TAG, "FNA3D configured for Desktop OpenGL 4.6 (renderer: " + rendererId + ")");
                 
                 // 强制使用 glsles3 shader profile 以避免 glspirv 被选择
