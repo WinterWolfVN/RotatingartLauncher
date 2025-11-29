@@ -87,7 +87,7 @@ __attribute__((visibility("default")))
 float RAL_GetTouchX(int index) {
     if (index >= 0 && index < g_touch_data.count) {
         // 返回像素坐标
-        return g_touch_data.x[index] * g_touch_data.screen_width;
+        return g_touch_data.x[index];
     }
     return 0.0f;
 }
@@ -96,7 +96,7 @@ __attribute__((visibility("default")))
 float RAL_GetTouchY(int index) {
     if (index >= 0 && index < g_touch_data.count) {
         // 返回像素坐标
-        return g_touch_data.y[index] * g_touch_data.screen_height;
+        return g_touch_data.y[index];
     }
     return 0.0f;
 }

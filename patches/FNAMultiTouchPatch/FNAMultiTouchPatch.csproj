@@ -19,7 +19,7 @@
       <Private>false</Private>
     </Reference>
     <Reference Include="tModLoader">
-      <HintPath>C:\GOG Games\tModLoader\tModLoader.dll</HintPath>
+      <HintPath>..\tModLoader.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

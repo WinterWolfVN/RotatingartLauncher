@@ -165,8 +165,8 @@ public static class MultiTouchPatcher
             
             if (isTouching)
             {
-                screenX = (int)RAL_GetTouchX(0);
-                screenY = (int)RAL_GetTouchY(0);
+                screenX = (int)(RAL_GetTouchX(0) * Main.screenWidth);
+                screenY = (int)(RAL_GetTouchY(0) * Main.screenHeight);
             }
             
             // 检测额外触摸点的按下边缘
@@ -181,8 +181,8 @@ public static class MultiTouchPatcher
                 if (!wasActive)
                 {
                     extraJustPressed = true;
-                    extraX = (int)RAL_GetTouchX(i);
-                    extraY = (int)RAL_GetTouchY(i);
+                    extraX = (int)(RAL_GetTouchX(i) * Main.screenWidth);
+                    extraY = (int)(RAL_GetTouchY(i) * Main.screenHeight);
                     Console.WriteLine($"[MultiTouchPatch] Extra touch at ({extraX}, {extraY})");
                     break;
                 }
