@@ -30,6 +30,23 @@ public static class MultiTouchPatcher
     [DllImport("main", CallingConvention = CallingConvention.Cdecl)]
     private static extern float RAL_GetTouchY(int index);
     
+    // 屏幕尺寸（Android 物理分辨率）
+    [DllImport("main", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int RAL_GetScreenWidth();
+    
+    [DllImport("main", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int RAL_GetScreenHeight();
+    
+    // 虚拟鼠标位置（右摇杆鼠标移动模式）
+    [DllImport("main", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int RAL_IsVirtualMouseActive();
+    
+    [DllImport("main", CallingConvention = CallingConvention.Cdecl)]
+    private static extern float RAL_GetVirtualMouseX();
+    
+    [DllImport("main", CallingConvention = CallingConvention.Cdecl)]
+    private static extern float RAL_GetVirtualMouseY();
+    
     // 共享的触摸状态（供 Mouse.GetState patch 使用）
     public static int CurrentTouchX = 0;
     public static int CurrentTouchY = 0;
@@ -150,9 +167,12 @@ public static class MultiTouchPatcher
             // 从 JNI 桥获取触摸数据
             int touchCount = RAL_GetTouchCount();
             
+            // 检查虚拟鼠标是否启用（右摇杆鼠标移动模式）
+            bool virtualMouseActive = RAL_IsVirtualMouseActive() != 0;
+            
             if (shouldLog)
             {
-                Console.WriteLine($"[MultiTouchPatch] Frame {_frameCount}: touchCount={touchCount}");
+                Console.WriteLine($"[MultiTouchPatch] Frame {_frameCount}: touchCount={touchCount}, virtualMouse={virtualMouseActive}");
             }
             
             // 保存旧状态
@@ -163,8 +183,28 @@ public static class MultiTouchPatcher
             int screenX = _lastTouchX;
             int screenY = _lastTouchY;
             
-            if (isTouching)
+            // 获取 Android 物理分辨率（touch_bridge 存储的）
+            int androidWidth = RAL_GetScreenWidth();
+            int androidHeight = RAL_GetScreenHeight();
+            
+            // 计算缩放比例（Android 物理分辨率 -> 游戏分辨率）
+            float scaleX = (androidWidth > 0) ? (float)Main.screenWidth / androidWidth : 1.0f;
+            float scaleY = (androidHeight > 0) ? (float)Main.screenHeight / androidHeight : 1.0f;
+            
+            // 如果虚拟鼠标启用，使用虚拟鼠标位置（右摇杆控制）
+            if (virtualMouseActive)
             {
+                // 虚拟鼠标位置是 Android 像素坐标，需要转换为游戏坐标
+                screenX = (int)(RAL_GetVirtualMouseX() * scaleX);
+                screenY = (int)(RAL_GetVirtualMouseY() * scaleY);
+                // 虚拟鼠标模式下，鼠标位置由右摇杆控制，触屏控制是否按下
+                // 始终更新最后触摸位置，即使没有触摸也要更新虚拟鼠标位置
+                _lastTouchX = screenX;
+                _lastTouchY = screenY;
+            }
+            else if (isTouching)
+            {
+                // 触屏坐标是归一化的（0-1），转换为游戏坐标
                 screenX = (int)(RAL_GetTouchX(0) * Main.screenWidth);
                 screenY = (int)(RAL_GetTouchY(0) * Main.screenHeight);
             }
@@ -181,6 +221,7 @@ public static class MultiTouchPatcher
                 if (!wasActive)
                 {
                     extraJustPressed = true;
+                    // 额外触摸点也使用归一化坐标
                     extraX = (int)(RAL_GetTouchX(i) * Main.screenWidth);
                     extraY = (int)(RAL_GetTouchY(i) * Main.screenHeight);
                     Console.WriteLine($"[MultiTouchPatch] Extra touch at ({extraX}, {extraY})");
@@ -226,12 +267,20 @@ public static class MultiTouchPatcher
             );
             
             // 更新 PlayerInput 位置
-            if (finalX != PlayerInput.MouseInfoOld.X || finalY != PlayerInput.MouseInfoOld.Y || finalPressed != _wasTouching)
+            // 在虚拟鼠标模式下，即使位置没有变化也要更新鼠标位置，确保鼠标移动生效
+            bool positionChanged = finalX != PlayerInput.MouseInfoOld.X || finalY != PlayerInput.MouseInfoOld.Y || finalPressed != _wasTouching;
+            if (positionChanged || virtualMouseActive)
             {
                 PlayerInput.MouseX = (int)(finalX * PlayerInput.RawMouseScale.X);
                 PlayerInput.MouseY = (int)(finalY * PlayerInput.RawMouseScale.Y);
                 
-                if (!PlayerInput.PreventFirstMousePositionGrab)
+                // 在虚拟鼠标模式下，如果位置改变，强制标记输入检测
+                if (virtualMouseActive && positionChanged)
+                {
+                    inputDetected = true;
+                    PlayerInput.SettingsForUI.SetCursorMode(CursorMode.Mouse);
+                }
+                else if (!PlayerInput.PreventFirstMousePositionGrab)
                 {
                     inputDetected = true;
                     PlayerInput.SettingsForUI.SetCursorMode(CursorMode.Mouse);
@@ -258,7 +307,8 @@ public static class MultiTouchPatcher
             Main.mouseY = PlayerInput.MouseY;
             
             // 保存状态供下一帧使用
-            if (isTouching)
+            // 在虚拟鼠标模式下，已经在上面更新了 _lastTouchX 和 _lastTouchY
+            if (!virtualMouseActive && isTouching)
             {
                 _lastTouchX = screenX;
                 _lastTouchY = screenY;

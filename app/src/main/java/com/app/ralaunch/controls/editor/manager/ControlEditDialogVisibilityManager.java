@@ -109,12 +109,33 @@ public class ControlEditDialogVisibilityManager {
             itemJoystickMode.setVisibility(isJoystick ? View.VISIBLE : View.GONE);
         }
         
-        // 摇杆左右选择：仅摇杆类型且为SDL控制器模式时显示
+        // 摇杆左右选择：仅摇杆类型且为SDL控制器模式或鼠标模式时显示
+        // - 鼠标模式：左摇杆=相对移动，右摇杆=八方向攻击（通过组合键的鼠标左键）
+        // - SDL控制器模式：左摇杆=左摇杆输入，右摇杆=右摇杆输入
         View itemJoystickStickSelect = view.findViewById(R.id.item_joystick_stick_select);
         if (itemJoystickStickSelect != null) {
             boolean isJoystick = (data.type == ControlData.TYPE_JOYSTICK);
             boolean isSDLControllerMode = (data.joystickMode == ControlData.JOYSTICK_MODE_SDL_CONTROLLER);
-            itemJoystickStickSelect.setVisibility((isJoystick && isSDLControllerMode) ? View.VISIBLE : View.GONE);
+            boolean isMouseMode = (data.joystickMode == ControlData.JOYSTICK_MODE_MOUSE);
+            itemJoystickStickSelect.setVisibility((isJoystick && (isSDLControllerMode || isMouseMode)) ? View.VISIBLE : View.GONE);
+        }
+        
+        // 右摇杆攻击模式：仅摇杆类型且为鼠标模式且为右摇杆时显示
+        View itemRightStickAttackMode = view.findViewById(R.id.item_right_stick_attack_mode);
+        if (itemRightStickAttackMode != null) {
+            boolean isJoystick = (data.type == ControlData.TYPE_JOYSTICK);
+            boolean isMouseMode = (data.joystickMode == ControlData.JOYSTICK_MODE_MOUSE);
+            boolean isRightStick = data.xboxUseRightStick;
+            itemRightStickAttackMode.setVisibility((isJoystick && isMouseMode && isRightStick) ? View.VISIBLE : View.GONE);
+        }
+        
+        // 鼠标移动范围：仅摇杆类型且为鼠标模式且为右摇杆时显示
+        View itemMouseRange = view.findViewById(R.id.item_mouse_range);
+        if (itemMouseRange != null) {
+            boolean isJoystick = (data.type == ControlData.TYPE_JOYSTICK);
+            boolean isMouseMode = (data.joystickMode == ControlData.JOYSTICK_MODE_MOUSE);
+            boolean isRightStick = data.xboxUseRightStick;
+            itemMouseRange.setVisibility((isJoystick && isMouseMode && isRightStick) ? View.VISIBLE : View.GONE);
         }
     }
     

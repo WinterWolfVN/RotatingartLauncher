@@ -87,7 +87,13 @@ public class ControlData {
     public int keycode; // SDL按键码或鼠标按键
     
     @SerializedName("opacity")
-    public float opacity; // 0.0 - 1.0
+    public float opacity; // 0.0 - 1.0 (背景透明度)
+    
+    @SerializedName("borderOpacity")
+    public float borderOpacity; // 0.0 - 1.0 (边框透明度，默认1.0)
+    
+    @SerializedName("textOpacity")
+    public float textOpacity; // 0.0 - 1.0 (文本透明度，默认1.0)
     
     @SerializedName("bgColor")
     public int bgColor;
@@ -116,11 +122,31 @@ public class ControlData {
     @SerializedName("joystickKeys")
     public int[] joystickKeys; // [up, right, down, left] 的键码
     
+    @SerializedName("joystickComboKeys")
+    public int[] joystickComboKeys; // 统一组合键映射：所有方向共用的组合按钮列表（如R+B、R+A等）
+    
     @SerializedName("joystickMode")
     public int joystickMode; // 0=键盘模式, 1=鼠标模式, 2=SDL控制器模式
 
     @SerializedName("xboxUseRightStick")
     public boolean xboxUseRightStick; // 手柄模式：true=右摇杆, false=左摇杆
+
+    @SerializedName("rightStickContinuous")
+    public boolean rightStickContinuous = true; // 右摇杆攻击模式：true=持续攻击, false=点击攻击
+
+    // 右摇杆鼠标移动范围（屏幕百分比 0.0-1.0）
+    @SerializedName("mouseRangeLeft")
+    public float mouseRangeLeft = 0.0f;   // 左边距百分比
+    @SerializedName("mouseRangeTop")
+    public float mouseRangeTop = 0.0f;    // 上边距百分比
+    @SerializedName("mouseRangeRight")
+    public float mouseRangeRight = 1.0f;  // 右边界百分比
+    @SerializedName("mouseRangeBottom")
+    public float mouseRangeBottom = 1.0f; // 下边界百分比
+    
+    // 右摇杆鼠标移动速度（1-100，默认30）
+    @SerializedName("mouseSpeed")
+    public float mouseSpeed = 30.0f;
 
     // 按钮模式
     @SerializedName("buttonMode")
@@ -169,6 +195,8 @@ public class ControlData {
         this.rotation = 0; // 默认不旋转
         this.keycode = SDL_SCANCODE_UNKNOWN;
         this.opacity = 0.7f;
+        this.borderOpacity = 1.0f; // 默认边框完全不透明
+        this.textOpacity = 1.0f; // 默认文本完全不透明
         this.bgColor = 0xFF808080; // 灰色背景（更清晰可见）
         this.strokeColor = 0x00000000; // 透明边框（无边框）
         this.strokeWidth = 0; // 无边框宽度
@@ -195,6 +223,8 @@ public class ControlData {
                 SDL_SCANCODE_S,  // down
                 SDL_SCANCODE_A   // left
             };
+            // 初始化统一组合键数组（所有方向共用）
+            this.joystickComboKeys = new int[0]; // 默认无组合键
             this.joystickMode = JOYSTICK_MODE_KEYBOARD; // 默认键盘模式
             this.xboxUseRightStick = false; // 默认左摇杆
         }
@@ -213,6 +243,8 @@ public class ControlData {
         this.rotation = other.rotation;
         this.keycode = other.keycode;
         this.opacity = other.opacity;
+        this.borderOpacity = other.borderOpacity != 0 ? other.borderOpacity : 1.0f; // 兼容旧数据，默认1.0
+        this.textOpacity = other.textOpacity != 0 ? other.textOpacity : 1.0f; // 兼容旧数据，默认1.0
         this.bgColor = other.bgColor;
         this.strokeColor = other.strokeColor;
         this.strokeWidth = other.strokeWidth;
@@ -227,6 +259,12 @@ public class ControlData {
         
         if (other.joystickKeys != null) {
             this.joystickKeys = other.joystickKeys.clone();
+        }
+        // 深拷贝统一组合键数组
+        if (other.joystickComboKeys != null) {
+            this.joystickComboKeys = other.joystickComboKeys.clone();
+        } else {
+            this.joystickComboKeys = new int[0];
         }
         this.joystickMode = other.joystickMode;
         this.xboxUseRightStick = other.xboxUseRightStick;
@@ -292,9 +330,15 @@ public class ControlData {
         joystick.height = 450;
         joystick.opacity = 0.7f;
         joystick.joystickMode = JOYSTICK_MODE_MOUSE; // 鼠标移动模式
+        joystick.xboxUseRightStick = true; // 右摇杆模式
         joystick.joystickKeys = null; // 鼠标模式不需要按键映射
         joystick.strokeColor = 0x00000000; // 无边框
         joystick.strokeWidth = 0; // 无边框宽度
+        // 鼠标移动范围：默认全屏 (0%, 0%, 100%, 100%)
+        joystick.mouseRangeLeft = 0.0f;
+        joystick.mouseRangeTop = 0.0f;
+        joystick.mouseRangeRight = 1.0f;
+        joystick.mouseRangeBottom = 1.0f;
         return joystick;
     }
 

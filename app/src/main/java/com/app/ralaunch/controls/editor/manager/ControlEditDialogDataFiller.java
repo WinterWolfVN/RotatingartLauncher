@@ -62,7 +62,7 @@ public class ControlEditDialogDataFiller {
         // 更新基本信息选项的可见性
         ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(view, refs.getCurrentData());
         
-        // 摇杆左右选择开关（仅摇杆类型且为SDL控制器模式时显示）
+        // 摇杆左右选择开关（仅摇杆类型且为SDL控制器模式或鼠标模式时显示）
         SwitchCompat switchJoystickStickSelect = view.findViewById(R.id.switch_joystick_stick_select);
         TextView tvJoystickStickSelect = view.findViewById(R.id.tv_joystick_stick_select);
         if (switchJoystickStickSelect != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
@@ -73,10 +73,65 @@ public class ControlEditDialogDataFiller {
             }
         }
         
+        // 右摇杆攻击模式开关（仅摇杆类型且为鼠标模式且为右摇杆时显示）
+        SwitchCompat switchRightStickAttackMode = view.findViewById(R.id.switch_right_stick_attack_mode);
+        TextView tvRightStickAttackMode = view.findViewById(R.id.tv_right_stick_attack_mode);
+        if (switchRightStickAttackMode != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
+            switchRightStickAttackMode.setChecked(refs.getCurrentData().rightStickContinuous);
+            // 更新显示文本
+            if (tvRightStickAttackMode != null) {
+                tvRightStickAttackMode.setText(refs.getCurrentData().rightStickContinuous ? "持续攻击" : "点击攻击");
+            }
+        }
+        
         // 触摸穿透开关
         SwitchCompat switchPassThrough = view.findViewById(R.id.switch_pass_through);
         if (switchPassThrough != null) {
             switchPassThrough.setChecked(refs.getCurrentData().passThrough);
+        }
+        
+        // 鼠标移动范围（仅摇杆类型且为鼠标模式且为右摇杆时显示）
+        SeekBar seekbarMouseRangeLeft = view.findViewById(R.id.seekbar_mouse_range_left);
+        TextView tvMouseRangeLeft = view.findViewById(R.id.tv_mouse_range_left);
+        SeekBar seekbarMouseRangeTop = view.findViewById(R.id.seekbar_mouse_range_top);
+        TextView tvMouseRangeTop = view.findViewById(R.id.tv_mouse_range_top);
+        SeekBar seekbarMouseRangeRight = view.findViewById(R.id.seekbar_mouse_range_right);
+        TextView tvMouseRangeRight = view.findViewById(R.id.tv_mouse_range_right);
+        SeekBar seekbarMouseRangeBottom = view.findViewById(R.id.seekbar_mouse_range_bottom);
+        TextView tvMouseRangeBottom = view.findViewById(R.id.tv_mouse_range_bottom);
+        
+        if (refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
+            if (seekbarMouseRangeLeft != null) {
+                seekbarMouseRangeLeft.setProgress((int) (refs.getCurrentData().mouseRangeLeft * 100));
+                if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText((int) (refs.getCurrentData().mouseRangeLeft * 100) + "%");
+            }
+            if (seekbarMouseRangeTop != null) {
+                seekbarMouseRangeTop.setProgress((int) (refs.getCurrentData().mouseRangeTop * 100));
+                if (tvMouseRangeTop != null) tvMouseRangeTop.setText((int) (refs.getCurrentData().mouseRangeTop * 100) + "%");
+            }
+            if (seekbarMouseRangeRight != null) {
+                seekbarMouseRangeRight.setProgress((int) (refs.getCurrentData().mouseRangeRight * 100));
+                if (tvMouseRangeRight != null) tvMouseRangeRight.setText((int) (refs.getCurrentData().mouseRangeRight * 100) + "%");
+            }
+            if (seekbarMouseRangeBottom != null) {
+                seekbarMouseRangeBottom.setProgress((int) (refs.getCurrentData().mouseRangeBottom * 100));
+                if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText((int) (refs.getCurrentData().mouseRangeBottom * 100) + "%");
+            }
+            
+            // 鼠标移动速度
+            SeekBar seekbarMouseSpeed = view.findViewById(R.id.seekbar_mouse_speed);
+            TextView tvMouseSpeed = view.findViewById(R.id.tv_mouse_speed);
+            if (seekbarMouseSpeed != null) {
+                seekbarMouseSpeed.setProgress((int) refs.getCurrentData().mouseSpeed);
+                if (tvMouseSpeed != null) tvMouseSpeed.setText(String.valueOf((int) refs.getCurrentData().mouseSpeed));
+            }
+        }
+        
+        // 组合键映射显示（仅摇杆类型显示）
+        TextView tvJoystickComboKeys = view.findViewById(R.id.tv_joystick_combo_keys);
+        if (tvJoystickComboKeys != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
+            // 显示统一组合键
+            ControlJoystickComboKeysManager.updateComboKeysDisplay(refs.getCurrentData(), tvJoystickComboKeys);
         }
     }
     
@@ -174,6 +229,53 @@ public class ControlEditDialogDataFiller {
                 () -> {} // 填充时不需要通知更新
             )
         );
+        
+        // 边框透明度设置（使用统一管理器）
+        ControlEditDialogSeekBarManager.fillSeekBarSetting(view,
+            R.id.seekbar_border_opacity,
+            R.id.tv_border_opacity_value,
+            ControlEditDialogSeekBarManager.createPercentConfig(
+                data,
+                new ControlEditDialogSeekBarManager.ValueSetter() {
+                    @Override
+                    public float get(ControlData d) {
+                        // 如果为0则使用背景透明度作为兼容
+                        return d.borderOpacity != 0 ? d.borderOpacity : d.opacity;
+                    }
+                    
+                    @Override
+                    public void set(ControlData d, float value) {
+                        d.borderOpacity = value;
+                    }
+                },
+                () -> {} // 填充时不需要通知更新
+            )
+        );
+        
+        // 文本透明度设置（使用统一管理器，仅按钮和文本控件显示）
+        View cardTextOpacity = view.findViewById(R.id.card_text_opacity);
+        if (cardTextOpacity != null && cardTextOpacity.getVisibility() == View.VISIBLE) {
+            ControlEditDialogSeekBarManager.fillSeekBarSetting(view,
+                R.id.seekbar_text_opacity,
+                R.id.tv_text_opacity_value,
+                ControlEditDialogSeekBarManager.createPercentConfig(
+                    data,
+                    new ControlEditDialogSeekBarManager.ValueSetter() {
+                        @Override
+                        public float get(ControlData d) {
+                            // 如果为0则使用背景透明度作为兼容
+                            return d.textOpacity != 0 ? d.textOpacity : d.opacity;
+                        }
+                        
+                        @Override
+                        public void set(ControlData d, float value) {
+                            d.textOpacity = value;
+                        }
+                    },
+                    () -> {} // 填充时不需要通知更新
+                )
+            );
+        }
         
         SwitchCompat switchVisible = view.findViewById(R.id.switch_visible);
         if (switchVisible != null) {

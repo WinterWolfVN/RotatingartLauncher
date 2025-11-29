@@ -27,6 +27,13 @@ public interface ControlInputBridge {
      * @param deltaY Y轴移动量
      */
     void sendMouseMove(float deltaX, float deltaY);
+    
+    /**
+     * 发送绝对鼠标位置（用于右摇杆八方向攻击）
+     * @param x 绝对X坐标（屏幕坐标）
+     * @param y 绝对Y坐标（屏幕坐标）
+     */
+    void sendMousePosition(float x, float y);
 
     /**
      * 设置Xbox虚拟控制器左摇杆

@@ -70,9 +70,14 @@ public class ControlElement {
     private int textColor;
     private float borderWidth;
     private float opacity;
+    private float borderOpacity;  // 边框透明度 0.0 - 1.0（默认1.0）
+    private float textOpacity;    // 文本透明度 0.0 - 1.0（默认1.0）
     private float textSize;
     private float stickOpacity;   // 摇杆头透明度（仅摇杆类型）
     private float stickKnobSize;  // 摇杆圆心大小比例 (0.0-1.0)，默认0.4
+    
+    // 摇杆统一组合键（仅摇杆类型）
+    private int[] joystickComboKeys; // 统一组合键映射：所有方向共用的组合按钮列表
 
     // 显示设置
     private Visibility visibility;
@@ -83,6 +88,18 @@ public class ControlElement {
     private float deadzone;          // 死区
     private float sensitivity;       // 灵敏度
     private boolean lockDirection;   // 锁定方向（4/8方向）
+    private int joystickMode;        // 摇杆模式 0=键盘模式, 1=鼠标模式, 2=SDL控制器模式
+    private boolean xboxUseRightStick; // 手柄模式：true=右摇杆, false=左摇杆
+    private boolean rightStickContinuous = true; // 右摇杆攻击模式：true=持续攻击, false=点击攻击
+    
+    // 鼠标移动范围（屏幕百分比 0.0-1.0）
+    private float mouseRangeLeft = 0.0f;   // 左边距百分比
+    private float mouseRangeTop = 0.0f;    // 上边距百分比
+    private float mouseRangeRight = 1.0f;  // 右边界百分比
+    private float mouseRangeBottom = 1.0f; // 下边界百分比
+    
+    // 鼠标移动速度（1-100，默认30）
+    private float mouseSpeed = 30.0f;
 
     // 触摸板特有属性
     private float scrollSensitivity;
@@ -108,9 +125,12 @@ public class ControlElement {
         this.textColor = Color.WHITE;
         this.borderWidth = 0.0f; // 默认无边框宽度
         this.opacity = 0.7f;
+        this.borderOpacity = 1.0f; // 默认边框完全不透明
+        this.textOpacity = 1.0f; // 默认文本完全不透明
         this.textSize = 16f;
         this.stickOpacity = 0.7f; // 默认摇杆头透明度
         this.stickKnobSize = 0.4f; // 默认摇杆圆心大小（40%半径）
+        this.joystickComboKeys = null; // 默认无组合键
 
         this.visibility = Visibility.ALWAYS;
         this.repeatDelay = 100;
@@ -119,6 +139,9 @@ public class ControlElement {
         // 摇杆默认值
         this.deadzone = 0.1f;
         this.sensitivity = 1.0f;
+        this.lockDirection = false;
+        this.joystickMode = 0; // 默认键盘模式
+        this.xboxUseRightStick = false; // 默认左摇杆
         this.scrollSensitivity = 1.0f;
     }
 
@@ -192,9 +215,65 @@ public class ControlElement {
         if (json.has("textColor")) element.textColor = json.getInt("textColor");
         if (json.has("borderWidth")) element.borderWidth = (float) json.getDouble("borderWidth");
         if (json.has("opacity")) element.opacity = (float) json.getDouble("opacity");
+        if (json.has("borderOpacity")) {
+            element.borderOpacity = (float) json.getDouble("borderOpacity");
+        } else {
+            element.borderOpacity = 1.0f; // 兼容旧数据，默认1.0
+        }
+        if (json.has("textOpacity")) {
+            element.textOpacity = (float) json.getDouble("textOpacity");
+        } else {
+            element.textOpacity = 1.0f; // 兼容旧数据，默认1.0
+        }
         if (json.has("textSize")) element.textSize = (float) json.getDouble("textSize");
         if (json.has("stickOpacity")) element.stickOpacity = (float) json.getDouble("stickOpacity");
         if (json.has("stickKnobSize")) element.stickKnobSize = (float) json.getDouble("stickKnobSize");
+        
+        // 加载统一组合键数组（仅摇杆类型）
+        if (json.has("joystickComboKeys") && element.type == ElementType.JOYSTICK) {
+            try {
+                org.json.JSONArray comboKeysArray = json.getJSONArray("joystickComboKeys");
+                if (comboKeysArray != null && comboKeysArray.length() > 0) {
+                    // 兼容旧数据：检查是否是二维数组（旧格式）
+                    try {
+                        Object firstItem = comboKeysArray.get(0);
+                        if (firstItem instanceof org.json.JSONArray) {
+                            // 旧格式：二维数组，转换为统一数组（使用第一个非空的组合键）
+                            int[] firstNonEmpty = null;
+                            for (int i = 0; i < comboKeysArray.length(); i++) {
+                                org.json.JSONArray directionArray = comboKeysArray.getJSONArray(i);
+                                if (directionArray != null && directionArray.length() > 0) {
+                                    firstNonEmpty = new int[directionArray.length()];
+                                    for (int j = 0; j < directionArray.length(); j++) {
+                                        firstNonEmpty[j] = directionArray.getInt(j);
+                                    }
+                                    break;
+                                }
+                            }
+                            element.joystickComboKeys = (firstNonEmpty != null) ? firstNonEmpty : new int[0];
+                        } else {
+                            // 新格式：一维数组
+                            element.joystickComboKeys = new int[comboKeysArray.length()];
+                            for (int i = 0; i < comboKeysArray.length(); i++) {
+                                element.joystickComboKeys[i] = comboKeysArray.getInt(i);
+                            }
+                        }
+                    } catch (JSONException e) {
+                        // 如果解析失败，尝试作为一维数组
+                        element.joystickComboKeys = new int[comboKeysArray.length()];
+                        for (int i = 0; i < comboKeysArray.length(); i++) {
+                            element.joystickComboKeys[i] = comboKeysArray.getInt(i);
+                        }
+                    }
+                } else {
+                    element.joystickComboKeys = null;
+                }
+            } catch (JSONException e) {
+                element.joystickComboKeys = null;
+            }
+        } else {
+            element.joystickComboKeys = null;
+        }
 
         // 显示设置
         if (json.has("visibility")) element.visibility = Visibility.valueOf(json.getString("visibility"));
@@ -205,6 +284,20 @@ public class ControlElement {
         if (json.has("deadzone")) element.deadzone = (float) json.getDouble("deadzone");
         if (json.has("sensitivity")) element.sensitivity = (float) json.getDouble("sensitivity");
         if (json.has("lockDirection")) element.lockDirection = json.getBoolean("lockDirection");
+        if (json.has("joystickMode")) element.joystickMode = json.getInt("joystickMode");
+        if (json.has("xboxUseRightStick")) element.xboxUseRightStick = json.getBoolean("xboxUseRightStick");
+        if (json.has("rightStickContinuous")) {
+            element.rightStickContinuous = json.getBoolean("rightStickContinuous");
+        } else {
+            element.rightStickContinuous = true; // 默认持续攻击
+        }
+        
+        // 鼠标移动范围
+        if (json.has("mouseRangeLeft")) element.mouseRangeLeft = (float) json.getDouble("mouseRangeLeft");
+        if (json.has("mouseRangeTop")) element.mouseRangeTop = (float) json.getDouble("mouseRangeTop");
+        if (json.has("mouseRangeRight")) element.mouseRangeRight = (float) json.getDouble("mouseRangeRight");
+        if (json.has("mouseRangeBottom")) element.mouseRangeBottom = (float) json.getDouble("mouseRangeBottom");
+        if (json.has("mouseSpeed")) element.mouseSpeed = (float) json.getDouble("mouseSpeed");
 
         // 触摸板特有
         if (json.has("scrollSensitivity")) element.scrollSensitivity = (float) json.getDouble("scrollSensitivity");
@@ -254,9 +347,20 @@ public class ControlElement {
         json.put("textColor", textColor);
         json.put("borderWidth", borderWidth);
         json.put("opacity", opacity);
+        json.put("borderOpacity", borderOpacity);
+        json.put("textOpacity", textOpacity);
         json.put("textSize", textSize);
         json.put("stickOpacity", stickOpacity);
         json.put("stickKnobSize", stickKnobSize);
+        
+        // 保存统一组合键数组（仅摇杆类型，所有方向共用）
+        if (type == ElementType.JOYSTICK && joystickComboKeys != null && joystickComboKeys.length > 0) {
+            org.json.JSONArray comboKeysArray = new org.json.JSONArray();
+            for (int key : joystickComboKeys) {
+                comboKeysArray.put(key);
+            }
+            json.put("joystickComboKeys", comboKeysArray);
+        }
 
         // 显示设置
         json.put("visibility", visibility.name());
@@ -267,6 +371,17 @@ public class ControlElement {
         json.put("deadzone", deadzone);
         json.put("sensitivity", sensitivity);
         json.put("lockDirection", lockDirection);
+        if (type == ElementType.JOYSTICK) {
+            json.put("joystickMode", joystickMode);
+            json.put("xboxUseRightStick", xboxUseRightStick);
+            json.put("rightStickContinuous", rightStickContinuous);
+            // 鼠标移动范围
+            json.put("mouseRangeLeft", mouseRangeLeft);
+            json.put("mouseRangeTop", mouseRangeTop);
+            json.put("mouseRangeRight", mouseRangeRight);
+            json.put("mouseRangeBottom", mouseRangeBottom);
+            json.put("mouseSpeed", mouseSpeed);
+        }
 
         // 触摸板特有
         json.put("scrollSensitivity", scrollSensitivity);
@@ -368,12 +483,22 @@ public class ControlElement {
     public float getOpacity() { return opacity; }
     public void setOpacity(float opacity) { this.opacity = opacity; }
     
+    public float getBorderOpacity() { return borderOpacity; }
+    public void setBorderOpacity(float borderOpacity) { this.borderOpacity = borderOpacity; }
+    
+    public float getTextOpacity() { return textOpacity; }
+    public void setTextOpacity(float textOpacity) { this.textOpacity = textOpacity; }
+    
     public float getStickOpacity() { return stickOpacity; }
     public void setStickOpacity(float stickOpacity) { this.stickOpacity = stickOpacity; }
     
     public float getStickKnobSize() { return stickKnobSize; }
     public void setStickKnobSize(float stickKnobSize) { this.stickKnobSize = stickKnobSize; }
     
+    public int[] getJoystickComboKeys() { 
+        return joystickComboKeys; 
+    }
+    public void setJoystickComboKeys(int[] joystickComboKeys) { this.joystickComboKeys = joystickComboKeys; }
 
     public float getTextSize() { return textSize; }
     public void setTextSize(float textSize) { this.textSize = textSize; }
@@ -404,4 +529,27 @@ public class ControlElement {
 
     public boolean isInvertY() { return invertY; }
     public void setInvertY(boolean invertY) { this.invertY = invertY; }
+    
+    public int getJoystickMode() { return joystickMode; }
+    public void setJoystickMode(int joystickMode) { this.joystickMode = joystickMode; }
+    
+    public boolean isXboxUseRightStick() { return xboxUseRightStick; }
+    public void setXboxUseRightStick(boolean xboxUseRightStick) { this.xboxUseRightStick = xboxUseRightStick; }
+    
+    public boolean isRightStickContinuous() { return rightStickContinuous; }
+    public void setRightStickContinuous(boolean rightStickContinuous) { this.rightStickContinuous = rightStickContinuous; }
+    
+    // 鼠标移动范围
+    public float getMouseRangeLeft() { return mouseRangeLeft; }
+    public void setMouseRangeLeft(float mouseRangeLeft) { this.mouseRangeLeft = mouseRangeLeft; }
+    public float getMouseRangeTop() { return mouseRangeTop; }
+    public void setMouseRangeTop(float mouseRangeTop) { this.mouseRangeTop = mouseRangeTop; }
+    public float getMouseRangeRight() { return mouseRangeRight; }
+    public void setMouseRangeRight(float mouseRangeRight) { this.mouseRangeRight = mouseRangeRight; }
+    public float getMouseRangeBottom() { return mouseRangeBottom; }
+    public void setMouseRangeBottom(float mouseRangeBottom) { this.mouseRangeBottom = mouseRangeBottom; }
+    
+    // 鼠标移动速度
+    public float getMouseSpeed() { return mouseSpeed; }
+    public void setMouseSpeed(float mouseSpeed) { this.mouseSpeed = mouseSpeed; }
 }

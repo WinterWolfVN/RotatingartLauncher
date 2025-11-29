@@ -295,6 +295,11 @@ public class ControlLayout extends FrameLayout {
      * 设置编辑模式的触摸监听器
      */
     private void setupEditModeListeners(View view, ControlView controlView, ControlData data) {
+        // 记录按下时的初始位置（用于判断是点击还是拖动）
+        final float[] downPos = new float[2];
+        final boolean[] isDragging = new boolean[1];
+        final float DRAG_THRESHOLD = 15f;
+        
         view.setOnTouchListener((v, event) -> {
             if (!mModifiable) {
                 // 非编辑模式，让控件自己处理触摸事件
@@ -310,8 +315,12 @@ public class ControlLayout extends FrameLayout {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     mSelectedControl = controlView;
+                    // 记录按下时的初始位置
+                    downPos[0] = event.getRawX();
+                    downPos[1] = event.getRawY();
                     mLastTouchX = event.getRawX();
                     mLastTouchY = event.getRawY();
+                    isDragging[0] = false;
                     
                     // 高亮选中的控件
                     v.setAlpha(0.5f);
@@ -319,21 +328,33 @@ public class ControlLayout extends FrameLayout {
                     
                 case MotionEvent.ACTION_MOVE:
                     if (mSelectedControl == controlView && !mIsMultiSelectMode) {
-                        // 拖动单个控件
                         float deltaX = event.getRawX() - mLastTouchX;
                         float deltaY = event.getRawY() - mLastTouchY;
                         
-                        LayoutParams params = (LayoutParams) v.getLayoutParams();
-                        params.leftMargin += (int) deltaX;
-                        params.topMargin += (int) deltaY;
-                        v.setLayoutParams(params);
+                        // 计算从按下位置到当前位置的总移动距离
+                        float totalDx = event.getRawX() - downPos[0];
+                        float totalDy = event.getRawY() - downPos[1];
+                        float totalDistance = (float) Math.sqrt(totalDx * totalDx + totalDy * totalDy);
                         
-                        // 更新数据
-                        data.x = params.leftMargin;
-                        data.y = params.topMargin;
+                        // 如果总移动距离超过阈值，标记为拖动
+                        if (totalDistance > DRAG_THRESHOLD) {
+                            isDragging[0] = true;
+                        }
                         
-                        mLastTouchX = event.getRawX();
-                        mLastTouchY = event.getRawY();
+                        if (isDragging[0]) {
+                            // 拖动单个控件
+                            LayoutParams params = (LayoutParams) v.getLayoutParams();
+                            params.leftMargin += (int) deltaX;
+                            params.topMargin += (int) deltaY;
+                            v.setLayoutParams(params);
+                            
+                            // 更新数据
+                            data.x = params.leftMargin;
+                            data.y = params.topMargin;
+                            
+                            mLastTouchX = event.getRawX();
+                            mLastTouchY = event.getRawY();
+                        }
                     }
                     return true;
                     
@@ -342,12 +363,19 @@ public class ControlLayout extends FrameLayout {
                     // 恢复透明度
                     v.setAlpha(1.0f);
                     
+                    // 清除控件的按下状态
+                    if (controlView instanceof VirtualButton) {
+                        ((VirtualButton) controlView).setPressedState(false);
+                    }
+                    
                     if (!mIsMultiSelectMode) {
-                        // 判断是点击还是拖动
-                        float totalDelta = Math.abs(event.getRawX() - mLastTouchX) + 
-                                         Math.abs(event.getRawY() - mLastTouchY);
+                        // 计算从按下到释放的总移动距离
+                        float finalDx = event.getRawX() - downPos[0];
+                        float finalDy = event.getRawY() - downPos[1];
+                        float finalDistance = (float) Math.sqrt(finalDx * finalDx + finalDy * finalDy);
                         
-                        if (totalDelta < 10) {
+                        // 只有在没有拖动（移动距离小于阈值）时才打开编辑对话框
+                        if (finalDistance <= DRAG_THRESHOLD && !isDragging[0]) {
                             // 点击事件 - 通知监听器显示编辑对话框
                             if (mEditControlListener != null) {
                                 mEditControlListener.onEditControl(data);

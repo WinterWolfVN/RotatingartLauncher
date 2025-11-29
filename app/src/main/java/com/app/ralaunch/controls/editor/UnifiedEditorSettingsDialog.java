@@ -43,6 +43,7 @@ public class UnifiedEditorSettingsDialog {
     private View mItemAddText;
     private View mItemAddTextGroup;
     private ViewGroup mAddControlsSection; // 添加控件区域
+    private View mItemSaveLayout; // 保存布局
     private View mItemHideCursor;
     private androidx.appcompat.widget.SwitchCompat mSwitchHideCursor;
     
@@ -77,6 +78,7 @@ public class UnifiedEditorSettingsDialog {
         void onAddButton();
         void onAddJoystick();
         void onAddText();
+        void onSaveLayout(); // 保存布局
         void onHideCursorChanged(boolean hide); // 隐藏鼠标光标选项变化
     }
 
@@ -99,6 +101,8 @@ public class UnifiedEditorSettingsDialog {
         if (mDialogLayout == null || mDialogLayout.getParent() == null) {
             if (mDialogLayout == null) {
                 inflateLayout();
+                // 恢复编辑模式状态（在布局创建后立即更新UI）
+                updateEditModeUI();
             }
             
             // 先添加遮罩层（底层）
@@ -147,7 +151,11 @@ public class UnifiedEditorSettingsDialog {
             });
             
             // 等待布局测量完成后再执行动画
-            mDialogLayout.post(() -> animateShow());
+            mDialogLayout.post(() -> {
+                // 确保编辑模式状态正确（在布局创建后）
+                updateEditModeUI();
+                animateShow();
+            });
         } else {
             // 如果已经添加，确保遮罩层也存在
             if (mOverlay == null || mOverlay.getParent() == null) {
@@ -290,6 +298,7 @@ public class UnifiedEditorSettingsDialog {
         mItemAddJoystick = mDialogLayout.findViewById(R.id.item_add_joystick);
         mItemAddText = mDialogLayout.findViewById(R.id.item_add_text);
         mAddControlsSection = mDialogLayout.findViewById(R.id.section_add_controls);
+        mItemSaveLayout = mDialogLayout.findViewById(R.id.item_save_layout);
         mItemHideCursor = mDialogLayout.findViewById(R.id.item_hide_cursor);
         mSwitchHideCursor = mDialogLayout.findViewById(R.id.switch_hide_cursor);
 
@@ -349,6 +358,14 @@ public class UnifiedEditorSettingsDialog {
                 mListener.onAddText();
                 hide();
             });
+
+            // 保存布局
+            if (mItemSaveLayout != null) {
+                mItemSaveLayout.setOnClickListener(v -> {
+                    mListener.onSaveLayout();
+                    // 保存后不关闭对话框，方便继续编辑
+                });
+            }
 
             // 隐藏鼠标光标开关
             if (mSwitchHideCursor != null) {

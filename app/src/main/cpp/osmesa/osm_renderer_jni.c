@@ -5,7 +5,6 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include "osm_renderer.h"
-#include "vulkan_loader.h"
 #include "app_logger.h"
 
 #define LOG_TAG "OSMRendererJNI"
@@ -94,21 +93,5 @@ Java_com_app_ralaunch_renderer_OSMRenderer_nativeSetWindow(JNIEnv *env, jclass c
     osm_renderer_set_window(nativeWindow);
     
     // Don't release here, OSMesa will manage it
-}
-
-/**
- * @brief JNI: Load Vulkan library
- * Java: nativeLoadVulkanInternal()
- */
-JNIEXPORT jboolean JNICALL
-Java_com_app_ralaunch_renderer_OSMRenderer_nativeLoadVulkanInternal(JNIEnv *env, jclass clazz) {
-    LOGI("Loading Vulkan library via JNI...");
-    bool result = vulkan_loader_load();
-    if (result) {
-        LOGI("✓ Vulkan library loaded successfully");
-    } else {
-        LOGE("✗ Failed to load Vulkan library");
-    }
-    return result ? JNI_TRUE : JNI_FALSE;
 }
 

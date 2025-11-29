@@ -93,7 +93,9 @@ public class VirtualButton extends View implements ControlView {
             mTextPaint.setColor(textColor);
             mTextPaint.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); // 粗体
             mTextPaint.setTextAlign(Paint.Align.CENTER);
-            mTextPaint.setAlpha((int) (mData.opacity * 255));
+            // 使用文本透明度（如果为0则使用背景透明度作为兼容）
+            float textOpacity = mData.textOpacity != 0 ? mData.textOpacity : mData.opacity;
+            mTextPaint.setAlpha((int) (textOpacity * 255));
         } else {
             // 键盘模式保持原有逻辑
             mBackgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -105,13 +107,17 @@ public class VirtualButton extends View implements ControlView {
             mStrokePaint.setColor(mData.strokeColor);
             mStrokePaint.setStyle(Paint.Style.STROKE);
             mStrokePaint.setStrokeWidth(dpToPx(mData.strokeWidth));
-            mStrokePaint.setAlpha((int) (mData.opacity * 255));
+            // 使用边框透明度（如果为0则使用背景透明度作为兼容）
+            float borderOpacity = mData.borderOpacity != 0 ? mData.borderOpacity : mData.opacity;
+            mStrokePaint.setAlpha((int) (borderOpacity * 255));
             
             mTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
             mTextPaint.setColor(0xFFFFFFFF);
             mTextPaint.setTextSize(dpToPx(16));
             mTextPaint.setTextAlign(Paint.Align.CENTER);
-            mTextPaint.setAlpha((int) (mData.opacity * 255));
+            // 使用文本透明度（如果为0则使用背景透明度作为兼容）
+            float textOpacity = mData.textOpacity != 0 ? mData.textOpacity : mData.opacity;
+            mTextPaint.setAlpha((int) (textOpacity * 255));
         }
     }
     
@@ -260,31 +266,58 @@ public class VirtualButton extends View implements ControlView {
         String keyName = KeyMapper.getKeyName(mData.keycode);
         String displayText = mData.name;
         
-        // RadialGamePad 风格：自动计算文字大小以适应区域
-        if (mData.buttonMode == ControlData.BUTTON_MODE_GAMEPAD && displayText != null && !displayText.isEmpty()) {
-            // 计算文字宽高比
-            mTextPaint.setTextSize(20f); // 临时设置用于测量
-            android.graphics.Rect textBounds = new android.graphics.Rect();
-            mTextPaint.getTextBounds(displayText, 0, displayText.length(), textBounds);
-            float textAspectRatio = textBounds.width() / (float) Math.max(textBounds.height(), 1);
+        if (displayText != null && !displayText.isEmpty()) {
+            // 保存 canvas 状态以便裁剪
+            canvas.save();
             
-            // 自动计算文字大小：minOf(height / 2, width / textAspectRatio)
-            float textSize = Math.min(
-                getHeight() / 2f,
-                getWidth() / Math.max(textAspectRatio, 1f)
-            );
-            mTextPaint.setTextSize(textSize);
-        } else {
-            // 键盘模式保持原有大小
-            if (mData.buttonMode != ControlData.BUTTON_MODE_GAMEPAD) {
-                mTextPaint.setTextSize(dpToPx(16));
+            // 根据控件形状设置裁剪区域
+            if (shape == ControlData.SHAPE_CIRCLE || shape == ControlData.SHAPE_DOUBLE_CIRCLE) {
+                // 圆形裁剪：使用圆形路径
+                android.graphics.Path clipPath = new android.graphics.Path();
+                clipPath.addCircle(centerXDraw, centerYDraw, radius, android.graphics.Path.Direction.CW);
+                canvas.clipPath(clipPath);
+            } else {
+                // 矩形裁剪：使用矩形区域（留出一些边距）
+                float padding = dpToPx(2);
+                canvas.clipRect(padding, padding, getWidth() - padding, getHeight() - padding);
             }
+            
+            // RadialGamePad 风格：自动计算文字大小以适应区域
+            if (mData.buttonMode == ControlData.BUTTON_MODE_GAMEPAD) {
+                // 计算文字宽高比
+                mTextPaint.setTextSize(20f); // 临时设置用于测量
+                android.graphics.Rect textBounds = new android.graphics.Rect();
+                mTextPaint.getTextBounds(displayText, 0, displayText.length(), textBounds);
+                float textAspectRatio = textBounds.width() / (float) Math.max(textBounds.height(), 1);
+                
+                // 自动计算文字大小：minOf(height / 2, width / textAspectRatio)
+                float textSize = Math.min(
+                    getHeight() / 2f,
+                    getWidth() / Math.max(textAspectRatio, 1f)
+                );
+                mTextPaint.setTextSize(textSize);
+            } else {
+                // 键盘模式：检查文本宽度，如果超出则缩小字体
+                mTextPaint.setTextSize(dpToPx(16));
+                float textWidth = mTextPaint.measureText(displayText);
+                float availableWidth = getWidth() - dpToPx(4); // 留出边距
+                
+                if (textWidth > availableWidth) {
+                    // 文本超出，按比例缩小字体
+                    float scale = availableWidth / textWidth;
+                    float newTextSize = mTextPaint.getTextSize() * scale;
+                    mTextPaint.setTextSize(newTextSize);
+                }
+            }
+            
+            // 只显示名称（居中）
+            // 显示真实按键会挡视野
+            float textY = getHeight() / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2);
+            canvas.drawText(displayText, getWidth() / 2f, textY, mTextPaint);
+            
+            // 恢复 canvas 状态
+            canvas.restore();
         }
-        
-        // 只显示名称（居中）
-        // 显示真实按键会挡视野
-        float textY = getHeight() / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2);
-        canvas.drawText(displayText, getWidth() / 2f, textY, mTextPaint);
         
         // 恢复旋转
         if (mData.rotation != 0) {

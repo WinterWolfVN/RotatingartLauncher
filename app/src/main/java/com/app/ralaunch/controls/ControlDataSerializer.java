@@ -25,6 +25,8 @@ public class ControlDataSerializer implements JsonSerializer<ControlData> {
         jsonObject.addProperty("height", src.height);
         jsonObject.addProperty("rotation", src.rotation);
         jsonObject.addProperty("opacity", src.opacity);
+        jsonObject.addProperty("borderOpacity", src.borderOpacity);
+        jsonObject.addProperty("textOpacity", src.textOpacity);
         jsonObject.addProperty("bgColor", src.bgColor);
         jsonObject.addProperty("strokeColor", src.strokeColor);
         jsonObject.addProperty("strokeWidth", src.strokeWidth);
@@ -46,6 +48,10 @@ public class ControlDataSerializer implements JsonSerializer<ControlData> {
             jsonObject.addProperty("xboxUseRightStick", src.xboxUseRightStick);
             if (src.joystickKeys != null) {
                 jsonObject.add("joystickKeys", context.serialize(src.joystickKeys));
+            }
+            // 序列化组合键数组
+            if (src.joystickComboKeys != null) {
+                jsonObject.add("joystickComboKeys", context.serialize(src.joystickComboKeys));
             }
         } else if (src.type == ControlData.TYPE_TEXT) {
             // 文本控件特有字段

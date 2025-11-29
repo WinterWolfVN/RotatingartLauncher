@@ -6,6 +6,8 @@ import org.libsdl.app.SDLActivity;
 /**
  * SDL输入桥接实现
  * 将虚拟控制器输入转发到SDL
+ * 
+ * 注意：游戏使用触屏控制，鼠标按键通过虚拟触屏点实现
  */
 public class SDLInputBridge implements ControlInputBridge {
     private static final String TAG = "SDLInputBridge";
@@ -15,10 +17,54 @@ public class SDLInputBridge implements ControlInputBridge {
     private static final int ACTION_UP = 1;
     private static final int ACTION_MOVE = 2;
     
-    // Mouse buttons
-    private static final int BUTTON_LEFT = 1;
-    private static final int BUTTON_RIGHT = 3;
-    private static final int BUTTON_MIDDLE = 2;
+    // 虚拟触屏点索引（用于右摇杆八方向攻击）
+    // 索引 0-2 保留给普通鼠标按键，索引 3+ 用于右摇杆
+    public static final int VIRTUAL_TOUCH_LEFT_CLICK = 0;
+    public static final int VIRTUAL_TOUCH_RIGHT_CLICK = 1;
+    public static final int VIRTUAL_TOUCH_MIDDLE_CLICK = 2;
+    public static final int VIRTUAL_TOUCH_RIGHT_STICK = 3;  // 右摇杆八方向攻击
+    
+    // 屏幕尺寸（用于虚拟触屏）
+    private static int screenWidth = 1920;
+    private static int screenHeight = 1080;
+    
+    // Native 方法声明（在 touch_bridge.c 中实现）
+    private static native void nativeSetVirtualTouch(int index, float x, float y, int screenWidth, int screenHeight);
+    private static native void nativeClearVirtualTouch(int index);
+    private static native void nativeClearAllVirtualTouches();
+    
+    // 虚拟鼠标位置 Native 方法（供右摇杆鼠标移动使用）
+    private static native void nativeEnableVirtualMouse(int screenWidth, int screenHeight);
+    private static native void nativeDisableVirtualMouse();
+    private static native void nativeUpdateVirtualMouseDelta(float deltaX, float deltaY);
+    private static native void nativeSetVirtualMousePosition(float x, float y);
+    private static native float nativeGetVirtualMouseX();
+    private static native float nativeGetVirtualMouseY();
+    private static native void nativeSetVirtualMouseRange(float left, float top, float right, float bottom);
+    
+    // 静态初始化
+    static {
+        try {
+            System.loadLibrary("main");
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "Native library not loaded yet");
+        }
+    }
+    
+    /**
+     * 设置屏幕尺寸（用于虚拟触屏坐标转换）
+     */
+    public static void setScreenSize(int width, int height) {
+        screenWidth = width;
+        screenHeight = height;
+        Log.i(TAG, "Screen size set: " + width + "x" + height);
+    }
+    
+    // Android mouse button states (bit masks, not SDL button values!)
+    // See Android's MotionEvent class for constants
+    private static final int BUTTON_PRIMARY = 1;    // Left button
+    private static final int BUTTON_SECONDARY = 2;  // Right button
+    private static final int BUTTON_TERTIARY = 4;   // Middle button
     
     /**
      * 将SDL Scancode转换为Android KeyCode
@@ -180,16 +226,17 @@ public class SDLInputBridge implements ControlInputBridge {
     @Override
     public void sendMouseButton(int button, boolean isDown, float x, float y) {
         try {
-            int sdlButton;
+            // Android_OnMouse expects Android button state (bit mask), not SDL button value
+            int androidButtonState;
             switch (button) {
                 case ControlData.MOUSE_LEFT:
-                    sdlButton = BUTTON_LEFT;
+                    androidButtonState = BUTTON_PRIMARY;
                     break;
                 case ControlData.MOUSE_RIGHT:
-                    sdlButton = BUTTON_RIGHT;
+                    androidButtonState = BUTTON_SECONDARY;
                     break;
                 case ControlData.MOUSE_MIDDLE:
-                    sdlButton = BUTTON_MIDDLE;
+                    androidButtonState = BUTTON_TERTIARY;
                     break;
                 default:
                     Log.w(TAG, "Unknown mouse button: " + button);
@@ -197,8 +244,10 @@ public class SDLInputBridge implements ControlInputBridge {
             }
             
             int action = isDown ? ACTION_DOWN : ACTION_UP;
-            // 调用SDLActivity的静态native方法，传递按钮中心坐标
-            SDLActivity.onNativeMouse(sdlButton, action, x, y, false);
+            // 调用SDLActivity的静态native方法，传递Android按钮状态（位掩码）和按钮中心坐标
+            // Android_OnMouse expects: (state, action, x, y, relative)
+            // where state is Android button state bit mask (BUTTON_PRIMARY, BUTTON_SECONDARY, etc.)
+            SDLActivity.onNativeMouse(androidButtonState, action, x, y, false);
 
         } catch (Exception e) {
             Log.e(TAG, "Error sending mouse button: " + button, e);
@@ -212,6 +261,130 @@ public class SDLInputBridge implements ControlInputBridge {
             SDLActivity.onNativeMouse(0, ACTION_MOVE, deltaX, deltaY, true);
         } catch (Exception e) {
             Log.e(TAG, "Error sending mouse move", e);
+        }
+    }
+    
+    /**
+     * 启用虚拟鼠标（用于右摇杆鼠标移动模式）
+     */
+    public void enableVirtualMouse() {
+        try {
+            nativeEnableVirtualMouse(screenWidth, screenHeight);
+            Log.i(TAG, "Virtual mouse enabled");
+        } catch (Exception e) {
+            Log.e(TAG, "Error enabling virtual mouse", e);
+        }
+    }
+    
+    /**
+     * 禁用虚拟鼠标
+     */
+    public void disableVirtualMouse() {
+        try {
+            nativeDisableVirtualMouse();
+            Log.i(TAG, "Virtual mouse disabled");
+        } catch (Exception e) {
+            Log.e(TAG, "Error disabling virtual mouse", e);
+        }
+    }
+    
+    /**
+     * 设置虚拟鼠标移动范围
+     * @param left 左边距（屏幕百分比 0.0-1.0）
+     * @param top 上边距（屏幕百分比 0.0-1.0）
+     * @param right 右边界（屏幕百分比 0.0-1.0）
+     * @param bottom 下边界（屏幕百分比 0.0-1.0）
+     */
+    public void setVirtualMouseRange(float left, float top, float right, float bottom) {
+        try {
+            nativeSetVirtualMouseRange(left, top, right, bottom);
+            Log.i(TAG, "Virtual mouse range set: left=" + left + ", top=" + top + ", right=" + right + ", bottom=" + bottom);
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting virtual mouse range", e);
+        }
+    }
+    
+    /**
+     * 更新虚拟鼠标位置（相对移动，用于右摇杆）
+     * @param deltaX X轴相对移动量
+     * @param deltaY Y轴相对移动量
+     */
+    public void updateVirtualMouseDelta(float deltaX, float deltaY) {
+        try {
+            nativeUpdateVirtualMouseDelta(deltaX, deltaY);
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating virtual mouse delta", e);
+        }
+    }
+    
+    /**
+     * 获取当前虚拟鼠标X位置
+     */
+    public float getVirtualMouseX() {
+        try {
+            return nativeGetVirtualMouseX();
+        } catch (Exception e) {
+            return screenWidth / 2.0f;
+        }
+    }
+    
+    /**
+     * 获取当前虚拟鼠标Y位置
+     */
+    public float getVirtualMouseY() {
+        try {
+            return nativeGetVirtualMouseY();
+        } catch (Exception e) {
+            return screenHeight / 2.0f;
+        }
+    }
+    
+    /**
+     * 发送绝对鼠标位置（用于右摇杆八方向攻击）
+     * @param x 绝对X坐标（屏幕坐标）
+     * @param y 绝对Y坐标（屏幕坐标）
+     */
+    public void sendMousePosition(float x, float y) {
+        try {
+            // 调用SDLActivity的静态native方法，使用绝对位置（relative = false）
+            SDLActivity.onNativeMouse(0, ACTION_MOVE, x, y, false);
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending mouse position", e);
+        }
+    }
+    
+    /**
+     * 发送虚拟触屏点击（用于右摇杆八方向攻击）
+     * 使用虚拟触屏点而不是鼠标，不会干扰真实触屏
+     * @param index 虚拟触屏点索引
+     * @param x 屏幕X坐标
+     * @param y 屏幕Y坐标
+     * @param isDown true=按下，false=释放
+     */
+    public void sendVirtualTouch(int index, float x, float y, boolean isDown) {
+        try {
+            if (isDown) {
+                nativeSetVirtualTouch(index, x, y, screenWidth, screenHeight);
+                Log.d(TAG, "Virtual touch DOWN: index=" + index + ", pos=(" + x + "," + y + ")");
+            } else {
+                nativeClearVirtualTouch(index);
+                Log.d(TAG, "Virtual touch UP: index=" + index);
+            }
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "Native library not loaded for sendVirtualTouch", e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending virtual touch", e);
+        }
+    }
+    
+    /**
+     * 清除右摇杆虚拟触屏点
+     */
+    public void clearRightStickTouch() {
+        try {
+            nativeClearVirtualTouch(VIRTUAL_TOUCH_RIGHT_STICK);
+        } catch (Exception e) {
+            Log.e(TAG, "Error clearing right stick virtual touch", e);
         }
     }
 

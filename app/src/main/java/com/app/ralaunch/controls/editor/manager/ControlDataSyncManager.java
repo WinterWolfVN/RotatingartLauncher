@@ -108,6 +108,8 @@ public class ControlDataSyncManager {
         target.keycode = source.keycode;
         target.isToggle = source.isToggle;
         target.opacity = source.opacity;
+        target.borderOpacity = source.borderOpacity;
+        target.textOpacity = source.textOpacity;
         target.visible = source.visible;
         target.bgColor = source.bgColor;
         target.strokeColor = source.strokeColor;
@@ -126,6 +128,12 @@ public class ControlDataSyncManager {
             target.stickKnobSize = source.stickKnobSize;
             if (source.joystickKeys != null) {
                 target.joystickKeys = source.joystickKeys.clone();
+            }
+            // 深拷贝统一组合键数组
+            if (source.joystickComboKeys != null) {
+                target.joystickComboKeys = source.joystickComboKeys.clone();
+            } else {
+                target.joystickComboKeys = new int[0];
             }
             target.joystickMode = source.joystickMode;
             target.xboxUseRightStick = source.xboxUseRightStick;

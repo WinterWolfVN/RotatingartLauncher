@@ -83,6 +83,23 @@ public class ControlEditDialogUIBinder {
             });
         }
         
+        // 组合键映射（仅摇杆类型显示）
+        MaterialCardView itemJoystickComboKeys = view.findViewById(R.id.item_joystick_combo_keys);
+        TextView tvJoystickComboKeys = view.findViewById(R.id.tv_joystick_combo_keys);
+        if (itemJoystickComboKeys != null) {
+            itemJoystickComboKeys.setOnClickListener(v -> {
+                // 直接显示统一组合键选择对话框（所有方向共用）
+                ControlJoystickComboKeysManager.showComboKeysSelectDialog(dialog.getContext(), refs.getCurrentData(),
+                    (updatedData) -> {
+                        // 更新显示
+                        if (tvJoystickComboKeys != null) {
+                            ControlJoystickComboKeysManager.updateComboKeysDisplay(updatedData, tvJoystickComboKeys);
+                        }
+                        refs.notifyUpdate();
+                    });
+            });
+        }
+        
         if (etName != null) {
             etName.addTextChangedListener(new android.text.TextWatcher() {
                 @Override
@@ -121,7 +138,7 @@ public class ControlEditDialogUIBinder {
             });
         }
         
-        // 摇杆左右选择开关（仅摇杆类型且为SDL控制器模式时显示）
+        // 摇杆左右选择开关（仅摇杆类型且为SDL控制器模式或鼠标模式时显示）
         SwitchCompat switchJoystickStickSelect = view.findViewById(R.id.switch_joystick_stick_select);
         TextView tvJoystickStickSelect = view.findViewById(R.id.tv_joystick_stick_select);
         if (switchJoystickStickSelect != null) {
@@ -131,6 +148,24 @@ public class ControlEditDialogUIBinder {
                     // 更新显示文本
                     if (tvJoystickStickSelect != null) {
                         tvJoystickStickSelect.setText(isChecked ? "右摇杆" : "左摇杆");
+                    }
+                    // 更新攻击模式选项的可见性
+                    ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(view, refs.getCurrentData());
+                    refs.notifyUpdate();
+                }
+            });
+        }
+        
+        // 右摇杆攻击模式开关（仅摇杆类型且为鼠标模式且为右摇杆时显示）
+        SwitchCompat switchRightStickAttackMode = view.findViewById(R.id.switch_right_stick_attack_mode);
+        TextView tvRightStickAttackMode = view.findViewById(R.id.tv_right_stick_attack_mode);
+        if (switchRightStickAttackMode != null) {
+            switchRightStickAttackMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (refs.getCurrentData() != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
+                    refs.getCurrentData().rightStickContinuous = isChecked;
+                    // 更新显示文本
+                    if (tvRightStickAttackMode != null) {
+                        tvRightStickAttackMode.setText(isChecked ? "持续攻击" : "点击攻击");
                     }
                     refs.notifyUpdate();
                 }
@@ -145,6 +180,94 @@ public class ControlEditDialogUIBinder {
                     refs.getCurrentData().passThrough = isChecked;
                     refs.notifyUpdate();
                 }
+            });
+        }
+        
+        // 鼠标移动范围设置（仅摇杆类型且为鼠标模式且为右摇杆时显示）
+        SeekBar seekbarMouseRangeLeft = view.findViewById(R.id.seekbar_mouse_range_left);
+        TextView tvMouseRangeLeft = view.findViewById(R.id.tv_mouse_range_left);
+        SeekBar seekbarMouseRangeTop = view.findViewById(R.id.seekbar_mouse_range_top);
+        TextView tvMouseRangeTop = view.findViewById(R.id.tv_mouse_range_top);
+        SeekBar seekbarMouseRangeRight = view.findViewById(R.id.seekbar_mouse_range_right);
+        TextView tvMouseRangeRight = view.findViewById(R.id.tv_mouse_range_right);
+        SeekBar seekbarMouseRangeBottom = view.findViewById(R.id.seekbar_mouse_range_bottom);
+        TextView tvMouseRangeBottom = view.findViewById(R.id.tv_mouse_range_bottom);
+        
+        if (seekbarMouseRangeLeft != null) {
+            seekbarMouseRangeLeft.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText(progress + "%");
+                    if (refs.getCurrentData() != null && fromUser) {
+                        refs.getCurrentData().mouseRangeLeft = progress / 100f;
+                        refs.notifyUpdate();
+                    }
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            });
+        }
+        
+        if (seekbarMouseRangeTop != null) {
+            seekbarMouseRangeTop.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (tvMouseRangeTop != null) tvMouseRangeTop.setText(progress + "%");
+                    if (refs.getCurrentData() != null && fromUser) {
+                        refs.getCurrentData().mouseRangeTop = progress / 100f;
+                        refs.notifyUpdate();
+                    }
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            });
+        }
+        
+        if (seekbarMouseRangeRight != null) {
+            seekbarMouseRangeRight.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (tvMouseRangeRight != null) tvMouseRangeRight.setText(progress + "%");
+                    if (refs.getCurrentData() != null && fromUser) {
+                        refs.getCurrentData().mouseRangeRight = progress / 100f;
+                        refs.notifyUpdate();
+                    }
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            });
+        }
+        
+        if (seekbarMouseRangeBottom != null) {
+            seekbarMouseRangeBottom.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText(progress + "%");
+                    if (refs.getCurrentData() != null && fromUser) {
+                        refs.getCurrentData().mouseRangeBottom = progress / 100f;
+                        refs.notifyUpdate();
+                    }
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+            });
+        }
+        
+        // 鼠标移动速度滑块
+        SeekBar seekbarMouseSpeed = view.findViewById(R.id.seekbar_mouse_speed);
+        TextView tvMouseSpeed = view.findViewById(R.id.tv_mouse_speed);
+        if (seekbarMouseSpeed != null) {
+            seekbarMouseSpeed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (tvMouseSpeed != null) tvMouseSpeed.setText(String.valueOf(progress));
+                    if (refs.getCurrentData() != null && fromUser) {
+                        refs.getCurrentData().mouseSpeed = progress;
+                        refs.notifyUpdate();
+                    }
+                }
+                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
     }
@@ -306,6 +429,53 @@ public class ControlEditDialogUIBinder {
                 refs::notifyUpdate
             )
         );
+        
+        // 边框透明度设置（使用统一管理器）
+        ControlEditDialogSeekBarManager.bindSeekBarSetting(view,
+            R.id.seekbar_border_opacity,
+            R.id.tv_border_opacity_value,
+            ControlEditDialogSeekBarManager.createPercentConfig(
+                refs.getCurrentData(),
+                new ControlEditDialogSeekBarManager.ValueSetter() {
+                    @Override
+                    public float get(ControlData data) {
+                        // 如果为0则使用背景透明度作为兼容
+                        return data.borderOpacity != 0 ? data.borderOpacity : data.opacity;
+                    }
+                    
+                    @Override
+                    public void set(ControlData data, float value) {
+                        data.borderOpacity = value;
+                    }
+                },
+                refs::notifyUpdate
+            )
+        );
+        
+        // 文本透明度设置（使用统一管理器，仅按钮和文本控件显示）
+        View cardTextOpacity = view.findViewById(R.id.card_text_opacity);
+        if (cardTextOpacity != null && cardTextOpacity.getVisibility() == View.VISIBLE) {
+            ControlEditDialogSeekBarManager.bindSeekBarSetting(view,
+                R.id.seekbar_text_opacity,
+                R.id.tv_text_opacity_value,
+                ControlEditDialogSeekBarManager.createPercentConfig(
+                    refs.getCurrentData(),
+                    new ControlEditDialogSeekBarManager.ValueSetter() {
+                        @Override
+                        public float get(ControlData data) {
+                            // 如果为0则使用背景透明度作为兼容
+                            return data.textOpacity != 0 ? data.textOpacity : data.opacity;
+                        }
+                        
+                        @Override
+                        public void set(ControlData data, float value) {
+                            data.textOpacity = value;
+                        }
+                    },
+                    refs::notifyUpdate
+                )
+            );
+        }
         
         if (switchVisible != null) {
             switchVisible.setOnCheckedChangeListener((buttonView, isChecked) -> {

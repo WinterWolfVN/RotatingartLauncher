@@ -1,4 +1,4 @@
-package com.app.ralaunch.manager;
+package com.app.ralaunch.controls.editor;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -13,32 +13,30 @@ import com.app.ralaunch.controls.ControlConfig;
 import com.app.ralaunch.controls.ControlData;
 import com.app.ralaunch.controls.ControlLayout;
 import com.app.ralaunch.controls.ControlView;
-import com.app.ralaunch.controls.editor.UnifiedEditorSettingsDialog;
-import com.app.ralaunch.controls.editor.ControlEditDialogMD;
-import com.app.ralaunch.controls.editor.ControlEditorOperations;
+import com.app.ralaunch.controls.editor.manager.ControlDataSyncManager;
 import com.app.ralaunch.utils.AppLogger;
 
-import java.io.File;
-
 /**
- * 游戏内控件编辑器管理器
+ * 统一的控件编辑管理器
  * 
- * 统一管理游戏内控件编辑功能，包括：
- * - 编辑模式进入/退出
- * - 控件添加/删除/编辑
- * - 布局保存/加载
- * - 编辑对话框管理
- * 
- * 减少 GameActivity 的代码耦合
+ * 支持两种模式：
+ * 1. MODE_STANDALONE (游戏外): 直接进入编辑模式，用于独立的控件编辑器界面
+ * 2. MODE_IN_GAME (游戏内): 需要手动进入编辑模式，用于游戏运行时的编辑
  */
-public class GameControlEditorManager {
-    private static final String TAG = "GameControlEditorManager";
+public class ControlEditorManager {
+    private static final String TAG = "ControlEditorManager";
+    
+    /** 独立模式：直接进入编辑模式 */
+    public static final int MODE_STANDALONE = 0;
+    /** 游戏内模式：需要手动进入编辑模式 */
+    public static final int MODE_IN_GAME = 1;
     
     private Context mContext;
     private ControlLayout mControlLayout;
     private ViewGroup mContentFrame;
-    private View mEditorSettingsButton;
-    private View mDrawerButton;
+    private int mMode;
+    private int mScreenWidth;
+    private int mScreenHeight;
     
     private boolean mIsInEditor = false;
     private boolean mHasUnsavedChanges = false;
@@ -47,6 +45,7 @@ public class GameControlEditorManager {
     private UnifiedEditorSettingsDialog mEditorSettingsDialog;
     
     private OnEditorStateChangedListener mStateListener;
+    private OnLayoutChangedListener mLayoutChangedListener;
     
     /**
      * 编辑状态变化监听器
@@ -56,14 +55,35 @@ public class GameControlEditorManager {
         void onEditorExited();
     }
     
-    public GameControlEditorManager(Context context, ControlLayout controlLayout, 
-                                   ViewGroup contentFrame, View editorSettingsButton, 
-                                   View drawerButton) {
+    /**
+     * 布局变化监听器（用于 Activity 刷新显示）
+     */
+    public interface OnLayoutChangedListener {
+        void onLayoutChanged();
+    }
+    
+    /**
+     * 创建控件编辑管理器
+     * @param context 上下文
+     * @param controlLayout 控件布局
+     * @param contentFrame 内容容器（用于显示对话框）
+     * @param mode 模式：MODE_STANDALONE 或 MODE_IN_GAME
+     */
+    public ControlEditorManager(Context context, ControlLayout controlLayout, 
+                               ViewGroup contentFrame, int mode) {
         mContext = context;
         mControlLayout = controlLayout;
         mContentFrame = contentFrame;
-        mEditorSettingsButton = editorSettingsButton;
-        mDrawerButton = drawerButton;
+        mMode = mode;
+        
+        DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        mScreenWidth = metrics.widthPixels;
+        mScreenHeight = metrics.heightPixels;
+        
+        // 独立模式下自动进入编辑模式
+        if (mMode == MODE_STANDALONE) {
+            setupEditMode();
+        }
     }
     
     /**
@@ -74,18 +94,42 @@ public class GameControlEditorManager {
     }
     
     /**
-     * 进入编辑模式
+     * 设置布局变化监听器
      */
-    public void enterEditMode() {
+    public void setOnLayoutChangedListener(OnLayoutChangedListener listener) {
+        mLayoutChangedListener = listener;
+    }
+    
+    /**
+     * 设置控件布局（用于布局重新创建后更新引用）
+     */
+    public void setControlLayout(ControlLayout controlLayout) {
+        mControlLayout = controlLayout;
+        // 独立模式下始终自动进入编辑模式
+        if (mMode == MODE_STANDALONE) {
+            setupEditMode();
+        } else if (mIsInEditor) {
+            // 游戏内模式：只有在已进入编辑模式时才重新设置
+            setupEditMode();
+        }
+    }
+    
+    /**
+     * 配置编辑模式（设置监听器等）
+     */
+    private void setupEditMode() {
         if (mControlLayout == null) return;
         
-        mIsInEditor = true;
-        mHasUnsavedChanges = false;
+        // 独立模式下自动设置为编辑状态
+        if (mMode == MODE_STANDALONE) {
+            mIsInEditor = true;
+        }
+        
         mControlLayout.setModifiable(true);
         
         // 初始化编辑对话框
         initControlEditDialog();
-
+        
         // 设置控件点击监听器
         mControlLayout.setEditControlListener(data -> {
             if (mControlEditDialog != null) {
@@ -98,28 +142,32 @@ public class GameControlEditorManager {
             mHasUnsavedChanges = true;
         });
         
-        // 初始化编辑器设置弹窗（如果还没有初始化）
+        // 禁用视图裁剪
+        disableClippingRecursive(mControlLayout);
+    }
+    
+    /**
+     * 进入编辑模式（仅游戏内模式使用）
+     */
+    public void enterEditMode() {
+        if (mControlLayout == null) return;
+        if (mMode == MODE_STANDALONE) return; // 独立模式始终处于编辑状态
+        
+        mIsInEditor = true;
+        mHasUnsavedChanges = false;
+        
+        setupEditMode();
+        
+        // 初始化编辑器设置弹窗
         initEditorSettingsDialog();
         
-        // 设置编辑模式为启用状态，显示添加控件区域
+        // 设置编辑模式为启用状态
         if (mEditorSettingsDialog != null) {
             mEditorSettingsDialog.setEditModeEnabled(true);
         }
         
-        // 统一使用 game_drawer_button，不再切换按钮
-        // 编辑模式和普通模式都使用同一个按钮（game_drawer_button）
-        if (mEditorSettingsButton != null) {
-            mEditorSettingsButton.setVisibility(View.GONE); // 隐藏编辑模式专用按钮
-        }
-        if (mDrawerButton != null) {
-            mDrawerButton.setVisibility(View.VISIBLE); // 始终显示统一的工具栏按钮
-        }
-        
         // 确保控制可见
         mControlLayout.setControlsVisible(true);
-        
-        // 禁用视图裁剪
-        disableClippingRecursive(mControlLayout);
         
         Toast.makeText(mContext, R.string.editor_mode_on, Toast.LENGTH_SHORT).show();
         
@@ -129,9 +177,11 @@ public class GameControlEditorManager {
     }
     
     /**
-     * 退出编辑模式
+     * 退出编辑模式（仅游戏内模式使用）
      */
     public void exitEditMode() {
+        if (mMode == MODE_STANDALONE) return; // 独立模式不支持退出
+        
         // 如果有未保存的修改，弹出确认对话框
         if (mHasUnsavedChanges) {
             new AlertDialog.Builder(mContext)
@@ -156,7 +206,7 @@ public class GameControlEditorManager {
         mIsInEditor = false;
         mControlLayout.setModifiable(false);
         
-        // 设置编辑模式为禁用状态，隐藏添加控件区域
+        // 设置编辑模式为禁用状态
         if (mEditorSettingsDialog != null) {
             mEditorSettingsDialog.setEditModeEnabled(false);
         }
@@ -167,14 +217,6 @@ public class GameControlEditorManager {
         // 禁用视图裁剪
         disableClippingRecursive(mControlLayout);
         
-        // 统一使用 game_drawer_button，始终显示
-        if (mEditorSettingsButton != null) {
-            mEditorSettingsButton.setVisibility(View.GONE); // 隐藏编辑模式专用按钮
-        }
-        if (mDrawerButton != null) {
-            mDrawerButton.setVisibility(View.VISIBLE); // 始终显示统一的工具栏按钮
-        }
-        
         Toast.makeText(mContext, R.string.editor_mode_off, Toast.LENGTH_SHORT).show();
         
         if (mStateListener != null) {
@@ -183,58 +225,70 @@ public class GameControlEditorManager {
     }
     
     /**
+     * 切换编辑模式
+     */
+    public void toggleEditMode() {
+        if (mMode == MODE_STANDALONE) return;
+        
+        if (mIsInEditor) {
+            exitEditMode();
+        } else {
+            enterEditMode();
+        }
+    }
+    
+    /**
      * 初始化控件编辑对话框
      */
     private void initControlEditDialog() {
         if (mControlEditDialog != null) return;
-
-        DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
-
-        mControlEditDialog = new ControlEditDialogMD(mContext,
-            metrics.widthPixels, metrics.heightPixels);
-
+        
+        mControlEditDialog = new ControlEditDialogMD(mContext, mScreenWidth, mScreenHeight);
+        
         // 设置实时更新监听器
         mControlEditDialog.setOnControlUpdatedListener(control -> {
             if (mControlLayout != null) {
-                // 实时更新视图（避免重新加载整个布局）
-                for (int i = 0; i < mControlLayout.getChildCount(); i++) {
-                    View child = mControlLayout.getChildAt(i);
-                    if (child instanceof ControlView) {
-                        ControlView controlView = (ControlView) child;
-                        if (controlView.getData() == control) {
-                            // 更新布局参数
-                            ViewGroup.LayoutParams layoutParams = child.getLayoutParams();
-                            if (layoutParams instanceof FrameLayout.LayoutParams) {
-                                FrameLayout.LayoutParams frameParams = (FrameLayout.LayoutParams) layoutParams;
-                                frameParams.width = (int) control.width;
-                                frameParams.height = (int) control.height;
-                                frameParams.leftMargin = (int) control.x;
-                                frameParams.topMargin = (int) control.y;
-                                child.setLayoutParams(frameParams);
-                            }
-                            // 更新视觉属性
-                            child.setAlpha(control.opacity);
-                            child.setVisibility(control.visible ? View.VISIBLE : View.INVISIBLE);
-                            // 刷新控件绘制
-                            controlView.updateData(control);
-                            child.invalidate();
-                            break;
-                        }
-                    }
-                }
+                ControlDataSyncManager.syncControlDataToView(mControlLayout, control);
                 mHasUnsavedChanges = true;
             }
         });
-
+        
         // 设置删除监听器
         mControlEditDialog.setOnControlDeletedListener(control -> {
             if (mControlLayout != null) {
                 ControlConfig config = mControlLayout.getConfig();
                 if (config != null && config.controls != null) {
-                    config.controls.remove(control);
+                    // 遍历列表找到相同的引用并删除
+                    for (int i = config.controls.size() - 1; i >= 0; i--) {
+                        if (config.controls.get(i) == control) {
+                            config.controls.remove(i);
+                            break;
+                        }
+                    }
                     mControlLayout.loadLayout(config);
                     disableClippingRecursive(mControlLayout);
                     mHasUnsavedChanges = true;
+                    
+                    if (mLayoutChangedListener != null) {
+                        mLayoutChangedListener.onLayoutChanged();
+                    }
+                }
+            }
+        });
+        
+        // 设置复制监听器
+        mControlEditDialog.setOnControlCopiedListener(control -> {
+            if (mControlLayout != null) {
+                ControlConfig config = mControlLayout.getConfig();
+                if (config != null && config.controls != null) {
+                    config.controls.add(control);
+                    mControlLayout.loadLayout(config);
+                    disableClippingRecursive(mControlLayout);
+                    mHasUnsavedChanges = true;
+                    
+                    if (mLayoutChangedListener != null) {
+                        mLayoutChangedListener.onLayoutChanged();
+                    }
                 }
             }
         });
@@ -243,13 +297,17 @@ public class GameControlEditorManager {
     /**
      * 初始化编辑器设置弹窗
      */
-    private void initEditorSettingsDialog() {
+    public void initEditorSettingsDialog() {
         if (mEditorSettingsDialog != null) return;
-
-        DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
+        
+        UnifiedEditorSettingsDialog.DialogMode dialogMode = 
+            (mMode == MODE_STANDALONE) ? 
+            UnifiedEditorSettingsDialog.DialogMode.EDITOR : 
+            UnifiedEditorSettingsDialog.DialogMode.GAME;
+        
         mEditorSettingsDialog = new UnifiedEditorSettingsDialog(
-            mContext, mContentFrame, metrics.widthPixels, UnifiedEditorSettingsDialog.DialogMode.EDITOR);
-
+            mContext, mContentFrame, mScreenWidth, dialogMode);
+        
         mEditorSettingsDialog.setOnMenuItemClickListener(new UnifiedEditorSettingsDialog.OnMenuItemClickListener() {
             @Override
             public void onAddButton() {
@@ -268,20 +326,45 @@ public class GameControlEditorManager {
 
             @Override
             public void onToggleEditMode() {
-                // 切换编辑模式：根据当前状态进入或退出
-                if (mIsInEditor) {
-                    exitEditMode();
-                } else {
-                    enterEditMode();
-                }
+                toggleEditMode();
+            }
+
+            @Override
+            public void onSaveLayout() {
+                saveLayout();
+                Toast.makeText(mContext, "布局已保存", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onHideCursorChanged(boolean hide) {
-                // 隐藏鼠标光标设置变化，通过环境变量传递给游戏
-                // 这个设置会在游戏启动时读取
+                // 隐藏鼠标光标设置变化
             }
         });
+        
+        // 独立模式下设置编辑模式为启用状态
+        if (mMode == MODE_STANDALONE) {
+            mEditorSettingsDialog.setEditModeEnabled(true);
+        }
+    }
+    
+    /**
+     * 显示设置对话框
+     */
+    public void showSettingsDialog() {
+        if (mEditorSettingsDialog == null) {
+            initEditorSettingsDialog();
+        }
+        // 独立模式下始终确保编辑模式为启用状态
+        if (mMode == MODE_STANDALONE) {
+            mEditorSettingsDialog.setEditModeEnabled(true);
+        } else {
+            mEditorSettingsDialog.setEditModeEnabled(mIsInEditor);
+        }
+        mEditorSettingsDialog.show();
+        // 对话框显示后再次确保状态正确（因为布局可能被重新创建）
+        if (mMode == MODE_STANDALONE) {
+            mEditorSettingsDialog.setEditModeEnabled(true);
+        }
     }
     
     /**
@@ -297,15 +380,17 @@ public class GameControlEditorManager {
             mControlLayout.loadLayout(config);
         }
         
-        DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
-        ControlData button = ControlEditorOperations.addButton(config, 
-            metrics.widthPixels, metrics.heightPixels);
+        ControlData button = ControlEditorOperations.addButton(config, mScreenWidth, mScreenHeight);
         
         if (button != null) {
             mControlLayout.loadLayout(config);
             disableClippingRecursive(mControlLayout);
             mHasUnsavedChanges = true;
             Toast.makeText(mContext, "已添加按钮", Toast.LENGTH_SHORT).show();
+            
+            if (mLayoutChangedListener != null) {
+                mLayoutChangedListener.onLayoutChanged();
+            }
         }
     }
     
@@ -322,15 +407,17 @@ public class GameControlEditorManager {
             mControlLayout.loadLayout(config);
         }
         
-        DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
-        ControlData joystick = ControlEditorOperations.addJoystick(config, 
-            metrics.widthPixels, metrics.heightPixels);
+        ControlData joystick = ControlEditorOperations.addJoystick(config, mScreenWidth, mScreenHeight);
         
         if (joystick != null) {
             mControlLayout.loadLayout(config);
             disableClippingRecursive(mControlLayout);
             mHasUnsavedChanges = true;
             Toast.makeText(mContext, "已添加摇杆", Toast.LENGTH_SHORT).show();
+            
+            if (mLayoutChangedListener != null) {
+                mLayoutChangedListener.onLayoutChanged();
+            }
         }
     }
     
@@ -347,27 +434,29 @@ public class GameControlEditorManager {
             mControlLayout.loadLayout(config);
         }
         
-        DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
-        ControlData text = ControlEditorOperations.addText(config, 
-            metrics.widthPixels, metrics.heightPixels);
+        ControlData text = ControlEditorOperations.addText(config, mScreenWidth, mScreenHeight);
         
         if (text != null) {
             mControlLayout.loadLayout(config);
             disableClippingRecursive(mControlLayout);
             mHasUnsavedChanges = true;
             Toast.makeText(mContext, "已添加文本", Toast.LENGTH_SHORT).show();
+            
+            if (mLayoutChangedListener != null) {
+                mLayoutChangedListener.onLayoutChanged();
+            }
         }
     }
     
-    
     /**
-     * 保存控制布局
+     * 保存布局
      */
-    public void saveControlLayout() {
+    public void saveLayout() {
         if (mControlLayout == null) return;
         
         ControlConfig config = mControlLayout.getConfig();
-        com.app.ralaunch.utils.ControlLayoutManager manager = new com.app.ralaunch.utils.ControlLayoutManager(mContext);
+        com.app.ralaunch.utils.ControlLayoutManager manager = 
+            new com.app.ralaunch.utils.ControlLayoutManager(mContext);
         String layoutName = manager.getCurrentLayoutName();
         
         if (ControlEditorOperations.saveLayout(mContext, config, layoutName)) {
@@ -376,43 +465,60 @@ public class GameControlEditorManager {
     }
     
     /**
-     * 加载控制布局
+     * 使用指定名称保存布局
      */
-    public void loadControlLayout() {
-        Toast.makeText(mContext, "加载布局功能开发中...", Toast.LENGTH_SHORT).show();
+    public void saveLayout(String layoutName) {
+        if (mControlLayout == null) return;
+        
+        ControlConfig config = mControlLayout.getConfig();
+        if (ControlEditorOperations.saveLayout(mContext, config, layoutName)) {
+            mHasUnsavedChanges = false;
+        }
     }
     
     /**
-     * 重置为默认控制布局
+     * 重置为默认布局
      */
     public void resetToDefaultLayout() {
         ControlEditorOperations.resetToDefaultLayout(mContext, mControlLayout, () -> {
             disableClippingRecursive(mControlLayout);
             mHasUnsavedChanges = true;
+            
+            if (mLayoutChangedListener != null) {
+                mLayoutChangedListener.onLayoutChanged();
+            }
         });
-    }
-    
-    /**
-     * 显示编辑器设置对话框
-     * 不自动进入编辑模式，用户需要在弹窗中手动点击"进入编辑模式"
-     */
-    public void showEditorSettingsDialog() {
-        // 初始化编辑器设置对话框（如果还没有初始化）
-        initEditorSettingsDialog();
-
-        // 同步编辑模式状态到对话框
-        if (mEditorSettingsDialog != null) {
-            mEditorSettingsDialog.setEditModeEnabled(mIsInEditor);
-            mEditorSettingsDialog.show();
-        }
     }
     
     /**
      * 隐藏编辑器设置对话框
      */
-    public void hideEditorSettingsDialog() {
+    public void hideSettingsDialog() {
         if (mEditorSettingsDialog != null) {
             mEditorSettingsDialog.hide();
+        }
+    }
+    
+    /**
+     * 设置对话框是否正在显示
+     */
+    public boolean isSettingsDialogShowing() {
+        return mEditorSettingsDialog != null && mEditorSettingsDialog.isDisplaying();
+    }
+    
+    /**
+     * 编辑对话框是否正在显示
+     */
+    public boolean isEditDialogShowing() {
+        return mControlEditDialog != null && mControlEditDialog.isShowing();
+    }
+    
+    /**
+     * 关闭编辑对话框
+     */
+    public void dismissEditDialog() {
+        if (mControlEditDialog != null) {
+            mControlEditDialog.dismiss();
         }
     }
     
@@ -420,7 +526,7 @@ public class GameControlEditorManager {
      * 是否处于编辑模式
      */
     public boolean isInEditor() {
-        return mIsInEditor;
+        return mMode == MODE_STANDALONE || mIsInEditor;
     }
     
     /**
@@ -428,6 +534,13 @@ public class GameControlEditorManager {
      */
     public boolean hasUnsavedChanges() {
         return mHasUnsavedChanges;
+    }
+    
+    /**
+     * 获取当前模式
+     */
+    public int getMode() {
+        return mMode;
     }
     
     /**

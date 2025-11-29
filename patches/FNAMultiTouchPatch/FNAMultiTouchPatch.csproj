@@ -15,11 +15,11 @@
   <!-- Reference FNA and tModLoader -->
   <ItemGroup>
     <Reference Include="FNA">
-      <HintPath>..\FNA.dll</HintPath>
+      <HintPath>C:\GOG Games\tModLoader\Libraries\FNA\1.0.0\FNA.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="tModLoader">
-      <HintPath>..\tModLoader.dll</HintPath>
+      <HintPath>C:\GOG Games\tModLoader\tModLoader.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

@@ -251,6 +251,20 @@ void Android_OnMouse(SDL_Window *window, int state, int action, float x, float y
     }
 }
 
+/* Direct mouse button send - bypasses last_state tracking for virtual controls */
+void Android_OnMouseButtonDirect(SDL_Window *window, int sdlButton, int pressed, float x, float y)
+{
+    if (!window) {
+        return;
+    }
+    
+    /* First move to position */
+    SDL_SendMouseMotion(window, 0, SDL_FALSE, (int)x, (int)y);
+    
+    /* Then send button event directly */
+    SDL_SendMouseButton(window, 0, pressed ? SDL_PRESSED : SDL_RELEASED, (Uint8)sdlButton);
+}
+
 #endif /* SDL_VIDEO_DRIVER_ANDROID */
 
 /* vi: set ts=4 sw=4 expandtab: */

@@ -33,9 +33,9 @@ import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.controls.ControlConfig;
 import com.app.ralaunch.controls.ControlData;
 import com.app.ralaunch.controls.editor.ControlEditorActivity;
+import com.app.ralaunch.controls.editor.ControlEditorManager;
 import com.app.ralaunch.utils.RuntimePreference;
 import com.app.ralib.error.ErrorHandler;
-import com.app.ralaunch.manager.GameControlEditorManager;
 import com.app.ralaunch.manager.GameMenuManager;
 import com.app.ralaunch.manager.GameFullscreenManager;
 
@@ -82,7 +82,7 @@ public class GameActivity extends SDLActivity {
     private FrameLayout mContentFrame; // 内容框架
     
     // 统一管理器
-    private GameControlEditorManager mControlEditorManager;
+    private ControlEditorManager mControlEditorManager;
     private GameMenuManager mMenuManager;
     private GameFullscreenManager mFullscreenManager;
 
@@ -357,6 +357,11 @@ public class GameActivity extends SDLActivity {
 
             // 创建输入桥接
             mInputBridge = new SDLInputBridge();
+            
+            // 初始化屏幕尺寸（用于虚拟触屏功能）
+            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
+            SDLInputBridge.setScreenSize(metrics.widthPixels, metrics.heightPixels);
+            AppLogger.info(TAG, "Screen size initialized: " + metrics.widthPixels + "x" + metrics.heightPixels);
 
             // 创建控制布局
             mControlLayout = new ControlLayout(this);
@@ -465,7 +470,7 @@ public class GameActivity extends SDLActivity {
             // 设置可拖动的悬浮按钮（与外部编辑器一致，直接打开编辑器设置对话框）
             setupDraggableButton(mDrawerButton, () -> {
                 if (mControlEditorManager != null) {
-                    mControlEditorManager.showEditorSettingsDialog();
+                    mControlEditorManager.showSettingsDialog();
                 }
             });
 
@@ -498,7 +503,7 @@ public class GameActivity extends SDLActivity {
                 public void onQuickSettings() {
                     // 快速设置已废弃，直接显示编辑器设置
                     if (mControlEditorManager != null) {
-                        mControlEditorManager.showEditorSettingsDialog();
+                        mControlEditorManager.showSettingsDialog();
                     }
                 }
 
@@ -521,8 +526,9 @@ public class GameActivity extends SDLActivity {
     private void initializeControlEditorManager() {
         if (mControlLayout == null || mContentFrame == null) return;
         
-        mControlEditorManager = new GameControlEditorManager(
-            this, mControlLayout, mContentFrame, mEditorSettingsButton, mDrawerButton);
+        // 使用统一的 ControlEditorManager，游戏内模式需要手动进入编辑模式
+        mControlEditorManager = new ControlEditorManager(
+            this, mControlLayout, mContentFrame, ControlEditorManager.MODE_IN_GAME);
     }
     
     /**
@@ -675,22 +681,12 @@ public class GameActivity extends SDLActivity {
 
     
     /**
-     * 保存控制布局（已废弃，使用 GameControlEditorManager）
+     * 保存控制布局（已废弃，使用 ControlEditorManager）
      */
     @Deprecated
     private void saveControlLayout() {
         if (mControlEditorManager != null) {
-            mControlEditorManager.saveControlLayout();
-        }
-    }
-
-    /**
-     * 加载控制布局（已废弃，使用 GameControlEditorManager）
-     */
-    @Deprecated
-    private void loadControlLayout() {
-        if (mControlEditorManager != null) {
-            mControlEditorManager.loadControlLayout();
+            mControlEditorManager.saveLayout();
         }
     }
 
@@ -1005,8 +1001,15 @@ public class GameActivity extends SDLActivity {
         try {
             int action = event.getActionMasked();
             
+            // 获取屏幕尺寸
+            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
+            int screenWidth = metrics.widthPixels;
+            int screenHeight = metrics.heightPixels;
+            
+            // 处理 ACTION_UP（最后一个触摸点抬起）
             if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
                 nativeClearTouchData();
+                AppLogger.debug(TAG, "Touch bridge: cleared (ACTION_UP/CANCEL)");
                 return;
             }
             
@@ -1014,14 +1017,9 @@ public class GameActivity extends SDLActivity {
             int actionIndex = event.getActionIndex();
             boolean isPointerUp = (action == MotionEvent.ACTION_POINTER_UP);
             
-            // 获取屏幕尺寸
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            int screenWidth = metrics.widthPixels;
-            int screenHeight = metrics.heightPixels;
-            
             int validCount = 0;
             for (int i = 0; i < pointerCount && validCount < 10; i++) {
-                // 跳过正在抬起的触摸点
+                // 跳过正在抬起的触摸点（ACTION_POINTER_UP）
                 if (isPointerUp && i == actionIndex) {
                     continue;
                 }
@@ -1032,21 +1030,35 @@ public class GameActivity extends SDLActivity {
                     continue;
                 }
                 
-                // 使用绝对屏幕坐标
+                // 使用归一化坐标（0-1）
                 mTouchX[validCount] = event.getX(i) / screenWidth;
                 mTouchY[validCount] = event.getY(i) / screenHeight;
                 validCount++;
             }
             
+            // 更新触摸数据（即使 validCount == 0，也要调用以清除之前的数据）
             nativeSetTouchData(validCount, mTouchX, mTouchY, screenWidth, screenHeight);
             
             // 调试日志
-            int consumedCount = com.app.ralaunch.controls.TouchPointerTracker.getConsumedCount();
-            if (validCount > 0 || consumedCount > 0) {
-                AppLogger.debug(TAG, "Touch bridge: game=" + validCount + ", controls=" + consumedCount);
+            if (validCount > 0) {
+                int consumedCount = com.app.ralaunch.controls.TouchPointerTracker.getConsumedCount();
+                AppLogger.debug(TAG, "Touch bridge: game=" + validCount + ", controls=" + consumedCount + 
+                    ", action=" + actionToString(action));
             }
         } catch (Exception e) {
-            // Ignore
+            AppLogger.error(TAG, "Error in updateTouchBridge: " + e.getMessage(), e);
+        }
+    }
+    
+    private String actionToString(int action) {
+        switch (action) {
+            case MotionEvent.ACTION_DOWN: return "DOWN";
+            case MotionEvent.ACTION_UP: return "UP";
+            case MotionEvent.ACTION_MOVE: return "MOVE";
+            case MotionEvent.ACTION_POINTER_DOWN: return "POINTER_DOWN";
+            case MotionEvent.ACTION_POINTER_UP: return "POINTER_UP";
+            case MotionEvent.ACTION_CANCEL: return "CANCEL";
+            default: return "UNKNOWN(" + action + ")";
         }
     }
 

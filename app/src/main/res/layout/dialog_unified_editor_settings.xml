@@ -198,6 +198,35 @@
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="16dp" />
 
+            <!-- 保存布局 -->
+            <LinearLayout
+                android:id="@+id/item_save_layout"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_save"
+                    android:tint="?attr/textPrimary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="保存布局"
+                    android:textColor="?attr/textPrimary"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
             </LinearLayout>
 
             <!-- 分隔线 -->

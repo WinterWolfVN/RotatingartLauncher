@@ -34,6 +34,8 @@ public class ControlDataConverter {
         data.height = element.getHeight();
         data.rotation = element.getRotation();
         data.opacity = element.getOpacity();
+        data.borderOpacity = element.getBorderOpacity() > 0 ? element.getBorderOpacity() : 1.0f;
+        data.textOpacity = element.getTextOpacity() > 0 ? element.getTextOpacity() : 1.0f;
         data.stickOpacity = element.getStickOpacity() > 0 ? element.getStickOpacity() : 1.0f;
         data.stickKnobSize = element.getStickKnobSize() > 0 ? element.getStickKnobSize() : 0.4f;
         data.visible = element.getVisibility() != ControlElement.Visibility.HIDDEN;
@@ -68,23 +70,42 @@ public class ControlDataConverter {
                 
             case JOYSTICK:
                 data.type = ControlData.TYPE_JOYSTICK;
-                int keyCode = element.getKeyCode();
                 
-                // 根据keycode判断摇杆模式
-                if (keyCode == -300) {
-                    // 左摇杆（SDL控制器模式）
-                    data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
-                    data.xboxUseRightStick = false;
-                    data.joystickKeys = null; // SDL控制器模式不需要joystickKeys
-                } else if (keyCode == -301) {
-                    // 右摇杆（SDL控制器模式）
-                    data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
-                    data.xboxUseRightStick = true;
+                // 优先使用保存的 joystickMode 和 xboxUseRightStick
+                if (element.getJoystickMode() >= 0 && element.getJoystickMode() <= 2) {
+                    data.joystickMode = element.getJoystickMode();
+                    data.xboxUseRightStick = element.isXboxUseRightStick();
+                    data.rightStickContinuous = element.isRightStickContinuous();
+                    // 鼠标移动范围
+                    data.mouseRangeLeft = element.getMouseRangeLeft();
+                    data.mouseRangeTop = element.getMouseRangeTop();
+                    data.mouseRangeRight = element.getMouseRangeRight();
+                    data.mouseRangeBottom = element.getMouseRangeBottom();
+                    data.mouseSpeed = element.getMouseSpeed();
+                } else {
+                    // 兼容旧数据：根据keycode判断摇杆模式
+                    int keyCode = element.getKeyCode();
+                    if (keyCode == -300) {
+                        // 左摇杆（SDL控制器模式）
+                        data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
+                        data.xboxUseRightStick = false;
+                    } else if (keyCode == -301) {
+                        // 右摇杆（SDL控制器模式）
+                        data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
+                        data.xboxUseRightStick = true;
+                    } else {
+                        // 键盘模式 - 根据keyCode推断方向键（如果keyCode是WASD之一）
+                        data.joystickMode = ControlData.JOYSTICK_MODE_KEYBOARD;
+                        data.xboxUseRightStick = false;
+                    }
+                }
+                
+                // 根据模式设置 joystickKeys
+                if (data.joystickMode == ControlData.JOYSTICK_MODE_SDL_CONTROLLER) {
                     data.joystickKeys = null; // SDL控制器模式不需要joystickKeys
                 } else {
-                    // 键盘模式 - 根据keyCode推断方向键（如果keyCode是WASD之一）
-                    data.joystickMode = ControlData.JOYSTICK_MODE_KEYBOARD;
-                    // 默认WASD映射，如果keyCode是W/A/S/D之一，则使用它作为上键
+                    // 键盘模式或鼠标模式 - 根据keyCode推断方向键（如果keyCode是WASD之一）
+                    int keyCode = element.getKeyCode();
                     int upKey = ControlData.SDL_SCANCODE_W;
                     if (keyCode == ControlData.SDL_SCANCODE_W || 
                         keyCode == ControlData.SDL_SCANCODE_A ||
@@ -114,6 +135,14 @@ public class ControlDataConverter {
                         leftKey = ControlData.SDL_SCANCODE_S;
                     }
                     data.joystickKeys = new int[]{upKey, rightKey, downKey, leftKey};
+                }
+                // 加载统一组合键数组
+                int[] elementComboKeys = element.getJoystickComboKeys();
+                if (elementComboKeys != null && elementComboKeys.length > 0) {
+                    data.joystickComboKeys = elementComboKeys.clone();
+                } else {
+                    // 兼容旧数据：初始化空数组
+                    data.joystickComboKeys = new int[0];
                 }
                 break;
                 
@@ -213,6 +242,8 @@ public class ControlDataConverter {
         element.setHeight(data.height);
         element.setRotation(data.rotation);
         element.setOpacity(data.opacity);
+        element.setBorderOpacity(data.borderOpacity != 0 ? data.borderOpacity : 1.0f);
+        element.setTextOpacity(data.textOpacity != 0 ? data.textOpacity : 1.0f);
         // 摇杆圆心透明度只使用 stickOpacity，如果没有设置则使用默认值 1.0（完全不透明），不受 opacity 影响
         element.setStickOpacity(data.stickOpacity != 0 ? data.stickOpacity : 1.0f);
         // 摇杆圆心大小，如果没有设置则使用默认值 0.4（40%半径）
@@ -236,11 +267,28 @@ public class ControlDataConverter {
             element.setToggle(data.isToggle);
             element.setButtonMode(data.buttonMode); // 保存按钮模式
         } else if (type == ControlElement.ElementType.JOYSTICK) {
-            // 摇杆模式转换
+            // 保存摇杆模式
+            element.setJoystickMode(data.joystickMode);
+            element.setXboxUseRightStick(data.xboxUseRightStick);
+            element.setRightStickContinuous(data.rightStickContinuous);
+            // 鼠标移动范围
+            element.setMouseRangeLeft(data.mouseRangeLeft);
+            element.setMouseRangeTop(data.mouseRangeTop);
+            element.setMouseRangeRight(data.mouseRangeRight);
+            element.setMouseRangeBottom(data.mouseRangeBottom);
+            element.setMouseSpeed(data.mouseSpeed);
+            
+            // 摇杆模式转换（兼容旧数据）
             if (data.joystickMode == ControlData.JOYSTICK_MODE_SDL_CONTROLLER) {
                 element.setKeyCode(data.xboxUseRightStick ? -301 : -300);
             } else {
                 element.setKeyCode(data.joystickKeys != null && data.joystickKeys.length > 0 ? data.joystickKeys[0] : 0);
+            }
+            // 保存统一组合键数组（所有方向共用）
+            if (data.joystickComboKeys != null && data.joystickComboKeys.length > 0) {
+                element.setJoystickComboKeys(data.joystickComboKeys.clone());
+            } else {
+                element.setJoystickComboKeys(null);
             }
         }
         
