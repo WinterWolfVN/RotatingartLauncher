@@ -42,6 +42,7 @@ import com.app.ralaunch.manager.GameFullscreenManager;
 import com.app.ralaunch.core.GameLauncher;
 import com.app.ralaunch.controls.ControlLayout;
 import com.app.ralaunch.controls.SDLInputBridge;
+import com.app.ralaunch.ui.FPSDisplayView;
 import com.app.ralib.patch.Patch;
 import com.app.ralib.patch.PatchManager;
 import com.app.ralaunch.renderer.OSMRenderer;
@@ -75,6 +76,7 @@ public class GameActivity extends SDLActivity {
     
     private ControlLayout mControlLayout;
     private SDLInputBridge mInputBridge;
+    private FPSDisplayView mFPSDisplayView;
     private DrawerLayout mDrawerLayout;
     private ListView mGameMenu;
     private View mDrawerButton; // 改为 View，因为现在是 MaterialCardView
@@ -377,6 +379,13 @@ public class GameActivity extends SDLActivity {
                             mControlLayout.setSDLSurface(mSurface);
                             AppLogger.info(TAG, "SDLSurface reference set for touch event forwarding");
                         }
+                        
+                        // 添加 FPS 显示视图
+                        mFPSDisplayView = new FPSDisplayView(GameActivity.this);
+                        mFPSDisplayView.setInputBridge(mInputBridge);
+                        contentView.addView(mFPSDisplayView, params);
+                        mFPSDisplayView.start();
+                        AppLogger.info(TAG, "FPS display view added and started");
                     }
                 } catch (Exception e) {
                     AppLogger.error(TAG, "Failed to add virtual controls to layout", e);
@@ -678,6 +687,11 @@ public class GameActivity extends SDLActivity {
     @Override
     protected void onDestroy() {
         AppLogger.info(TAG, "GameActivity.onDestroy() called");
+        
+        // 停止 FPS 显示更新
+        if (mFPSDisplayView != null) {
+            mFPSDisplayView.stop();
+        }
         
         super.onDestroy();
     }
