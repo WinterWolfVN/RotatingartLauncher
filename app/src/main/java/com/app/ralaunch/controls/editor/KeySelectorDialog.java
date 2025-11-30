@@ -205,6 +205,8 @@ public class KeySelectorDialog extends Dialog {
         bindKey(layout, R.id.key_mouse_left, "LMB", ControlData.MOUSE_LEFT);
         bindKey(layout, R.id.key_mouse_right, "RMB", ControlData.MOUSE_RIGHT);
         bindKey(layout, R.id.key_mouse_middle, "MMB", ControlData.MOUSE_MIDDLE);
+        bindKey(layout, R.id.key_mouse_Keyboard, "键盘", ControlData.SPECIAL_KEYBOARD);
+
     }
 
     /**
