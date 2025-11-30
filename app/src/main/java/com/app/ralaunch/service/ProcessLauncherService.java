@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.app.ralaunch.R;
+import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralaunch.core.GameLauncher;
 import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.utils.RuntimePreference;
@@ -244,8 +245,8 @@ public class ProcessLauncherService extends Service {
      */
     private void setupStartupHooksAuto(String assemblyPath) {
         try {
-            PatchManager patchManager = new PatchManager(null);
-            List<Patch> enabledPatches = patchManager.getEnabledPatches(Paths.get(assemblyPath));
+
+            List<Patch> enabledPatches = RaLaunchApplication.getPatchManager().getEnabledPatches(Paths.get(assemblyPath));
             
             if (!enabledPatches.isEmpty()) {
                 String hooks = PatchManager.constructStartupHooksEnvVar(enabledPatches);
