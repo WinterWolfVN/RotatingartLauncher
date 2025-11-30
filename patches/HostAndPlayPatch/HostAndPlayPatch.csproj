@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony.Thin" Version="2.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="tModLoader">
+      <HintPath>C:\GOG Games\tModLoader\tModLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="FNA">
+      <HintPath>C:\GOG Games\tModLoader\Libraries\FNA\1.0.0\FNA.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

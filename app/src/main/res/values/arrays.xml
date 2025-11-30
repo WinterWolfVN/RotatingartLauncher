@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- RangeSlider 默认值 (0, 100) -->
+    <array name="range_slider_default_values">
+        <item>0.0</item>
+        <item>100.0</item>
+    </array>
+</resources>
+

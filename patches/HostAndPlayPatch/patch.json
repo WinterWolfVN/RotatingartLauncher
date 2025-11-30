@@ -1,0 +1,27 @@
+{
+  "id": "host_and_play",
+  "name": "Host & Play (单进程开服)",
+  "description": "在单个游戏进程中同时运行服务器和客户端，无需多开进程即可开服并游玩。支持内存Socket通信和本地TCP回环连接两种模式。",
+  "version": "1.0.0",
+  "author": "RAL",
+  "dllFileName": "HostAndPlayPatch.dll",
+  "entryPoint": {
+    "typeName": "HostAndPlayPatch.StartupHook",
+    "methodName": "Initialize"
+  },
+  "targetGames": [
+    "tModLoader",
+    "Terraria"
+  ],
+  "priority": 50,
+  "enabled": true,
+  "environmentVariables": {
+    "HOSTANDPLAY_ENABLED": "1"
+  },
+  "features": [
+    "内存Socket通信 - 避免网络开销",
+    "单进程多线程架构",
+    "支持本地回环TCP连接（可选）",
+    "支持最多8个玩家（可配置）"
+  ]
+}

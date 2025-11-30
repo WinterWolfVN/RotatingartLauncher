@@ -272,6 +272,4 @@ public static class Patcher
         
         Console.WriteLine("[TModLoaderPatch] InstallVerifier class mitigations applied successfully!");
     }
-
-   
 }

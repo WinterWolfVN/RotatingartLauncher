@@ -1,21 +1,21 @@
 package com.app.ralaunch.controls.editor.manager;
 
 import android.view.View;
-import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
 import com.app.ralaunch.controls.ControlData;
+import com.google.android.material.slider.Slider;
 
 /**
- * SeekBar 设置项统一管理器
- * 统一管理所有 SeekBar 类型的设置项，避免重复代码
+ * Slider 设置项统一管理器 (MD3 风格)
+ * 统一管理所有 Slider 类型的设置项，避免重复代码
  */
 public class ControlEditDialogSeekBarManager {
     
     /**
-     * SeekBar 配置接口
+     * Slider 配置接口
      */
     public interface SeekBarConfig {
         /**
@@ -45,76 +45,64 @@ public class ControlEditDialogSeekBarManager {
     }
     
     /**
-     * 绑定 SeekBar 设置项
+     * 绑定 Slider 设置项
      * @param view 父视图
-     * @param seekBarId SeekBar 的 ID
+     * @param sliderId Slider 的 ID
      * @param textViewId 显示值的 TextView 的 ID
      * @param config 配置接口
      */
     public static void bindSeekBarSetting(@NonNull View view, 
-                                         int seekBarId, 
+                                         int sliderId, 
                                          int textViewId,
                                          @NonNull SeekBarConfig config) {
-        SeekBar seekBar = view.findViewById(seekBarId);
+        Slider slider = view.findViewById(sliderId);
         TextView textView = view.findViewById(textViewId);
         
-        if (seekBar == null || textView == null) {
+        if (slider == null || textView == null) {
             return;
         }
         
         // 清除旧的监听器，避免重复绑定导致的问题
-        seekBar.setOnSeekBarChangeListener(null);
-        
-        // 设置最大值
-        seekBar.setMax(config.getMaxValue());
+        slider.clearOnChangeListeners();
         
         // 设置初始值（从配置中获取当前值，确保使用最新的数据）
         float currentValue = config.getCurrentValue();
-        int progress = (int) (currentValue * config.getMaxValue());
-        seekBar.setProgress(progress);
+        float sliderValue = currentValue * config.getMaxValue();
+        slider.setValue(sliderValue);
         textView.setText(config.getDisplayText(currentValue));
         
         // 设置监听器
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    float value = progress / (float) config.getMaxValue();
-                    textView.setText(config.getDisplayText(value));
-                    config.setValue(value);
-                    config.notifyUpdate();
-                }
+        slider.addOnChangeListener((s, value, fromUser) -> {
+            if (fromUser) {
+                float normalizedValue = value / config.getMaxValue();
+                textView.setText(config.getDisplayText(normalizedValue));
+                config.setValue(normalizedValue);
+                config.notifyUpdate();
             }
-            
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-            
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
     }
     
     /**
-     * 填充 SeekBar 设置项的值
+     * 填充 Slider 设置项的值
      * @param view 父视图
-     * @param seekBarId SeekBar 的 ID
+     * @param sliderId Slider 的 ID
      * @param textViewId 显示值的 TextView 的 ID
      * @param config 配置接口
      */
     public static void fillSeekBarSetting(@NonNull View view,
-                                         int seekBarId,
+                                         int sliderId,
                                          int textViewId,
                                          @NonNull SeekBarConfig config) {
-        SeekBar seekBar = view.findViewById(seekBarId);
+        Slider slider = view.findViewById(sliderId);
         TextView textView = view.findViewById(textViewId);
         
-        if (seekBar == null || textView == null) {
+        if (slider == null || textView == null) {
             return;
         }
         
         float currentValue = config.getCurrentValue();
-        int progress = (int) (currentValue * config.getMaxValue());
-        seekBar.setProgress(progress);
+        float sliderValue = currentValue * config.getMaxValue();
+        slider.setValue(sliderValue);
         textView.setText(config.getDisplayText(currentValue));
     }
     
@@ -210,5 +198,3 @@ public class ControlEditDialogSeekBarManager {
         void notifyUpdate();
     }
 }
-
-

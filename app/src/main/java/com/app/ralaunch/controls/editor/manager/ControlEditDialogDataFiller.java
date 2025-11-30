@@ -2,7 +2,6 @@ package com.app.ralaunch.controls.editor.manager;
 
 import android.view.View;
 import android.widget.EditText;
-import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,6 +11,7 @@ import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
 import com.app.ralaunch.controls.KeyMapper;
 import com.app.ralaunch.controls.editor.manager.ControlEditDialogVisibilityManager;
+import com.google.android.material.slider.Slider;
 
 /**
  * 控件编辑对话框数据填充管理器
@@ -73,16 +73,8 @@ public class ControlEditDialogDataFiller {
             }
         }
         
-        // 右摇杆攻击模式开关（仅摇杆类型且为鼠标模式且为右摇杆时显示）
-        SwitchCompat switchRightStickAttackMode = view.findViewById(R.id.switch_right_stick_attack_mode);
-        TextView tvRightStickAttackMode = view.findViewById(R.id.tv_right_stick_attack_mode);
-        if (switchRightStickAttackMode != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
-            switchRightStickAttackMode.setChecked(refs.getCurrentData().rightStickContinuous);
-            // 更新显示文本
-            if (tvRightStickAttackMode != null) {
-                tvRightStickAttackMode.setText(refs.getCurrentData().rightStickContinuous ? "持续攻击" : "点击攻击");
-            }
-        }
+        // 右摇杆攻击模式 RadioGroup（从全局设置读取）
+        // 初始化已在 ControlEditDialogUIBinder 中处理
         
         // 触摸穿透开关
         SwitchCompat switchPassThrough = view.findViewById(R.id.switch_pass_through);
@@ -90,42 +82,8 @@ public class ControlEditDialogDataFiller {
             switchPassThrough.setChecked(refs.getCurrentData().passThrough);
         }
         
-        // 鼠标移动范围（仅摇杆类型且为鼠标模式且为右摇杆时显示）
-        SeekBar seekbarMouseRangeLeft = view.findViewById(R.id.seekbar_mouse_range_left);
-        TextView tvMouseRangeLeft = view.findViewById(R.id.tv_mouse_range_left);
-        SeekBar seekbarMouseRangeTop = view.findViewById(R.id.seekbar_mouse_range_top);
-        TextView tvMouseRangeTop = view.findViewById(R.id.tv_mouse_range_top);
-        SeekBar seekbarMouseRangeRight = view.findViewById(R.id.seekbar_mouse_range_right);
-        TextView tvMouseRangeRight = view.findViewById(R.id.tv_mouse_range_right);
-        SeekBar seekbarMouseRangeBottom = view.findViewById(R.id.seekbar_mouse_range_bottom);
-        TextView tvMouseRangeBottom = view.findViewById(R.id.tv_mouse_range_bottom);
-        
-        if (refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
-            if (seekbarMouseRangeLeft != null) {
-                seekbarMouseRangeLeft.setProgress((int) (refs.getCurrentData().mouseRangeLeft * 100));
-                if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText((int) (refs.getCurrentData().mouseRangeLeft * 100) + "%");
-            }
-            if (seekbarMouseRangeTop != null) {
-                seekbarMouseRangeTop.setProgress((int) (refs.getCurrentData().mouseRangeTop * 100));
-                if (tvMouseRangeTop != null) tvMouseRangeTop.setText((int) (refs.getCurrentData().mouseRangeTop * 100) + "%");
-            }
-            if (seekbarMouseRangeRight != null) {
-                seekbarMouseRangeRight.setProgress((int) (refs.getCurrentData().mouseRangeRight * 100));
-                if (tvMouseRangeRight != null) tvMouseRangeRight.setText((int) (refs.getCurrentData().mouseRangeRight * 100) + "%");
-            }
-            if (seekbarMouseRangeBottom != null) {
-                seekbarMouseRangeBottom.setProgress((int) (refs.getCurrentData().mouseRangeBottom * 100));
-                if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText((int) (refs.getCurrentData().mouseRangeBottom * 100) + "%");
-            }
-            
-            // 鼠标移动速度
-            SeekBar seekbarMouseSpeed = view.findViewById(R.id.seekbar_mouse_speed);
-            TextView tvMouseSpeed = view.findViewById(R.id.tv_mouse_speed);
-            if (seekbarMouseSpeed != null) {
-                seekbarMouseSpeed.setProgress((int) refs.getCurrentData().mouseSpeed);
-                if (tvMouseSpeed != null) tvMouseSpeed.setText(String.valueOf((int) refs.getCurrentData().mouseSpeed));
-            }
-        }
+        // 鼠标移动范围和速度（从全局设置读取）
+        // 初始化已在 ControlEditDialogUIBinder 中处理
         
         // 组合键映射显示（仅摇杆类型显示）
         TextView tvJoystickComboKeys = view.findViewById(R.id.tv_joystick_combo_keys);
@@ -141,37 +99,37 @@ public class ControlEditDialogDataFiller {
     public static void fillPositionSizeData(@NonNull View view, @NonNull UIReferences refs) {
         if (refs.getCurrentData() == null) return;
         
-        SeekBar seekbarPosX = view.findViewById(R.id.seekbar_pos_x);
+        Slider sliderPosX = view.findViewById(R.id.seekbar_pos_x);
         TextView tvPosXValue = view.findViewById(R.id.tv_pos_x_value);
-        SeekBar seekbarPosY = view.findViewById(R.id.seekbar_pos_y);
+        Slider sliderPosY = view.findViewById(R.id.seekbar_pos_y);
         TextView tvPosYValue = view.findViewById(R.id.tv_pos_y_value);
-        SeekBar seekbarWidth = view.findViewById(R.id.seekbar_width);
+        Slider sliderWidth = view.findViewById(R.id.seekbar_width);
         TextView tvWidthValue = view.findViewById(R.id.tv_width_value);
-        SeekBar seekbarHeight = view.findViewById(R.id.seekbar_height);
+        Slider sliderHeight = view.findViewById(R.id.seekbar_height);
         TextView tvHeightValue = view.findViewById(R.id.tv_height_value);
         SwitchCompat switchAutoSize = view.findViewById(R.id.switch_auto_size);
         
-        if (seekbarPosX != null) {
+        if (sliderPosX != null) {
             int xPercent = (int) (refs.getCurrentData().x / refs.getScreenWidth() * 100);
-            seekbarPosX.setProgress(xPercent);
+            sliderPosX.setValue(xPercent);
             if (tvPosXValue != null) tvPosXValue.setText(xPercent + "%");
         }
         
-        if (seekbarPosY != null) {
+        if (sliderPosY != null) {
             int yPercent = (int) (refs.getCurrentData().y / refs.getScreenHeight() * 100);
-            seekbarPosY.setProgress(yPercent);
+            sliderPosY.setValue(yPercent);
             if (tvPosYValue != null) tvPosYValue.setText(yPercent + "%");
         }
         
-        if (seekbarWidth != null) {
+        if (sliderWidth != null) {
             int widthPercent = (int) (refs.getCurrentData().width / refs.getScreenWidth() * 100);
-            seekbarWidth.setProgress(widthPercent);
+            sliderWidth.setValue(widthPercent);
             if (tvWidthValue != null) tvWidthValue.setText(widthPercent + "%");
         }
         
-        if (seekbarHeight != null) {
+        if (sliderHeight != null) {
             int heightPercent = (int) (refs.getCurrentData().height / refs.getScreenHeight() * 100);
-            seekbarHeight.setProgress(heightPercent);
+            sliderHeight.setValue(heightPercent);
             if (tvHeightValue != null) tvHeightValue.setText(heightPercent + "%");
         }
         
@@ -285,15 +243,14 @@ public class ControlEditDialogDataFiller {
         // 更新外观选项的可见性（根据控件类型和形状）
         ControlEditDialogVisibilityManager.updateAppearanceOptionsVisibility(view, data);
         
-        // 圆角半径设置（使用统一管理器，仅在矩形形状时显示）
+        // 圆角半径设置（仅在矩形形状时显示）
         View cardCornerRadius = view.findViewById(R.id.card_corner_radius);
         if (cardCornerRadius != null && cardCornerRadius.getVisibility() == View.VISIBLE) {
-            SeekBar seekbarCornerRadius = view.findViewById(R.id.seekbar_corner_radius);
+            Slider sliderCornerRadius = view.findViewById(R.id.seekbar_corner_radius);
             TextView tvCornerRadiusValue = view.findViewById(R.id.tv_corner_radius_value);
-            if (seekbarCornerRadius != null && tvCornerRadiusValue != null) {
+            if (sliderCornerRadius != null && tvCornerRadiusValue != null) {
                 int cornerRadius = (int) data.cornerRadius;
-                seekbarCornerRadius.setMax(100); // 最大圆角半径100dp
-                seekbarCornerRadius.setProgress(cornerRadius);
+                sliderCornerRadius.setValue(cornerRadius);
                 tvCornerRadiusValue.setText(cornerRadius + "dp");
             }
         }
@@ -358,12 +315,11 @@ public class ControlEditDialogDataFiller {
         }
         
         // 旋转角度设置（0-360度）
-        SeekBar seekbarRotation = view.findViewById(R.id.seekbar_rotation);
+        Slider sliderRotation = view.findViewById(R.id.seekbar_rotation);
         TextView tvRotationValue = view.findViewById(R.id.tv_rotation_value);
-        if (seekbarRotation != null && tvRotationValue != null) {
+        if (sliderRotation != null && tvRotationValue != null) {
             int rotation = (int) data.rotation;
-            seekbarRotation.setMax(360);
-            seekbarRotation.setProgress(rotation);
+            sliderRotation.setValue(rotation);
             tvRotationValue.setText(rotation + "°");
         }
     }

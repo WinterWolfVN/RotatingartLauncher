@@ -17,7 +17,7 @@ public class Patch {
     public PatchManifest manifest;
 
     @NonNull Path getEntryAssemblyAbsolutePath() {
-        return patchPath.resolve(manifest.entryAssemblyFile).toAbsolutePath().normalize();
+        return patchPath.resolve(manifest.getEntryAssemblyFile()).toAbsolutePath().normalize();
     }
 
     @Nullable

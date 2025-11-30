@@ -3,9 +3,11 @@ package com.app.ralaunch.controls.editor.manager;
 import android.content.Context;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.SeekBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import androidx.appcompat.widget.SwitchCompat;
 import android.widget.TextView;
+import com.google.android.material.slider.Slider;
 
 import androidx.annotation.NonNull;
 
@@ -15,6 +17,7 @@ import com.app.ralaunch.controls.editor.ControlEditDialogMD;
 import com.app.ralaunch.controls.editor.manager.ControlColorManager;
 import com.app.ralaunch.controls.editor.manager.ControlEditDialogSeekBarManager;
 import com.app.ralaunch.controls.editor.manager.ControlEditDialogVisibilityManager;
+import com.app.ralaunch.data.SettingsManager;
 import com.google.android.material.card.MaterialCardView;
 
 /**
@@ -156,19 +159,38 @@ public class ControlEditDialogUIBinder {
             });
         }
         
-        // 右摇杆攻击模式开关（仅摇杆类型且为鼠标模式且为右摇杆时显示）
-        SwitchCompat switchRightStickAttackMode = view.findViewById(R.id.switch_right_stick_attack_mode);
-        TextView tvRightStickAttackMode = view.findViewById(R.id.tv_right_stick_attack_mode);
-        if (switchRightStickAttackMode != null) {
-            switchRightStickAttackMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (refs.getCurrentData() != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
-                    refs.getCurrentData().rightStickContinuous = isChecked;
-                    // 更新显示文本
-                    if (tvRightStickAttackMode != null) {
-                        tvRightStickAttackMode.setText(isChecked ? "持续攻击" : "点击攻击");
-                    }
-                    refs.notifyUpdate();
+        // 右摇杆攻击模式 RadioGroup（仅摇杆类型且为鼠标模式且为右摇杆时显示）
+        RadioGroup rgAttackMode = view.findViewById(R.id.rg_attack_mode);
+        if (rgAttackMode != null) {
+            // 从全局设置读取攻击模式
+            SettingsManager settingsManager = SettingsManager.getInstance(dialog.getContext());
+            int attackMode = settingsManager.getMouseRightStickAttackMode();
+            
+            // 初始化选中状态
+            switch (attackMode) {
+                case SettingsManager.ATTACK_MODE_HOLD:
+                    rgAttackMode.check(R.id.rb_attack_mode_hold);
+                    break;
+                case SettingsManager.ATTACK_MODE_CLICK:
+                    rgAttackMode.check(R.id.rb_attack_mode_click);
+                    break;
+                case SettingsManager.ATTACK_MODE_CONTINUOUS:
+                    rgAttackMode.check(R.id.rb_attack_mode_continuous);
+                    break;
+            }
+            
+            // 监听选择变化，保存到全局设置
+            rgAttackMode.setOnCheckedChangeListener((group, checkedId) -> {
+                int mode = SettingsManager.ATTACK_MODE_HOLD;
+                if (checkedId == R.id.rb_attack_mode_hold) {
+                    mode = SettingsManager.ATTACK_MODE_HOLD;
+                } else if (checkedId == R.id.rb_attack_mode_click) {
+                    mode = SettingsManager.ATTACK_MODE_CLICK;
+                } else if (checkedId == R.id.rb_attack_mode_continuous) {
+                    mode = SettingsManager.ATTACK_MODE_CONTINUOUS;
                 }
+                settingsManager.setMouseRightStickAttackMode(mode);
+                refs.notifyUpdate();
             });
         }
         
@@ -183,91 +205,101 @@ public class ControlEditDialogUIBinder {
             });
         }
         
-        // 鼠标移动范围设置（仅摇杆类型且为鼠标模式且为右摇杆时显示）
-        SeekBar seekbarMouseRangeLeft = view.findViewById(R.id.seekbar_mouse_range_left);
+        // 鼠标移动范围设置（使用全局设置）
+        SettingsManager rangeSettingsManager = SettingsManager.getInstance(dialog.getContext());
+        
+        Slider sliderMouseRangeLeft = view.findViewById(R.id.seekbar_mouse_range_left);
         TextView tvMouseRangeLeft = view.findViewById(R.id.tv_mouse_range_left);
-        SeekBar seekbarMouseRangeTop = view.findViewById(R.id.seekbar_mouse_range_top);
+        Slider sliderMouseRangeTop = view.findViewById(R.id.seekbar_mouse_range_top);
         TextView tvMouseRangeTop = view.findViewById(R.id.tv_mouse_range_top);
-        SeekBar seekbarMouseRangeRight = view.findViewById(R.id.seekbar_mouse_range_right);
+        Slider sliderMouseRangeRight = view.findViewById(R.id.seekbar_mouse_range_right);
         TextView tvMouseRangeRight = view.findViewById(R.id.tv_mouse_range_right);
-        SeekBar seekbarMouseRangeBottom = view.findViewById(R.id.seekbar_mouse_range_bottom);
+        Slider sliderMouseRangeBottom = view.findViewById(R.id.seekbar_mouse_range_bottom);
         TextView tvMouseRangeBottom = view.findViewById(R.id.tv_mouse_range_bottom);
         
-        if (seekbarMouseRangeLeft != null) {
-            seekbarMouseRangeLeft.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        refs.getCurrentData().mouseRangeLeft = progress / 100f;
-                        refs.notifyUpdate();
-                    }
+        // 初始化鼠标范围值（从全局设置读取）
+        if (sliderMouseRangeLeft != null) {
+            int leftProgress = (int) (rangeSettingsManager.getMouseRightStickRangeLeft() * 100);
+            sliderMouseRangeLeft.setValue(leftProgress);
+            if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText(leftProgress + "%");
+            
+            sliderMouseRangeLeft.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText(progress + "%");
+                if (fromUser) {
+                    rangeSettingsManager.setMouseRightStickRangeLeft(progress / 100f);
+                    refs.notifyUpdate();
                 }
-                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
-        if (seekbarMouseRangeTop != null) {
-            seekbarMouseRangeTop.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvMouseRangeTop != null) tvMouseRangeTop.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        refs.getCurrentData().mouseRangeTop = progress / 100f;
-                        refs.notifyUpdate();
-                    }
+        if (sliderMouseRangeTop != null) {
+            int topProgress = (int) (rangeSettingsManager.getMouseRightStickRangeTop() * 100);
+            sliderMouseRangeTop.setValue(topProgress);
+            if (tvMouseRangeTop != null) tvMouseRangeTop.setText(topProgress + "%");
+            
+            sliderMouseRangeTop.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvMouseRangeTop != null) tvMouseRangeTop.setText(progress + "%");
+                if (fromUser) {
+                    rangeSettingsManager.setMouseRightStickRangeTop(progress / 100f);
+                    refs.notifyUpdate();
                 }
-                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
-        if (seekbarMouseRangeRight != null) {
-            seekbarMouseRangeRight.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvMouseRangeRight != null) tvMouseRangeRight.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        refs.getCurrentData().mouseRangeRight = progress / 100f;
-                        refs.notifyUpdate();
-                    }
+        if (sliderMouseRangeRight != null) {
+            int rightProgress = (int) (rangeSettingsManager.getMouseRightStickRangeRight() * 100);
+            sliderMouseRangeRight.setValue(rightProgress);
+            if (tvMouseRangeRight != null) tvMouseRangeRight.setText(rightProgress + "%");
+            
+            sliderMouseRangeRight.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvMouseRangeRight != null) tvMouseRangeRight.setText(progress + "%");
+                if (fromUser) {
+                    rangeSettingsManager.setMouseRightStickRangeRight(progress / 100f);
+                    refs.notifyUpdate();
                 }
-                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
-        if (seekbarMouseRangeBottom != null) {
-            seekbarMouseRangeBottom.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        refs.getCurrentData().mouseRangeBottom = progress / 100f;
-                        refs.notifyUpdate();
-                    }
+        if (sliderMouseRangeBottom != null) {
+            int bottomProgress = (int) (rangeSettingsManager.getMouseRightStickRangeBottom() * 100);
+            sliderMouseRangeBottom.setValue(bottomProgress);
+            if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText(bottomProgress + "%");
+            
+            sliderMouseRangeBottom.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText(progress + "%");
+                if (fromUser) {
+                    rangeSettingsManager.setMouseRightStickRangeBottom(progress / 100f);
+                    refs.notifyUpdate();
                 }
-                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
-        // 鼠标移动速度滑块
-        SeekBar seekbarMouseSpeed = view.findViewById(R.id.seekbar_mouse_speed);
+        // 鼠标移动速度滑块（使用全局设置，范围60-200，步进10）
+        Slider sliderMouseSpeed = view.findViewById(R.id.seekbar_mouse_speed);
         TextView tvMouseSpeed = view.findViewById(R.id.tv_mouse_speed);
-        if (seekbarMouseSpeed != null) {
-            seekbarMouseSpeed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvMouseSpeed != null) tvMouseSpeed.setText(String.valueOf(progress));
-                    if (refs.getCurrentData() != null && fromUser) {
-                        refs.getCurrentData().mouseSpeed = progress;
-                        refs.notifyUpdate();
-                    }
+        if (sliderMouseSpeed != null) {
+            int speedProgress = rangeSettingsManager.getMouseRightStickSpeed();
+            // 对齐到步进值（stepSize=10, valueFrom=60）
+            float stepSize = 10.0f;
+            float valueFrom = 60.0f;
+            float alignedValue = valueFrom + Math.round((speedProgress - valueFrom) / stepSize) * stepSize;
+            // 确保在范围内
+            alignedValue = Math.max(valueFrom, Math.min(200.0f, alignedValue));
+            sliderMouseSpeed.setValue(alignedValue);
+            int displayValue = (int) alignedValue;
+            if (tvMouseSpeed != null) tvMouseSpeed.setText(String.valueOf(displayValue));
+            
+            sliderMouseSpeed.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvMouseSpeed != null) tvMouseSpeed.setText(String.valueOf(progress));
+                if (fromUser) {
+                    rangeSettingsManager.setMouseRightStickSpeed(progress);
+                    refs.notifyUpdate();
                 }
-                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
     }
@@ -276,99 +308,75 @@ public class ControlEditDialogUIBinder {
      * 绑定位置大小视图
      */
     public static void bindPositionSizeViews(@NonNull View view, @NonNull UIReferences refs) {
-        SeekBar seekbarPosX = view.findViewById(R.id.seekbar_pos_x);
+        Slider sliderPosX = view.findViewById(R.id.seekbar_pos_x);
         TextView tvPosXValue = view.findViewById(R.id.tv_pos_x_value);
-        SeekBar seekbarPosY = view.findViewById(R.id.seekbar_pos_y);
+        Slider sliderPosY = view.findViewById(R.id.seekbar_pos_y);
         TextView tvPosYValue = view.findViewById(R.id.tv_pos_y_value);
-        SeekBar seekbarWidth = view.findViewById(R.id.seekbar_width);
+        Slider sliderWidth = view.findViewById(R.id.seekbar_width);
         TextView tvWidthValue = view.findViewById(R.id.tv_width_value);
-        SeekBar seekbarHeight = view.findViewById(R.id.seekbar_height);
+        Slider sliderHeight = view.findViewById(R.id.seekbar_height);
         TextView tvHeightValue = view.findViewById(R.id.tv_height_value);
         SwitchCompat switchAutoSize = view.findViewById(R.id.switch_auto_size);
         
-        if (seekbarPosX != null) {
-            seekbarPosX.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvPosXValue != null) tvPosXValue.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        refs.getCurrentData().x = refs.getScreenWidth() * progress / 100f;
-                        refs.notifyUpdate();
-                    }
+        if (sliderPosX != null) {
+            sliderPosX.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvPosXValue != null) tvPosXValue.setText(progress + "%");
+                if (refs.getCurrentData() != null && fromUser) {
+                    refs.getCurrentData().x = refs.getScreenWidth() * progress / 100f;
+                    refs.notifyUpdate();
                 }
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
-        if (seekbarPosY != null) {
-            seekbarPosY.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvPosYValue != null) tvPosYValue.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        refs.getCurrentData().y = refs.getScreenHeight() * progress / 100f;
-                        refs.notifyUpdate();
-                    }
+        if (sliderPosY != null) {
+            sliderPosY.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvPosYValue != null) tvPosYValue.setText(progress + "%");
+                if (refs.getCurrentData() != null && fromUser) {
+                    refs.getCurrentData().y = refs.getScreenHeight() * progress / 100f;
+                    refs.notifyUpdate();
                 }
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
-        if (seekbarWidth != null) {
-            seekbarWidth.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvWidthValue != null) tvWidthValue.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        float width = refs.getScreenWidth() * progress / 100f;
-                        refs.getCurrentData().width = width;
-                        if (refs.isAutoSize()) {
-                            refs.getCurrentData().height = width;
-                            if (seekbarHeight != null) {
-                                int heightPercent = (int) (width / refs.getScreenHeight() * 100);
-                                seekbarHeight.setProgress(heightPercent);
-                                if (tvHeightValue != null) tvHeightValue.setText(heightPercent + "%");
-                            }
+        if (sliderWidth != null) {
+            sliderWidth.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvWidthValue != null) tvWidthValue.setText(progress + "%");
+                if (refs.getCurrentData() != null && fromUser) {
+                    float width = refs.getScreenWidth() * progress / 100f;
+                    refs.getCurrentData().width = width;
+                    if (refs.isAutoSize()) {
+                        refs.getCurrentData().height = width;
+                        if (sliderHeight != null) {
+                            int heightPercent = (int) (width / refs.getScreenHeight() * 100);
+                            sliderHeight.setValue(heightPercent);
+                            if (tvHeightValue != null) tvHeightValue.setText(heightPercent + "%");
                         }
-                        refs.notifyUpdate();
                     }
+                    refs.notifyUpdate();
                 }
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
-        if (seekbarHeight != null) {
-            seekbarHeight.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (tvHeightValue != null) tvHeightValue.setText(progress + "%");
-                    if (refs.getCurrentData() != null && fromUser) {
-                        float height = refs.getScreenHeight() * progress / 100f;
-                        refs.getCurrentData().height = height;
-                        if (refs.isAutoSize()) {
-                            refs.getCurrentData().width = height;
-                            if (seekbarWidth != null) {
-                                int widthPercent = (int) (height / refs.getScreenWidth() * 100);
-                                seekbarWidth.setProgress(widthPercent);
-                                if (tvWidthValue != null) tvWidthValue.setText(widthPercent + "%");
-                            }
+        if (sliderHeight != null) {
+            sliderHeight.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvHeightValue != null) tvHeightValue.setText(progress + "%");
+                if (refs.getCurrentData() != null && fromUser) {
+                    float height = refs.getScreenHeight() * progress / 100f;
+                    refs.getCurrentData().height = height;
+                    if (refs.isAutoSize()) {
+                        refs.getCurrentData().width = height;
+                        if (sliderWidth != null) {
+                            int widthPercent = (int) (height / refs.getScreenWidth() * 100);
+                            sliderWidth.setValue(widthPercent);
+                            if (tvWidthValue != null) tvWidthValue.setText(widthPercent + "%");
                         }
-                        refs.notifyUpdate();
                     }
+                    refs.notifyUpdate();
                 }
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         
@@ -377,9 +385,9 @@ public class ControlEditDialogUIBinder {
                 refs.setAutoSize(isChecked);
                 if (refs.getCurrentData() != null && isChecked) {
                     refs.getCurrentData().height = refs.getCurrentData().width;
-                    if (seekbarHeight != null) {
+                    if (sliderHeight != null) {
                         int heightPercent = (int) (refs.getCurrentData().height / refs.getScreenHeight() * 100);
-                        seekbarHeight.setProgress(heightPercent);
+                        sliderHeight.setValue(heightPercent);
                         if (tvHeightValue != null) tvHeightValue.setText(heightPercent + "%");
                     }
                     refs.notifyUpdate();
@@ -394,18 +402,18 @@ public class ControlEditDialogUIBinder {
     public static void bindAppearanceViews(@NonNull View view, 
                                            @NonNull UIReferences refs,
                                            @NonNull ControlEditDialogMD dialog) {
-        SeekBar seekbarOpacity = view.findViewById(R.id.seekbar_opacity);
+        Slider sliderOpacity = view.findViewById(R.id.seekbar_opacity);
         TextView tvOpacityValue = view.findViewById(R.id.tv_opacity_value);
         SwitchCompat switchVisible = view.findViewById(R.id.switch_visible);
         View viewBgColor = view.findViewById(R.id.view_bg_color);
         View viewStrokeColor = view.findViewById(R.id.view_stroke_color);
-        SeekBar seekbarCornerRadius = view.findViewById(R.id.seekbar_corner_radius);
+        Slider sliderCornerRadius = view.findViewById(R.id.seekbar_corner_radius);
         TextView tvCornerRadiusValue = view.findViewById(R.id.tv_corner_radius_value);
-        SeekBar seekbarStickOpacity = view.findViewById(R.id.seekbar_stick_opacity);
+        Slider sliderStickOpacity = view.findViewById(R.id.seekbar_stick_opacity);
         TextView tvStickOpacityValue = view.findViewById(R.id.tv_stick_opacity_value);
-        SeekBar seekbarStickKnobSize = view.findViewById(R.id.seekbar_stick_knob_size);
+        Slider sliderStickKnobSize = view.findViewById(R.id.seekbar_stick_knob_size);
         TextView tvStickKnobSizeValue = view.findViewById(R.id.tv_stick_knob_size_value);
-        SeekBar seekbarRotation = view.findViewById(R.id.seekbar_rotation);
+        Slider sliderRotation = view.findViewById(R.id.seekbar_rotation);
         TextView tvRotationValue = view.findViewById(R.id.tv_rotation_value);
        
         
@@ -515,32 +523,23 @@ public class ControlEditDialogUIBinder {
         // 更新外观选项的可见性（根据控件类型和形状）
         ControlEditDialogVisibilityManager.updateAppearanceOptionsVisibility(view, refs.getCurrentData());
         
-        // 圆角半径设置（使用统一管理器，仅在矩形形状时显示）
+        // 圆角半径设置（仅在矩形形状时显示）
         View cardCornerRadius = view.findViewById(R.id.card_corner_radius);
         if (cardCornerRadius != null && cardCornerRadius.getVisibility() == View.VISIBLE) {
-            if (seekbarCornerRadius != null && tvCornerRadiusValue != null) {
-                seekbarCornerRadius.setMax(100); // 最大圆角半径100dp
+            if (sliderCornerRadius != null && tvCornerRadiusValue != null) {
                 if (refs.getCurrentData() != null) {
                     int cornerRadius = (int) refs.getCurrentData().cornerRadius;
-                    seekbarCornerRadius.setProgress(cornerRadius);
+                    sliderCornerRadius.setValue(cornerRadius);
                     tvCornerRadiusValue.setText(cornerRadius + "dp");
                 }
                 
-                seekbarCornerRadius.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        if (fromUser && refs.getCurrentData() != null) {
-                            refs.getCurrentData().cornerRadius = progress;
-                            tvCornerRadiusValue.setText(progress + "dp");
-                            refs.notifyUpdate();
-                        }
+                sliderCornerRadius.addOnChangeListener((slider, value, fromUser) -> {
+                    int progress = (int) value;
+                    if (fromUser && refs.getCurrentData() != null) {
+                        refs.getCurrentData().cornerRadius = progress;
+                        tvCornerRadiusValue.setText(progress + "dp");
+                        refs.notifyUpdate();
                     }
-                    
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {}
-                    
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {}
                 });
             }
         }
@@ -594,29 +593,20 @@ public class ControlEditDialogUIBinder {
         }
         
         // 旋转角度设置（0-360度）
-        if (seekbarRotation != null && tvRotationValue != null) {
-            seekbarRotation.setMax(360);
+        if (sliderRotation != null && tvRotationValue != null) {
             if (refs.getCurrentData() != null) {
                 int rotation = (int) refs.getCurrentData().rotation;
-                seekbarRotation.setProgress(rotation);
+                sliderRotation.setValue(rotation);
                 tvRotationValue.setText(rotation + "°");
             }
             
-            seekbarRotation.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    if (fromUser && refs.getCurrentData() != null) {
-                        refs.getCurrentData().rotation = progress;
-                        tvRotationValue.setText(progress + "°");
-                        refs.notifyUpdate();
-                    }
+            sliderRotation.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (fromUser && refs.getCurrentData() != null) {
+                    refs.getCurrentData().rotation = progress;
+                    tvRotationValue.setText(progress + "°");
+                    refs.notifyUpdate();
                 }
-                
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {}
-                
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {}
             });
         }
         

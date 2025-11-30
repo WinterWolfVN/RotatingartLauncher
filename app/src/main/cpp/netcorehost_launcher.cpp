@@ -15,6 +15,9 @@
 #include <netcorehost/bindings.hpp>
 #include <netcorehost/delegate_loader.hpp>
 #include <jni.h>
+#include <dirent.h>
+#include <dlfcn.h>
+#include <vector>
 
 // 直接声明静态链接的 nethost 函数
 extern "C" {
@@ -48,6 +51,10 @@ static int g_framework_major = 0;
 static char* g_startup_hooks_dll = nullptr;
 static bool g_enable_corehost_trace = false;
 
+// 命令行参数
+static int g_argc = 0;
+static char** g_argv = nullptr;
+
 // 错误消息缓冲区
 static char g_last_error[1024] = {0};
 
@@ -57,6 +64,81 @@ static char g_last_error[1024] = {0};
 static char* str_dup(const char* str) {
     if (!str) return nullptr;
     return strdup(str);
+}
+
+/**
+ * @brief 预加载 .NET 加密库并初始化 JNI
+ * 
+ * libSystem.Security.Cryptography.Native.Android.so 需要 JNI_OnLoad 来初始化 JavaVM 指针
+ * 但 .NET 运行时通过 dlopen 加载它时不一定会触发 JNI_OnLoad
+ * 所以我们需要手动加载并调用 JNI_OnLoad
+ * 
+ * 注意：需要加载所有版本的库，因为不同版本有各自的 g_jvm 静态变量
+ */
+static void preload_crypto_jni(JavaVM* jvm) {
+    if (!jvm || !g_dotnet_path) {
+        LOGW(LOG_TAG, "Cannot preload crypto JNI: jvm=%p, dotnet_path=%s", jvm, g_dotnet_path ? g_dotnet_path : "(null)");
+        return;
+    }
+    
+    LOGI(LOG_TAG, "Preloading crypto library JNI for all .NET versions...");
+    
+    // 查找 .NET 运行时目录
+    std::string dotnet_root = g_dotnet_path;
+    std::string shared_dir = dotnet_root + "/shared/Microsoft.NETCore.App";
+    
+    // 查找所有版本目录
+    DIR* dir = opendir(shared_dir.c_str());
+    if (!dir) {
+        LOGW(LOG_TAG, "  Cannot open .NET shared directory: %s", shared_dir.c_str());
+        return;
+    }
+    
+    std::vector<std::string> versions;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (entry->d_type == DT_DIR && entry->d_name[0] != '.') {
+            versions.push_back(entry->d_name);
+        }
+    }
+    closedir(dir);
+    
+    if (versions.empty()) {
+        LOGW(LOG_TAG, "  No .NET runtime versions found");
+        return;
+    }
+    
+    LOGI(LOG_TAG, "  Found %zu .NET runtime version(s)", versions.size());
+    
+    // 为每个版本加载加密库
+    typedef jint (*JNI_OnLoad_t)(JavaVM* vm, void* reserved);
+    
+    for (const auto& version : versions) {
+        std::string crypto_lib_path = shared_dir + "/" + version + "/libSystem.Security.Cryptography.Native.Android.so";
+        LOGI(LOG_TAG, "  Loading crypto library for .NET %s: %s", version.c_str(), crypto_lib_path.c_str());
+        
+        // 使用 dlopen 加载库
+        void* handle = dlopen(crypto_lib_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
+        if (!handle) {
+            LOGW(LOG_TAG, "    Failed to dlopen: %s", dlerror());
+            continue;
+        }
+        
+        // 查找 JNI_OnLoad 函数
+        JNI_OnLoad_t jni_onload = (JNI_OnLoad_t)dlsym(handle, "JNI_OnLoad");
+        
+        if (jni_onload) {
+            LOGI(LOG_TAG, "    Calling JNI_OnLoad...");
+            jint result = jni_onload(jvm, nullptr);
+            LOGI(LOG_TAG, "    JNI_OnLoad returned: %d", result);
+        } else {
+            LOGW(LOG_TAG, "    JNI_OnLoad not found: %s", dlerror());
+        }
+        
+        // 不要 dlclose，保持库加载状态
+    }
+    
+    LOGI(LOG_TAG, "  Crypto library JNI preload complete");
 }
 
 /**
@@ -81,13 +163,55 @@ static bool is_set_thread_affinity_to_big_core() {
 }
 
 /**
- * @brief 设置启动参数
+ * @brief 释放命令行参数
+ */
+static void free_argv() {
+    if (g_argv) {
+        for (int i = 0; i < g_argc; i++) {
+            if (g_argv[i]) free(g_argv[i]);
+        }
+        free(g_argv);
+        g_argv = nullptr;
+    }
+    g_argc = 0;
+}
+
+/**
+ * @brief 设置启动参数（支持命令行参数）
  */
 int netcorehost_set_params(
         const char* app_dir,
         const char* main_assembly,
         const char* dotnet_root,
-        int framework_major) {
+        int framework_major,
+        int argc,
+        const char* const* argv) {
+    
+    // 释放旧的命令行参数
+    free_argv();
+    
+    // 检测是否是服务器模式（-server 参数）
+    bool is_server_mode = false;
+    if (argc > 0 && argv != nullptr) {
+        for (int i = 0; i < argc; i++) {
+            if (argv[i] && strcmp(argv[i], "-server") == 0) {
+                is_server_mode = true;
+                break;
+            }
+        }
+    }
+    
+
+    
+    // 复制新的命令行参数
+    if (argc > 0 && argv != nullptr) {
+        g_argc = argc;
+        g_argv = (char**)malloc(sizeof(char*) * argc);
+        for (int i = 0; i < argc; i++) {
+            g_argv[i] = str_dup(argv[i]);
+            LOGI(LOG_TAG, "  Arg[%d]: %s", i, g_argv[i]);
+        }
+    }
 
     // 1. 保存 .NET 路径
     str_free(g_dotnet_path);
@@ -176,6 +300,9 @@ int netcorehost_launch() {
         env = Bridge_GetJNIEnv();
         if (env) {
             LOGI(LOG_TAG, "JNI Bridge initialized, JavaVM: %p, JNIEnv: %p", jvm, env);
+            
+            // 预初始化加密库的 JNI（解决 dlopen 不触发 JNI_OnLoad 的问题）
+            preload_crypto_jni(jvm);
         } else {
             LOGW(LOG_TAG, "JNI Bridge initialized but cannot get JNIEnv");
         }
@@ -218,12 +345,30 @@ int netcorehost_launch() {
 
         std::unique_ptr<netcorehost::HostfxrContextForCommandLine> context;
 
-        if (g_dotnet_path) {
-            auto dotnet_root_str = netcorehost::PdCString::from_str(g_dotnet_path);
-            context = hostfxr->initialize_for_dotnet_command_line_with_dotnet_root(
-                    app_path_str, dotnet_root_str);
+        // 根据是否有命令行参数和 dotnet_root 选择合适的初始化函数
+        if (g_argc > 0 && g_argv != nullptr) {
+            LOGI(LOG_TAG, "  Passing %d command line arguments to .NET:", g_argc);
+            for (int i = 0; i < g_argc; i++) {
+                LOGI(LOG_TAG, "    [%d] %s", i, g_argv[i]);
+            }
+            
+            if (g_dotnet_path) {
+                auto dotnet_root_str = netcorehost::PdCString::from_str(g_dotnet_path);
+                context = hostfxr->initialize_for_dotnet_command_line_with_args_and_dotnet_root(
+                        app_path_str, g_argc, (const char* const*)g_argv, dotnet_root_str);
+            } else {
+                context = hostfxr->initialize_for_dotnet_command_line_with_args(
+                        app_path_str, g_argc, (const char* const*)g_argv);
+            }
         } else {
-            context = hostfxr->initialize_for_dotnet_command_line(app_path_str);
+            LOGI(LOG_TAG, "  No command line arguments");
+            if (g_dotnet_path) {
+                auto dotnet_root_str = netcorehost::PdCString::from_str(g_dotnet_path);
+                context = hostfxr->initialize_for_dotnet_command_line_with_dotnet_root(
+                        app_path_str, dotnet_root_str);
+            } else {
+                context = hostfxr->initialize_for_dotnet_command_line(app_path_str);
+            }
         }
         if (!context) {
             LOGE(LOG_TAG, ".NET runtime initialization failed");
@@ -286,7 +431,7 @@ void netcorehost_cleanup() {
     LOGI(LOG_TAG, "Cleanup complete");
 }
 /**
- * @brief JNI 函数：设置启动参数
+ * @brief JNI 函数：设置启动参数（无命令行参数）
  */
 extern "C" JNIEXPORT jint JNICALL
 Java_com_app_ralaunch_core_GameLauncher_netcorehostSetParams(
@@ -297,8 +442,54 @@ Java_com_app_ralaunch_core_GameLauncher_netcorehostSetParams(
     const char *main_assembly = env->GetStringUTFChars(mainAssembly, nullptr);
     const char *dotnet_root = dotnetRoot ? env->GetStringUTFChars(dotnetRoot, nullptr) : nullptr;
 
-    int result = netcorehost_set_params(app_dir, main_assembly, dotnet_root, frameworkMajor);
+    int result = netcorehost_set_params(app_dir, main_assembly, dotnet_root, frameworkMajor, 0, nullptr);
 
+    env->ReleaseStringUTFChars(appDir, app_dir);
+    env->ReleaseStringUTFChars(mainAssembly, main_assembly);
+    if (dotnet_root) env->ReleaseStringUTFChars(dotnetRoot, dotnet_root);
+
+    return result;
+}
+
+/**
+ * @brief JNI 函数：设置启动参数（带命令行参数）
+ */
+extern "C" JNIEXPORT jint JNICALL
+Java_com_app_ralaunch_core_GameLauncher_netcorehostSetParamsWithArgs(
+        JNIEnv *env, jclass clazz,
+        jstring appDir, jstring mainAssembly, jstring dotnetRoot, jint frameworkMajor,
+        jobjectArray args) {
+
+    const char *app_dir = env->GetStringUTFChars(appDir, nullptr);
+    const char *main_assembly = env->GetStringUTFChars(mainAssembly, nullptr);
+    const char *dotnet_root = dotnetRoot ? env->GetStringUTFChars(dotnetRoot, nullptr) : nullptr;
+
+    // 转换 Java String[] 到 C char**
+    int argc = 0;
+    const char** argv = nullptr;
+    
+    if (args != nullptr) {
+        argc = env->GetArrayLength(args);
+        if (argc > 0) {
+            argv = (const char**)malloc(sizeof(char*) * argc);
+            for (int i = 0; i < argc; i++) {
+                jstring jstr = (jstring)env->GetObjectArrayElement(args, i);
+                argv[i] = env->GetStringUTFChars(jstr, nullptr);
+            }
+        }
+    }
+
+    int result = netcorehost_set_params(app_dir, main_assembly, dotnet_root, frameworkMajor, argc, argv);
+
+    // 释放资源
+    if (argv != nullptr) {
+        for (int i = 0; i < argc; i++) {
+            jstring jstr = (jstring)env->GetObjectArrayElement(args, i);
+            env->ReleaseStringUTFChars(jstr, argv[i]);
+        }
+        free((void*)argv);
+    }
+    
     env->ReleaseStringUTFChars(appDir, app_dir);
     env->ReleaseStringUTFChars(mainAssembly, main_assembly);
     if (dotnet_root) env->ReleaseStringUTFChars(dotnetRoot, dotnet_root);
@@ -366,4 +557,129 @@ Java_com_app_ralaunch_utils_CoreCLRConfig_nativeSetEnv(
 
     env->ReleaseStringUTFChars(key, key_str);
     env->ReleaseStringUTFChars(value, value_str);
+}
+
+/**
+ * @brief 通用进程启动器 - 供 .NET P/Invoke 调用
+ * 
+ * @param assembly_path 程序集完整路径
+ * @param args_json     命令行参数 JSON 数组（如 ["-server", "-world", "xxx"]）
+ * @param startup_hooks DOTNET_STARTUP_HOOKS 值，可为 nullptr
+ * @param title         通知标题
+ * @return 0 成功，非0 失败
+ */
+extern "C" __attribute__((visibility("default"))) 
+int process_launcher_start(const char* assembly_path, const char* args_json, 
+                           const char* startup_hooks, const char* title) {
+    LOGI(LOG_TAG, "========================================");
+    LOGI(LOG_TAG, "process_launcher_start called");
+    LOGI(LOG_TAG, "========================================");
+    LOGI(LOG_TAG, "  Assembly: %s", assembly_path ? assembly_path : "(null)");
+    LOGI(LOG_TAG, "  Args JSON: %s", args_json ? args_json : "(null)");
+    LOGI(LOG_TAG, "  StartupHooks: %s", startup_hooks ? "yes" : "no");
+    LOGI(LOG_TAG, "  Title: %s", title ? title : "(null)");
+    
+    if (!assembly_path) {
+        LOGE(LOG_TAG, "Assembly path is null");
+        return -1;
+    }
+    
+    JNIEnv* env = Bridge_GetJNIEnv();
+    if (env == nullptr) {
+        LOGE(LOG_TAG, "Failed to get JNIEnv");
+        return -2;
+    }
+    
+    // 解析 JSON 数组为 String[]
+    // 简单解析：假设格式为 ["arg1","arg2",...]
+    jobjectArray jArgs = nullptr;
+    if (args_json && args_json[0] == '[') {
+        // 简单的 JSON 数组解析
+        std::vector<std::string> args;
+        std::string json(args_json);
+        size_t pos = 1; // 跳过 '['
+        
+        while (pos < json.length()) {
+            // 跳过空白
+            while (pos < json.length() && (json[pos] == ' ' || json[pos] == ',')) pos++;
+            if (pos >= json.length() || json[pos] == ']') break;
+            
+            if (json[pos] == '"') {
+                pos++; // 跳过开始引号
+                std::string arg;
+                while (pos < json.length() && json[pos] != '"') {
+                    if (json[pos] == '\\' && pos + 1 < json.length()) {
+                        pos++;
+                        if (json[pos] == 'n') arg += '\n';
+                        else if (json[pos] == 't') arg += '\t';
+                        else arg += json[pos];
+                    } else {
+                        arg += json[pos];
+                    }
+                    pos++;
+                }
+                pos++; // 跳过结束引号
+                args.push_back(arg);
+            } else {
+                pos++;
+            }
+        }
+        
+        if (!args.empty()) {
+            jclass stringClass = env->FindClass("java/lang/String");
+            jArgs = env->NewObjectArray(args.size(), stringClass, nullptr);
+            for (size_t i = 0; i < args.size(); i++) {
+                jstring jArg = env->NewStringUTF(args[i].c_str());
+                env->SetObjectArrayElement(jArgs, i, jArg);
+                env->DeleteLocalRef(jArg);
+            }
+            LOGI(LOG_TAG, "  Parsed %zu arguments", args.size());
+        }
+    }
+    
+    // 转换为 Java 字符串
+    jstring jAssemblyPath = env->NewStringUTF(assembly_path);
+    jstring jStartupHooks = startup_hooks ? env->NewStringUTF(startup_hooks) : nullptr;
+    jstring jTitle = env->NewStringUTF(title ? title : "Process");
+    
+    // 获取 ProcessLauncherService 类
+    jclass serviceClass = env->FindClass("com/app/ralaunch/service/ProcessLauncherService");
+    if (serviceClass == nullptr) {
+        LOGE(LOG_TAG, "Failed to find ProcessLauncherService class");
+        return -3;
+    }
+    
+    // 获取 launch 静态方法
+    jmethodID launchMethod = env->GetStaticMethodID(serviceClass, "launch",
+        "(Landroid/content/Context;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    if (launchMethod == nullptr) {
+        LOGE(LOG_TAG, "Failed to find launch method");
+        return -4;
+    }
+    
+    // 获取 Context
+    jclass sdlActivityClass = env->FindClass("org/libsdl/app/SDLActivity");
+    jmethodID getContextMethod = env->GetStaticMethodID(sdlActivityClass, "getContext",
+        "()Landroid/content/Context;");
+    jobject context = env->CallStaticObjectMethod(sdlActivityClass, getContextMethod);
+    
+    if (context == nullptr) {
+        LOGE(LOG_TAG, "Failed to get context");
+        return -5;
+    }
+    
+    // 调用 launch
+    LOGI(LOG_TAG, "Calling ProcessLauncherService.launch...");
+    env->CallStaticVoidMethod(serviceClass, launchMethod,
+        context, jAssemblyPath, jArgs, jStartupHooks, jTitle);
+    
+    // 清理
+    env->DeleteLocalRef(jAssemblyPath);
+    if (jArgs) env->DeleteLocalRef(jArgs);
+    if (jStartupHooks) env->DeleteLocalRef(jStartupHooks);
+    env->DeleteLocalRef(jTitle);
+    
+    LOGI(LOG_TAG, "Process launch requested!");
+    LOGI(LOG_TAG, "========================================");
+    return 0;
 }

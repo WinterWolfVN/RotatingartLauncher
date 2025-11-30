@@ -77,14 +77,15 @@
 
             </LinearLayout>
 
-            <SeekBar
+            <com.google.android.material.slider.Slider
                 android:id="@+id/seekbar_opacity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="100"
-                android:progress="70"
-                android:progressTint="?attr/colorPrimary"
-                android:thumbTint="?attr/colorPrimary" />
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="70"
+                android:stepSize="1"
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 
@@ -159,14 +160,15 @@
 
             </LinearLayout>
 
-            <SeekBar
+            <com.google.android.material.slider.Slider
                 android:id="@+id/seekbar_border_opacity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="100"
-                android:progress="100"
-                android:progressTint="?attr/colorPrimary"
-                android:thumbTint="?attr/colorPrimary" />
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="100"
+                android:stepSize="1"
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 
@@ -242,14 +244,15 @@
 
             </LinearLayout>
 
-            <SeekBar
+            <com.google.android.material.slider.Slider
                 android:id="@+id/seekbar_text_opacity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="100"
-                android:progress="100"
-                android:progressTint="?attr/colorPrimary"
-                android:thumbTint="?attr/colorPrimary" />
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="100"
+                android:stepSize="1"
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 
@@ -325,14 +328,15 @@
 
             </LinearLayout>
 
-            <SeekBar
+            <com.google.android.material.slider.Slider
                 android:id="@+id/seekbar_stick_opacity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="100"
-                android:progress="70"
-                android:progressTint="?attr/colorPrimary"
-                android:thumbTint="?attr/colorPrimary" />
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="70"
+                android:stepSize="1"
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 
@@ -408,14 +412,15 @@
 
             </LinearLayout>
 
-            <SeekBar
+            <com.google.android.material.slider.Slider
                 android:id="@+id/seekbar_stick_knob_size"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="100"
-                android:progress="40"
-                android:progressTint="?attr/colorPrimary"
-                android:thumbTint="?attr/colorPrimary" />
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="40"
+                android:stepSize="1"
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 
@@ -620,14 +625,15 @@
 
             </LinearLayout>
 
-            <SeekBar
+            <com.google.android.material.slider.Slider
                 android:id="@+id/seekbar_corner_radius"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="50"
-                android:progress="2"
-                android:progressTint="?attr/colorPrimary"
-                android:thumbTint="?attr/colorPrimary" />
+                android:valueFrom="0"
+                android:valueTo="50"
+                android:value="2"
+                android:stepSize="1"
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 
@@ -768,12 +774,15 @@
 
             </LinearLayout>
 
-            <SeekBar
+            <com.google.android.material.slider.Slider
                 android:id="@+id/seekbar_rotation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:max="360"
-                android:progress="0" />
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:value="0"
+                android:stepSize="1"
+                app:labelBehavior="gone" />
 
         </LinearLayout>
 

@@ -61,6 +61,11 @@ public class SettingsManager {
         // 触屏设置
         public static final String MOUSE_RIGHT_STICK_ENABLED = "mouse_right_stick_enabled"; // 鼠标模式右摇杆
         public static final String MOUSE_RIGHT_STICK_ATTACK_MODE = "mouse_right_stick_attack_mode"; // 右摇杆攻击模式
+        public static final String MOUSE_RIGHT_STICK_SPEED = "mouse_right_stick_speed"; // 鼠标移动速度
+        public static final String MOUSE_RIGHT_STICK_RANGE_LEFT = "mouse_right_stick_range_left"; // 鼠标范围左边界
+        public static final String MOUSE_RIGHT_STICK_RANGE_TOP = "mouse_right_stick_range_top"; // 鼠标范围上边界
+        public static final String MOUSE_RIGHT_STICK_RANGE_RIGHT = "mouse_right_stick_range_right"; // 鼠标范围右边界
+        public static final String MOUSE_RIGHT_STICK_RANGE_BOTTOM = "mouse_right_stick_range_bottom"; // 鼠标范围下边界
 
         // 开发者设置
         public static final String VERBOSE_LOGGING = "verbose_logging";
@@ -106,15 +111,20 @@ public class SettingsManager {
 
         // 控制设置
         public static final boolean CONTROLS_VIBRATION_ENABLED = true; // 默认开启振动反馈
-        public static final boolean TOUCH_MULTITOUCH_ENABLED = true; // 默认开启多点触控
+        public static final boolean TOUCH_MULTITOUCH_ENABLED = true; // 默认开启多点触控（不可更改）
         public static final boolean HIDE_CURSOR_ENABLED = false; // 默认不隐藏鼠标光标
         public static final boolean FPS_DISPLAY_ENABLED = false; // 默认关闭 FPS 显示
         public static final float FPS_DISPLAY_X = -1f; // 默认自动位置（跟随鼠标）
         public static final float FPS_DISPLAY_Y = -1f; // 默认自动位置（跟随鼠标）
         
         // 触屏设置
-        public static final boolean MOUSE_RIGHT_STICK_ENABLED = false; // 默认关闭鼠标模式右摇杆
+        public static final boolean MOUSE_RIGHT_STICK_ENABLED = true; // 默认开启鼠标模式右摇杆（不可更改）
         public static final int MOUSE_RIGHT_STICK_ATTACK_MODE = 0; // 默认长按模式
+        public static final int MOUSE_RIGHT_STICK_SPEED = 80; // 默认速度80（范围60-200）
+        public static final float MOUSE_RIGHT_STICK_RANGE_LEFT = 0.0f; // 默认左边界0%
+        public static final float MOUSE_RIGHT_STICK_RANGE_TOP = 0.0f; // 默认上边界0%
+        public static final float MOUSE_RIGHT_STICK_RANGE_RIGHT = 1.0f; // 默认右边界100%
+        public static final float MOUSE_RIGHT_STICK_RANGE_BOTTOM = 1.0f; // 默认下边界100%
 
         // CoreCLR 默认值
         public static final boolean CORECLR_SERVER_GC = false; // 移动端默认关闭 Server GC
@@ -393,6 +403,52 @@ public class SettingsManager {
     
     public void setMouseRightStickAttackMode(int mode) {
         putInt(Keys.MOUSE_RIGHT_STICK_ATTACK_MODE, mode);
+    }
+    
+    /**
+     * 鼠标移动速度（1-100）
+     */
+    public int getMouseRightStickSpeed() {
+        return getInt(Keys.MOUSE_RIGHT_STICK_SPEED, Defaults.MOUSE_RIGHT_STICK_SPEED);
+    }
+    
+    public void setMouseRightStickSpeed(int speed) {
+        putInt(Keys.MOUSE_RIGHT_STICK_SPEED, speed);
+    }
+    
+    /**
+     * 鼠标移动范围（屏幕百分比 0.0-1.0）
+     */
+    public float getMouseRightStickRangeLeft() {
+        return getFloat(Keys.MOUSE_RIGHT_STICK_RANGE_LEFT, Defaults.MOUSE_RIGHT_STICK_RANGE_LEFT);
+    }
+    
+    public void setMouseRightStickRangeLeft(float value) {
+        putFloat(Keys.MOUSE_RIGHT_STICK_RANGE_LEFT, value);
+    }
+    
+    public float getMouseRightStickRangeTop() {
+        return getFloat(Keys.MOUSE_RIGHT_STICK_RANGE_TOP, Defaults.MOUSE_RIGHT_STICK_RANGE_TOP);
+    }
+    
+    public void setMouseRightStickRangeTop(float value) {
+        putFloat(Keys.MOUSE_RIGHT_STICK_RANGE_TOP, value);
+    }
+    
+    public float getMouseRightStickRangeRight() {
+        return getFloat(Keys.MOUSE_RIGHT_STICK_RANGE_RIGHT, Defaults.MOUSE_RIGHT_STICK_RANGE_RIGHT);
+    }
+    
+    public void setMouseRightStickRangeRight(float value) {
+        putFloat(Keys.MOUSE_RIGHT_STICK_RANGE_RIGHT, value);
+    }
+    
+    public float getMouseRightStickRangeBottom() {
+        return getFloat(Keys.MOUSE_RIGHT_STICK_RANGE_BOTTOM, Defaults.MOUSE_RIGHT_STICK_RANGE_BOTTOM);
+    }
+    
+    public void setMouseRightStickRangeBottom(float value) {
+        putFloat(Keys.MOUSE_RIGHT_STICK_RANGE_BOTTOM, value);
     }
     
     // 开发者设置

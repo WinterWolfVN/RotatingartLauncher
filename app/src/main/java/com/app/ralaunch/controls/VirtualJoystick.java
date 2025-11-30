@@ -76,10 +76,17 @@ public class VirtualJoystick extends View implements ControlView {
     private float mLastJoystickDy = 0;
     
     // 右摇杆移动阈值（像素，只有当摇杆位置变化超过此值时才移动鼠标）
-    private static final float JOYSTICK_MOVE_THRESHOLD = 8.0f;
+    private static final float JOYSTICK_MOVE_THRESHOLD = 20.0f;
 
-    // 死区（防止漂移） - 优化为更小的死区提升灵敏度
-    private static final float DEADZONE_PERCENT = 0.1f;
+    // 死区（防止漂移）
+    private static final float DEADZONE_PERCENT = 0.15f;
+    
+    // 运行时从全局设置读取的鼠标速度和范围
+    private float mGlobalMouseSpeed = 80.0f;
+    private float mGlobalMouseRangeLeft = 0.0f;
+    private float mGlobalMouseRangeTop = 0.0f;
+    private float mGlobalMouseRangeRight = 1.0f;
+    private float mGlobalMouseRangeBottom = 1.0f;
     
     // 8方向角度映射表（从角度计算结果映射到实际方向）
     // 角度计算：0度=正右, 90度=正上, 180度=正左, 270度=正下
@@ -104,13 +111,26 @@ public class VirtualJoystick extends View implements ControlView {
         mScreenWidth = metrics.widthPixels;
         mScreenHeight = metrics.heightPixels;
         
-        // 读取攻击模式设置
+        // 读取全局设置（攻击模式、鼠标速度、鼠标范围）
         try {
             com.app.ralaunch.data.SettingsManager settingsManager = 
                 com.app.ralaunch.data.SettingsManager.getInstance(context);
             mAttackMode = settingsManager.getMouseRightStickAttackMode();
+            mGlobalMouseSpeed = settingsManager.getMouseRightStickSpeed();
+            mGlobalMouseRangeLeft = settingsManager.getMouseRightStickRangeLeft();
+            mGlobalMouseRangeTop = settingsManager.getMouseRightStickRangeTop();
+            mGlobalMouseRangeRight = settingsManager.getMouseRightStickRangeRight();
+            mGlobalMouseRangeBottom = settingsManager.getMouseRightStickRangeBottom();
+            Log.i(TAG, "Global settings loaded: speed=" + mGlobalMouseSpeed + 
+                  ", range=(" + mGlobalMouseRangeLeft + "," + mGlobalMouseRangeTop + 
+                  "," + mGlobalMouseRangeRight + "," + mGlobalMouseRangeBottom + ")");
         } catch (Exception e) {
             mAttackMode = 0; // 默认长按模式
+            mGlobalMouseSpeed = 80.0f; // 默认速度80（范围60-200）
+            mGlobalMouseRangeLeft = 0.0f;
+            mGlobalMouseRangeTop = 0.0f;
+            mGlobalMouseRangeRight = 1.0f;
+            mGlobalMouseRangeBottom = 1.0f;
         }
 
         // 设置透明背景，确保只显示绘制的圆形
@@ -1098,15 +1118,15 @@ public class VirtualJoystick extends View implements ControlView {
         float normalizedDeltaX = deltaDx / maxDistance;
         float normalizedDeltaY = deltaDy / maxDistance;
         
-        // 应用灵敏度系数（使用用户配置的速度，默认30）
-        float sensitivity = (mData.mouseSpeed > 0) ? mData.mouseSpeed : 30.0f;
+        // 应用灵敏度系数（使用全局设置的速度）
+        float sensitivity = mGlobalMouseSpeed;
         float mouseX = normalizedDeltaX * sensitivity;
         float mouseY = normalizedDeltaY * sensitivity;
         
         // 发送真正的鼠标相对移动事件（使用 SDL onNativeMouse）
         mInputBridge.sendMouseMove(mouseX, mouseY);
         
-        Log.d(TAG, "Mouse move: delta=(" + mouseX + ", " + mouseY + ")");
+        Log.d(TAG, "Mouse move: delta=(" + mouseX + ", " + mouseY + "), speed=" + sensitivity);
     }
     
     /**
@@ -1115,14 +1135,14 @@ public class VirtualJoystick extends View implements ControlView {
     private void enableVirtualMouse() {
         if (mInputBridge instanceof SDLInputBridge) {
             SDLInputBridge bridge = (SDLInputBridge) mInputBridge;
-            // 先设置鼠标移动范围（从配置读取）
-            float left = mData.mouseRangeLeft;
-            float top = mData.mouseRangeTop;
-            float right = mData.mouseRangeRight;
-            float bottom = mData.mouseRangeBottom;
+            // 先设置鼠标移动范围（从全局设置读取）
+            float left = mGlobalMouseRangeLeft;
+            float top = mGlobalMouseRangeTop;
+            float right = mGlobalMouseRangeRight;
+            float bottom = mGlobalMouseRangeBottom;
             
-            Log.i(TAG, "enableVirtualMouse: config range=(" + left + "," + top + "," + right + "," + bottom + 
-                  "), speed=" + mData.mouseSpeed);
+            Log.i(TAG, "enableVirtualMouse: global range=(" + left + "," + top + "," + right + "," + bottom + 
+                  "), speed=" + mGlobalMouseSpeed);
             
             bridge.setVirtualMouseRange(left, top, right, bottom);
             // 然后启用虚拟鼠标

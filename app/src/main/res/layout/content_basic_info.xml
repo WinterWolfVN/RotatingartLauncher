@@ -451,9 +451,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
         app:cardCornerRadius="16dp"
         app:cardElevation="0dp"
         app:strokeWidth="0dp"
@@ -463,23 +460,22 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:orientation="vertical"
             android:paddingHorizontal="20dp"
             android:paddingVertical="16dp">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info_outline"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
-
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_info_outline"
+                    app:tint="?attr/textPrimary"
+                    android:layout_marginEnd="16dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -489,25 +485,40 @@
                     android:textSize="15sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tv_right_stick_attack_mode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="持续攻击"
-                    android:textColor="?attr/textSecondary"
-                    android:textSize="12sp"
-                    android:layout_marginTop="2dp" />
-
             </LinearLayout>
 
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switch_right_stick_attack_mode"
-                android:layout_width="wrap_content"
+            <RadioGroup
+                android:id="@+id/rg_attack_mode"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:checked="true"
-                app:thumbTint="?attr/colorPrimary"
-                app:trackTint="?attr/colorOutlineVariant" />
+                android:layout_marginTop="12dp"
+                android:orientation="vertical">
+
+                <RadioButton
+                    android:id="@+id/rb_attack_mode_hold"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="长按 - 按住鼠标左键不放"
+                    android:textColor="?attr/textPrimary"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_attack_mode_click"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="点击 - 快速连续点击"
+                    android:textColor="?attr/textPrimary"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_attack_mode_continuous"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="持续 - 保持按住状态"
+                    android:textColor="?attr/textPrimary"
+                    android:textSize="14sp" />
+
+            </RadioGroup>
 
         </LinearLayout>
 
@@ -573,13 +584,16 @@
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
-                <SeekBar
+                <com.google.android.material.slider.Slider
                     android:id="@+id/seekbar_mouse_range_left"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:max="100"
-                    android:progress="0" />
+                    android:valueFrom="0"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:labelBehavior="gone" />
 
                 <TextView
                     android:id="@+id/tv_mouse_range_left"
@@ -607,13 +621,16 @@
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
-                <SeekBar
+                <com.google.android.material.slider.Slider
                     android:id="@+id/seekbar_mouse_range_top"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:max="100"
-                    android:progress="0" />
+                    android:valueFrom="0"
+                    android:valueTo="100"
+                    android:value="0"
+                    android:stepSize="1"
+                    app:labelBehavior="gone" />
 
                 <TextView
                     android:id="@+id/tv_mouse_range_top"
@@ -641,13 +658,16 @@
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
-                <SeekBar
+                <com.google.android.material.slider.Slider
                     android:id="@+id/seekbar_mouse_range_right"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:max="100"
-                    android:progress="100" />
+                    android:valueFrom="0"
+                    android:valueTo="100"
+                    android:value="100"
+                    android:stepSize="1"
+                    app:labelBehavior="gone" />
 
                 <TextView
                     android:id="@+id/tv_mouse_range_right"
@@ -675,13 +695,16 @@
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
-                <SeekBar
+                <com.google.android.material.slider.Slider
                     android:id="@+id/seekbar_mouse_range_bottom"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:max="100"
-                    android:progress="100" />
+                    android:valueFrom="0"
+                    android:valueTo="100"
+                    android:value="100"
+                    android:stepSize="1"
+                    app:labelBehavior="gone" />
 
                 <TextView
                     android:id="@+id/tv_mouse_range_bottom"
@@ -709,20 +732,22 @@
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
-                <SeekBar
+                <com.google.android.material.slider.Slider
                     android:id="@+id/seekbar_mouse_speed"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:max="100"
-                    android:min="1"
-                    android:progress="30" />
+                    android:valueFrom="60"
+                    android:valueTo="200"
+                    android:value="80"
+                    android:stepSize="10"
+                    app:labelBehavior="gone" />
 
                 <TextView
                     android:id="@+id/tv_mouse_speed"
                     android:layout_width="50dp"
                     android:layout_height="wrap_content"
-                    android:text="30"
+                    android:text="80"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:gravity="end" />

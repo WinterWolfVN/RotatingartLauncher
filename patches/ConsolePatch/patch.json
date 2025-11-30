@@ -1,0 +1,19 @@
+{
+  "id": "console_android_fix",
+  "name": "Android 控制台兼容补丁",
+  "description": "修复 Android 平台不支持 Console.Title 和 Console.ForegroundColor 的问题",
+  "version": "1.0.0",
+  "author": "RA Launcher Team",
+  "dllFileName": "ConsolePatch.dll",
+  "entryPoint": {
+    "typeName": "ConsolePatch.ConsolePatcher",
+    "methodName": "Initialize"
+  },
+  "targetGames": [
+    "tModLoader",
+    "Terraria"
+  ],
+  "priority": 300,
+  "enabled": true
+}
+

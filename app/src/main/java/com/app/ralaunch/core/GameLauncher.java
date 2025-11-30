@@ -104,6 +104,29 @@ public class GameLauncher {
             String dotnetRoot,
             int frameworkMajor);
 
+    /**
+     * netcorehost API：设置启动参数（带命令行参数）
+     *
+     * @param appDir 应用程序目录
+     * @param mainAssembly 主程序集名称（如 "MyGame.dll"）
+     * @param dotnetRoot .NET 运行时根目录（可为 null）
+     * @param frameworkMajor 首选框架主版本号（0 = 自动选择最高版本）
+     * @param args 命令行参数数组
+     * @return 0 成功，负数失败
+     */
+    public static native int netcorehostSetParamsWithArgs(
+            String appDir,
+            String mainAssembly,
+            String dotnetRoot,
+            int frameworkMajor,
+            String[] args);
+    
+    /**
+     * netcorehost API：启动应用
+     * @return 应用退出码
+     */
+    public static native int netcorehostLaunch();
+
 
     /**
      * netcorehost API：设置 DOTNET_STARTUP_HOOKS 补丁路径

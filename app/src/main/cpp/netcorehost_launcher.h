@@ -18,9 +18,8 @@ extern "C" {
  * @param main_assembly 主程序集名称（如 "MyGame.dll"）
  * @param dotnet_root .NET 运行时根目录（可选，NULL 表示使用系统默认）
  * @param framework_major 首选框架主版本号（如 8 表示 .NET 8，0 表示最高版本）
- * @param hostfxr_override_path 可选，用于指定 hostfxr.so 的替代路径
- * @param argc 命令行参数数量（不包括程序集路径本身，0 表示无参数）
- * @param argv 命令行参数数组（不包括程序集路径本身，NULL 表示无参数）
+ * @param argc 命令行参数数量（0 表示无参数）
+ * @param argv 命令行参数数组（NULL 表示无参数）
  * 
  * @return 0 成功，负数表示失败
  */
@@ -29,7 +28,6 @@ int netcorehost_set_params(
     const char* main_assembly,
     const char* dotnet_root,
     int framework_major,
-    const char* hostfxr_override_path,
     int argc,
     const char* const* argv);
 
@@ -37,38 +35,33 @@ int netcorehost_set_params(
  * @brief 启动 .NET 应用程序
  * 
  * @return 应用程序退出码（0 表示成功）
- * 
- * 此函数使用 netcorehost API 启动 .NET 应用，执行流程：
- * 1. 加载 nethost 库
- * 2. 定位 hostfxr.so
- * 3. 初始化运行时
- * 4. 执行主程序集
- * 
- * 错误码：
- * - -1: 参数未设置
- * - -2: nethost/hostfxr 加载失败
- * - -3: 运行时初始化失败
- * - -4: 程序集执行失败
  */
 int netcorehost_launch();
 
 /**
  * @brief 获取最后一次错误的详细消息
- *
- * @return 错误消息字符串,如果没有错误则返回 NULL
- *
- * 注意:返回的字符串是内部缓冲区,调用者不应该释放它
  */
 const char* netcorehost_get_last_error();
 
 /**
  * @brief 清理资源
- *
- * 释放所有分配的内存和资源
  */
 void netcorehost_cleanup();
+
+/**
+ * @brief 通用进程启动器 - 供 .NET P/Invoke 调用
+ * 
+ * 在独立进程中启动 .NET 程序集，所有参数由 C# 控制
+ * 
+ * @param assembly_path 程序集完整路径
+ * @param args_json     命令行参数 JSON 数组（如 ["-server", "-world", "xxx"]）
+ * @param startup_hooks DOTNET_STARTUP_HOOKS 值，可为 nullptr
+ * @param title         通知标题
+ * @return 0 成功，非0 失败
+ */
+int process_launcher_start(const char* assembly_path, const char* args_json, 
+                           const char* startup_hooks, const char* title);
 
 #ifdef __cplusplus
 }
 #endif
-

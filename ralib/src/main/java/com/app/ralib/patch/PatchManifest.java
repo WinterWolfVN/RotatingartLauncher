@@ -4,7 +4,6 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
-import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.SerializedName;
@@ -23,7 +22,6 @@ public class PatchManifest {
     public static final String MANIFEST_FILE_NAME = "patch.json";
 
     public static Gson gson = new GsonBuilder()
-            .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
             .setPrettyPrinting()
             .create();
 
@@ -42,14 +40,33 @@ public class PatchManifest {
     @SerializedName("author")
     public String author = "";
 
-    @SerializedName("target_games")
+    @SerializedName("targetGames")
     public List<String> targetGames = null;
 
-    @SerializedName("entry_assembly_file")
-    public String entryAssemblyFile = "";
+    @SerializedName("dllFileName")
+    public String dllFileName = "";
+
+    @SerializedName("entryPoint")
+    public EntryPoint entryPoint = null;
 
     @SerializedName("priority")
     public int priority = 0;
+
+    @SerializedName("enabled")
+    public boolean enabled = true;
+
+    // 为了向后兼容，entryAssemblyFile 指向 dllFileName
+    public String getEntryAssemblyFile() {
+        return dllFileName != null && !dllFileName.isEmpty() ? dllFileName : "";
+    }
+
+    public static class EntryPoint {
+        @SerializedName("typeName")
+        public String typeName = "";
+
+        @SerializedName("methodName")
+        public String methodName = "";
+    }
 
     public static @Nullable PatchManifest fromZip(Path pathToZip) {
         Log.i(TAG, "加载 Patch 压缩包, pathToZip: " + pathToZip);
