@@ -141,6 +141,7 @@ fabric.properties
 .idea/copilot.data.migration.edit.xml
 .idea/copilotDiffState.xml
 .idea/markdown.xml
+.idea
 
 tools/assemblypatch/.vs/
 
