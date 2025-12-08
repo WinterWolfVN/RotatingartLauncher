@@ -160,22 +160,9 @@ public class ControlLayout extends FrameLayout {
             return;
         }
         
-        // 检查鼠标右摇杆设置
-        boolean mouseRightStickEnabled = isMouseRightStickEnabled();
-        if (mouseRightStickEnabled) {
-            AppLogger.info(TAG, "Mouse right stick mode enabled from settings");
-        }
-        
         // 创建虚拟控制元素
         for (ControlData data : config.controls) {
             if (!data.visible) continue;
-            
-            // 如果启用了鼠标右摇杆模式，自动配置右摇杆
-            if (mouseRightStickEnabled && data.type == ControlData.TYPE_JOYSTICK && data.xboxUseRightStick) {
-                // 将右摇杆切换为鼠标模式（类似 Steam Deck 触控板）
-                data.joystickMode = ControlData.JOYSTICK_MODE_MOUSE;
-                AppLogger.info(TAG, "Auto-configured right stick to mouse mode");
-            }
             
             ControlView controlView = createControlView(data);
             if (controlView != null) {
@@ -183,20 +170,6 @@ public class ControlLayout extends FrameLayout {
             }
         }
         
-    }
-    
-    /**
-     * 检查是否启用鼠标右摇杆模式
-     */
-    private boolean isMouseRightStickEnabled() {
-        try {
-            com.app.ralaunch.data.SettingsManager settingsManager = 
-                com.app.ralaunch.data.SettingsManager.getInstance(getContext());
-            return settingsManager.isMouseRightStickEnabled();
-        } catch (Exception e) {
-            AppLogger.warn(TAG, "Failed to check mouse right stick setting", e);
-            return false;
-        }
     }
     
     /**

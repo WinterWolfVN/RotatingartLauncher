@@ -151,7 +151,7 @@ public class ControlEditorOperations {
                         break;
                     case 2:
                         newMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
-                        modeName = "SDL控制器模式";
+                        modeName = "XBOX控制器模式";
                         break;
                     default:
                         return;
@@ -204,9 +204,12 @@ public class ControlEditorOperations {
                 } else {
                     // SDL控制器模式：清除按键映射，设置默认为左摇杆
                     control.joystickKeys = null;
-                    if (!control.name.contains("右")) {
+                    if (control.name.contains("右")) {
+                        control.xboxUseRightStick = true;
+                    } else if (control.name.contains("左")) {
                         control.xboxUseRightStick = false;
                     }
+                    // do nothing for others
                 }
                 updatedCount++;
             }

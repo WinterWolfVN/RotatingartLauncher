@@ -86,11 +86,11 @@ public class ControlDataConverter {
                     // 兼容旧数据：根据keycode判断摇杆模式
                     int keyCode = element.getKeyCode();
                     if (keyCode == -300) {
-                        // 左摇杆（SDL控制器模式）
+                        // 左摇杆（XBOX控制器模式）
                         data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
                         data.xboxUseRightStick = false;
                     } else if (keyCode == -301) {
-                        // 右摇杆（SDL控制器模式）
+                        // 右摇杆（XBOX控制器模式）
                         data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
                         data.xboxUseRightStick = true;
                     } else {

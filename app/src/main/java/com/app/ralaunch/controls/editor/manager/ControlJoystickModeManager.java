@@ -24,7 +24,7 @@ public class ControlJoystickModeManager {
             case ControlData.JOYSTICK_MODE_MOUSE:
                 return "鼠标模式";
             case ControlData.JOYSTICK_MODE_SDL_CONTROLLER:
-                return "SDL控制器模式";
+                return "XBOX控制器模式";
             default:
                 return "键盘模式";
         }
@@ -52,7 +52,7 @@ public class ControlJoystickModeManager {
             return;
         }
 
-        String[] modes = {"键盘模式", "鼠标模式", "SDL控制器模式"};
+        String[] modes = {"键盘模式", "鼠标模式", "XBOX控制器模式"};
         
         // 确定当前选中的索引
         int currentIndex = data.joystickMode;
@@ -81,9 +81,7 @@ public class ControlJoystickModeManager {
                     // 鼠标模式：不需要 joystickKeys
                     data.joystickKeys = null;
                 } else if (newMode == ControlData.JOYSTICK_MODE_SDL_CONTROLLER) {
-                    // SDL控制器模式：不需要 joystickKeys，默认左摇杆
                     data.joystickKeys = null;
-                    data.xboxUseRightStick = false;
                 }
                 
                 if (listener != null) {

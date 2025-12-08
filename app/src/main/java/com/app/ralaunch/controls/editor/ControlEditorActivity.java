@@ -233,9 +233,9 @@ public class ControlEditorActivity extends AppCompatActivity {
         mCurrentConfig.name = "默认布局";
         mCurrentConfig.controls = new java.util.ArrayList<>();
         
-        ControlData joystick = ControlData.createDefaultJoystick();
-        joystick.y = mScreenHeight - joystick.height - 50;
-        mCurrentConfig.controls.add(joystick);
+//        ControlData joystick = ControlData.createDefaultJoystick();
+//        joystick.y = mScreenHeight - joystick.height - 50;
+//        mCurrentConfig.controls.add(joystick);
     }
     
     private void displayLayout() {

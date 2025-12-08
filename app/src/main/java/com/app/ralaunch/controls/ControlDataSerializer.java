@@ -32,6 +32,7 @@ public class ControlDataSerializer implements JsonSerializer<ControlData> {
         jsonObject.addProperty("strokeWidth", src.strokeWidth);
         jsonObject.addProperty("cornerRadius", src.cornerRadius);
         jsonObject.addProperty("visible", src.visible);
+        jsonObject.addProperty("passThrough", src.passThrough);
         jsonObject.addProperty("shape", src.shape);
         
         // 根据类型添加特定字段
@@ -46,6 +47,12 @@ public class ControlDataSerializer implements JsonSerializer<ControlData> {
             jsonObject.addProperty("stickKnobSize", src.stickKnobSize);
             jsonObject.addProperty("joystickMode", src.joystickMode);
             jsonObject.addProperty("xboxUseRightStick", src.xboxUseRightStick);
+            jsonObject.addProperty("rightStickContinuous", src.rightStickContinuous);
+            jsonObject.addProperty("mouseRangeLeft", src.mouseRangeLeft);
+            jsonObject.addProperty("mouseRangeTop", src.mouseRangeTop);
+            jsonObject.addProperty("mouseRangeRight", src.mouseRangeRight);
+            jsonObject.addProperty("mouseRangeBottom", src.mouseRangeBottom);
+            jsonObject.addProperty("mouseSpeed", src.mouseSpeed);
             if (src.joystickKeys != null) {
                 jsonObject.add("joystickKeys", context.serialize(src.joystickKeys));
             }
