@@ -170,12 +170,12 @@ public class PatchManagementDialog {
                     if (iconFile.exists()) {
                         ivGameIcon.setImageBitmap(BitmapFactory.decodeFile(game.getIconPath()));
                     } else {
-                        ivGameIcon.setImageResource(R.drawable.ic_launcher_foreground);
+                        ivGameIcon.setImageResource(R.drawable.ic_ral);
                     }
                 } else if (game.getIconResId() != 0) {
                     ivGameIcon.setImageResource(game.getIconResId());
                 } else {
-                    ivGameIcon.setImageResource(R.drawable.ic_launcher_foreground);
+                    ivGameIcon.setImageResource(R.drawable.ic_ral);
                 }
 
                 // 设置选中状态

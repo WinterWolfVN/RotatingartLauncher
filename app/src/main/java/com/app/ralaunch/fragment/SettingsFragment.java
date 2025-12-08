@@ -86,7 +86,7 @@ public class SettingsFragment extends BaseFragment {
         setupCategoryItem(categoryAppearance, R.drawable.ic_settings, R.string.settings_appearance, 0);
         setupCategoryItem(categoryControls, R.drawable.ic_controller, R.string.settings_control, 1);
         setupCategoryItem(categoryGame, R.drawable.ic_game, R.string.settings_game, 2);
-        setupCategoryItem(categoryLauncher, R.drawable.ic_launcher_foreground, R.string.settings_launcher, 3);
+        setupCategoryItem(categoryLauncher, R.drawable.ic_ral, R.string.settings_launcher, 3);
         setupCategoryItem(categoryDeveloper, R.drawable.ic_bug, R.string.settings_developer, 4);
 
         // 默认选中第一项
