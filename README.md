@@ -27,33 +27,6 @@
 
 
 
-## 💝 赞助支持
-
-如果这个项目对您有帮助，欢迎通过 Patreon 支持我们的开发工作！
-
-<div align="center">
-  <a href="https://www.patreon.com/c/RotatingArtLauncher">
-    <img src="https://img.shields.io/badge/成为赞助者-FF424D?style=for-the-badge&logo=patreon&logoColor=white" alt="成为赞助者" />
-  </a>
-</div>
-
-### 赞助层级
-
-| 层级 | 价格 | 权益 |
-|------|------|------|
-| 🎁 **Supporter** | $3/月 | 开发日志访问 · 项目更新通知 · 社区访问 · 早期功能预览 |
-| 🚀 **Early Access** | $5/月 | Supporter 所有权益 + 新版本抢先体验 · 月度进展报告 · 优先技术支持 · 功能投票权 |
-| ⭐ **Premium** | $10/月 | Early Access 所有权益 + 定制功能建议 · 专属 Discord 频道 · 致谢名单 · 年度项目回顾 |
-
-您的支持将帮助我们：
-- ✨ 添加更多游戏支持
-- 🐛 修复 Bug 和性能优化
-- 📚 完善文档和教程
-- 🎨 改进用户界面
-- 🔧 开发新功能
-
-
-
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
