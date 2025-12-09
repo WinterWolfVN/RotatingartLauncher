@@ -739,10 +739,8 @@ public class MainActivity extends AppCompatActivity implements
             Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
             if (currentFragment instanceof ControlLayoutFragment) {
                 hideControlLayoutFragment();
-            } else if (fragmentNavigator.getBackStackCount() > 1) {
-                fragmentNavigator.goBack();
             } else {
-                fragmentNavigator.hideFragment();
+                fragmentNavigator.goBack();
             }
         } else {
             super.onBackPressed();

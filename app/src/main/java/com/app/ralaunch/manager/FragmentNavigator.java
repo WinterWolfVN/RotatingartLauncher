@@ -82,9 +82,10 @@ public class FragmentNavigator {
      * 返回上一页
      */
     public void goBack() {
-        if (pageManager.getBackStackCount() > 1) {
-            pageManager.goBack();
-        } else {
+        pageManager.goBack();
+        fragmentManager.popBackStack();
+        var a = pageManager.getBackStackCount();
+        if (a <= 1) {
             hideFragment();
         }
     }

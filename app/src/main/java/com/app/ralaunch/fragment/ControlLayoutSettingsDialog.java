@@ -104,6 +104,9 @@ public class ControlLayoutSettingsDialog {
                 }
                 return false; // 让对话框内容正常处理触摸事件
             });
+
+            // 初始隐藏对话框布局
+            mDialogLayout.setVisibility(View.GONE);
             
             // 等待布局测量完成后再执行动画
             mDialogLayout.post(() -> animateShow());
