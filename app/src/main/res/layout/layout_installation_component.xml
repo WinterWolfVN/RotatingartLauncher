@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 组件安装界面 - MD3 风格左右布局 -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/extractionLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="visible"
+    tools:visibility="visible"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:padding="20dp">
+
+        <!-- 左侧：组件列表（放大） -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="7"
+            android:layout_marginEnd="8dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp"
+            app:cardBackgroundColor="?attr/backgroundCard"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/textSecondary">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="组件管理"
+                    android:textColor="?attr/textPrimary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- MD3 RecyclerView - 直接使用，无需包裹 -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/componentsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:scrollbars="vertical"
+                    android:overScrollMode="ifContentScrolls"
+                    android:layout_marginBottom="12dp"
+                android:paddingBottom="8dp"
+                    android:contentDescription="需要安装的组件列表" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 中间分隔线 -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:layout_marginVertical="8dp"
+            android:background="#20FFFFFF"
+            android:alpha="0.3" />
+
+        <!-- 右侧：详细介绍（缩小） -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="5"
+            android:orientation="vertical"
+            android:layout_marginStart="8dp">
+
+            <!-- 介绍卡片 -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="?attr/backgroundCard"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/textSecondary">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="关于运行时环境"
+                        android:textColor="?attr/textPrimary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="16dp" />
+
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:fillViewport="true">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+
+
+                            <!-- 说明 -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="安装说明"
+                                android:textColor="?attr/textPrimary"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="这些组件是运行游戏所必需的。首次安装需要解压文件到应用目录，安装过程可能需要 10-30 秒，具体取决于设备性能。"
+                                android:textColor="?attr/textSecondary"
+                                android:textSize="13sp"
+                                android:lineSpacingExtra="2dp" />
+
+                        </LinearLayout>
+
+                    </ScrollView>
+
+                    <!-- 进度和按钮区域 -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/textSecondary"
+                        android:alpha="0.1"
+                        android:layout_marginVertical="16dp" />
+
+                    <!-- 进度显示 - MD3 圆形旋转 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp">
+
+
+
+
+                    </LinearLayout>
+
+                    <!-- 底部按钮 -->
+                    <Button
+                        android:id="@+id/btnStartExtraction"
+                        android:layout_width="match_parent"
+                        android:layout_height="46dp"
+                        android:background="@drawable/selector_button"
+                        android:text="同意并安装"
+                        android:textColor="?attr/textPrimary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:contentDescription="同意并安装组件按钮" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>
+

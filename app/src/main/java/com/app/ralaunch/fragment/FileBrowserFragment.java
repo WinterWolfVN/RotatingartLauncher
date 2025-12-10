@@ -235,29 +235,21 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
 
     /**
      * 检查权限并加载文件
+     * 注意：此方法只检查权限状态，不会主动请求权限
+     * 如果没有权限，会显示权限拒绝状态，用户需要主动点击授权按钮
      */
     private void checkPermissionsAndLoadFiles() {
         MainActivity activity = FragmentHelper.getMainActivity(this);
         if (activity != null) {
-
             if (activity.hasRequiredPermissions()) {
                 // 已有权限，加载文件
                 loadInitialDirectory();
                 hidePermissionDeniedState();
             } else {
-                activity.requestRequiredPermissions(new MainActivity.PermissionCallback() {
-                    @Override
-                    public void onPermissionsGranted() {
-                        checkPermissionsAndLoadFiles();
-                    }
-
-                    @Override
-                    public void onPermissionsDenied() {
-
-                    }
-                });
+                // 没有权限，显示权限拒绝状态
+                // 不自动请求权限，避免重复授权提示
+                // 用户需要点击"授予权限"按钮来请求权限
                 showPermissionDeniedState();
-
             }
         }
     }

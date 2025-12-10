@@ -100,8 +100,6 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         osmesa/osm_renderer_jni.c
         osmesa/vulkan_loader.c
         vulkan_turnip_loader.c
-        driver_helper/nsbypass.c
-        utils/loader_dlopen.c
         touch_bridge.c
         virtual_mouse_sdl.c
         And64InlineHook/And64InlineHook.cpp

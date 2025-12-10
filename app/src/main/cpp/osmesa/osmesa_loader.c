@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include "osmesa_loader.h"
-#include "utils/loader_dlopen.h"
 #include "GL/osmesa.h"
 
 // Function pointers
@@ -25,7 +24,7 @@ void* (*OSMesaGetProcAddress_p)(const char* funcName);
 
 bool dlsym_OSMesa(void) {
     // Load libOSMesa.so
-    void* dl_handle = loader_dlopen("libOSMesa.so", NULL, RTLD_LOCAL | RTLD_LAZY);
+    void* dl_handle = dlopen("libOSMesa.so", RTLD_LOCAL | RTLD_LAZY);
     if (dl_handle == NULL) {
         return false;
     }

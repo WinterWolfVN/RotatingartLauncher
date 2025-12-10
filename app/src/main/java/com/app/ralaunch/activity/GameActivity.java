@@ -71,7 +71,6 @@ import java.util.ArrayList;
  */
 public class GameActivity extends SDLActivity {
     private static final String TAG = "GameActivity";
-    private static final int STORAGE_PERMISSION_REQUEST_CODE = 1001;
     private static final int CONTROL_EDITOR_REQUEST_CODE = 2001;
     public static GameActivity mainActivity;
     
@@ -254,24 +253,6 @@ public class GameActivity extends SDLActivity {
     @Override
     protected String getMainFunction() {
         return "SDL_main";
-    }
-
-    // 处理权限请求结果
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 &&
-                    grantResults[0] == PackageManager.PERMISSION_GRANTED &&
-                    grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "存储权限已授予", Toast.LENGTH_SHORT).show();
-                setLaunchParams();
-            } else {
-                ErrorHandler.showWarning("权限不足", "需要存储权限才能运行游戏");
-                finish();
-            }
-        }
     }
 
     // 设置启动参数

@@ -142,12 +142,13 @@
         <item name="backgroundTint">@android:color/transparent</item>
     </style>
 
-    <!-- Material 3 卡片样式 - 标准卡片 -->
+    <!-- Material 3 卡片样式 - 标准卡片（带边框） -->
     <style name="Widget.App.CardView.Standard" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">1dp</item>
         <item name="cardBackgroundColor">?attr/colorSurface</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">?attr/textSecondary</item>
     </style>
 
     <!-- Material 3 卡片样式 - 小卡片 -->
@@ -215,11 +216,13 @@
         <item name="android:textStyle">bold</item>
     </style>
 
-    <!-- Material 3 卡片样式 - 列表项卡片 -->
+    <!-- Material 3 卡片样式 - 列表项卡片（带边框） -->
     <style name="Widget.App.CardView.ListItem" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">10dp</item>
         <item name="cardElevation">1dp</item>
         <item name="cardBackgroundColor">?attr/backgroundCard</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">?attr/textSecondary</item>
     </style>
 
     <!-- Material 3 卡片样式 - 图标容器卡片 -->
@@ -244,18 +247,21 @@
         <item name="cardBackgroundColor">?attr/backgroundCard</item>
     </style>
 
-    <!-- Material 3 卡片样式 - 文件列表卡片 -->
+    <!-- Material 3 卡片样式 - 文件列表卡片（带边框） -->
     <style name="Widget.App.CardView.FileList" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">10dp</item>
         <item name="cardElevation">3dp</item>
         <item name="cardBackgroundColor">?attr/backgroundCard</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">?attr/textSecondary</item>
     </style>
 
-    <!-- Material 3 卡片样式 - 游戏卡片 -->
+    <!-- Material 3 卡片样式 - 游戏卡片（带边框） -->
     <style name="Widget.App.CardView.GameItem" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">16dp</item>
         <item name="cardElevation">4dp</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">?attr/textSecondary</item>
     </style>
 
     <!-- Material 3 卡片样式 - 删除按钮卡片 -->

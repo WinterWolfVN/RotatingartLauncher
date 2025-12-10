@@ -11,8 +11,8 @@ android {
         applicationId "com.app.ralaunch"
         minSdk 28
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -118,8 +118,10 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.16.0'
 
     implementation 'com.google.code.gson:gson:2.13.2'
-    implementation 'com.github.omicronapps:7-Zip-JBinding-4Android:Release-16.02-2.03'
+    
+    // Apache Commons Compress + XZ 用于 tar.xz 解压
     implementation 'org.apache.commons:commons-compress:1.24.0'
+    implementation 'org.tukaani:xz:1.9'
 
     implementation project(path: ':ralib')
 
