@@ -1,0 +1,22 @@
+[
+  {
+    "gameId": 1207665503,
+    "name": "tModLoader",
+    "versions": [
+      {
+        "version": "v2025.10.3.1",
+        "url": "https://github.com/tModLoader/tModLoader/releases/download/v2025.10.3.1/tModLoader.zip",
+        "fileName": "tModLoader-v2025.10.3.1.zip",
+        "stable": true
+      },
+      {
+        "version": "v2025.09.3.3",
+        "url": "https://github.com/tModLoader/tModLoader/releases/download/v2025.09.3.3/tModLoader.zip",
+        "fileName": "tModLoader-v2025.09.3.3.zip",
+        "stable": true
+      }
+    
+    ]
+  }
+]
+

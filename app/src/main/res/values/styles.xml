@@ -122,6 +122,12 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <!-- ShapeableImageView 圆角样式 12dp -->
+    <style name="RoundedImageView12" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
     <!-- ShapeableImageView 圆角样式 16dp -->
     <style name="RoundedImageView16" parent="">
         <item name="cornerFamily">rounded</item>
@@ -346,6 +352,21 @@
     <style name="ShapeAppearance.App.NavigationRail.Indicator" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- GOG 对话框样式 - 透明背景 MD3 风格 -->
+    <style name="GogDialogStyle" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.6</item>
+        <item name="android:windowAnimationStyle">@style/DialogAnimation</item>
+        <item name="android:windowMinWidthMajor">0%</item>
+        <item name="android:windowMinWidthMinor">0%</item>
+        <!-- 移除所有默认装饰 -->
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">true</item>
     </style>
 
 </resources>

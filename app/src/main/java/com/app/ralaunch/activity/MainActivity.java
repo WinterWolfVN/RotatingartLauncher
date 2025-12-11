@@ -456,15 +456,7 @@ public class MainActivity extends AppCompatActivity implements
                 appBarLayout.setVisibility(View.GONE);
             }
             
-            // GogClientFragment 的 toolbar 和 toolbarLoggedIn
-            View toolbar = container.findViewById(R.id.toolbar);
-            if (toolbar != null) {
-                toolbar.setVisibility(View.GONE);
-            }
-            View toolbarLoggedIn = container.findViewById(R.id.toolbarLoggedIn);
-            if (toolbarLoggedIn != null) {
-                toolbarLoggedIn.setVisibility(View.GONE);
-            }
+            // GogClientFragment 的 toolbar 已从布局中移除（横屏设计）
         });
     }
     

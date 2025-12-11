@@ -53,7 +53,6 @@
         android:id="@+id/codeLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="验证码"
         app:startIconDrawable="@drawable/ic_security"
         app:boxCornerRadiusTopStart="16dp"
         app:boxCornerRadiusTopEnd="16dp"

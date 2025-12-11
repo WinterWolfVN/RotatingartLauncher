@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- GOG 游戏列表项 - 现代化 MD3 设计 -->
+<!-- GOG 游戏网格项 - 垂直布局，适合网格视图 -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -7,11 +7,11 @@
     android:id="@+id/gameCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="4dp"
-    android:layout_marginVertical="6dp"
+    android:layout_marginHorizontal="3dp"
+    android:layout_marginVertical="4dp"
     android:clickable="true"
     android:focusable="true"
-    app:cardCornerRadius="20dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeWidth="0dp"
     app:rippleColor="?attr/colorPrimary"
@@ -20,15 +20,16 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:gravity="center_vertical">
+        android:orientation="vertical"
+        android:padding="8dp">
 
         <!-- 游戏封面 -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            app:cardCornerRadius="12dp"
+            android:id="@+id/imageCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="120dp"
+            app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
             app:strokeColor="?attr/colorOutline"
@@ -37,7 +38,8 @@
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/gameImage"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
                 android:scaleType="centerCrop"
                 app:shapeAppearanceOverlay="@style/RoundedImageView12"
                 tools:src="@drawable/ic_games" />
@@ -46,23 +48,21 @@
 
         <!-- 游戏信息 -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginStart="14dp"
-            android:layout_marginEnd="8dp">
+            android:layout_marginTop="8dp">
 
             <TextView
                 android:id="@+id/gameTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="游戏标题"
-                android:textSize="15sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 android:maxLines="2"
                 android:ellipsize="end"
-                android:lineSpacingExtra="2dp"
+                android:lineSpacingExtra="1dp"
                 android:textColor="?attr/textPrimary"
                 tools:text="The Witcher 3: Wild Hunt" />
 
@@ -71,3 +71,4 @@
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
+

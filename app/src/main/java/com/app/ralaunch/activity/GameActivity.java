@@ -664,10 +664,7 @@ public class GameActivity extends SDLActivity {
         AppLogger.debug(TAG, "Toggle virtual controls visibility");
         toggleVirtualControls();
 
-//        AppLogger.debug(TAG, "Showing exit confirmation dialog");
-//        if (mMenuManager != null) {
-//            mMenuManager.showExitConfirmDialog();
-//        }
+
     }
     @Override
     protected void onDestroy() {

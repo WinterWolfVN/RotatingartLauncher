@@ -76,6 +76,9 @@ public class LocalImportFragment extends BaseFragment {
     private String gameIconPath = null;  // 将从gameinfo读取
     private String engineType = "FNA";
     public static File gameDir;
+    
+    // 防止重复导入的标志
+    private boolean isImporting = false;
 
     public interface OnImportCompleteListener {
         void onImportComplete(String gameType, GameItem newGame);
@@ -292,6 +295,13 @@ public class LocalImportFragment extends BaseFragment {
             showToast("请先选择游戏文件");
             return;
         }
+        
+        // 防止重复导入
+        if (isImporting) {
+            AppLogger.warn(TAG, "导入已经在进行中，忽略重复调用");
+            return;
+        }
+        isImporting = true;
 
         // 根据是否选择了 ModLoader 来确定游戏类型
         boolean hasModLoader = modLoaderFilePath != null && !modLoaderFilePath.isEmpty();
@@ -409,6 +419,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onComplete(String gamePath, String modLoaderPath) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
+                                    isImporting = false; // 重置导入标志
                                     updateProgress("导入完成！", 100);
 
                                     AppLogger.info(TAG, "=== 导入完成回调 ===");
@@ -521,6 +532,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onError(String error) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
+                                    isImporting = false; // 重置导入标志
                                     updateProgress("导入失败: " + error, 0);
                                     if (getActivity() != null) {
                                         // 使用 RALib 的错误弹窗代替普通 Toast
@@ -547,6 +559,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onComplete(String gamePath, String modLoaderPath) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
+                                    isImporting = false; // 重置导入标志
                                     updateProgress("导入完成！", 100);
 
 
@@ -599,6 +612,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onError(String error) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
+                                    isImporting = false; // 重置导入标志
                                     updateProgress("导入失败: " + error, 0);
                                     if (getActivity() != null) {
                                         // 使用 RALib 的错误弹窗代替普通 Toast

@@ -66,6 +66,11 @@ public class GogApiClient {
         T execute() throws IOException;
     }
 
+    // 下载进度回调
+    public interface DownloadProgress {
+        void onProgress(long downloaded, long total);
+    }
+
     private TwoFactorCallback twoFactorCallback;
 
     /**
@@ -182,6 +187,59 @@ public class GogApiClient {
     }
 
     /**
+     * 使用当前认证信息下载文件
+     */
+    public void downloadWithAuth(String urlString, File targetFile, DownloadProgress progress) throws IOException {
+        if (targetFile == null) throw new IOException("目标文件无效");
+        File parent = targetFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            if (!parent.mkdirs()) {
+                throw new IOException("无法创建下载目录: " + parent.getAbsolutePath());
+            }
+        }
+
+        executeWithRetry(() -> {
+            String accessToken = getAccessToken();
+            HttpURLConnection conn = (HttpURLConnection) new URL(urlString).openConnection();
+            try {
+                conn.setInstanceFollowRedirects(true);
+                if (accessToken != null) {
+                    conn.setRequestProperty("Authorization", "Bearer " + accessToken);
+                }
+                String cookieHeader = getCookieHeader();
+                if (cookieHeader != null) {
+                    conn.setRequestProperty("Cookie", cookieHeader);
+                }
+                conn.setConnectTimeout(20000);
+                conn.setReadTimeout(20000);
+
+                int code = conn.getResponseCode();
+                if (code >= 400) {
+                    throw new IOException("下载失败，HTTP " + code);
+                }
+
+                long total = conn.getContentLengthLong();
+                try (InputStream in = conn.getInputStream();
+                     FileOutputStream out = new FileOutputStream(targetFile)) {
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    long downloaded = 0;
+                    while ((len = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, len);
+                        downloaded += len;
+                        if (progress != null) {
+                            progress.onProgress(downloaded, total);
+                        }
+                    }
+                }
+            } finally {
+                conn.disconnect();
+            }
+            return null;
+        }, "download " + targetFile.getName());
+    }
+
+    /**
      * 使用用户名和密码登录
      */
     public boolean loginWithCredentials(String username, String password) throws IOException {
@@ -218,7 +276,7 @@ public class GogApiClient {
                 conn.setRequestMethod("GET");
                 conn.setConnectTimeout(15000); // 15秒连接超时
                 conn.setReadTimeout(15000); // 15秒读取超时
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36");
                 conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
 
                 AppLogger.info(TAG, "连接响应码: " + conn.getResponseCode());
@@ -596,7 +654,7 @@ public class GogApiClient {
             HttpURLConnection conn = (HttpURLConnection) new URL(currentUrl).openConnection();
             try {
                 conn.setRequestMethod("GET");
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36");
                 conn.setInstanceFollowRedirects(false); // 手动处理重定向
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(15000);
@@ -878,10 +936,10 @@ public class GogApiClient {
     }
 
     /**
-     * 获取产品构建信息 (默认 Windows 平台)
+     * 获取产品构建信息 (默认 Linux 平台)
      */
     public JSONObject getProductBuilds(String productId) throws IOException {
-        return getProductBuilds(productId, "windows", "2");
+        return getProductBuilds(productId, "linux", "2");
     }
 
     /**
@@ -953,12 +1011,68 @@ public class GogApiClient {
     }
 
     /**
+     * 从 downlink url 中提取 secure_link 所需的 path
+     * 参考 lgogdownloader C++: galaxyAPI::getPathFromDownlinkUrl()
+     */
+    private String getPathFromDownlinkUrl(String downlinkUrl, String gamename) {
+        if (downlinkUrl == null || downlinkUrl.isEmpty()) return "";
+        try {
+            String urlDecoded = java.net.URLDecoder.decode(downlinkUrl, "UTF-8");
+            if (urlDecoded.endsWith("/")) {
+                urlDecoded = urlDecoded.substring(0, urlDecoded.length() - 1);
+            }
+
+            int filenameStart = 0;
+            int lastSlash = urlDecoded.lastIndexOf('/');
+            if (lastSlash != -1) {
+                filenameStart = lastSlash + 1;
+            }
+            int gamenameIdx = urlDecoded.indexOf("/" + gamename + "/");
+            if (gamenameIdx != -1) {
+                filenameStart = gamenameIdx;
+            }
+
+            int filenameEnd = urlDecoded.length();
+            int qIdx = urlDecoded.indexOf('?');
+            if (qIdx != -1) {
+                filenameEnd = qIdx;
+                int tokenPos = urlDecoded.indexOf("&token=");
+                int accessTokenPos = urlDecoded.indexOf("&access_token=");
+                if (tokenPos != -1 && accessTokenPos != -1) {
+                    filenameEnd = Math.min(tokenPos, accessTokenPos);
+                } else {
+                    int amp = urlDecoded.indexOf('&');
+                    if (amp != -1) filenameEnd = Math.min(filenameEnd, amp);
+                }
+            }
+
+            String path = urlDecoded.substring(filenameStart, filenameEnd);
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
+            if (!path.contains("/" + gamename + "/")) {
+                path = "/" + gamename + path;
+            }
+            // 去掉可能的问号尾巴
+            int lastQ = path.lastIndexOf('?');
+            if (lastQ != -1 && lastQ > path.lastIndexOf('/')) {
+                path = path.substring(0, lastQ);
+            }
+            return path;
+        } catch (Exception e) {
+            AppLogger.error(TAG, "解析 downlink url 失败", e);
+            return "";
+        }
+    }
+
+    /**
      * 获取安全下载链接
      * 对应 C++: galaxyAPI::getSecureLink()
      */
     public JSONObject getSecureLink(String productId, String path) throws IOException {
-        String url = "https://content-system.gog.com/products/" + productId + "/secure_link?path=" +
-                    URLEncoder.encode(path, "UTF-8");
+        // 遵循 lgogdownloader C++ 实现: generation=2 & _version=2，path 直接拼接
+        String url = "https://content-system.gog.com/products/" + productId +
+                "/secure_link?generation=2&_version=2&path=" + path;
         return getResponseJson(url);
     }
 
@@ -1024,17 +1138,17 @@ public class GogApiClient {
 
                 // 解析安装程序
                 if (downloads.has("installers")) {
-                    installers = parseGameFiles(downloads.getJSONArray("installers"), "installer");
+                    installers = parseGameFiles(downloads.getJSONArray("installers"), "installer", gamename);
                 }
 
                 // 解析额外内容
                 if (downloads.has("bonus_content")) {
-                    extras = parseGameFiles(downloads.getJSONArray("bonus_content"), "extra");
+                    extras = parseGameFiles(downloads.getJSONArray("bonus_content"), "extra", gamename);
                 }
 
                 // 解析补丁
                 if (downloads.has("patches")) {
-                    patches = parseGameFiles(downloads.getJSONArray("patches"), "patch");
+                    patches = parseGameFiles(downloads.getJSONArray("patches"), "patch", gamename);
                 }
             }
         } catch (org.json.JSONException e) {
@@ -1052,8 +1166,9 @@ public class GogApiClient {
     /**
      * 解析游戏文件列表
      * 参考 C++: galaxyAPI::fileJsonNodeToGameFileVector()
+     * 仅保留 Linux 版本的文件
      */
-    private List<GameFile> parseGameFiles(JSONArray filesArray, String type) {
+    private List<GameFile> parseGameFiles(JSONArray filesArray, String type, String gamename) {
         List<GameFile> files = new ArrayList<>();
 
         for (int i = 0; i < filesArray.length(); i++) {
@@ -1073,13 +1188,48 @@ public class GogApiClient {
                 String language = fileNode.optString("language", "en");
                 String os = fileNode.optString("os", "");
 
+                // 仅保留 Linux 版本的文件
+                if (!os.equalsIgnoreCase("linux")) {
+                    continue;
+                }
+
                 // 获取第一个文件的信息
                 if (fileNode.has("files") && fileNode.getJSONArray("files").length() > 0) {
                     JSONObject firstFile = fileNode.getJSONArray("files").getJSONObject(0);
                     long size = firstFile.optLong("size", 0);
                     String manualUrl = firstFile.optString("manual_url", "");
+                    String path = firstFile.optString("path", "");
 
-                    files.add(new GameFile(name, version, language, os, type, size, manualUrl));
+                    String downlinkJsonUrl = firstFile.optString("downlink", "");
+                    if (!downlinkJsonUrl.isEmpty()) {
+                        AppLogger.debug(TAG, "[downlink] request json: " + downlinkJsonUrl);
+                        try {
+                            JSONObject downlinkJson = getResponseJson(downlinkJsonUrl);
+                            if (downlinkJson != null) {
+                                String downlinkUrl = downlinkJson.optString("downlink", "");
+                                if (!downlinkUrl.isEmpty()) {
+                                    // 优先使用 downlink 返回的真实下载 url
+                                    manualUrl = downlinkUrl;
+                                    path = getPathFromDownlinkUrl(downlinkUrl, gamename);
+                                    AppLogger.debug(TAG, "[downlink] resolved for " + gamename + " file=" + name + " url=" + manualUrl + " path=" + path);
+                                } else {
+                                    AppLogger.warn(TAG, "[downlink] json without downlink field for " + name);
+                                }
+                            } else {
+                                AppLogger.warn(TAG, "[downlink] empty json for " + name);
+                            }
+                        } catch (Exception e) {
+                            AppLogger.warn(TAG, "[downlink] 解析失败: " + e.getMessage());
+                        }
+                    } else {
+                        AppLogger.debug(TAG, "[downlink] none for file " + name + ", fallback manual=" + manualUrl + " path=" + path);
+                    }
+
+                    if (manualUrl == null || manualUrl.isEmpty()) {
+                        AppLogger.warn(TAG, "未能获取 manualUrl，文件: " + name + " path: " + path);
+                    }
+
+                    files.add(new GameFile(name, version, language, os, type, size, manualUrl, path));
                 }
             } catch (Exception e) {
                 AppLogger.error(TAG, "解析游戏文件失败", e);
@@ -1210,9 +1360,10 @@ public class GogApiClient {
         public final String type;           // 类型 (installer/patch/langpack/extra)
         public final long size;             // 文件大小（字节）
         public final String manualUrl;      // 手动下载链接
+        public final String path;           // secure_link 所需的路径
 
         public GameFile(String name, String version, String language, String os,
-                       String type, long size, String manualUrl) {
+                       String type, long size, String manualUrl, String path) {
             this.name = name;
             this.version = version;
             this.language = language;
@@ -1220,6 +1371,7 @@ public class GogApiClient {
             this.type = type;
             this.size = size;
             this.manualUrl = manualUrl;
+            this.path = path;
         }
 
         public String getSizeFormatted() {
