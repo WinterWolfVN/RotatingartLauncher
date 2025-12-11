@@ -57,7 +57,7 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
     private TextView emptyText;
     private LinearLayout permissionDeniedState;
     private android.widget.EditText searchInput;
-    private ImageButton sortButton;
+    private com.google.android.material.button.MaterialButton sortButton;
 
     // 文件相关
     private File currentDirectory;
@@ -70,7 +70,8 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
     private List<FileItem> filteredFileList = new ArrayList<>();
     private FileBrowserAdapter fileAdapter;
     
-    // 排序模式: 0=名称, 1=大小, 2=时间
+    // 排序模式: 0=名称（默认）, 1=大小, 2=时间
+    // 默认按文件名称排序（不区分大小写）
     private int sortMode = 0;
     
     // 权限请求监听器
@@ -143,13 +144,7 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
     }
 
     private void setupUI(View view) {
-        // 返回按钮
-        ImageButton backButton = view.findViewById(R.id.backButton);
-        backButton.setOnClickListener(v -> {
-            if (backListener != null) {
-                backListener.onBack();
-            }
-        });
+        // 返回按钮已移除，通过 NavigationRail 导航
 
         // 设置页面标题
         TextView pageTitle = view.findViewById(R.id.pageTitle);
@@ -192,7 +187,9 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
         });
         
         // 排序按钮监听
-        sortButton.setOnClickListener(v -> showSortMenu());
+        if (sortButton != null) {
+            sortButton.setOnClickListener(v -> showSortMenu());
+        }
 
         // 确认按钮
         confirmButton.setOnClickListener(v -> {
@@ -223,6 +220,9 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
     }
 
     private String getPageTitle() {
+        if (fileType == null) {
+            return "选择文件";
+        }
         switch (fileType) {
             case "game":
                 return "选择游戏文件";
@@ -507,7 +507,7 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
                     return Long.compare(fileB.lastModified(), fileA.lastModified());
                 };
                 break;
-            default: // 按名称排序
+            default: // 按名称排序（默认，不区分大小写）
                 comparator = (a, b) -> a.getName().compareToIgnoreCase(b.getName());
                 break;
         }

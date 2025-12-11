@@ -95,7 +95,8 @@ public class LocalImportDialog extends DialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.dialog_local_import, container, false);
+        // 使用新的横屏布局（与 GameImportFragment 共用）
+        return inflater.inflate(R.layout.fragment_game_import, container, false);
     }
 
     @Override
@@ -105,20 +106,8 @@ public class LocalImportDialog extends DialogFragment {
     }
 
     private void setupUI(View view) {
-        // 初始化控件 - closeButton 在 include 布局中，需要通过 include 的 id 访问
-        View dialogHeader = view.findViewById(R.id.dialogHeader);
-        if (dialogHeader != null) {
-            View closeButton = dialogHeader.findViewById(R.id.closeButton);
-            if (closeButton != null) {
-                closeButton.setOnClickListener(v -> dismiss());
-            }
-        } else {
-            // 如果找不到 include，尝试直接查找（向后兼容）
-            View closeButton = view.findViewById(R.id.closeButton);
-            if (closeButton != null) {
-                closeButton.setOnClickListener(v -> dismiss());
-            }
-        }
+        // 新布局不需要关闭按钮（通过 NavigationRail 导航，不需要关闭按钮）
+        // 如果是 Dialog 模式，可以通过点击外部区域关闭
 
         gameFileCard = view.findViewById(R.id.gameFileCard);
         modLoaderCard = view.findViewById(R.id.modLoaderCard);

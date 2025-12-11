@@ -7,7 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?attr/backgroundPrimary">
+    android:background="?android:attr/colorBackground">
 
     <!-- ===== 登录界面 ===== -->
     <LinearLayout
@@ -22,7 +22,7 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="?attr/colorSurface"
+            android:background="?android:attr/colorBackground"
             app:title="GOG Galaxy"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:navigationIconTint="?attr/textPrimary"
@@ -226,7 +226,7 @@
         <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/colorSurface"
+            android:background="?android:attr/colorBackground"
             app:elevation="0dp">
 
             <com.google.android.material.appbar.MaterialToolbar

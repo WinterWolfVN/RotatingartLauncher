@@ -18,7 +18,7 @@ public class UIManager {
     private MaterialButton addGameButton;
     private MaterialButton refreshButton;
     private MaterialButton gogButton;
-    private com.app.ralib.ui.ModernButton launchGameButton;
+    private MaterialButton launchGameButton;
     
     public UIManager(Activity activity) {
         this.activity = activity;
@@ -29,7 +29,7 @@ public class UIManager {
      */
     public void initialize(View mainLayoutView, MaterialButton settingsBtn, 
                          MaterialButton addGameBtn, MaterialButton refreshBtn,
-                         MaterialButton gogBtn, com.app.ralib.ui.ModernButton launchBtn) {
+                         MaterialButton gogBtn, MaterialButton launchBtn) {
         this.mainLayout = mainLayoutView;
         this.settingsButton = settingsBtn;
         this.addGameButton = addGameBtn;

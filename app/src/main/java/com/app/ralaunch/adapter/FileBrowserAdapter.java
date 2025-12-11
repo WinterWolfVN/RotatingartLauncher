@@ -107,11 +107,20 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
         // 设置选中状态
         boolean isSelected = fileItem.getPath().equals(selectedFilePath);
         if (isSelected) {
-            holder.cardView.setStrokeColor(holder.itemView.getContext().getColor(R.color.accent_primary));
-            holder.cardView.setStrokeWidth(4);
+            // 选中状态：紫色边框、背景色、更高阴影
+            int primaryColor = holder.itemView.getContext().getColor(R.color.accent_primary);
+            holder.cardView.setStrokeColor(primaryColor);
+            holder.cardView.setStrokeWidth(3);
+            // 使用 primaryContainer 颜色作为背景
+            int primaryContainerColor = holder.itemView.getContext().getColor(R.color.md_theme_light_primaryContainer);
+            holder.cardView.setCardBackgroundColor(primaryContainerColor);
             holder.cardView.setCardElevation(8f);
         } else {
+            // 未选中状态：无边框、默认背景、低阴影
             holder.cardView.setStrokeWidth(0);
+            // 使用 surface 颜色作为背景
+            int surfaceColor = holder.itemView.getContext().getColor(R.color.md_theme_light_surface);
+            holder.cardView.setCardBackgroundColor(surfaceColor);
             holder.cardView.setCardElevation(2f);
         }
 

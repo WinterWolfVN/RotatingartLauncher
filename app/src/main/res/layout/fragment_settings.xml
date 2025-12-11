@@ -1,120 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-        android:background="?android:attr/colorBackground">
+    android:orientation="vertical"
+    android:background="?android:attr/colorBackground">
 
-    <!-- 左侧导航栏 -->
-    <LinearLayout
-        android:id="@+id/sidebarContainer"
-        android:layout_width="100dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="?attr/colorSurfaceVariant"
-        android:clickable="true"
-        android:focusable="true"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+    <!-- 顶部分类导航栏 - Underline Tabs 风格 -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/settingsTabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:background="?android:attr/colorBackground"
+        android:minHeight="48dp"
+        app:tabMode="fixed"
+        app:tabGravity="fill"
+        app:tabIndicatorColor="?attr/colorPrimary"
+        app:tabIndicatorHeight="3dp"
+        app:tabIndicatorFullWidth="false"
+        app:tabIndicatorGravity="bottom"
+        app:tabSelectedTextColor="?attr/colorPrimary"
+        app:tabTextColor="?attr/textSecondary"
+        app:tabRippleColor="@android:color/transparent"
+        app:tabTextAppearance="@style/TextAppearance.Material3.BodyLarge"
+        app:tabPaddingStart="12dp"
+        app:tabPaddingEnd="12dp"
+        app:tabPaddingTop="12dp"
+        app:tabPaddingBottom="12dp"
+        app:tabMinWidth="0dp"
+        app:tabContentStart="0dp" />
 
-        <!-- 标题 -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Rotating art Launcher"
-            android:textColor="?attr/textPrimary"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:paddingHorizontal="4dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="4dp"
-            android:letterSpacing="0.02"
-            android:maxLines="2" />
-
-        <!-- 设置分类列表 -->
-        <androidx.core.widget.NestedScrollView
-            android:id="@+id/settingsCategoryScrollView"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fillViewport="false"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:id="@+id/settingsCategoryLinearLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingTop="0dp"
-                android:paddingBottom="8dp">
-
-                <!-- 外观设置 -->
-                <include
-                    layout="@layout/item_settings_category"
-                    android:id="@+id/categoryAppearance" />
-
-                <!-- 控制设置 -->
-                <include
-                    layout="@layout/item_settings_category"
-                    android:id="@+id/categoryControls" />
-
-                <!-- 游戏设置 -->
-                <include
-                    layout="@layout/item_settings_category"
-                    android:id="@+id/categoryGame" />
-
-                <!-- 启动器设置 -->
-                <include
-                    layout="@layout/item_settings_category"
-                    android:id="@+id/categoryLauncher" />
-
-                <!-- 实验性设置 -->
-                <include
-                    layout="@layout/item_settings_category"
-                    android:id="@+id/categoryDeveloper" />
-
-            </LinearLayout>
-
-        </androidx.core.widget.NestedScrollView>
-
-    </LinearLayout>
-
-    <!-- 右侧内容区域 -->
+    <!-- 内容区域 -->
     <FrameLayout
         android:id="@+id/contentFrame"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:clickable="false"
-        android:focusable="false"
-        app:layout_constraintStart_toEndOf="@id/sidebarContainer"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:background="?android:attr/colorBackground">
 
         <!-- 外观设置内容 -->
-
-        <!-- 控制设置内容 -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/contentAppearance"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true"
+            android:padding="16dp"
             android:visibility="visible">
 
             <include layout="@layout/fragment_settings_misc" />
+
         </androidx.core.widget.NestedScrollView>
 
+        <!-- 控制设置内容 -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/contentControls"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:padding="16dp"
+            android:visibility="gone">
+
             <include layout="@layout/fragment_settings_controls" />
+
         </androidx.core.widget.NestedScrollView>
 
         <!-- 游戏设置内容 -->
@@ -122,9 +71,12 @@
             android:id="@+id/contentGame"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:padding="16dp"
+            android:visibility="gone">
+
             <include layout="@layout/fragment_settings_game" />
+
         </androidx.core.widget.NestedScrollView>
 
         <!-- 启动器设置内容 -->
@@ -132,9 +84,12 @@
             android:id="@+id/contentLauncher"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:padding="16dp"
+            android:visibility="gone">
+
             <include layout="@layout/fragment_settings_launcher" />
+
         </androidx.core.widget.NestedScrollView>
 
         <!-- 实验性设置内容 -->
@@ -142,11 +97,14 @@
             android:id="@+id/contentDeveloper"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="gone"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:padding="16dp"
+            android:visibility="gone">
+
             <include layout="@layout/fragment_settings_developer" />
+
         </androidx.core.widget.NestedScrollView>
 
     </FrameLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

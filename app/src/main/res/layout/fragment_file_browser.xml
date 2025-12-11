@@ -3,91 +3,62 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/backgroundPrimary"
-    android:orientation="vertical"
-    android:padding="4dp">
+    android:background="?android:attr/colorBackground"
+    android:orientation="horizontal"
+    android:padding="24dp">
 
-    <!-- 顶部标题栏 - 更紧凑 -->
-    <include
-        layout="@layout/include_fragment_header_compact"
-        android:id="@+id/header" />
-
-    <!-- 当前路径显示 - 更紧凑 -->
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="36dp"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.App.CardView.PathDisplay">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="horizontal"
-            android:paddingHorizontal="10dp"
-            android:gravity="center_vertical">
-
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_folder"
-                app:tint="?attr/colorPrimary"
-                android:layout_marginEnd="6dp" />
-
-            <TextView
-                android:id="@+id/currentPathText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="/storage/emulated/0/Download"
-                android:textSize="11sp"
-                android:maxLines="1"
-                android:ellipsize="middle"
-                android:textColor="?attr/textSecondary" />
-
-        </LinearLayout>
-
-    </androidx.cardview.widget.CardView>
-
-    <!-- 搜索和排序工具栏 -->
+    <!-- 左侧工具栏区域 -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="4dp">
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.4"
+        android:orientation="vertical"
+        android:paddingEnd="16dp">
+
+        <!-- 标题 -->
+        <TextView
+            android:id="@+id/pageTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="文件浏览器"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.01"
+            android:layout_marginBottom="32dp" />
 
         <!-- 搜索框 -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="0dp"
-            android:layout_height="32dp"
-            android:layout_weight="1"
-            style="@style/Widget.App.CardView.SearchBox">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            style="@style/Widget.App.CardView.Outlined">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingHorizontal="10dp">
+                android:padding="14dp">
 
                 <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_search"
-                    app:tint="?attr/textSecondary" />
+                    app:tint="?attr/colorOnSurfaceVariant"
+                    android:layout_marginEnd="10dp" />
 
                 <EditText
                     android:id="@+id/searchInput"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="@null"
                     android:hint="搜索文件..."
-                    android:textColorHint="?attr/textHint"
-                    android:textColor="?attr/textPrimary"
-                    android:textSize="11sp"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
+                    android:textColorHint="?attr/colorOnSurfaceVariant"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="14sp"
                     android:maxLines="1"
                     android:inputType="text" />
 
@@ -96,29 +67,90 @@
         </com.google.android.material.card.MaterialCardView>
 
         <!-- 排序按钮 -->
-        <ImageButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/sortButton"
-            android:layout_marginStart="6dp"
-            android:src="@drawable/ic_sort"
-            android:contentDescription="排序"
-            app:tint="?attr/colorPrimary"
-            style="@style/Widget.App.ImageButton.Toolbar" />
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="排序"
+            android:textSize="14sp"
+            app:icon="@drawable/ic_sort"
+            app:iconSize="20dp"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:cornerRadius="12dp"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 确认按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/confirmButton"
+            android:layout_width="match_parent"
+            android:layout_height="75dp"
+            android:text="选择文件"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:enabled="false"
+            app:cornerRadius="16dp"
+            style="@style/Widget.App.Button.Filled" />
 
     </LinearLayout>
 
-    <!-- 文件列表区域 - 占据主要空间 -->
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginBottom="8dp"
-        style="@style/Widget.App.CardView.FileList">
+    <!-- 右侧文件列表区域 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1.6"
+        android:orientation="vertical">
 
-        <!-- 空状态 -->
-        <include
-            layout="@layout/include_empty_state"
+        <!-- 当前路径显示卡片 -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            style="@style/Widget.App.CardView.Outlined">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_folder"
+                    app:tint="?attr/colorPrimary"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:id="@+id/currentPathText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="/storage/emulated/0/Download"
+                    android:textSize="14sp"
+                    android:maxLines="1"
+                    android:ellipsize="middle"
+                    android:textColor="?attr/colorOnSurface" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 文件列表卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            style="@style/Widget.App.CardView.Outlined">
+
+            <!-- 空状态 -->
+            <include
+                layout="@layout/include_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
         <!-- 权限拒绝状态 -->
         <LinearLayout
             android:id="@+id/permissionDeniedState"
@@ -144,7 +176,7 @@
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"
-                android:textColor="?attr/textPrimary" />
+                android:textColor="?attr/colorOnSurface" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -153,45 +185,30 @@
                 android:text="请授予存储权限以浏览文件"
                 android:textSize="14sp"
                 android:layout_marginBottom="20dp"
-                style="@style/TextAppearance.App.Medium"
-                android:textColor="?attr/textSecondary" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/grantPermissionButton"
                 android:layout_width="wrap_content"
-                android:layout_height="44dp"
+                android:layout_height="48dp"
                 android:text="授予权限"
-                android:textColor="?attr/textPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:background="@drawable/bg_card_8dp"
-                android:backgroundTint="?attr/colorPrimary"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp" />
+                app:cornerRadius="12dp"
+                style="@style/Widget.App.Button.Filled" />
 
         </LinearLayout>
 
-        <!-- 文件列表 -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/fileRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="4dp"
-            android:clipToPadding="false" />
+            <!-- 文件列表 -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/fileRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp"
+                android:clipToPadding="false" />
 
-    </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-    <!-- 确认按钮 - 更紧凑 -->
-    <Button
-        android:id="@+id/confirmButton"
-        android:layout_width="match_parent"
-        android:layout_height="30dp"
-        android:text="选择文件"
-        android:textColor="?attr/textPrimary"
-        android:textSize="8sp"
-        android:textStyle="bold"
-        android:background="@drawable/bg_card_8dp"
-        android:backgroundTint="?attr/colorSecondary"
-        android:enabled="false" />
+    </LinearLayout>
 
 </LinearLayout>

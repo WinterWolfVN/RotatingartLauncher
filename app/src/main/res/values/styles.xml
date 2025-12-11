@@ -329,4 +329,23 @@
         <item name="cornerRadius">14dp</item>
     </style>
 
+    <!-- NavigationRailView 样式 - GitHub 风格 -->
+    <style name="Widget.App.NavigationRailView" parent="Widget.Material3.NavigationRailView">
+        <item name="itemIconTint">@color/navigation_rail_item_color</item>
+        <item name="itemTextColor">@color/navigation_rail_item_color</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.App.NavigationRailView.ActiveIndicator</item>
+    </style>
+
+    <!-- NavigationRailView 激活指示器样式 -->
+    <style name="Widget.App.NavigationRailView.ActiveIndicator" parent="Widget.Material3.NavigationRailView.ActiveIndicator">
+        <item name="android:color">?attr/colorPrimaryContainer</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.NavigationRail.Indicator</item>
+    </style>
+
+    <!-- NavigationRail 指示器形状 -->
+    <style name="ShapeAppearance.App.NavigationRail.Indicator" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
 </resources>

@@ -4,14 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/backgroundPrimary">
+    android:background="?android:attr/colorBackground">
 
     <!-- Material 3 Top App Bar -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/backgroundPrimary"
+        android:background="?android:attr/colorBackground"
         app:elevation="0dp">
 
         <LinearLayout
@@ -25,7 +25,7 @@
                 android:layout_width="0dp"
                 android:layout_height="?attr/actionBarSize"
                 android:layout_weight="1"
-                android:background="?attr/backgroundPrimary"
+                android:background="?android:attr/colorBackground"
                 app:title="控制布局"
                 app:titleTextColor="?attr/textPrimary"
                 app:navigationIcon="@drawable/ic_arrow_back"
@@ -57,9 +57,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingTop="8dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
         android:paddingBottom="96dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
     <!-- Empty State -->

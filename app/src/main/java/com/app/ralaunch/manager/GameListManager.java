@@ -4,7 +4,6 @@ import android.content.Context;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 import com.app.ralaunch.R;
 import com.app.ralaunch.RaLaunchApplication;
@@ -46,7 +45,7 @@ public class GameListManager {
      */
     public void initialize(RecyclerView recyclerView, View gameInfoView, 
                           ImageView gameImage, TextView gameName, 
-                          TextView gameDescription, CardView emptyText) {
+                          TextView gameDescription, View emptyText) {
         this.gameRecyclerView = recyclerView;
         this.selectionViewManager = new SelectionViewManager(
             gameInfoView, gameImage, gameName, gameDescription, emptyText);

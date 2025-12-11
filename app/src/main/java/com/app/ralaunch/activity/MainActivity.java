@@ -14,6 +14,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.navigationrail.NavigationRailView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,9 +29,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.app.ralaunch.R;
 import com.app.ralaunch.RaLaunchApplication;
-import com.app.ralaunch.dialog.LocalImportDialog;
 import com.app.ralaunch.fragment.ControlLayoutFragment;
 import com.app.ralaunch.fragment.FileBrowserFragment;
+import com.app.ralaunch.fragment.GameImportFragment;
 import com.app.ralaunch.fragment.InitializationFragment;
 import com.app.ralaunch.fragment.LocalImportFragment;
 import com.app.ralaunch.adapter.GameAdapter;
@@ -66,7 +67,6 @@ public class MainActivity extends AppCompatActivity implements
     private RuntimeSelectorManager runtimeSelectorManager;
     private GameImportManager gameImportManager;
     private GameDeletionManager gameDeletionManager;
-    private FileBrowserManager fileBrowserManager;
     private UIManager uiManager;
     private ThemeManager themeManager;
     private GameLaunchManager gameLaunchManager;
@@ -80,18 +80,12 @@ public class MainActivity extends AppCompatActivity implements
     private ImageView selectedGameImage;
     private TextView selectedGameName;
     private TextView selectedGameDescription;
-    private com.app.ralib.ui.ModernButton launchGameButton;
-    private CardView emptySelectionText;
+    private com.google.android.material.button.MaterialButton launchGameButton;
+    private LinearLayout emptySelectionText;
     private RecyclerView gameRecyclerView;
     private View runtimeSelectContainer;
     private View btnRuntimeSelector;
     private TextView tvCurrentRuntime;
-    private MaterialButton settingsButton;
-    private MaterialButton addGameButton;
-    private MaterialButton refreshButton;
-    private MaterialButton gogButton;
-    private com.app.ralib.ui.ViewSwitcherButton viewSwitchButton;
-    private View fileBrowserContainer;
 
     // 权限回调接口
     public interface PermissionCallback {
@@ -188,9 +182,6 @@ public class MainActivity extends AppCompatActivity implements
         // 初始化游戏删除管理器
         gameDeletionManager = new GameDeletionManager(this);
         
-        // 初始化文件浏览器管理器
-        fileBrowserManager = new FileBrowserManager(this);
-        
         // 初始化游戏启动管理器
         gameLaunchManager = new GameLaunchManager(this);
         
@@ -199,9 +190,6 @@ public class MainActivity extends AppCompatActivity implements
         
         // 初始化游戏删除管理器
         gameDeletionManager = new GameDeletionManager(this);
-        
-        // 初始化文件浏览器管理器
-        fileBrowserManager = new FileBrowserManager(this);
         
         // 初始化游戏启动管理器
         gameLaunchManager = new GameLaunchManager(this);
@@ -327,7 +315,6 @@ public class MainActivity extends AppCompatActivity implements
         // 初始化RecyclerView
         gameRecyclerView = findViewById(R.id.gameRecyclerView);
         gameRecyclerView.setLayoutManager(new GridLayoutManager(this, 2));
-        fileBrowserContainer = findViewById(R.id.fileBrowserContainer);
         
         // 初始化游戏列表管理器
         gameListManager.initialize(gameRecyclerView, selectedGameInfo, selectedGameImage,
@@ -341,16 +328,9 @@ public class MainActivity extends AppCompatActivity implements
         // 初始化游戏导入管理器
         gameImportManager.setOnImportCompleteListener(this::onImportComplete);
         
-        // 初始化 UI 管理器
-        settingsButton = findViewById(R.id.settingsButton);
-        addGameButton = findViewById(R.id.addGameButton);
-        refreshButton = findViewById(R.id.refreshButton);
-        gogButton = findViewById(R.id.gogButton);
-        uiManager.initialize(mainLayout, settingsButton, addGameButton, refreshButton, gogButton, launchGameButton);
-        
-        // 初始化文件浏览器管理器
-        fileBrowserManager.initialize(fileBrowserContainer, gameRecyclerView, selectedGameInfo,
-                selectedGameImage, selectedGameName, selectedGameDescription, emptySelectionText);
+        // 初始化 UI 管理器（刷新和添加游戏按钮已移至 NavigationRail）
+        // settingsButton 和 gogButton 已移至 NavigationRail，不再需要
+        uiManager.initialize(mainLayout, null, null, null, null, launchGameButton);
         
         // 初始化运行时选择器管理器
         runtimeSelectorManager.initialize(runtimeSelectContainer, btnRuntimeSelector, tvCurrentRuntime);
@@ -358,70 +338,53 @@ public class MainActivity extends AppCompatActivity implements
             showSuccessSnackbar("已切换到 .NET " + version);
         });
 
-        // 设置按钮监听器（通过 UI 管理器）
-        uiManager.setSettingsButtonListener(v -> showSettingsFragment());
-        // 添加游戏按钮：单击显示导入对话框，长按显示文件浏览器选择 DLL/EXE
-        uiManager.setAddGameButtonListener(v -> showAddGameFragment());
-        addGameButton.setOnLongClickListener(v -> {
-            showAddAssemblyFromFileBrowser();
+        // NavigationRail 点击监听器 - 替代原来的设置和下载按钮
+        NavigationRailView navigationRail = findViewById(R.id.navigationRail);
+        if (navigationRail != null) {
+            navigationRail.setOnItemSelectedListener(new NavigationRailView.OnItemSelectedListener() {
+                @Override
+                public boolean onNavigationItemSelected(android.view.MenuItem item) {
+                    int itemId = item.getItemId();
+                    if (itemId == R.id.nav_settings) {
+                        // 切换到设置页面
+                        showSettingsPage();
             return true;
-        });
-        uiManager.setRefreshButtonListener(v -> {
-            showToast("刷新游戏列表");
-            gameListManager.refreshGameList();
-        });
-        uiManager.setGogButtonListener(v -> showGogClientFragment());
-
-        // 视图切换按钮 (ralib 组件)
-        viewSwitchButton = findViewById(R.id.viewSwitchButton);
-        if (viewSwitchButton != null) {
-            viewSwitchButton.setOnStateChangedListener(isSecondary -> {
-                if (isSecondary) {
-                    fileBrowserManager.showFileBrowserMode();
-                    showInfoSnackbar("文件浏览器模式 - 选择 DLL/EXE 文件启动");
-                } else {
-                    fileBrowserManager.showGameListMode();
-                    showInfoSnackbar("游戏列表模式");
+                    } else if (itemId == R.id.nav_download) {
+                        // 切换到下载页面
+                        showDownloadPage();
+                        return true;
+                    } else if (itemId == R.id.nav_game) {
+                        // 切换到游戏页面
+                        showGamePage();
+                        return true;
+                    } else if (itemId == R.id.nav_file) {
+                        // 切换到文件页面
+                        showFilePage();
+                        return true;
+                    } else if (itemId == R.id.nav_control) {
+                        // 切换到控制布局页面
+                        showControlPage();
+                        return true;
+                    } else if (itemId == R.id.nav_add_game) {
+                        // 显示添加游戏对话框
+                        showAddGameFragment();
+                        return true;
+                    }
+                    return false;
                 }
             });
         }
-        
-        // 设置文件浏览器文件选择监听器
-        fileBrowserManager.setOnFileSelectedListener(file -> {
-            uiManager.showLaunchGameButton();
-        });
-        
-        // 设置文件浏览器文件长按监听器
-        fileBrowserManager.setOnFileLongClickListener(file -> {
-            showFileActionMenu(file);
-        });
 
         // 启动游戏按钮监听器
         uiManager.setLaunchGameButtonListener(v -> {
-            if (fileBrowserManager.isFileBrowserMode()) {
-                // 文件浏览器模式：启动选中的程序集
-                File assemblyFile = fileBrowserManager.getSelectedAssemblyFile();
-                if (assemblyFile != null) {
-                    gameLaunchManager.launchAssembly(assemblyFile);
-                } else {
-                    showToast("请先选择一个 DLL 或 EXE 文件");
-                }
-            } else {
-                // 游戏列表模式：启动选中的游戏
+            // 启动选中的游戏
                 GameItem selectedGame = gameListManager.getSelectedGame();
                 if (selectedGame != null) {
                     gameLaunchManager.launchGame(selectedGame);
                 } else {
                     showToast("请先选择一个游戏");
-                }
             }
         });
-
-
-        // 控制布局按钮
-        MaterialButton controlLayoutButton = findViewById(R.id.controlLayoutButton);
-        com.app.ralaunch.manager.common.ButtonAnimationManager.setClickListenerWithBounce(
-            controlLayoutButton, v -> showControlLayoutFragment());
 
         // 默认显示主界面
         showMainLayout();
@@ -430,19 +393,182 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
-    private void showGogClientFragment() {
-        if (fragmentNavigator != null) {
+    /**
+     * 显示下载页面
+     */
+    private void showDownloadPage() {
+        View gameListPage = findViewById(R.id.gameListPage);
+        View fileManagerPage = findViewById(R.id.fileManagerPage);
+        View controlPage = findViewById(R.id.controlPage);
+        View downloadPage = findViewById(R.id.downloadPage);
+        View settingsPage = findViewById(R.id.settingsPage);
+        View importPage = findViewById(R.id.importPage);
+        
+        if (gameListPage != null) gameListPage.setVisibility(View.GONE);
+        if (fileManagerPage != null) fileManagerPage.setVisibility(View.GONE);
+        if (controlPage != null) controlPage.setVisibility(View.GONE);
+        if (downloadPage != null) downloadPage.setVisibility(View.VISIBLE);
+        if (settingsPage != null) settingsPage.setVisibility(View.GONE);
+        if (importPage != null) importPage.setVisibility(View.GONE);
+        
+        // 更新 TopAppBar：统一隐藏
+        updateTopAppBar();
+        
+        // 初始化下载 Fragment（如果尚未初始化）
+        if (downloadPage != null && getSupportFragmentManager().findFragmentById(R.id.downloadPage) == null) {
             com.app.ralaunch.gog.GogClientFragment gogFragment = new com.app.ralaunch.gog.GogClientFragment();
-            fragmentNavigator.showPage(gogFragment, "gog_client");
+            
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.downloadPage, gogFragment, "gog_client")
+                    .commit();
         }
+        
+        // 隐藏下载页面的顶部栏（通过 NavigationRail 导航时不需要）
+        hideFragmentTopBar(downloadPage);
+    }
+
+    /**
+     * 更新 TopAppBar（所有页面统一隐藏）
+     */
+    private void updateTopAppBar() {
+        com.google.android.material.appbar.MaterialToolbar topAppBar = findViewById(R.id.topAppBar);
+        if (topAppBar != null) {
+            topAppBar.setVisibility(View.GONE);
+        }
+    }
+    
+    /**
+     * 隐藏 Fragment 的顶部栏（统一处理）
+     */
+    private void hideFragmentTopBar(View container) {
+        if (container == null) return;
+        
+        container.post(() -> {
+            // FileBrowserFragment 的 header（新布局已移除）
+            // View header = container.findViewById(R.id.header);
+            // if (header != null) {
+            //     header.setVisibility(View.GONE);
+            // }
+            
+            // ControlLayoutFragment 的 appBarLayout
+            View appBarLayout = container.findViewById(R.id.appBarLayout);
+            if (appBarLayout != null) {
+                appBarLayout.setVisibility(View.GONE);
+            }
+            
+            // GogClientFragment 的 toolbar 和 toolbarLoggedIn
+            View toolbar = container.findViewById(R.id.toolbar);
+            if (toolbar != null) {
+                toolbar.setVisibility(View.GONE);
+            }
+            View toolbarLoggedIn = container.findViewById(R.id.toolbarLoggedIn);
+            if (toolbarLoggedIn != null) {
+                toolbarLoggedIn.setVisibility(View.GONE);
+            }
+        });
+    }
+    
+    /**
+     * 显示游戏页面
+     */
+    private void showGamePage() {
+        View gameListPage = findViewById(R.id.gameListPage);
+        View fileManagerPage = findViewById(R.id.fileManagerPage);
+        View controlPage = findViewById(R.id.controlPage);
+        View downloadPage = findViewById(R.id.downloadPage);
+        View settingsPage = findViewById(R.id.settingsPage);
+        View importPage = findViewById(R.id.importPage);
+        
+        if (gameListPage != null) gameListPage.setVisibility(View.VISIBLE);
+        if (fileManagerPage != null) fileManagerPage.setVisibility(View.GONE);
+        if (controlPage != null) controlPage.setVisibility(View.GONE);
+        if (downloadPage != null) downloadPage.setVisibility(View.GONE);
+        if (settingsPage != null) settingsPage.setVisibility(View.GONE);
+        if (importPage != null) importPage.setVisibility(View.GONE);
+        
+        // 更新 TopAppBar：统一隐藏
+        updateTopAppBar();
+    }
+
+    /**
+     * 显示文件管理器页面
+     */
+    private void showFilePage() {
+        View gameListPage = findViewById(R.id.gameListPage);
+        View fileManagerPage = findViewById(R.id.fileManagerPage);
+        View controlPage = findViewById(R.id.controlPage);
+        View downloadPage = findViewById(R.id.downloadPage);
+        View settingsPage = findViewById(R.id.settingsPage);
+        View importPage = findViewById(R.id.importPage);
+        
+        if (gameListPage != null) gameListPage.setVisibility(View.GONE);
+        if (fileManagerPage != null) fileManagerPage.setVisibility(View.VISIBLE);
+        if (controlPage != null) controlPage.setVisibility(View.GONE);
+        if (downloadPage != null) downloadPage.setVisibility(View.GONE);
+        if (settingsPage != null) settingsPage.setVisibility(View.GONE);
+        if (importPage != null) importPage.setVisibility(View.GONE);
+        
+        // 更新 TopAppBar：统一隐藏
+        updateTopAppBar();
+        
+        // 初始化文件浏览器 Fragment（如果尚未初始化）
+        if (fileManagerPage != null && getSupportFragmentManager().findFragmentById(R.id.fileManagerPage) == null) {
+            FileBrowserFragment fileBrowserFragment = new FileBrowserFragment();
+            fileBrowserFragment.setMode(FileBrowserFragment.MODE_SELECT_FILE);
+            fileBrowserFragment.setOnPermissionRequestListener(this::onPermissionRequest);
+            fileBrowserFragment.setOnBackListener(() -> {
+                // 文件浏览器返回时，切换到游戏页面
+                showGamePage();
+            });
+            
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fileManagerPage, fileBrowserFragment, "file_browser")
+                    .commit();
+        }
+        
+        // 隐藏文件浏览器的顶部栏（通过 NavigationRail 导航时不需要）
+        hideFragmentTopBar(fileManagerPage);
+    }
+    
+    /**
+     * 显示控制布局页面
+     */
+    private void showControlPage() {
+        View gameListPage = findViewById(R.id.gameListPage);
+        View fileManagerPage = findViewById(R.id.fileManagerPage);
+        View controlPage = findViewById(R.id.controlPage);
+        View downloadPage = findViewById(R.id.downloadPage);
+        View settingsPage = findViewById(R.id.settingsPage);
+        View importPage = findViewById(R.id.importPage);
+        
+        if (gameListPage != null) gameListPage.setVisibility(View.GONE);
+        if (fileManagerPage != null) fileManagerPage.setVisibility(View.GONE);
+        if (controlPage != null) controlPage.setVisibility(View.VISIBLE);
+        if (downloadPage != null) downloadPage.setVisibility(View.GONE);
+        if (settingsPage != null) settingsPage.setVisibility(View.GONE);
+        if (importPage != null) importPage.setVisibility(View.GONE);
+        
+        // 更新 TopAppBar：统一隐藏
+        updateTopAppBar();
+        
+        // 初始化控制布局 Fragment（如果尚未初始化）
+        if (controlPage != null && getSupportFragmentManager().findFragmentById(R.id.controlPage) == null) {
+            ControlLayoutFragment controlFragment = new ControlLayoutFragment();
+            controlFragment.setOnControlLayoutBackListener(() -> {
+                // 控制布局返回时，切换到游戏页面
+                showGamePage();
+            });
+            
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.controlPage, controlFragment, "control_layout")
+                    .commit();
+        }
+        
+        // 隐藏控制布局的顶部栏（通过 NavigationRail 导航时不需要）
+        hideFragmentTopBar(controlPage);
     }
 
     private void showControlLayoutFragment() {
-        // 确保文件浏览器模式已关闭，避免残影
-        if (fileBrowserManager != null && fileBrowserManager.isFileBrowserMode()) {
-            fileBrowserManager.showGameListMode();
-        }
-        
         // 确保主布局显示
         if (uiManager != null) {
             uiManager.showMainLayout();
@@ -481,10 +607,74 @@ public class MainActivity extends AppCompatActivity implements
         com.app.ralaunch.manager.common.MessageHelper.showInfo(this, message);
     }
 
+    /**
+     * 显示导入游戏页面
+     */
     private void showAddGameFragment() {
-        if (gameImportManager != null && fragmentNavigator != null) {
-            gameImportManager.showAddGameDialog(fragmentNavigator.getFragmentManager());
+        View gameListPage = findViewById(R.id.gameListPage);
+        View fileManagerPage = findViewById(R.id.fileManagerPage);
+        View controlPage = findViewById(R.id.controlPage);
+        View downloadPage = findViewById(R.id.downloadPage);
+        View settingsPage = findViewById(R.id.settingsPage);
+        View importPage = findViewById(R.id.importPage);
+        
+        if (gameListPage != null) gameListPage.setVisibility(View.GONE);
+        if (fileManagerPage != null) fileManagerPage.setVisibility(View.GONE);
+        if (controlPage != null) controlPage.setVisibility(View.GONE);
+        if (downloadPage != null) downloadPage.setVisibility(View.GONE);
+        if (settingsPage != null) settingsPage.setVisibility(View.GONE);
+        if (importPage != null) importPage.setVisibility(View.VISIBLE);
+        
+        // 更新 TopAppBar：统一隐藏
+        updateTopAppBar();
+        
+        // 初始化导入 Fragment（如果尚未初始化）
+        if (importPage != null && getSupportFragmentManager().findFragmentById(R.id.importPage) == null) {
+            GameImportFragment importFragment = new GameImportFragment();
+            importFragment.setOnImportStartListener((gameFilePath, modLoaderFilePath, gameName, gameVersion) -> {
+                // 开始导入，切换到 LocalImportFragment
+                startGameImport(gameFilePath, modLoaderFilePath, gameName, gameVersion);
+            });
+            importFragment.setOnBackListener(() -> {
+                // 导入返回时，切换到游戏页面
+                showGamePage();
+            });
+            
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.importPage, importFragment, "game_import")
+                    .commit();
         }
+    }
+    
+    /**
+     * 开始游戏导入
+     */
+    private void startGameImport(String gameFilePath, String modLoaderFilePath, 
+                                 String gameName, String gameVersion) {
+        View importPage = findViewById(R.id.importPage);
+        if (importPage == null) return;
+        
+        LocalImportFragment localImportFragment = new LocalImportFragment();
+        localImportFragment.setOnImportCompleteListener((gameType, newGame) -> {
+            onImportComplete(gameType, newGame);
+        });
+        localImportFragment.setOnBackListener(() -> {
+            // 导入完成或取消后，切换到游戏页面
+            showGamePage();
+        });
+        
+        // 传递文件路径给Fragment
+        Bundle args = new Bundle();
+        args.putString("gameFilePath", gameFilePath);
+        args.putString("modLoaderFilePath", modLoaderFilePath);
+        args.putString("gameName", gameName);
+        args.putString("gameVersion", gameVersion);
+        localImportFragment.setArguments(args);
+        
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.importPage, localImportFragment, "local_import")
+                .addToBackStack("game_import")
+                .commit();
     }
     
     /**
@@ -644,7 +834,10 @@ public class MainActivity extends AppCompatActivity implements
         if (gameListManager != null) {
             gameListManager.addGame(newGame);
             showToast("游戏添加成功！");
+            // 隐藏导入 Fragment
             fragmentNavigator.hideFragment("local_import");
+            // 切换到游戏页面
+            showGamePage();
         }
     }
 
@@ -706,22 +899,45 @@ public class MainActivity extends AppCompatActivity implements
         com.app.ralaunch.manager.common.MessageHelper.showToast(this, message);
     }
 
-    private void showSettingsFragment() {
-        if (fragmentNavigator != null) {
-            SettingsDialogFragment dialog = SettingsDialogFragment.newInstance();
-            dialog.show(fragmentNavigator.getFragmentManager(), "settings_dialog");
+    /**
+     * 显示设置页面
+     */
+    private void showSettingsPage() {
+        View gameListPage = findViewById(R.id.gameListPage);
+        View fileManagerPage = findViewById(R.id.fileManagerPage);
+        View controlPage = findViewById(R.id.controlPage);
+        View downloadPage = findViewById(R.id.downloadPage);
+        View settingsPage = findViewById(R.id.settingsPage);
+        View importPage = findViewById(R.id.importPage);
+        
+        if (gameListPage != null) gameListPage.setVisibility(View.GONE);
+        if (fileManagerPage != null) fileManagerPage.setVisibility(View.GONE);
+        if (controlPage != null) controlPage.setVisibility(View.GONE);
+        if (downloadPage != null) downloadPage.setVisibility(View.GONE);
+        if (settingsPage != null) settingsPage.setVisibility(View.VISIBLE);
+        if (importPage != null) importPage.setVisibility(View.GONE);
+        
+        // 更新 TopAppBar：统一隐藏
+        updateTopAppBar();
+        
+        // 初始化设置 Fragment（如果尚未初始化）
+        if (settingsPage != null && getSupportFragmentManager().findFragmentById(R.id.settingsPage) == null) {
+            SettingsFragment settingsFragment = new SettingsFragment();
+            settingsFragment.setOnSettingsBackListener(() -> {
+                // 设置返回时，切换到游戏页面
+                showGamePage();
+            });
+            
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.settingsPage, settingsFragment, "settings")
+                    .commit();
         }
     }
 
     @Override
     public void onSettingsBack() {
-        hideSettingsFragment();
-    }
-
-    private void hideSettingsFragment() {
-        if (fragmentNavigator != null) {
-            fragmentNavigator.hideFragment("settings");
-        }
+        // 设置返回时，切换到游戏页面
+        showGamePage();
     }
 
     @Override

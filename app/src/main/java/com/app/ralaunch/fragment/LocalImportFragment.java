@@ -57,7 +57,11 @@ public class LocalImportFragment extends BaseFragment {
     private Button selectModLoaderButton;
     private Button startImportButton;
     private LinearLayout importProgressContainer;
-    private com.app.ralib.ui.ModernProgressBar modernProgressBar;
+    private com.google.android.material.progressindicator.LinearProgressIndicator progressIndicator;
+    private TextView statusText;
+    private TextView progressText;
+    private TextView detailText;
+    private TextView progressInfoText;
     private TextView gameFileText;
     private TextView modLoaderFileText;
 
@@ -124,20 +128,18 @@ public class LocalImportFragment extends BaseFragment {
     }
 
     private void setupUI(View view) {
-        // 返回按钮
-        ImageButton backButton = view.findViewById(R.id.backButton);
-        backButton.setOnClickListener(v -> {
-            if (backListener != null) {
-                backListener.onBack();
-            }
-        });
+        // 新布局不需要返回按钮（通过 NavigationRail 导航）
 
         // 初始化控件
         selectGameFileButton = view.findViewById(R.id.selectGameFileButton);
         selectModLoaderButton = view.findViewById(R.id.selectModLoaderButton);
         startImportButton = view.findViewById(R.id.startImportButton);
         importProgressContainer = view.findViewById(R.id.importProgressContainer);
-        modernProgressBar = view.findViewById(R.id.modernProgressBar);
+        progressIndicator = view.findViewById(R.id.progressIndicator);
+        statusText = view.findViewById(R.id.statusText);
+        progressText = view.findViewById(R.id.progressText);
+        detailText = view.findViewById(R.id.detailText);
+        progressInfoText = view.findViewById(R.id.progressInfoText);
         gameFileText = view.findViewById(R.id.gameFileText);
         modLoaderFileText = view.findViewById(R.id.modLoaderFileText);
 
@@ -148,6 +150,53 @@ public class LocalImportFragment extends BaseFragment {
 
         // 初始状态
         updateImportButtonState();
+    }
+
+    /**
+     * 更新进度显示（高级格式）
+     */
+    private void updateProgress(String message, int progress) {
+        if (progressIndicator != null) {
+            progressIndicator.setProgress(progress);
+        }
+        if (statusText != null) {
+            statusText.setText(message);
+        }
+        if (progressText != null) {
+            // 显示带小数点的百分比（例如：45.7%）
+            // 如果进度是整数，显示整数；否则显示一位小数
+            String progressStr;
+            if (progress % 10 == 0) {
+                progressStr = String.format("%d%%", progress);
+            } else {
+                progressStr = String.format("%.1f%%", (float) progress);
+            }
+            progressText.setText(progressStr);
+        }
+        if (progressInfoText != null) {
+            progressInfoText.setText(message);
+        }
+        // 更新详细信息（显示进度百分比，格式：45.7%）
+        if (detailText != null) {
+            String detail;
+            if (progress == 100) {
+                detail = "完成";
+            } else if (progress == 0) {
+                detail = "开始";
+            } else {
+                detail = String.format("%.1f%%", (float) progress);
+            }
+            detailText.setText(detail);
+        }
+    }
+
+    /**
+     * 更新详细信息（可选）
+     */
+    private void updateDetail(String detail) {
+        if (detailText != null) {
+            detailText.setText(detail);
+        }
     }
 
     private void selectGameFile() {
@@ -262,7 +311,7 @@ public class LocalImportFragment extends BaseFragment {
         // 如果游戏信息丢失，重新解析
         if (gameName == null || gameVersion == null) {
             AppLogger.warn(TAG, "Game info lost, re-parsing...");
-            modernProgressBar.setStatusText("正在读取游戏信息...");
+            updateProgress("正在读取游戏信息...", 0);
 
             new Thread(() -> {
                 var gdzf = GogShFileExtractor.GameDataZipFile.parseFromGogShFile(Paths.get(gameFilePath));
@@ -278,7 +327,7 @@ public class LocalImportFragment extends BaseFragment {
                             // 继续导入
                             continueImport();
                         } else {
-                            modernProgressBar.setStatusText("无法读取游戏信息");
+                            updateProgress("无法读取游戏信息", 0);
                             startImportButton.setEnabled(true);
                             showToast("无法读取游戏信息，导入失败");
                         }
@@ -351,8 +400,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onProgress(String message, int progress) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
-                                    modernProgressBar.setStatusText(message);
-                                    modernProgressBar.setProgress(progress);
+                                    updateProgress(message, progress);
                                 });
                             }
                         }
@@ -361,8 +409,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onComplete(String gamePath, String modLoaderPath) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
-                                    modernProgressBar.setStatusText("导入完成！");
-                                    modernProgressBar.setProgress(100);
+                                    updateProgress("导入完成！", 100);
 
                                     AppLogger.info(TAG, "=== 导入完成回调 ===");
                                     AppLogger.info(TAG, "游戏路径: " + gamePath);
@@ -474,7 +521,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onError(String error) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
-                                    modernProgressBar.setStatusText("导入失败: " + error);
+                                    updateProgress("导入失败: " + error, 0);
                                     if (getActivity() != null) {
                                         // 使用 RALib 的错误弹窗代替普通 Toast
                                         ErrorHandler.showWarning("导入失败", error);
@@ -491,8 +538,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onProgress(String message, int progress) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
-                                    modernProgressBar.setStatusText(message);
-                                    modernProgressBar.setProgress(progress);
+                                    updateProgress(message, progress);
                                 });
                             }
                         }
@@ -501,8 +547,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onComplete(String gamePath, String modLoaderPath) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
-                                    modernProgressBar.setStatusText("导入完成！");
-                                    modernProgressBar.setProgress(100);
+                                    updateProgress("导入完成！", 100);
 
 
                                     String finalGamePath;
@@ -554,7 +599,7 @@ public class LocalImportFragment extends BaseFragment {
                         public void onError(String error) {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
-                                    modernProgressBar.setStatusText("导入失败: " + error);
+                                    updateProgress("导入失败: " + error, 0);
                                     if (getActivity() != null) {
                                         // 使用 RALib 的错误弹窗代替普通 Toast
                                         ErrorHandler.showWarning("导入失败", error);

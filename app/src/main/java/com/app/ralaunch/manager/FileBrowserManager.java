@@ -5,7 +5,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import androidx.cardview.widget.CardView;
 import com.app.ralaunch.manager.common.AnimationHelper;
 import com.app.ralaunch.manager.common.IconLoader;
 import com.app.ralaunch.manager.common.SelectionViewManager;
@@ -44,7 +43,7 @@ public class FileBrowserManager {
      */
     public void initialize(View container, View recyclerView, View gameInfoView,
                           ImageView gameImage, TextView gameName, 
-                          TextView gameDescription, CardView emptyText) {
+                          TextView gameDescription, View emptyText) {
         this.fileBrowserContainer = container;
         this.gameRecyclerView = recyclerView;
         this.selectionViewManager = new SelectionViewManager(

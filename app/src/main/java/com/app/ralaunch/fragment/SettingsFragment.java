@@ -4,11 +4,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-
-import androidx.fragment.app.Fragment;
-
 import com.app.ralaunch.R;
 import com.app.ralaunch.data.SettingsManager;
 import com.app.ralaunch.settings.SettingsModule;
@@ -16,7 +11,6 @@ import com.app.ralaunch.settings.AppearanceSettingsModule;
 import com.app.ralaunch.settings.ControlsSettingsModule;
 import com.app.ralaunch.settings.GameSettingsModule;
 import com.app.ralaunch.settings.DeveloperSettingsModule;
-import com.google.android.material.card.MaterialCardView;
 
 /**
  * 设置Fragment - 使用简单的 View 切换
@@ -26,14 +20,7 @@ public class SettingsFragment extends BaseFragment {
     private static final String TAG = "SettingsFragment";
 
     private OnSettingsBackListener backListener;
-    private LinearLayout settingsCategoryLinearLayout;
-    
-    // 分类项视图
-    private View categoryAppearance;
-    private View categoryControls;
-    private View categoryGame;
-    private View categoryLauncher;
-    private View categoryDeveloper;
+    private com.google.android.material.tabs.TabLayout settingsTabLayout;
     
     // 内容面板
     private View contentAppearance;
@@ -72,25 +59,13 @@ public class SettingsFragment extends BaseFragment {
         contentLauncher = view.findViewById(R.id.contentLauncher);
         contentDeveloper = view.findViewById(R.id.contentDeveloper);
 
-        // 获取分类列表容器
-        settingsCategoryLinearLayout = view.findViewById(R.id.settingsCategoryLinearLayout);
+        // 初始化 TabLayout
+        settingsTabLayout = view.findViewById(R.id.settingsTabLayout);
         
-        // 获取分类项视图
-        categoryAppearance = view.findViewById(R.id.categoryAppearance);
-        categoryControls = view.findViewById(R.id.categoryControls);
-        categoryGame = view.findViewById(R.id.categoryGame);
-        categoryLauncher = view.findViewById(R.id.categoryLauncher);
-        categoryDeveloper = view.findViewById(R.id.categoryDeveloper);
-
-        // 设置分类项的内容和点击事件
-        setupCategoryItem(categoryAppearance, R.drawable.ic_settings, R.string.settings_appearance, 0);
-        setupCategoryItem(categoryControls, R.drawable.ic_controller, R.string.settings_control, 1);
-        setupCategoryItem(categoryGame, R.drawable.ic_game, R.string.settings_game, 2);
-        setupCategoryItem(categoryLauncher, R.drawable.ic_ral, R.string.settings_launcher, 3);
-        setupCategoryItem(categoryDeveloper, R.drawable.ic_bug, R.string.settings_developer, 4);
-
+        // 设置 TabLayout
+        setupTabLayout();
+        
         // 默认选中第一项
-        selectCategory(0);
         switchToCategory(0);
         
         // 初始化所有设置模块
@@ -107,53 +82,51 @@ public class SettingsFragment extends BaseFragment {
     }
     
     /**
-     * 设置分类项的内容和点击事件
+     * 设置 TabLayout
      */
-    private void setupCategoryItem(View itemView, int iconRes, int nameRes, final int position) {
-        android.widget.ImageView icon = itemView.findViewById(R.id.icon);
-        android.widget.TextView name = itemView.findViewById(R.id.category_name);
+    private void setupTabLayout() {
+        // 添加标签页 - Underline Tabs 风格，只显示文字，不显示图标
+        settingsTabLayout.addTab(settingsTabLayout.newTab()
+            .setText(getString(R.string.settings_appearance)));
         
-        icon.setImageResource(iconRes);
-        name.setText(getString(nameRes));
+        settingsTabLayout.addTab(settingsTabLayout.newTab()
+            .setText(getString(R.string.settings_control)));
         
-        // 设置点击事件
-        itemView.setOnClickListener(v -> {
-            selectCategory(position);
-            switchToCategory(position);
-        });
-    }
-    
-    /**
-     * 选中指定分类（更新背景色）
-     */
-    private void selectCategory(int position) {
-        // 获取所有分类项
-        View[] categories = {
-            categoryAppearance,
-            categoryControls,
-            categoryGame,
-            categoryLauncher,
-            categoryDeveloper
-        };
+        settingsTabLayout.addTab(settingsTabLayout.newTab()
+            .setText(getString(R.string.settings_game)));
         
-        // 更新所有 item 的背景色
-        for (int i = 0; i < categories.length; i++) {
-            View itemView = categories[i];
-            if (itemView instanceof com.google.android.material.card.MaterialCardView) {
-                com.google.android.material.card.MaterialCardView cardView =
-                    (com.google.android.material.card.MaterialCardView) itemView;
-                if (i == position) {
-                    // 选中状态 - 使用主题色带透明度
-                    cardView.setCardBackgroundColor(
-                        getResources().getColor(R.color.accent_primary_light, null));
-                } else {
-                    // 未选中状态 - 透明
-                    cardView.setCardBackgroundColor(
-                        getResources().getColor(android.R.color.transparent, null));
-                }
+        settingsTabLayout.addTab(settingsTabLayout.newTab()
+            .setText(getString(R.string.settings_launcher)));
+        
+        settingsTabLayout.addTab(settingsTabLayout.newTab()
+            .setText(getString(R.string.settings_developer)));
+        
+        // 设置标签选中监听器
+        settingsTabLayout.addOnTabSelectedListener(new com.google.android.material.tabs.TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(com.google.android.material.tabs.TabLayout.Tab tab) {
+                int position = tab.getPosition();
+                switchToCategory(position);
             }
+            
+            @Override
+            public void onTabUnselected(com.google.android.material.tabs.TabLayout.Tab tab) {
+                // 不需要处理
+            }
+            
+            @Override
+            public void onTabReselected(com.google.android.material.tabs.TabLayout.Tab tab) {
+                // 不需要处理
+            }
+        });
+        
+        // 默认选中第一项，确保下划线显示
+        com.google.android.material.tabs.TabLayout.Tab firstTab = settingsTabLayout.getTabAt(0);
+        if (firstTab != null) {
+            firstTab.select();
         }
     }
+    
 
     /**
      * 切换到指定分类 - 带淡入淡出动画

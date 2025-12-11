@@ -3,7 +3,6 @@ package com.app.ralaunch.manager.common;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import androidx.cardview.widget.CardView;
 
 /**
  * 选中视图管理器
@@ -14,11 +13,11 @@ public class SelectionViewManager {
     private ImageView selectedImageView;
     private TextView selectedNameView;
     private TextView selectedDescriptionView;
-    private CardView emptyTextView;
+    private View emptyTextView;
     
     public SelectionViewManager(View infoView, ImageView imageView, 
                                 TextView nameView, TextView descriptionView, 
-                                CardView emptyView) {
+                                View emptyView) {
         this.selectedInfoView = infoView;
         this.selectedImageView = imageView;
         this.selectedNameView = nameView;

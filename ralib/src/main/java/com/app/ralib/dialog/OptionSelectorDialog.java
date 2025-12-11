@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.app.ralib.R;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
@@ -30,8 +31,7 @@ public class OptionSelectorDialog extends DialogFragment {
 
     private RecyclerView rvOptions;
     private TextView tvTitle;
-    private ImageView ivIcon;
-    private ImageButton btnClose;
+    private MaterialButton btnClose;
     
     private List<Option> options;
     private String currentValue;
@@ -95,6 +95,7 @@ public class OptionSelectorDialog extends DialogFragment {
     }
     
     public OptionSelectorDialog setIcon(int iconRes) {
+        // 图标功能已移除，保持 API 兼容性但不显示图标
         this.dialogIconRes = iconRes;
         return this;
     }
@@ -184,17 +185,10 @@ public class OptionSelectorDialog extends DialogFragment {
         // 初始化视图
         rvOptions = view.findViewById(R.id.rvOptions);
         tvTitle = view.findViewById(R.id.tvTitle);
-        ivIcon = view.findViewById(R.id.ivIcon);
         btnClose = view.findViewById(R.id.btnClose);
 
-        // 设置标题和图标
+        // 设置标题（图标已从布局中移除，保持极简设计）
         tvTitle.setText(dialogTitle);
-        if (dialogIconRes != 0) {
-            ivIcon.setImageResource(dialogIconRes);
-            ivIcon.setVisibility(View.VISIBLE);
-        } else {
-            ivIcon.setVisibility(View.GONE);
-        }
 
         // 初始化 RecyclerView
         rvOptions.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -304,17 +298,21 @@ public class OptionSelectorDialog extends DialogFragment {
                 boolean isSelected = option.getValue().equals(selectedValue);
                 ivCheckmark.setVisibility(isSelected ? View.VISIBLE : View.GONE);
                 
-                // 选中状态：使用主色调背景，未选中：使用表面变体
+                // 选中状态：使用主色调容器背景和边框，未选中：使用表面色和边框
+                android.util.TypedValue typedValue = new android.util.TypedValue();
+                android.content.res.Resources.Theme theme = cardOption.getContext().getTheme();
+                
                 if (isSelected) {
-                    // 选中：使用主色调容器背景
-                    // 使用主题属性获取颜色
-                    android.util.TypedValue typedValue = new android.util.TypedValue();
-                    android.content.res.Resources.Theme theme = cardOption.getContext().getTheme();
-                    
-                    // 获取 primaryContainer 颜色（Material Design 3 属性）
+                    // 选中：使用主色调容器背景 + 主色调边框
                     if (theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)) {
                         int primaryContainerColor = typedValue.data;
                         cardOption.setCardBackgroundColor(primaryContainerColor);
+                    }
+                    
+                    if (theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true)) {
+                        int primaryColor = typedValue.data;
+                        cardOption.setStrokeColor(primaryColor);
+                        cardOption.setStrokeWidth((int) (2 * cardOption.getResources().getDisplayMetrics().density)); // 2dp
                     }
                     
                     // 获取 onPrimaryContainer 颜色
@@ -324,14 +322,16 @@ public class OptionSelectorDialog extends DialogFragment {
                         tvOptionLabel.setTextColor(onPrimaryContainerColor);
                     }
                 } else {
-                    // 未选中：使用表面变体背景（已在布局中设置，这里需要重置）
-                    android.util.TypedValue typedValue = new android.util.TypedValue();
-                    android.content.res.Resources.Theme theme = cardOption.getContext().getTheme();
+                    // 未选中：使用表面色背景 + 轮廓边框
+                    if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)) {
+                        int surfaceColor = typedValue.data;
+                        cardOption.setCardBackgroundColor(surfaceColor);
+                    }
                     
-                    // 获取 surfaceVariant 颜色
-                    if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
-                        int surfaceVariantColor = typedValue.data;
-                        cardOption.setCardBackgroundColor(surfaceVariantColor);
+                    if (theme.resolveAttribute(com.google.android.material.R.attr.colorOutline, typedValue, true)) {
+                        int outlineColor = typedValue.data;
+                        cardOption.setStrokeColor(outlineColor);
+                        cardOption.setStrokeWidth((int) (1 * cardOption.getResources().getDisplayMetrics().density)); // 1dp
                     }
                     
                     // 获取 onSurface 颜色

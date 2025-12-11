@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NavigationRail 菜单 - GitHub 风格导航 -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <item
+        android:id="@+id/nav_game"
+        android:icon="@drawable/ic_game_controller"
+        android:title="游戏"
+        android:enabled="true" />
+    
+    <item
+        android:id="@+id/nav_file"
+        android:icon="@drawable/ic_folder"
+        android:title="文件"
+        android:enabled="true" />
+    
+    <item
+        android:id="@+id/nav_control"
+        android:icon="@drawable/ic_controller"
+        android:title="控制"
+        android:enabled="true" />
+    
+    <item
+        android:id="@+id/nav_download"
+        android:icon="@drawable/ic_download"
+        android:title="下载"
+        android:enabled="true" />
+    
+    <item
+        android:id="@+id/nav_add_game"
+        android:icon="@drawable/ic_add"
+        android:title="添加游戏"
+        android:enabled="true" />
+    
+    <item
+        android:id="@+id/nav_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="设置"
+        android:enabled="true" />
+    
+</menu>
+

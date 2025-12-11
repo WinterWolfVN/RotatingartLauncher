@@ -75,8 +75,9 @@ public class InitializationFragment extends Fragment {
     private Button btnRequestPermissions;
     private Button btnSkipPermissions;
     private Button btnStartExtraction;
-   // private com.google.android.material.progressindicator.CircularProgressIndicator overallProgressBar;
-
+    private ProgressBar overallProgressBar;
+    private TextView overallProgressText;
+    private TextView overallProgressPercent;
     private TextView permissionStatusText;
     
     // 数据和适配器
@@ -143,7 +144,10 @@ public class InitializationFragment extends Fragment {
         btnSkipPermissions = view.findViewById(R.id.btnSkipPermissions);
         btnStartExtraction = view.findViewById(R.id.btnStartExtraction);
         
-
+        // 这些视图在布局中已移除，设置为 null
+        overallProgressBar = null; // view.findViewById(R.id.overallProgressBar);
+        overallProgressText = null; // view.findViewById(R.id.overallProgressText);
+        overallProgressPercent = null; // view.findViewById(R.id.overallProgressPercent);
         permissionStatusText = view.findViewById(R.id.permissionStatusText);
         
         // 官方下载链接
@@ -176,52 +180,25 @@ public class InitializationFragment extends Fragment {
     private List<ComponentItem> createComponentList() {
         List<ComponentItem> componentList = new ArrayList<>();
 
-        // GL4ES - OpenGL ES 兼容层（预编译库，不需要解压）
-        componentList.add(new ComponentItem(
-            "GL4ES",
-            "OpenGL2.0转换为OpenGL ES兼容层",
-            "gl4es.tar.xz",
-            false  // 不需要解压
-        ));
-
-        // SDL - Simple DirectMedia Layer（预编译库，不需要解压）
-        componentList.add(new ComponentItem(
-            "SDL",
-            "跨平台多媒体和输入处理库",
-            "sdl.tar.xz",
-            false  // 不需要解压
-        ));
-
-        // .NET Core Host（预编译库，不需要解压）
-        componentList.add(new ComponentItem(
-            "NETCoreclr",
-            ".NET核心运行时宿主",
-            "netcorehost.tar.xz",
-            false  // 不需要解压
-        ));
-
-        // .NET 运行时（需要解压）
+        // .NET 运行时
         componentList.add(new ComponentItem(
             "dotnet",
             ".NET10运行时环境",
-            "dotnet.tar.xz",
-            true  // 需要解压
+            "dotnet.tar.xz"
         ));
 
-        // MonoMod 补丁框架（需要解压）
+        // MonoMod 补丁框架
         componentList.add(new ComponentItem(
             "MonoMod",
             "MonoMod是一个通用的.NET程序集模组化工具",
-            "MonoMod_Patch.tar.xz",
-            true  // 需要解压
+            "MonoMod_Patch.tar.xz"
         ));
 
-        // 游戏补丁集合（需要解压）
+        // 游戏补丁集合
         componentList.add(new ComponentItem(
             "patches",
             "游戏修复补丁",
-            "patches.tar.xz",
-            true  // 需要解压
+            "patches.tar.xz"
         ));
 
         return componentList;
@@ -293,7 +270,8 @@ public class InitializationFragment extends Fragment {
         // 重置组件状态
         resetComponentsState();
         
-
+        // 重置进度
+        updateOverallProgress(0, "点击【同意并安装】开始");
         
         animateViewEntrance(extractionLayout);
         
@@ -517,12 +495,6 @@ public class InitializationFragment extends Fragment {
      * 解压单个组件
      */
     private boolean extractComponent(ComponentItem component, int componentIndex) {
-        // 检查是否需要解压
-        if (!component.needsExtraction()) {
-            AppLogger.info(TAG, "Component " + component.getName() + " does not need extraction, skipping...");
-            updateComponentStatus(componentIndex, 100, "无需解压");
-            return true;  // 直接标记为成功
-        }
 
         AssetManager assetManager = requireActivity().getAssets();
         File tempArchiveFile = null;
@@ -712,12 +684,27 @@ public class InitializationFragment extends Fragment {
             component.setProgress(progress);
             componentAdapter.notifyItemChanged(componentIndex);
             
-
+            // 更新总体进度
+            int overallProgress = calculateOverallProgress();
+            updateOverallProgress(overallProgress, status);
 
         });
     }
     
-
+    /**
+     * 更新总体进度
+     */
+    private void updateOverallProgress(int progress, String status) {
+        if (overallProgressBar != null) {
+            overallProgressBar.setProgress(progress);
+        }
+        if (overallProgressText != null) {
+            overallProgressText.setText(status);
+        }
+        if (overallProgressPercent != null) {
+            overallProgressPercent.setText(progress + "%");
+        }
+    }
     
     /**
      * 计算总体进度
@@ -753,7 +740,8 @@ public class InitializationFragment extends Fragment {
         SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
         prefs.edit().putBoolean(KEY_COMPONENTS_EXTRACTED, true).apply();
         
-
+        // 更新UI显示成功状态
+        updateOverallProgress(100, "安装完成");
         
         // 显示安装的运行时版本信息
         try {
