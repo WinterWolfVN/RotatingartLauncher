@@ -26,15 +26,6 @@
         android:paddingHorizontal="16dp"
         android:minWidth="80dp">
 
-        <ImageView
-            android:id="@+id/icon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/ic_settings"
-            android:contentDescription="Settings category icon"
-            app:tint="?attr/textPrimary"
-            android:layout_marginEnd="8dp" />
-
         <TextView
             android:id="@+id/category_name"
             android:layout_width="wrap_content"

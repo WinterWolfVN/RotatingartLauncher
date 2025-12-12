@@ -180,25 +180,52 @@ public class InitializationFragment extends Fragment {
     private List<ComponentItem> createComponentList() {
         List<ComponentItem> componentList = new ArrayList<>();
 
-        // .NET 运行时
+        // GL4ES - OpenGL ES 兼容层（预编译库，不需要解压）
+        componentList.add(new ComponentItem(
+            "GL4ES",
+            "OpenGL2.0转换为OpenGL ES兼容层",
+            "gl4es.tar.xz",
+            false  // 不需要解压
+        ));
+
+        // SDL - Simple DirectMedia Layer（预编译库，不需要解压）
+        componentList.add(new ComponentItem(
+            "SDL",
+            "跨平台多媒体和输入处理库",
+            "sdl.tar.xz",
+            false  // 不需要解压
+        ));
+
+        // .NET Core Host（预编译库，不需要解压）
+        componentList.add(new ComponentItem(
+            "NETCoreclr",
+            ".NET核心运行时宿主",
+            "netcorehost.tar.xz",
+            false  // 不需要解压
+        ));
+
+        // .NET 运行时（需要解压）
         componentList.add(new ComponentItem(
             "dotnet",
             ".NET10运行时环境",
-            "dotnet.tar.xz"
+            "dotnet.tar.xz",
+            true  // 需要解压
         ));
 
-        // MonoMod 补丁框架
+        // MonoMod 补丁框架（不在初始化时解压，按需解压）
         componentList.add(new ComponentItem(
             "MonoMod",
             "MonoMod是一个通用的.NET程序集模组化工具",
-            "MonoMod_Patch.tar.xz"
+            "MonoMod_Patch.tar.xz",
+            false  // 不在初始化时解压
         ));
 
-        // 游戏补丁集合
+        // 游戏补丁集合（不在初始化时解压，按需解压）
         componentList.add(new ComponentItem(
             "patches",
             "游戏修复补丁",
-            "patches.tar.xz"
+            "patches.tar.xz",
+            false  // 不在初始化时解压
         ));
 
         return componentList;
@@ -495,6 +522,12 @@ public class InitializationFragment extends Fragment {
      * 解压单个组件
      */
     private boolean extractComponent(ComponentItem component, int componentIndex) {
+        // 检查是否需要解压
+        if (!component.needsExtraction()) {
+            AppLogger.info(TAG, "组件 " + component.getName() + " 不需要解压，跳过...");
+            updateComponentStatus(componentIndex, 100, "无需解压");
+            return true;  // 直接标记为成功
+        }
 
         AssetManager assetManager = requireActivity().getAssets();
         File tempArchiveFile = null;
@@ -511,15 +544,7 @@ public class InitializationFragment extends Fragment {
 
             // 3. 根据组件名称确定目标目录
             String dirName = component.getName(); // 使用组件名称作为目录名
-            File outputDir;
-            
-            // patches 组件需要解压到外部存储，供 PatchManager 使用
-            if ("patches".equals(dirName)) {
-                outputDir = new File(requireActivity().getExternalFilesDir(null), dirName);
-                AppLogger.info(TAG, "patches 组件将解压到外部存储: " + outputDir.getAbsolutePath());
-            } else {
-                outputDir = new File(requireActivity().getFilesDir(), dirName);
-            }
+            File outputDir = new File(requireActivity().getFilesDir(), dirName);
             
             if (!outputDir.exists()) {
                 outputDir.mkdirs();
@@ -527,16 +552,6 @@ public class InitializationFragment extends Fragment {
 
             // 4. 解压文件到目标目录
             boolean success = extractArchiveFile(tempArchiveFile, outputDir, component, componentIndex);
-            
-            // 5. 如果是 patches 组件，解压后需要安装补丁
-            if (success && "patches".equals(dirName)) {
-                try {
-                    installPatchesFromDirectory(outputDir, componentIndex);
-                } catch (Exception e) {
-                    AppLogger.error(TAG, "安装补丁失败", e);
-                    return false;
-                }
-            }
             
             return success;
             
@@ -606,19 +621,12 @@ public class InitializationFragment extends Fragment {
                 
                 String entryName = entry.getName();
                 
-                // 跳过顶层目录（针对不同组件）
+                // 跳过顶层 dotnet 目录
                 if (entryName.contains("/") || entryName.contains("\\")) {
                     int slashIndex = Math.max(entryName.indexOf('/'), entryName.indexOf('\\'));
                     String topLevel = entryName.substring(0, slashIndex);
-                    
-                    // dotnet 组件：跳过 dotnet 顶层目录
-                    if (topLevel.startsWith("dotnet") && "dotnet".equals(component.getName())) {
+                    if (topLevel.startsWith("dotnet")) {
                         entryName = entryName.substring(slashIndex + 1);
-                    }
-                    // patches 组件：跳过 patches 顶层目录（避免重复）
-                    else if ("patches".equals(topLevel) && "patches".equals(component.getName())) {
-                        entryName = entryName.substring(slashIndex + 1);
-                        AppLogger.debug(TAG, "跳过 patches 顶层目录: " + entry.getName() + " -> " + entryName);
                     }
                 }
                 
@@ -823,77 +831,6 @@ public class InitializationFragment extends Fragment {
                             | View.SYSTEM_UI_FLAG_FULLSCREEN
             );
         }
-    }
-    
-    /**
-     * 从目录中安装所有补丁 ZIP 文件
-     */
-    private void installPatchesFromDirectory(File patchesDir, int componentIndex) throws Exception {
-        AppLogger.info(TAG, "开始安装补丁: " + patchesDir.getAbsolutePath());
-        updateComponentStatus(componentIndex, 85, "正在安装补丁...");
-        
-        // 获取 PatchManager 实例
-        com.app.ralib.patch.PatchManager patchManager = 
-                com.app.ralaunch.RaLaunchApplication.getPatchManager();
-        
-        if (patchManager == null) {
-            AppLogger.warn(TAG, "PatchManager 未初始化，跳过补丁安装");
-            return;
-        }
-        
-        // 先列出目录中的所有文件用于调试
-        File[] allFiles = patchesDir.listFiles();
-        if (allFiles != null && allFiles.length > 0) {
-            AppLogger.info(TAG, "补丁目录内容:");
-            for (File f : allFiles) {
-                AppLogger.info(TAG, "  - " + (f.isDirectory() ? "[DIR] " : "[FILE] ") + f.getName());
-            }
-        } else {
-            AppLogger.warn(TAG, "补丁目录为空或无法读取");
-        }
-        
-        // 扫描目录中的 ZIP 文件
-        File[] files = patchesDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
-        if (files == null || files.length == 0) {
-            AppLogger.warn(TAG, "没有找到补丁 ZIP 文件，检查子目录...");
-            
-            // 检查是否有子目录包含 ZIP 文件
-            if (allFiles != null) {
-                for (File subDir : allFiles) {
-                    if (subDir.isDirectory()) {
-                        File[] subFiles = subDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
-                        if (subFiles != null && subFiles.length > 0) {
-                            AppLogger.info(TAG, "在子目录 " + subDir.getName() + " 中找到 " + subFiles.length + " 个 ZIP 文件");
-                        }
-                    }
-                }
-            }
-            return;
-        }
-        
-        AppLogger.info(TAG, "找到 " + files.length + " 个补丁文件");
-        int installedCount = 0;
-        
-        for (File zipFile : files) {
-            try {
-                AppLogger.info(TAG, "正在安装补丁: " + zipFile.getName());
-                java.nio.file.Path zipPath = zipFile.toPath();
-                
-                // 调用 PatchManager 安装补丁
-                boolean success = patchManager.installPatch(zipPath);
-                if (success) {
-                    installedCount++;
-                    AppLogger.info(TAG, "✓ 补丁安装成功: " + zipFile.getName());
-                } else {
-                    AppLogger.warn(TAG, "✗ 补丁安装失败: " + zipFile.getName());
-                }
-            } catch (Exception e) {
-                AppLogger.error(TAG, "安装补丁时出错: " + zipFile.getName(), e);
-            }
-        }
-        
-        AppLogger.info(TAG, "补丁安装完成，成功安装 " + installedCount + " 个补丁");
-        updateComponentStatus(componentIndex, 95, "补丁安装完成");
     }
     
     @Override

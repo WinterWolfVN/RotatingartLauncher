@@ -31,25 +31,45 @@ public class AssemblyPatcher {
      * @return 替换的程序集数量，失败返回 -1
      */
     public static int applyMonoModPatches(Context context, String gameDirectory) {
-        AppLogger.info(TAG, "开始应用 MonoMod 补丁");
-        AppLogger.info(TAG, "游戏目录: " + gameDirectory);
+        return applyMonoModPatches(context, gameDirectory, true);
+    }
+
+    /**
+     * 应用 MonoMod 补丁到游戏目录（可控制日志级别）
+     *
+     * @param context Android上下文
+     * @param gameDirectory 游戏目录路径
+     * @param verboseLog 是否输出详细日志
+     * @return 替换的程序集数量，失败返回 -1
+     */
+    public static int applyMonoModPatches(Context context, String gameDirectory, boolean verboseLog) {
+        if (verboseLog) {
+            AppLogger.info(TAG, "开始应用 MonoMod 补丁");
+            AppLogger.info(TAG, "游戏目录: " + gameDirectory);
+        }
 
         try {
             // 1. 从解压目录加载 MonoMod 补丁
             Map<String, byte[]> patchAssemblies = loadPatchArchive(context);
 
             if (patchAssemblies.isEmpty()) {
-                AppLogger.warn(TAG, "未找到任何补丁程序集，请先在初始化界面安装组件");
+                if (verboseLog) {
+                    AppLogger.warn(TAG, "未找到任何补丁程序集");
+                }
                 return 0;
             }
 
-            AppLogger.info(TAG, "已加载 " + patchAssemblies.size() + " 个补丁程序集");
+            if (verboseLog) {
+                AppLogger.debug(TAG, "已加载 " + patchAssemblies.size() + " 个补丁程序集");
+            }
 
             // 2. 扫描游戏目录中的程序集
             File gameDir = new File(gameDirectory);
             List<File> gameAssemblies = findGameAssemblies(gameDir);
 
-            AppLogger.info(TAG, "找到 " + gameAssemblies.size() + " 个游戏程序集");
+            if (verboseLog) {
+                AppLogger.debug(TAG, "找到 " + gameAssemblies.size() + " 个游戏程序集");
+            }
 
             // 3. 替换对应的程序集
             int patchedCount = 0;
@@ -58,15 +78,17 @@ public class AssemblyPatcher {
 
                 if (patchAssemblies.containsKey(assemblyName)) {
                     if (replaceAssembly(assemblyFile, patchAssemblies.get(assemblyName))) {
-                        AppLogger.info(TAG, "✓ 已替换: " + assemblyName);
+                        AppLogger.info(TAG, "  ✓ 已替换: " + assemblyName);
                         patchedCount++;
                     } else {
-                        AppLogger.warn(TAG, "✗ 替换失败: " + assemblyName);
+                        AppLogger.warn(TAG, "  ✗ 替换失败: " + assemblyName);
                     }
                 }
             }
 
-            AppLogger.info(TAG, "补丁应用完成，共处理 " + patchedCount + " 个程序集");
+            if (verboseLog && patchedCount > 0) {
+                AppLogger.info(TAG, "补丁应用完成，共处理 " + patchedCount + " 个程序集");
+            }
             return patchedCount;
 
         } catch (Exception e) {

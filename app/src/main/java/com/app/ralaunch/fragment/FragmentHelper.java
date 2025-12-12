@@ -65,37 +65,19 @@ public class FragmentHelper {
 
         fileBrowserFragment.setOnFileSelectedListener((filePath, type) -> {
             onFileSelected.onFileSelected(filePath, type);
-            FragmentNavigator navigator = new FragmentNavigator(
-                mainActivity.getSupportFragmentManager(),
-                R.id.fragmentContainer
-            );
-            navigator.goBack();
+            mainActivity.onFragmentBack();
         });
 
         if (onBack != null) {
             fileBrowserFragment.setOnBackListener(() -> {
                 onBack.run();
-                FragmentNavigator navigator = new FragmentNavigator(
-                    mainActivity.getSupportFragmentManager(),
-                    R.id.fragmentContainer
-                );
-                navigator.goBack();
+                mainActivity.onFragmentBack();
             });
         } else {
-            fileBrowserFragment.setOnBackListener(() -> {
-                FragmentNavigator navigator = new FragmentNavigator(
-                    mainActivity.getSupportFragmentManager(),
-                    R.id.fragmentContainer
-                );
-                navigator.goBack();
-            });
+            fileBrowserFragment.setOnBackListener(mainActivity::onFragmentBack);
         }
 
-        FragmentNavigator navigator = new FragmentNavigator(
-            mainActivity.getSupportFragmentManager(),
-            R.id.fragmentContainer
-        );
-        navigator.replace(fileBrowserFragment, "file_browser");
+        mainActivity.getFragmentNavigator().showFragment(fileBrowserFragment, "file_browser");
     }
 
     /**
@@ -143,26 +125,12 @@ public class FragmentHelper {
         fileBrowserFragment.setMode(FileBrowserFragment.MODE_SELECT_ASSEMBLY);
         fileBrowserFragment.setOnAssemblySelectedListener(assemblyPath -> {
             onAssemblySelected.onAssemblySelected(assemblyPath);
-            FragmentNavigator navigator = new FragmentNavigator(
-                mainActivity.getSupportFragmentManager(),
-                R.id.fragmentContainer
-            );
-            navigator.goBack();
+            mainActivity.onFragmentBack();
         });
 
-        fileBrowserFragment.setOnBackListener(() -> {
-            FragmentNavigator navigator = new FragmentNavigator(
-                mainActivity.getSupportFragmentManager(),
-                R.id.fragmentContainer
-            );
-            navigator.goBack();
-        });
+        fileBrowserFragment.setOnBackListener(mainActivity::onFragmentBack);
 
-        FragmentNavigator navigator = new FragmentNavigator(
-            mainActivity.getSupportFragmentManager(),
-            R.id.fragmentContainer
-        );
-        navigator.replace(fileBrowserFragment, "assembly_browser");
+        mainActivity.getFragmentNavigator().showFragment(fileBrowserFragment, "assembly_browser");
     }
 }
 

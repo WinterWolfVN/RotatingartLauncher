@@ -2,6 +2,7 @@ package com.app.ralaunch.controls.editor;
 
 import android.app.Dialog;
 import android.content.Context;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,14 +11,9 @@ import android.view.Window;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import com.google.android.material.slider.Slider;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
@@ -47,13 +43,14 @@ public class ControlEditDialogMD extends Dialog {
     private int mScreenWidth, mScreenHeight;
     private boolean mIsUpdating = false;
 
-    private ListView mCategoryListView;
     private ViewGroup mContentFrame;
-    private android.widget.LinearLayout mCategoriesLinearLayout;
+    private com.google.android.material.card.MaterialCardView mSidebarContainer;
+    private LinearLayout mCategoryList;
+    private com.google.android.material.card.MaterialCardView mCategoryBasic, mCategoryPosition, mCategoryAppearance, mCategoryKeymap;
     private int mCurrentCategory = 0; // 0=基本信息, 1=位置大小, 2=外观样式, 3=键值设置
     
     // 关闭按钮
-    private android.widget.ImageButton mBtnClose;
+    private com.google.android.material.button.MaterialButton mBtnClose;
     
     // 内容视图
     private android.view.View mContentBasic, mContentPosition, mContentAppearance, mContentKeymap;
@@ -99,28 +96,13 @@ public class ControlEditDialogMD extends Dialog {
         // 启用硬件加速，确保 Material Design 的触摸反馈和点击事件正常工作
         view.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
-        // 设置对话框样式 - MD3风格
-        Window window = getWindow();
-        if (window != null) {
-            window.setBackgroundDrawableResource(android.R.color.transparent);
-            android.util.DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
-            int screenHeight = metrics.heightPixels;
-            int screenWidth = metrics.widthPixels;
-            // 使用更大的高度，确保内容完整显示，底部按钮可见
-            int maxHeight = (int) (screenHeight * 0.90);
-            // MD3对话框推荐宽度为屏幕的85-90%
-            int dialogWidth = (int) (screenWidth * 0.90);
-            window.setLayout(dialogWidth, maxHeight);
-            // 设置MD3对话框的圆角和边距
-            window.setDimAmount(0.5f);
-        }
-
         // 绑定UI元素
         initViews(view);
 
         // 设置监听器
         setupListeners();
     }
+
 
     /**
      * 初始化UI元素
@@ -129,11 +111,19 @@ public class ControlEditDialogMD extends Dialog {
         // 关闭按钮
         mBtnClose = view.findViewById(R.id.btn_close);
         
-        mCategoryListView = view.findViewById(R.id.categoryListView);
+        // 侧边栏分类导航（XML 中已定义，无需代码生成）
+        mCategoryList = view.findViewById(R.id.categoryList);
+        mCategoryBasic = view.findViewById(R.id.categoryBasic);
+        mCategoryPosition = view.findViewById(R.id.categoryPosition);
+        mCategoryAppearance = view.findViewById(R.id.categoryAppearance);
+        mCategoryKeymap = view.findViewById(R.id.categoryKeymap);
         mContentFrame = view.findViewById(R.id.contentFrame);
         
-        // 设置分类列表
-        setupCategoryList(view);
+        // 设置侧边栏分类点击监听器
+        mCategoryBasic.setOnClickListener(v -> switchToCategory(0));
+        mCategoryPosition.setOnClickListener(v -> switchToCategory(1));
+        mCategoryAppearance.setOnClickListener(v -> switchToCategory(2));
+        mCategoryKeymap.setOnClickListener(v -> switchToCategory(3));
         
         // 初始化内容视图
         mContentBasic = view.findViewById(R.id.contentBasic);
@@ -143,135 +133,6 @@ public class ControlEditDialogMD extends Dialog {
         
         // 默认显示第一个分类
         switchToCategory(0);
-    }
-    
-    /**
-     * 设置分类列表
-     */
-    private void setupCategoryList(View view) {
-        // 找到 ListView 的父容器
-        ViewGroup listViewParent = (ViewGroup) mCategoryListView.getParent();
-        int listViewIndex = listViewParent.indexOfChild(mCategoryListView);
-        
-        // 移除 ListView
-        listViewParent.removeView(mCategoryListView);
-        
-        // 创建新的容器来替代 ListView
-        mCategoriesLinearLayout = new android.widget.LinearLayout(getContext());
-        mCategoriesLinearLayout.setOrientation(android.widget.LinearLayout.VERTICAL);
-        mCategoriesLinearLayout.setLayoutParams(new ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
-        
-        // 添加到原位置
-        listViewParent.addView(mCategoriesLinearLayout, listViewIndex);
-        
-        // 创建分类数据
-        List<Map<String, Object>> categories = getCategories();
-        for (int i = 0; i < categories.size(); i++) {
-            final int position = i;
-            Map<String, Object> category = categories.get(i);
-            
-            View itemView = LayoutInflater.from(getContext()).inflate(
-                R.layout.item_settings_category, mCategoriesLinearLayout, false);
-            
-            ImageView icon = itemView.findViewById(R.id.icon);
-            TextView name = itemView.findViewById(R.id.category_name);
-            
-            icon.setImageResource((Integer) category.get("icon"));
-            name.setText((String) category.get("category_name"));
-            
-            // 设置点击事件
-            itemView.setOnClickListener(v -> {
-                // 更新所有 item 的背景色
-                for (int j = 0; j < mCategoriesLinearLayout.getChildCount(); j++) {
-                    View child = mCategoriesLinearLayout.getChildAt(j);
-                    if (child instanceof com.google.android.material.card.MaterialCardView) {
-                        com.google.android.material.card.MaterialCardView cardView =
-                            (com.google.android.material.card.MaterialCardView) child;
-                        if (j == position) {
-                            // 选中状态
-                            cardView.setCardBackgroundColor(
-                                ContextCompat.getColor(getContext(), R.color.accent_primary_light));
-                            // 更新文字颜色
-                            TextView textView = child.findViewById(R.id.category_name);
-                            if (textView != null) {
-                                textView.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
-                            }
-                            ImageView iconView = child.findViewById(R.id.icon);
-                            if (iconView != null) {
-                                iconView.setColorFilter(ContextCompat.getColor(getContext(), R.color.text_primary));
-                            }
-                        } else {
-                            // 未选中状态
-                            cardView.setCardBackgroundColor(
-                                ContextCompat.getColor(getContext(), android.R.color.transparent));
-                            // 更新文字颜色
-                            TextView textView = child.findViewById(R.id.category_name);
-                            if (textView != null) {
-                                textView.setTextColor(ContextCompat.getColor(getContext(), R.color.text_secondary));
-                            }
-                            ImageView iconView = child.findViewById(R.id.icon);
-                            if (iconView != null) {
-                                iconView.setColorFilter(ContextCompat.getColor(getContext(), R.color.text_secondary));
-                            }
-                        }
-                    }
-                }
-                
-                // 切换内容面板
-                switchToCategory(position);
-            });
-            
-            mCategoriesLinearLayout.addView(itemView);
-        }
-        
-        // 默认选中第一项
-        if (mCategoriesLinearLayout.getChildCount() > 0) {
-            View firstChild = mCategoriesLinearLayout.getChildAt(0);
-            if (firstChild instanceof com.google.android.material.card.MaterialCardView) {
-                ((com.google.android.material.card.MaterialCardView) firstChild).setCardBackgroundColor(
-                    ContextCompat.getColor(getContext(), R.color.accent_primary_light));
-                TextView textView = firstChild.findViewById(R.id.category_name);
-                if (textView != null) {
-                    textView.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
-                }
-                ImageView iconView = firstChild.findViewById(R.id.icon);
-                if (iconView != null) {
-                    iconView.setColorFilter(ContextCompat.getColor(getContext(), R.color.text_primary));
-                }
-            }
-        }
-    }
-    
-    /**
-     * 获取分类数据
-     */
-    private List<Map<String, Object>> getCategories() {
-        List<Map<String, Object>> categories = new ArrayList<>();
-        
-        Map<String, Object> basic = new HashMap<>();
-        basic.put("icon", R.drawable.ic_info_outline);
-        basic.put("category_name", "基本信息");
-        categories.add(basic);
-        
-        Map<String, Object> position = new HashMap<>();
-        position.put("icon", R.drawable.ic_location_on);
-        position.put("category_name", "位置大小");
-        categories.add(position);
-        
-        Map<String, Object> appearance = new HashMap<>();
-        appearance.put("icon", R.drawable.ic_palette);
-        appearance.put("category_name", "外观样式");
-        categories.add(appearance);
-        
-        Map<String, Object> keymap = new HashMap<>();
-        keymap.put("icon", R.drawable.ic_keyboard);
-        keymap.put("category_name", "键值设置");
-        categories.add(keymap);
-        
-        return categories;
     }
     
     /**
@@ -313,6 +174,9 @@ public class ControlEditDialogMD extends Dialog {
                 break;
         }
         
+        // 更新侧边栏选中状态（紧凑极简风格）
+        updateCategorySelection(category);
+        
         // 绑定当前分类的视图
         bindCategoryViews();
         
@@ -325,6 +189,117 @@ public class ControlEditDialogMD extends Dialog {
         
         // 填充数据
         fillCategoryData();
+    }
+    
+    /**
+     * 更新侧边栏分类选中状态（MD3圆角卡片风格）
+     */
+    private void updateCategorySelection(int selectedCategory) {
+        // 重置所有分类样式
+        updateCategoryCardStyle(mCategoryBasic, false);
+        updateCategoryCardStyle(mCategoryPosition, false);
+        updateCategoryCardStyle(mCategoryAppearance, false);
+        updateCategoryCardStyle(mCategoryKeymap, false);
+        
+        // 设置选中分类样式
+        com.google.android.material.card.MaterialCardView selectedCard = null;
+        switch (selectedCategory) {
+            case 0:
+                selectedCard = mCategoryBasic;
+                break;
+            case 1:
+                selectedCard = mCategoryPosition;
+                break;
+            case 2:
+                selectedCard = mCategoryAppearance;
+                break;
+            case 3:
+                selectedCard = mCategoryKeymap;
+                break;
+        }
+        
+        if (selectedCard != null) {
+            updateCategoryCardStyle(selectedCard, true);
+        }
+    }
+    
+    /**
+     * 更新分类卡片样式 (MD3圆角卡片效果)
+     */
+    private void updateCategoryCardStyle(com.google.android.material.card.MaterialCardView card, boolean selected) {
+        if (card == null) return;
+        
+        if (selected) {
+            // MD3 选中状态：主色背景 + 加粗文字 + 白色图标
+            android.util.TypedValue colorValue = new android.util.TypedValue();
+            getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, colorValue, true);
+            card.setCardBackgroundColor(colorValue.data);
+            card.setStrokeWidth(0);
+            
+            TextView textView = findTextViewInCard(card);
+            if (textView != null) {
+                textView.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
+                textView.setTypeface(null, android.graphics.Typeface.BOLD);
+            }
+            
+            ImageView imageView = findImageViewInCard(card);
+            if (imageView != null) {
+                android.util.TypedValue primaryColor = new android.util.TypedValue();
+                getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorPrimary, primaryColor, true);
+                imageView.setColorFilter(primaryColor.data, PorterDuff.Mode.SRC_IN);
+            }
+        } else {
+            // MD3 未选中状态：透明背景 + 正常文字 + 次要色图标
+            card.setCardBackgroundColor(ContextCompat.getColor(getContext(), android.R.color.transparent));
+            card.setStrokeWidth(0);
+            
+            TextView textView = findTextViewInCard(card);
+            if (textView != null) {
+                textView.setTextColor(ContextCompat.getColor(getContext(), R.color.text_secondary));
+                textView.setTypeface(null, android.graphics.Typeface.NORMAL);
+            }
+            
+            ImageView imageView = findImageViewInCard(card);
+            if (imageView != null) {
+                android.util.TypedValue onSurfaceColor = new android.util.TypedValue();
+                getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, onSurfaceColor, true);
+                imageView.setColorFilter(onSurfaceColor.data, PorterDuff.Mode.SRC_IN);
+            }
+        }
+    }
+    
+    /**
+     * 在卡片中查找 TextView
+     */
+    private TextView findTextViewInCard(ViewGroup card) {
+        if (card == null) return null;
+        for (int i = 0; i < card.getChildCount(); i++) {
+            View child = card.getChildAt(i);
+            if (child instanceof TextView) {
+                return (TextView) child;
+            } else if (child instanceof ViewGroup) {
+                TextView found = findTextViewInCard((ViewGroup) child);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 在卡片中查找 ImageView
+     */
+    private ImageView findImageViewInCard(ViewGroup card) {
+        if (card == null) return null;
+        for (int i = 0; i < card.getChildCount(); i++) {
+            View child = card.getChildAt(i);
+            if (child instanceof ImageView) {
+                return (ImageView) child;
+            } else if (child instanceof ViewGroup) {
+                ImageView found = findImageViewInCard((ViewGroup) child);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     /**
@@ -529,21 +504,17 @@ public class ControlEditDialogMD extends Dialog {
      * 更新键值设置分类的可见性
      */
     private void updateKeymapCategoryVisibility() {
-        if (mCurrentData == null || mCategoriesLinearLayout == null) return;
+        if (mCurrentData == null || mCategoryKeymap == null) return;
 
-        // 如果当前是摇杆类型，隐藏键值设置分类项
-        View keymapCategoryItem = mCategoriesLinearLayout.getChildAt(3);
-        if (keymapCategoryItem != null) {
         // 按钮控件显示键值设置分类（文本控件不显示）
         if (mCurrentData.type == ControlData.TYPE_BUTTON &&
             mCurrentData.type != ControlData.TYPE_TEXT) {
-                keymapCategoryItem.setVisibility(View.VISIBLE);
+            mCategoryKeymap.setVisibility(View.VISIBLE);
         } else {
-                keymapCategoryItem.setVisibility(View.GONE);
-                // 如果当前正在查看键值设置，切换回基本信息
+            mCategoryKeymap.setVisibility(View.GONE);
+            // 如果当前正在查看键值设置，切换回基本信息
             if (mCurrentCategory == 3) {
-                    switchToCategory(0);
-                }
+                switchToCategory(0);
             }
         }
     }

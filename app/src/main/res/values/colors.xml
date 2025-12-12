@@ -5,7 +5,7 @@
     <!-- 主色调 (Primary) - 更柔和的紫色 -->
     <color name="md_theme_light_primary">#9C7AE8</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
-    <color name="md_theme_light_primaryContainer">#F3EDF7</color>
+    <color name="md_theme_light_primaryContainer">#FFFFFF</color>
     <color name="md_theme_light_onPrimaryContainer">#4A148C</color>
 
     <!-- 次色调 (Secondary) -->
@@ -30,11 +30,12 @@
     <color name="md_theme_light_background">#FFFFFF</color>
     <color name="md_theme_light_onBackground">#1C1B1F</color>
 
-    <!-- 表面色 (Surface) - 统一为纯白色，减少紫色感 -->
+    <!-- 表面色 (Surface) - 统一为纯白色 -->
     <color name="md_theme_light_surface">#FFFFFF</color>
     <color name="md_theme_light_onSurface">#1C1B1F</color>
-    <color name="md_theme_light_surfaceVariant">#F5F5F5</color>
+    <color name="md_theme_light_surfaceVariant">#F8F8F8</color>
     <color name="md_theme_light_onSurfaceVariant">#49454F</color>
+    <color name="md_theme_light_surfaceContainerHighest">#F0F0F0</color>
 
     <!-- 轮廓线 (Outline) - 增强对比度 -->
     <color name="md_theme_light_outline">#79747E</color>

@@ -75,6 +75,9 @@ public class RaLaunchApplication extends Application {
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize PatchManager", e);
         }
+        
+        // 提取并安装内置补丁（如果需要）
+        com.app.ralaunch.utils.PatchExtractor.extractPatchesIfNeeded(appContext);
 
         vibrationManager = new VibrationManager(appContext);
 

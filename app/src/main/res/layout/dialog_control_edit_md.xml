@@ -1,159 +1,327 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 侧边栏导航风格 - 紧凑极简 MD3 游戏控制编辑对话框 -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:padding="16dp"
     app:cardCornerRadius="28dp"
-    app:cardElevation="8dp"
-    app:strokeWidth="0dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="2dp"
+    app:strokeColor="?attr/colorPrimary"
     app:cardBackgroundColor="?attr/colorSurface"
-    style="@style/Widget.Material3.CardView.Elevated">
+    style="@style/Widget.Material3.CardView.Outlined">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        android:minHeight="350dp"
+        android:maxHeight="500dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
 
-        <!-- 顶部标题栏（关闭按钮） -->
-        <LinearLayout
-            android:id="@+id/titleBar"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical|end"
-            android:paddingStart="16dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:minHeight="36dp"
-            android:background="?attr/colorSurface"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <!-- 关闭按钮 -->
-            <ImageButton
-                android:id="@+id/btn_close"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_close"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:contentDescription="关闭"
-                android:padding="6dp"
-                android:scaleType="fitCenter"
-                app:tint="?attr/colorOnSurface" />
-
-        </LinearLayout>
-
-        <!-- 左侧分类导航栏 -->
-        <LinearLayout
+        <!-- 左侧图标导航栏 - MD3 容器 -->
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/sidebarContainer"
-            android:layout_width="80dp"
+            android:layout_width="64dp"
             android:layout_height="0dp"
-            android:orientation="vertical"
-            android:background="?attr/colorSurface"
-            android:clickable="true"
-            android:focusable="true"
+            android:layout_marginEnd="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/titleBar"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/bottomButtons">
 
-            <!-- 分类列表 -->
-            <ListView
-                android:id="@+id/categoryListView"
+            <LinearLayout
+                android:id="@+id/categoryList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:divider="@android:color/transparent"
-                android:dividerHeight="0dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
-                android:scrollbars="none"
-                android:choiceMode="singleChoice" />
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="12dp">
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
+                <!-- 基本信息 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/categoryBasic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@android:color/transparent">
 
-        </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:paddingVertical="10dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_info"
+                        app:tint="?attr/colorPrimary"
+                        android:contentDescription="基本信息" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="基本信息"
+                        android:textColor="?attr/textPrimary"
+                        android:textSize="10sp"
+                        android:layout_marginTop="4dp"
+                        android:maxLines="2"
+                        android:gravity="center"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 位置大小 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/categoryPosition"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@android:color/transparent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:paddingVertical="10dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_location_on"
+                        app:tint="?attr/colorOnSurface"
+                        android:contentDescription="位置大小" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="位置大小"
+                        android:textColor="?attr/textSecondary"
+                        android:textSize="10sp"
+                        android:layout_marginTop="4dp"
+                        android:maxLines="2"
+                        android:gravity="center"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 外观样式 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/categoryAppearance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@android:color/transparent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:paddingVertical="10dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_palette"
+                        app:tint="?attr/colorOnSurface"
+                        android:contentDescription="外观样式" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="外观"
+                        android:textColor="?attr/textSecondary"
+                        android:textSize="10sp"
+                        android:layout_marginTop="4dp"
+                        android:maxLines="2"
+                        android:gravity="center"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- 键值设置 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/categoryKeymap"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="@android:color/transparent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:paddingVertical="10dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_keyboard"
+                        app:tint="?attr/colorOnSurface"
+                        android:contentDescription="键值设置" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="键值设置"
+                        android:textColor="?attr/textSecondary"
+                        android:textSize="10sp"
+                        android:layout_marginTop="4dp"
+                        android:maxLines="2"
+                        android:gravity="center"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- 右侧内容区域 -->
-        <FrameLayout
-            android:id="@+id/contentFrame"
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/contentScrollView"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:clickable="false"
-            android:focusable="false"
-            android:minHeight="400dp"
+            android:fillViewport="false"
+            android:overScrollMode="ifContentScrolls"
+            android:scrollbars="vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             app:layout_constraintStart_toEndOf="@id/sidebarContainer"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/titleBar"
-            app:layout_constraintBottom_toTopOf="@id/bottomButtons"
-            app:layout_constraintVertical_bias="0.0"
-            android:background="?attr/colorSurface">
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/bottomButtons">
 
-            <!-- 基本信息内容 -->
-            <androidx.core.widget.NestedScrollView
-                android:id="@+id/contentBasic"
+            <FrameLayout
+                android:id="@+id/contentFrame"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fillViewport="true"
-                android:visibility="visible">
+                android:layout_height="wrap_content">
 
-                <include layout="@layout/content_basic_info" />
-            </androidx.core.widget.NestedScrollView>
+                <!-- 基本信息内容 -->
 
-            <!-- 位置大小内容 -->
-            <androidx.core.widget.NestedScrollView
-                android:id="@+id/contentPosition"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fillViewport="true"
-                android:visibility="gone">
+                <!-- 位置大小内容 -->
 
-                <include layout="@layout/content_position_size" />
-            </androidx.core.widget.NestedScrollView>
+                <LinearLayout
+                    android:id="@+id/contentBasic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="visible">
 
-            <!-- 外观样式内容 -->
-            <androidx.core.widget.NestedScrollView
-                android:id="@+id/contentAppearance"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fillViewport="true"
-                android:visibility="gone">
+                    <include layout="@layout/content_basic_info" />
 
-                <include layout="@layout/content_appearance" />
-            </androidx.core.widget.NestedScrollView>
+                </LinearLayout>
 
-            <!-- 键值设置内容 -->
-            <androidx.core.widget.NestedScrollView
-                android:id="@+id/contentKeymap"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fillViewport="true"
-                android:visibility="gone">
+                <LinearLayout
+                    android:id="@+id/contentPosition"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
-                <include layout="@layout/content_keymap" />
-            </androidx.core.widget.NestedScrollView>
+                    <include layout="@layout/content_position_size" />
 
-        </FrameLayout>
+                </LinearLayout>
 
-        <!-- 底部操作按钮 -->
+                <!-- 外观样式内容 -->
+                <LinearLayout
+                    android:id="@+id/contentAppearance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <include layout="@layout/content_appearance" />
+
+                </LinearLayout>
+
+                <!-- 键值设置内容 -->
+                <LinearLayout
+                    android:id="@+id/contentKeymap"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <include layout="@layout/content_keymap" />
+
+                </LinearLayout>
+
+            </FrameLayout>
+
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- 底部操作按钮栏 - MD3 分隔线 -->
+        <View
+            android:id="@+id/divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:background="?attr/colorOutlineVariant"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toEndOf="@id/sidebarContainer"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/contentScrollView"
+            app:layout_constraintBottom_toTopOf="@id/bottomButtons"/>
+
         <LinearLayout
             android:id="@+id/bottomButtons"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="end"
-            android:padding="12dp"
-            android:minHeight="56dp"
-            android:background="?attr/colorSurface"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:background="@android:color/transparent"
             app:layout_constraintStart_toEndOf="@id/sidebarContainer"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/contentFrame"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintVertical_bias="1.0">
+            app:layout_constraintTop_toBottomOf="@id/divider"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_delete"
@@ -161,12 +329,16 @@
                 android:layout_height="wrap_content"
                 android:text="删除"
                 android:textSize="14sp"
-                android:minWidth="0dp"
-                android:minHeight="36dp"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.Material3.Button.TonalButton" />
+                android:minWidth="80dp"
+                android:minHeight="40dp"
+                android:paddingHorizontal="20dp"
+                android:layout_marginEnd="12dp"
+                app:cornerRadius="20dp"
+                app:icon="@drawable/ic_delete"
+                app:iconSize="18dp"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_copy"
@@ -174,11 +346,15 @@
                 android:layout_height="wrap_content"
                 android:text="复制"
                 android:textSize="14sp"
-                android:minWidth="0dp"
-                android:minHeight="36dp"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
-                android:layout_marginEnd="8dp"
+                android:minWidth="80dp"
+                android:minHeight="40dp"
+                android:paddingHorizontal="20dp"
+                android:layout_marginEnd="12dp"
+                app:cornerRadius="20dp"
+                app:icon="@drawable/ic_content_copy"
+                app:iconSize="18dp"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
                 style="@style/Widget.Material3.Button.TonalButton" />
 
             <com.google.android.material.button.MaterialButton
@@ -187,11 +363,29 @@
                 android:layout_height="wrap_content"
                 android:text="保存"
                 android:textSize="14sp"
-                android:minWidth="0dp"
-                android:minHeight="36dp"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
+                android:minWidth="80dp"
+                android:minHeight="40dp"
+                android:paddingHorizontal="20dp"
+                android:layout_marginEnd="12dp"
+                app:cornerRadius="20dp"
+                app:icon="@drawable/ic_save"
+                app:iconSize="18dp"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
                 style="@style/Widget.Material3.Button" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_close"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="关闭"
+                android:textSize="14sp"
+                android:minWidth="80dp"
+                android:minHeight="40dp"
+                android:paddingHorizontal="20dp"
+                app:cornerRadius="20dp"
+                style="@style/Widget.Material3.Button.TextButton" />
+
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

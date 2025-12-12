@@ -32,13 +32,6 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_palette"
-                    app:tint="?attr/textPrimary"
-                    android:layout_marginEnd="16dp" />
-
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -117,13 +110,6 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_palette"
-                    app:tint="?attr/textPrimary"
-                    android:layout_marginEnd="16dp" />
-
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -200,13 +186,6 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_palette"
-                    app:tint="?attr/textPrimary"
-                    android:layout_marginEnd="16dp" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -285,13 +264,6 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_palette"
-                    app:tint="?attr/textPrimary"
-                    android:layout_marginEnd="16dp" />
-
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -369,13 +341,6 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_palette"
-                    app:tint="?attr/textPrimary"
-                    android:layout_marginEnd="16dp" />
-
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -445,15 +410,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_palette"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -512,15 +470,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_palette"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -581,13 +532,6 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_palette"
-                    app:tint="?attr/textPrimary"
-                    android:layout_marginEnd="16dp" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -659,15 +603,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_palette"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -729,13 +666,6 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_refresh"
-                    app:tint="?attr/textPrimary"
-                    android:layout_marginEnd="16dp" />
 
                 <LinearLayout
                     android:layout_width="0dp"

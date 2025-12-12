@@ -24,6 +24,9 @@
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:backgroundDimAmount">0.6</item>
         <item name="android:windowAnimationStyle">@style/DialogAnimation</item>
+        <!-- 窗口宽度设置 -->
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
         <!-- 不使用硬编码颜色，直接继承父主题的颜色 -->
     </style>
 
@@ -151,10 +154,10 @@
     <!-- Material 3 卡片样式 - 标准卡片（带边框） -->
     <style name="Widget.App.CardView.Standard" parent="Widget.Material3.CardView.Elevated">
         <item name="cardCornerRadius">16dp</item>
-        <item name="cardElevation">1dp</item>
+        <item name="cardElevation">0dp</item>
         <item name="cardBackgroundColor">?attr/colorSurface</item>
         <item name="strokeWidth">1dp</item>
-        <item name="strokeColor">?attr/textSecondary</item>
+        <item name="strokeColor">?attr/colorOutlineVariant</item>
     </style>
 
     <!-- Material 3 卡片样式 - 小卡片 -->

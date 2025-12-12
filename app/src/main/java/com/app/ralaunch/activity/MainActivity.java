@@ -225,6 +225,7 @@ public class MainActivity extends AppCompatActivity implements
         if (fragmentContainer != null) {
             fragmentContainer.setVisibility(View.GONE);
         }
+        
         initializeApp();
     }
 
@@ -1016,6 +1017,22 @@ public class MainActivity extends AppCompatActivity implements
      */
     public ThemeManager getThemeManager() {
         return themeManager;
+    }
+
+    /**
+     * 获取 Fragment 导航器
+     */
+    public FragmentNavigator getFragmentNavigator() {
+        return fragmentNavigator;
+    }
+
+    /**
+     * Fragment 返回
+     */
+    public void onFragmentBack() {
+        if (fragmentNavigator != null) {
+            fragmentNavigator.hideFragment();
+        }
     }
 
     /**

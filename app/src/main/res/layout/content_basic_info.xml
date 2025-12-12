@@ -29,15 +29,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info_outline"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -100,15 +93,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_edit"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -173,15 +159,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info_outline"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -217,12 +196,6 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="8dp"
-                android:src="@android:drawable/arrow_down_float"
-                android:tint="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
 
@@ -248,15 +221,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info_outline"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -292,12 +258,6 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="8dp"
-                android:src="@android:drawable/arrow_down_float"
-                android:tint="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
 
@@ -323,15 +283,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info_outline"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -367,12 +320,6 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="8dp"
-                android:src="@android:drawable/arrow_down_float"
-                android:tint="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
 
@@ -398,15 +345,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info_outline"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -461,8 +401,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -543,8 +483,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -778,8 +718,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <ImageView
                 android:layout_width="24dp"
@@ -822,12 +762,6 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="8dp"
-                android:src="@android:drawable/arrow_down_float"
-                android:tint="?attr/colorOnSurfaceVariant" />
 
         </LinearLayout>
 
@@ -853,15 +787,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_info_outline"
-                app:tint="?attr/textPrimary"
-                android:layout_marginEnd="16dp" />
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp">
 
             <LinearLayout
                 android:layout_width="0dp"
