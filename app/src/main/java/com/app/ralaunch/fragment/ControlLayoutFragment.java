@@ -139,7 +139,7 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
         EditText editText = dialogView.findViewById(R.id.layout_name_edit);
 
         // 设置默认名称
-        String defaultName = "新建布局";
+        String defaultName = getString(R.string.control_new_layout);
 
         // 如果名称已存在，添加数字后缀
         String finalName = defaultName;
@@ -153,15 +153,15 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
         editText.selectAll();
 
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("新建控制布局")
+                .setTitle(getString(R.string.control_create_layout))
                 .setView(dialogView)
-                .setPositiveButton("创建", (dialog, which) -> {
+                .setPositiveButton(getString(R.string.control_create), (dialog, which) -> {
                     String layoutName = editText.getText().toString().trim();
                     if (!layoutName.isEmpty()) {
                         createNewLayout(layoutName);
                     }
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
@@ -169,7 +169,7 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
         // 检查名称是否已存在
         for (ControlLayout layout : layouts) {
             if (layout.getName().equals(name)) {
-                Toast.makeText(getContext(), "布局名称已存在", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.control_layout_name_exists), Toast.LENGTH_SHORT).show();
                 return;
             }
         }
@@ -249,13 +249,13 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             if (outputStream != null) {
                 outputStream.write(json.getBytes("UTF-8"));
                 outputStream.close();
-                Toast.makeText(getContext(), "布局已导出", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.control_export_success), Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(getContext(), "导出失败: 无法写入文件", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.control_export_failed_write), Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(getContext(), "导出失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.control_export_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -300,15 +300,15 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
         editText.selectAll();
 
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("重命名布局")
+                .setTitle(getString(R.string.control_rename_layout))
                 .setView(dialogView)
-                .setPositiveButton("确定", (dialog, which) -> {
+                .setPositiveButton(getString(R.string.ok), (dialog, which) -> {
                     String newName = editText.getText().toString().trim();
                     if (!newName.isEmpty() && !newName.equals(layout.getName())) {
                         // 检查名称是否已存在
                         for (ControlLayout l : layouts) {
                             if (l.getName().equals(newName)) {
-                                Toast.makeText(getContext(), "布局名称已存在", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(getContext(), getString(R.string.control_layout_name_exists), Toast.LENGTH_SHORT).show();
                                 return;
                             }
                         }
@@ -316,20 +316,20 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
                         layoutManager.saveLayout(layout);
                         layouts = layoutManager.getLayouts();
                         adapter.updateLayouts(layouts);
-                        Toast.makeText(getContext(), "布局已重命名", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), getString(R.string.control_layout_renamed), Toast.LENGTH_SHORT).show();
                     }
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
     @Override
     public void onLayoutDuplicate(ControlLayout layout) {
-        String newName = layout.getName() + " (副本)";
+        String newName = layout.getName() + " " + getString(R.string.control_layout_copy_suffix);
         int counter = 1;
         while (layoutExists(newName)) {
             counter++;
-            newName = layout.getName() + " (副本 " + counter + ")";
+            newName = layout.getName() + " " + getString(R.string.control_layout_copy_suffix_numbered, counter);
         }
 
         ControlLayout duplicate = new ControlLayout(newName);
@@ -338,14 +338,14 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
         layouts = layoutManager.getLayouts();
         adapter.updateLayouts(layouts);
         updateEmptyState();
-        Toast.makeText(getContext(), "布局已复制", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), getString(R.string.control_layout_duplicated), Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onLayoutSetDefault(ControlLayout layout) {
         layoutManager.setCurrentLayout(layout.getName());
         adapter.setDefaultLayoutId(layout.getName());
-        Toast.makeText(getContext(), "已设为默认布局", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), getString(R.string.control_set_as_default), Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -360,7 +360,7 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             intent.putExtra(Intent.EXTRA_TITLE, layout.getName() + ".json");
             startActivityForResult(intent, REQUEST_CODE_EXPORT_LAYOUT);
         } catch (Exception e) {
-            Toast.makeText(getContext(), "导出失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.control_export_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -369,23 +369,24 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
         String layoutName = layout.getName();
         
         // 检查是否是默认布局，给出警告但允许删除
-        boolean isDefaultLayout = "键盘模式".equals(layoutName) || "手柄模式".equals(layoutName);
+        boolean isDefaultLayout = getString(R.string.control_layout_keyboard_mode).equals(layoutName) || 
+                                  getString(R.string.control_layout_gamepad_mode).equals(layoutName);
         String message = isDefaultLayout 
-            ? "确定要删除默认布局 \"" + layoutName + "\" 吗？\n删除后需要手动创建新布局才能使用。"
-            : "确定要删除布局 \"" + layoutName + "\" 吗？";
+            ? getString(R.string.control_delete_default_layout_confirm, layoutName)
+            : getString(R.string.control_delete_layout_confirm, layoutName);
         
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("删除布局")
+                .setTitle(getString(R.string.control_delete_layout))
                 .setMessage(message)
-                .setPositiveButton("删除", (dialog, which) -> {
+                .setPositiveButton(getString(R.string.control_delete), (dialog, which) -> {
                     layoutManager.removeLayout(layoutName);
                     // 重新加载布局列表
                     layouts = layoutManager.getLayouts();
                     adapter.updateLayouts(layouts);
                     updateEmptyState();
-                    Toast.makeText(getContext(), "布局已删除", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), getString(R.string.control_layout_deleted), Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
@@ -417,7 +418,7 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             // 读取文件内容
             java.io.InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
             if (inputStream == null) {
-                Toast.makeText(getContext(), "无法读取文件", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.control_cannot_read_file), Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -436,16 +437,17 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             com.app.ralaunch.controls.ControlConfig config = com.app.ralaunch.controls.ControlConfig.loadFromJson(json);
 
             if (config == null || config.controls == null || config.controls.isEmpty()) {
-                Toast.makeText(getContext(), "布局文件格式不正确或为空", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.control_layout_file_invalid), Toast.LENGTH_SHORT).show();
                 return;
             }
 
             // 生成唯一的布局名称
-            String layoutName = config.name != null ? config.name : "导入的布局";
+            String defaultName = getString(R.string.control_layout_imported);
+            String layoutName = config.name != null ? config.name : defaultName;
             int counter = 1;
             while (layoutExists(layoutName)) {
                 counter++;
-                layoutName = (config.name != null ? config.name : "导入的布局") + " " + counter;
+                layoutName = (config.name != null ? config.name : defaultName) + " " + counter;
             }
 
             // 获取屏幕尺寸用于坐标转换
@@ -468,11 +470,11 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             adapter.updateLayouts(layouts);
             updateEmptyState();
 
-            Toast.makeText(getContext(), "已导入布局：" + layoutName, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.control_import_success, layoutName), Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(getContext(), "导入失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.control_import_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -480,15 +482,18 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
      * 显示导入预设配置对话框
      */
     private void showImportPresetDialog() {
-        String[] presetNames = {"键盘模式布局", "手柄模式布局"};
+        String[] presetNames = {
+            getString(R.string.control_layout_preset_keyboard),
+            getString(R.string.control_layout_preset_gamepad)
+        };
         String[] presetFiles = {"default_layout.json", "gamepad_layout.json"};
 
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("选择预设配置")
+                .setTitle(getString(R.string.control_select_preset))
                 .setItems(presetNames, (dialog, which) -> {
                     importPresetLayout(presetFiles[which], presetNames[which]);
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
@@ -509,7 +514,7 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             com.app.ralaunch.controls.ControlConfig config = gson.fromJson(json, com.app.ralaunch.controls.ControlConfig.class);
 
             if (config == null || config.controls == null || config.controls.isEmpty()) {
-                Toast.makeText(getContext(), "预设配置文件格式不正确或为空", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.control_preset_file_invalid), Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -541,11 +546,11 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             adapter.updateLayouts(layouts);
             updateEmptyState();
 
-            Toast.makeText(getContext(), "已导入预设配置：" + layoutName, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.control_preset_imported, layoutName), Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(getContext(), "导入失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.control_import_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
 }

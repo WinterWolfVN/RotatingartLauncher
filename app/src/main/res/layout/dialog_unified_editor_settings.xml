@@ -30,7 +30,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="游戏设置"
+            android:text="@string/editor_game_settings_title"
             android:textColor="?attr/colorOnSurface"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -41,7 +41,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_close"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="关闭"
+            android:contentDescription="@string/editor_close"
             android:padding="8dp"
             app:tint="?attr/colorOnSurface" />
 
@@ -80,7 +80,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="进入编辑模式"
+                    android:text="@string/editor_enter_edit_mode_text"
                     android:textColor="?attr/textPrimary"
                     android:textSize="16sp" />
 
@@ -97,7 +97,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="添加控件"
+                android:text="@string/editor_add_controls_section"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -126,7 +126,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="添加按键"
+                    android:text="@string/editor_add_button_text"
                     android:textColor="?attr/textPrimary"
                     android:textSize="16sp" />
 
@@ -155,7 +155,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="添加摇杆"
+                    android:text="@string/editor_add_joystick_text"
                     android:textColor="?attr/textPrimary"
                     android:textSize="16sp" />
 
@@ -184,7 +184,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="添加文本"
+                    android:text="@string/editor_add_text_text"
                     android:textColor="?attr/textPrimary"
                     android:textSize="16sp" />
 
@@ -221,7 +221,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="保存布局"
+                    android:text="@string/editor_save_layout_text"
                     android:textColor="?attr/textPrimary"
                     android:textSize="16sp" />
 
@@ -261,7 +261,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="16dp"
-                    android:text="FPS 显示"
+                    android:text="@string/editor_fps_display"
                     android:textColor="?attr/textPrimary"
                     android:textSize="16sp" />
 

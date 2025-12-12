@@ -9,15 +9,6 @@ import com.app.ralaunch.renderer.RendererLoader;
 
 /**
  * 运行时框架偏好设置管理
- *
- * 管理 .NET Framework 版本偏好设置：
- * - 保存和读取用户选择的框架版本（net6/net7/net8/net9/net10/auto）
- * - 提供统一的偏好存取接口
- *
- * 注意：此类主要用于兼容旧的框架版本选择方式，
- * 新的运行时管理推荐使用 RuntimeManager
- *
- * 本应用仅支持 ARM64 架构。
  */
 public final class RuntimePreference {
     private static final String TAG = "RuntimePreference";

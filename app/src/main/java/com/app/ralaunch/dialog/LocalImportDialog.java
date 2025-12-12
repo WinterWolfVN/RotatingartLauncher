@@ -185,7 +185,7 @@ public class LocalImportDialog extends DialogFragment {
         this.gameFilePath = filePath;
         if (gameFileText != null && filePath != null) {
             File file = new File(filePath);
-            gameFileText.setText("已选择: " + file.getName());
+            gameFileText.setText(getString(R.string.import_file_selected, file.getName()));
 
             // 在后台解析游戏信息
             new Thread(() -> {
@@ -196,7 +196,7 @@ public class LocalImportDialog extends DialogFragment {
                             gameName = gdzf.id;
                             gameVersion = gdzf.version;
                             if (getActivity() != null) {
-                                ((MainActivity) getActivity()).showToast("检测到游戏: " + gameName + " " + gameVersion);
+                                ((MainActivity) getActivity()).showToast(getString(R.string.import_game_detected, gameName, gameVersion));
                             }
                             AppLogger.debug(TAG, "Game detected: " + gameName + " " + gameVersion);
                         }
@@ -215,9 +215,9 @@ public class LocalImportDialog extends DialogFragment {
         this.modLoaderFilePath = filePath;
         if (modLoaderFileText != null && filePath != null) {
             File file = new File(filePath);
-            modLoaderFileText.setText("已选择: " + file.getName());
+            modLoaderFileText.setText(getString(R.string.import_file_selected, file.getName()));
         } else if (modLoaderFileText != null) {
-            modLoaderFileText.setText("模组加载器 (.zip)");
+            modLoaderFileText.setText(getString(R.string.dialog_modloader_zip));
         }
         updateImportButtonState();
     }

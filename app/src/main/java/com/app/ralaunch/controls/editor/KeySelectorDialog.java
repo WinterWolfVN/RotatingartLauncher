@@ -1,6 +1,5 @@
 package com.app.ralaunch.controls.editor;
 
-import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
@@ -17,12 +16,13 @@ import androidx.annotation.NonNull;
 
 import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
+import com.app.ralaunch.utils.LocalizedDialog;
 
 /**
  * MD3风格的键值选择对话框
  * 根据模式显示键盘按键或手柄按键的网格布局
  */
-public class KeySelectorDialog extends Dialog {
+public class KeySelectorDialog extends LocalizedDialog {
     private final boolean isGamepadMode;
     private OnKeySelectedListener listener;
 
@@ -46,7 +46,7 @@ public class KeySelectorDialog extends Dialog {
         // 设置无标题栏
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        // 加载XML布局
+        // 布局加载使用原始Context（包含主题），字符串资源使用getLocalizedContext()
         View view = LayoutInflater.from(getContext()).inflate(R.layout.dialog_key_selector, null);
         setContentView(view);
 
@@ -61,7 +61,8 @@ public class KeySelectorDialog extends Dialog {
 
         // 设置标题
         TextView tvTitle = view.findViewById(R.id.tv_title);
-        tvTitle.setText(isGamepadMode ? "选择手柄按键" : "选择按键");
+        Context localizedContext = getLocalizedContext();
+        tvTitle.setText(isGamepadMode ? localizedContext.getString(R.string.editor_select_gamepad_key) : localizedContext.getString(R.string.editor_select_key));
 
         // 获取内容容器
         LinearLayout contentLayout = view.findViewById(R.id.content_container);
@@ -92,7 +93,7 @@ public class KeySelectorDialog extends Dialog {
      * 添加键盘按键 - 从XML布局加载
      */
     private void addKeyboardKeys(LinearLayout container) {
-        // 加载键盘布局
+        // 加载键盘布局（使用原始Context，因为布局需要主题资源）
         View keyboardLayout = LayoutInflater.from(getContext()).inflate(
             R.layout.layout_keyboard_selector, container, false);
         container.addView(keyboardLayout);
@@ -205,7 +206,7 @@ public class KeySelectorDialog extends Dialog {
         bindKey(layout, R.id.key_mouse_left, "LMB", ControlData.MOUSE_LEFT);
         bindKey(layout, R.id.key_mouse_right, "RMB", ControlData.MOUSE_RIGHT);
         bindKey(layout, R.id.key_mouse_middle, "MMB", ControlData.MOUSE_MIDDLE);
-        bindKey(layout, R.id.key_mouse_Keyboard, "键盘", ControlData.SPECIAL_KEYBOARD);
+        bindKey(layout, R.id.key_mouse_Keyboard, getLocalizedContext().getString(R.string.editor_keyboard), ControlData.SPECIAL_KEYBOARD);
 
     }
 
@@ -213,7 +214,7 @@ public class KeySelectorDialog extends Dialog {
      * 添加手柄按键 - 从XML布局加载
      */
     private void addGamepadKeys(LinearLayout container) {
-        // 加载手柄布局
+        // 加载手柄布局（使用原始Context，因为布局需要主题资源）
         View gamepadLayout = LayoutInflater.from(getContext()).inflate(
             R.layout.layout_gamepad_selector, container, false);
         container.addView(gamepadLayout);

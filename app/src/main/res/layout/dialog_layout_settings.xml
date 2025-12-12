@@ -30,7 +30,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="布局设置"
+            android:text="@string/layout_settings_title"
             android:textColor="?attr/colorOnSurface"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -41,7 +41,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_close"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="关闭"
+            android:contentDescription="@string/content_desc_close"
             android:padding="8dp"
             app:tint="?attr/colorOnSurface" />
 
@@ -77,7 +77,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="导入布局"
+                android:text="@string/import_layout"
                 android:textColor="?attr/textPrimary"
                 android:textSize="16sp" />
 
@@ -106,7 +106,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="导入预设"
+                android:text="@string/import_preset"
                 android:textColor="?attr/textPrimary"
                 android:textSize="16sp" />
 

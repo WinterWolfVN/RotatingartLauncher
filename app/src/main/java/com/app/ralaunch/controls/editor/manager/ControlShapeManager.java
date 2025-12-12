@@ -6,6 +6,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -18,22 +19,22 @@ public class ControlShapeManager {
     /**
      * 获取形状显示名称
      */
-    public static String getShapeDisplayName(ControlData data) {
+    public static String getShapeDisplayName(Context context, ControlData data) {
         if (data == null) {
-            return "矩形";
+            return context.getString(R.string.control_shape_rectangle);
         }
         
         if (data.shape == ControlData.SHAPE_CIRCLE) {
-            return "圆形";
+            return context.getString(R.string.control_shape_circle);
         } else {
-            return "矩形";
+            return context.getString(R.string.control_shape_rectangle);
         }
     }
 
     /**
      * 更新形状显示
      */
-    public static void updateShapeDisplay(ControlData data, TextView textView, View shapeItemView) {
+    public static void updateShapeDisplay(Context context, ControlData data, TextView textView, View shapeItemView) {
         if (data == null) {
             return;
         }
@@ -46,7 +47,7 @@ public class ControlShapeManager {
                 shapeItemView.setVisibility(View.VISIBLE);
             }
             if (textView != null) {
-                String shapeName = getShapeDisplayName(data);
+                String shapeName = getShapeDisplayName(context, data);
                 textView.setText(shapeName);
             }
         } else {
@@ -72,11 +73,14 @@ public class ControlShapeManager {
             return;
         }
 
-        String[] shapes = {"矩形", "圆形"};
+        String[] shapes = {
+            context.getString(R.string.control_shape_rectangle),
+            context.getString(R.string.control_shape_circle)
+        };
         int currentIndex = (data.shape == ControlData.SHAPE_CIRCLE) ? 1 : 0;
 
         new MaterialAlertDialogBuilder(context)
-            .setTitle("选择控件形状")
+            .setTitle(context.getString(R.string.control_select_shape))
             .setSingleChoiceItems(shapes, currentIndex, (dialog, which) -> {
                 data.shape = which;
                 
@@ -86,7 +90,7 @@ public class ControlShapeManager {
                 
                 dialog.dismiss();
             })
-            .setNegativeButton("取消", null)
+            .setNegativeButton(context.getString(R.string.cancel), null)
             .show();
     }
 

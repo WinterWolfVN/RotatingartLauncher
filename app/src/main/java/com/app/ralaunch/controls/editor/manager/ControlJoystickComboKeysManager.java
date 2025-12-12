@@ -5,6 +5,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
 import com.app.ralaunch.controls.KeyMapper;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -19,9 +20,8 @@ import java.util.List;
 public class ControlJoystickComboKeysManager {
     
     // 方向名称数组（对应 VirtualJoystick 的8个方向）
-    private static final String[] DIRECTION_NAMES = {
-        "上", "右上", "右", "右下", "下", "左下", "左", "左上"
-    };
+    // 注意：这些名称需要从 Context 获取，不能作为静态常量
+    // 使用 getDirectionName(Context, int) 方法获取本地化的方向名称
     
     // 所有可用的手柄按钮（用于组合键选择）
     // 使用 KeyMapper.getXboxButtons() 获取，确保与系统一致
@@ -29,21 +29,31 @@ public class ControlJoystickComboKeysManager {
     /**
      * 获取方向显示名称
      */
-    public static String getDirectionName(int direction) {
-        if (direction >= 0 && direction < DIRECTION_NAMES.length) {
-            return DIRECTION_NAMES[direction];
+    public static String getDirectionName(Context context, int direction) {
+        int resId;
+        switch (direction) {
+            case 0: resId = R.string.control_direction_up; break;
+            case 1: resId = R.string.control_direction_up_right; break;
+            case 2: resId = R.string.control_direction_right; break;
+            case 3: resId = R.string.control_direction_down_right; break;
+            case 4: resId = R.string.control_direction_down; break;
+            case 5: resId = R.string.control_direction_down_left; break;
+            case 6: resId = R.string.control_direction_left; break;
+            case 7: resId = R.string.control_direction_up_left; break;
+            default: return context.getString(R.string.control_unknown);
         }
-        return "未知";
+        return context.getString(resId);
     }
     
     /**
      * 获取组合键显示文本
+     * @param context 上下文（用于获取本地化字符串）
      * @param comboKeys 组合键数组
      * @return 显示文本，如 "R+B" 或 "无"
      */
-    public static String getComboKeysDisplayText(int[] comboKeys) {
+    public static String getComboKeysDisplayText(Context context, int[] comboKeys) {
         if (comboKeys == null || comboKeys.length == 0) {
-            return "无";
+            return context.getString(R.string.control_none);
         }
         
         List<String> buttonNames = new ArrayList<>();
@@ -55,7 +65,7 @@ public class ControlJoystickComboKeysManager {
         }
         
         if (buttonNames.isEmpty()) {
-            return "无";
+            return context.getString(R.string.control_none);
         }
         
         return String.join("+", buttonNames);
@@ -110,12 +120,12 @@ public class ControlJoystickComboKeysManager {
         String[] buttonNamesArray = buttonNames.toArray(new String[0]);
         
         new MaterialAlertDialogBuilder(context)
-            .setTitle("选择组合键（所有方向共用）")
+            .setTitle(context.getString(R.string.editor_select_combo_keys))
             .setMultiChoiceItems(buttonNamesArray, checkedItems, (dialog, which, isChecked) -> {
                 // 多选状态变化时更新数组
                 checkedItems[which] = isChecked;
             })
-            .setPositiveButton("确定", (dialog, which) -> {
+            .setPositiveButton(context.getString(R.string.ok), (dialog, which) -> {
                 // 收集选中的按钮
                 List<Integer> selectedButtons = new ArrayList<>();
                 for (int i = 0; i < checkedItems.length; i++) {
@@ -135,8 +145,8 @@ public class ControlJoystickComboKeysManager {
                     listener.onComboKeysSelected(data);
                 }
             })
-            .setNegativeButton("取消", null)
-            .setNeutralButton("清除", (dialog, which) -> {
+            .setNegativeButton(context.getString(R.string.cancel), null)
+            .setNeutralButton(context.getString(R.string.control_clear), (dialog, which) -> {
                 // 清除统一组合键
                 data.joystickComboKeys = new int[0];
                 
@@ -151,12 +161,12 @@ public class ControlJoystickComboKeysManager {
     /**
      * 更新统一组合键显示
      */
-    public static void updateComboKeysDisplay(ControlData data, TextView textView) {
+    public static void updateComboKeysDisplay(Context context, ControlData data, TextView textView) {
         if (data == null || textView == null) {
             return;
         }
         
-        String displayText = getComboKeysDisplayText(data.joystickComboKeys);
+        String displayText = getComboKeysDisplayText(context, data.joystickComboKeys);
         textView.setText(displayText);
     }
     

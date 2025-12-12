@@ -151,7 +151,7 @@ public class RuntimeSelectorDialog extends DialogFragment {
             String savedVersion = RuntimeManager.getSelectedVersion(requireContext());
             android.util.Log.d("RuntimeDialog", "Saved version: " + savedVersion);
             
-            Toast.makeText(getContext(), "已切换到 .NET " + selectedVersion, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.main_runtime_switched, selectedVersion), Toast.LENGTH_SHORT).show();
             
             if (listener != null) {
                 listener.onVersionSelected(selectedVersion);
@@ -179,14 +179,14 @@ public class RuntimeSelectorDialog extends DialogFragment {
             String savedVersion = RuntimeManager.getSelectedVersion(requireContext());
             android.util.Log.d("RuntimeDialog", "Saved version: " + savedVersion);
             
-            Toast.makeText(getContext(), "已切换到 .NET " + selectedVersion, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.main_runtime_switched, selectedVersion), Toast.LENGTH_SHORT).show();
             
             if (listener != null) {
                 listener.onVersionSelected(selectedVersion);
             }
         } else {
             android.util.Log.d("RuntimeDialog", "No version change needed");
-            Toast.makeText(getContext(), "当前已是 .NET " + selectedVersion, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.runtime_already_selected, selectedVersion), Toast.LENGTH_SHORT).show();
         }
         
         dismiss();
@@ -322,16 +322,17 @@ public class RuntimeSelectorDialog extends DialogFragment {
 
             private String getVersionInfo(String version) {
                 // 根据版本号返回描述
+                Context context = itemView.getContext();
                 if (version.startsWith("10.")) {
-                    return "最新版本 - 推荐使用";
+                    return context.getString(R.string.runtime_version_latest_desc);
                 } else if (version.startsWith("9.")) {
-                    return "稳定版本 - 推荐使用";
+                    return context.getString(R.string.runtime_version_stable_desc);
                 } else if (version.startsWith("8.")) {
-                    return "长期支持版本 (LTS)";
+                    return context.getString(R.string.runtime_version_lts_desc);
                 } else if (version.startsWith("7.")) {
-                    return "旧版本 - 兼容性好";
+                    return context.getString(R.string.runtime_version_old_desc);
                 } else {
-                    return "兼容版本";
+                    return context.getString(R.string.runtime_version_compat_desc);
                 }
             }
         }

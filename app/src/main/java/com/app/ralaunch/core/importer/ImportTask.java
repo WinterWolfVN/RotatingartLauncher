@@ -81,10 +81,10 @@ public class ImportTask {
 
         public ImportTask build() {
             if (gameFilePath == null || gameFilePath.isEmpty()) {
-                throw new IllegalArgumentException("游戏文件路径不能为空");
+                throw new IllegalArgumentException("Game file path cannot be empty");
             }
             if (outputDirectory == null || outputDirectory.isEmpty()) {
-                throw new IllegalArgumentException("输出目录不能为空");
+                throw new IllegalArgumentException("Output directory cannot be empty");
             }
             return new ImportTask(this);
         }

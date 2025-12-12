@@ -48,7 +48,7 @@
                     android:id="@+id/layout_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="布局名称"
+                    android:text="@string/layout_name_placeholder"
                     android:textColor="?attr/textPrimary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -58,7 +58,7 @@
                     android:id="@+id/default_chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="默认"
+                    android:text="@string/layout_default_tag"
                     android:textSize="10sp"
                     android:visibility="gone"
                     android:layout_marginStart="8dp"
@@ -73,7 +73,7 @@
                 android:id="@+id/layout_info"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="5个控件"
+                android:text="@string/layout_controls_count"
                 android:textColor="?attr/textSecondary"
                 android:textSize="13sp"
                 android:layout_marginTop="4dp" />
@@ -86,7 +86,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="更多选项"
+            android:contentDescription="@string/content_desc_more_options"
             android:src="@drawable/ic_more_vert"
             app:tint="?attr/textSecondary" />
 

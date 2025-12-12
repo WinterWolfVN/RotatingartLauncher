@@ -55,7 +55,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="渲染器"
+                            android:text="@string/renderer_title"
                             android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -63,7 +63,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="选择图形渲染后端"
+                            android:text="@string/renderer_desc"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -75,7 +75,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        android:text="自动选择"
+                        android:text="@string/renderer_auto"
                         android:textColor="?attr/textSecondary"
                         android:textSize="12sp" />
 

@@ -24,20 +24,10 @@ public class CoreCLRConfig {
      */
     public static void applyConfig(Context context) {
         SettingsManager settings = SettingsManager.getInstance(context);
-
-        AppLogger.info(TAG, "========================================");
-        AppLogger.info(TAG, "应用 CoreCLR 配置");
-        AppLogger.info(TAG, "========================================");
-
         // GC 配置
         applyGCConfig(settings);
-
         // JIT 配置
         applyJITConfig(settings);
-
-        AppLogger.info(TAG, "========================================");
-        AppLogger.info(TAG, "CoreCLR 配置已应用");
-        AppLogger.info(TAG, "========================================");
     }
 
     /**

@@ -3,6 +3,7 @@ package com.app.ralaunch.utils;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
+import com.app.ralaunch.R;
 import com.app.ralaunch.model.ControlLayout;
 import com.app.ralaunch.model.ControlElement;
 import com.app.ralaunch.controls.ControlConfig;
@@ -31,6 +32,11 @@ public class ControlLayoutManager {
     private static final String PREF_NAME = "control_layouts";
     private static final String KEY_LAYOUTS = "saved_layouts";
     private static final String KEY_CURRENT_LAYOUT = "current_layout";
+
+    // 使用固定的内部标识符，不随语言变化
+    private static final String INTERNAL_KEYBOARD_MODE = "keyboard_mode";
+    private static final String INTERNAL_GAMEPAD_MODE = "gamepad_mode";
+    private static final String INTERNAL_DEFAULT_LAYOUT = "default_layout";
 
     private SharedPreferences preferences;    private Gson gson;
     private List<ControlLayout> layouts;
@@ -62,7 +68,7 @@ public class ControlLayoutManager {
         // 检查并添加默认布局（如果不存在）
         ensureDefaultLayoutsExist();
 
-        currentLayoutName = preferences.getString(KEY_CURRENT_LAYOUT, "键盘模式");
+        currentLayoutName = preferences.getString(KEY_CURRENT_LAYOUT, INTERNAL_KEYBOARD_MODE);
     }
 
     /**
@@ -81,24 +87,39 @@ public class ControlLayoutManager {
         boolean hasKeyboardLayout = false;
         boolean hasGamepadLayout = false;
         boolean hasOldDefaultLayout = false;
+        String oldDefaultLayoutName = context.getString(R.string.control_layout_default_name);
 
-        // 检查是否已存在键盘模式和手柄模式布局
+        // 检查是否已存在键盘模式和手柄模式布局（使用内部标识符）
         for (ControlLayout layout : layouts) {
             String name = layout.getName();
-            if ("键盘模式".equals(name)) {
+            // 检查内部标识符
+            if (INTERNAL_KEYBOARD_MODE.equals(name)) {
                 hasKeyboardLayout = true;
-            } else if ("手柄模式".equals(name)) {
+            } else if (INTERNAL_GAMEPAD_MODE.equals(name)) {
                 hasGamepadLayout = true;
-            } else if ("默认布局".equals(name)) {
+            } else if (INTERNAL_DEFAULT_LAYOUT.equals(name)) {
+                hasOldDefaultLayout = true;
+            } 
+            // 兼容旧版本：检查旧的中文名称（如果存在）
+            else if (context.getString(R.string.control_layout_keyboard_mode).equals(name)) {
+                // 旧版本的中文名称，更新为内部标识符
+                layout.setName(INTERNAL_KEYBOARD_MODE);
+                hasKeyboardLayout = true;
+            } else if (context.getString(R.string.control_layout_gamepad_mode).equals(name)) {
+                // 旧版本的英文名称，更新为内部标识符
+                layout.setName(INTERNAL_GAMEPAD_MODE);
+                hasGamepadLayout = true;
+            } else if (oldDefaultLayoutName.equals(name)) {
+                // 旧的"默认布局"，更新为内部标识符
                 hasOldDefaultLayout = true;
             }
         }
 
-        // 如果有旧的"默认布局"，将其重命名为"键盘模式"
+        // 如果有旧的"默认布局"，将其更新为内部标识符
         if (hasOldDefaultLayout && !hasKeyboardLayout) {
             for (ControlLayout layout : layouts) {
-                if ("默认布局".equals(layout.getName())) {
-                    layout.setName("键盘模式");
+                if (INTERNAL_DEFAULT_LAYOUT.equals(layout.getName()) || oldDefaultLayoutName.equals(layout.getName())) {
+                    layout.setName(INTERNAL_KEYBOARD_MODE);
                     hasKeyboardLayout = true;
                     break;
                 }
@@ -117,8 +138,9 @@ public class ControlLayoutManager {
      */
     private void createDefaultLayouts(boolean skipKeyboard, boolean skipGamepad) {
         // 创建键盘模式默认布局（从 default_layout.json 加载）
+        // 使用固定的内部标识符作为存储名称
         if (!skipKeyboard) {
-            ControlLayout keyboardLayout = loadLayoutFromAssets("controls/default_layout.json", "键盘模式");
+            ControlLayout keyboardLayout = loadLayoutFromAssets("controls/default_layout.json", INTERNAL_KEYBOARD_MODE);
             if (keyboardLayout != null) {
                 layouts.add(keyboardLayout);
             } else {
@@ -127,9 +149,10 @@ public class ControlLayoutManager {
         }
 
         // 创建手柄模式默认布局（从 gamepad_layout_classic.json 加载，设置为默认）
+        // 使用固定的内部标识符作为存储名称
         if (!skipGamepad) {
             // 首先加载经典手柄布局作为默认手柄布局
-            ControlLayout classicLayout = loadLayoutFromAssets("controls/gamepad_layout.json", "手柄模式");
+            ControlLayout classicLayout = loadLayoutFromAssets("controls/gamepad_layout.json", INTERNAL_GAMEPAD_MODE);
             if (classicLayout != null) {
                 layouts.add(classicLayout);
             } else {
@@ -237,18 +260,18 @@ public class ControlLayoutManager {
         // 如果删除的是当前布局，需要切换到其他布局
         if (layoutName.equals(currentLayoutName)) {
             // 尝试切换到键盘模式，如果不存在则切换到第一个可用布局
-            boolean hasKeyboard = layouts.stream().anyMatch(l -> "键盘模式".equals(l.getName()));
+            boolean hasKeyboard = layouts.stream().anyMatch(l -> INTERNAL_KEYBOARD_MODE.equals(l.getName()));
             if (hasKeyboard) {
-                currentLayoutName = "键盘模式";
+                currentLayoutName = INTERNAL_KEYBOARD_MODE;
             } else if (!layouts.isEmpty()) {
                 currentLayoutName = layouts.get(0).getName();
             } else {
-                currentLayoutName = "键盘模式"; // 如果列表为空，设置为默认名称
+                currentLayoutName = INTERNAL_KEYBOARD_MODE; // 如果列表为空，设置为默认名称
             }
         }
         
-        // 检查是否是默认布局
-        boolean isDefaultLayout = "键盘模式".equals(layoutName) || "手柄模式".equals(layoutName);
+        // 检查是否是默认布局（使用内部标识符）
+        boolean isDefaultLayout = INTERNAL_KEYBOARD_MODE.equals(layoutName) || INTERNAL_GAMEPAD_MODE.equals(layoutName);
         
         // 删除布局
         boolean removed = layouts.removeIf(layout -> layout.getName().equals(layoutName));
@@ -277,5 +300,19 @@ public class ControlLayoutManager {
 
     public void saveLayout(ControlLayout layout) {
         updateLayout(layout);
+    }
+
+    /**
+     * 获取布局的显示名称（用于UI显示）
+     * 如果是默认布局，返回本地化的名称；否则返回原始名称
+     */
+    public String getLayoutDisplayName(String layoutName) {
+        if (INTERNAL_KEYBOARD_MODE.equals(layoutName)) {
+            return context.getString(R.string.control_layout_keyboard_mode);
+        } else if (INTERNAL_GAMEPAD_MODE.equals(layoutName)) {
+            return context.getString(R.string.control_layout_gamepad_mode);
+        } else {
+            return layoutName;
+        }
     }
 }

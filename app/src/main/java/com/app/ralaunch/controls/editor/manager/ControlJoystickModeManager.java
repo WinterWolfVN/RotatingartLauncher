@@ -5,6 +5,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -17,28 +18,28 @@ public class ControlJoystickModeManager {
     /**
      * 获取摇杆模式显示名称
      */
-    public static String getModeDisplayName(int joystickMode) {
+    public static String getModeDisplayName(Context context, int joystickMode) {
         switch (joystickMode) {
             case ControlData.JOYSTICK_MODE_KEYBOARD:
-                return "键盘模式";
+                return context.getString(R.string.editor_mode_keyboard);
             case ControlData.JOYSTICK_MODE_MOUSE:
-                return "鼠标模式";
+                return context.getString(R.string.editor_mode_mouse);
             case ControlData.JOYSTICK_MODE_SDL_CONTROLLER:
-                return "XBOX控制器模式";
+                return context.getString(R.string.editor_mode_xbox_controller);
             default:
-                return "键盘模式";
+                return context.getString(R.string.editor_mode_keyboard);
         }
     }
 
     /**
      * 更新模式显示
      */
-    public static void updateModeDisplay(ControlData data, TextView textView) {
+    public static void updateModeDisplay(Context context, ControlData data, TextView textView) {
         if (data == null || textView == null) {
             return;
         }
         
-        String modeName = getModeDisplayName(data.joystickMode);
+        String modeName = getModeDisplayName(context, data.joystickMode);
         textView.setText(modeName);
     }
 
@@ -52,7 +53,11 @@ public class ControlJoystickModeManager {
             return;
         }
 
-        String[] modes = {"键盘模式", "鼠标模式", "XBOX控制器模式"};
+        String[] modes = {
+            context.getString(R.string.editor_mode_keyboard),
+            context.getString(R.string.editor_mode_mouse),
+            context.getString(R.string.editor_mode_xbox_controller)
+        };
         
         // 确定当前选中的索引
         int currentIndex = data.joystickMode;
@@ -61,7 +66,7 @@ public class ControlJoystickModeManager {
         }
 
         new MaterialAlertDialogBuilder(context)
-            .setTitle("选择摇杆模式")
+            .setTitle(context.getString(R.string.editor_select_joystick_mode))
             .setSingleChoiceItems(modes, currentIndex, (dialog, which) -> {
                 int newMode = which;
                 data.joystickMode = newMode;
@@ -90,7 +95,7 @@ public class ControlJoystickModeManager {
                 
                 dialog.dismiss();
             })
-            .setNegativeButton("取消", null)
+            .setNegativeButton(context.getString(R.string.cancel), null)
             .show();
     }
 

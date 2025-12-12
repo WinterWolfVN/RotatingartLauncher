@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="输入布局名称"
+        android:text="@string/input_layout_name"
         android:textColor="?attr/textPrimary"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -18,7 +18,7 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="布局名称"
+        android:hint="@string/layout_name_hint"
         app:boxBackgroundMode="outline"
         app:boxCornerRadiusTopStart="12dp"
         app:boxCornerRadiusTopEnd="12dp"
@@ -30,10 +30,10 @@
             android:id="@+id/layout_name_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="新建布局"
+            android:text="@string/control_new_layout"
             android:textSize="14sp"
             android:textColor="?attr/textPrimary"
-            android:hint="例如：我的布局" />
+            android:hint="@string/layout_name_example" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

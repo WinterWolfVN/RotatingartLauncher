@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
+import com.app.ralaunch.R;
 import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.utils.ControlLayoutManager;
 import com.app.ralaunch.model.ControlElement;
@@ -260,7 +261,8 @@ public class ControlLayout extends FrameLayout {
         // 如果加载失败，尝试加载键盘模式默认布局（从 JSON）
         try {
             ControlLayoutManager manager = new ControlLayoutManager(getContext());
-            com.app.ralaunch.model.ControlLayout keyboardLayout = manager.getLayout("键盘模式");
+            // 使用固定的内部标识符
+            com.app.ralaunch.model.ControlLayout keyboardLayout = manager.getLayout("keyboard_mode");
             
             if (keyboardLayout != null && !keyboardLayout.getElements().isEmpty()) {
                 ControlConfig config = new ControlConfig();

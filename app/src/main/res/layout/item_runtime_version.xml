@@ -51,7 +51,7 @@
                 android:id="@+id/tvVersionInfo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="推荐版本"
+                android:text="@string/runtime_recommended_version"
                 android:textColor="?attr/textHint"
                 android:textSize="12sp"
                 android:layout_marginTop="4dp" />

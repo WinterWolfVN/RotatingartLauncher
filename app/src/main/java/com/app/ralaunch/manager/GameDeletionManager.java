@@ -32,23 +32,23 @@ public class GameDeletionManager {
         // 根据是否为快捷方式显示不同的提示
         String description;
         if (game.isShortcut()) {
-            description = "确定要从列表中移除 " + game.getGameName() + " 吗？\n\n注意：这只是移除快捷方式，不会删除实际文件";
+            description = context.getString(R.string.delete_shortcut_message, game.getGameName());
         } else {
-            description = "确定要删除 " + game.getGameName() + " 吗？\n\n注意：这将同时删除游戏文件";
+            description = context.getString(R.string.delete_game_message_full, game.getGameName());
         }
         
         options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
             "confirm", 
-            "删除", 
+            context.getString(R.string.delete_confirm), 
             description
         ));
         options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
             "cancel", 
-            "取消", 
+            context.getString(R.string.cancel), 
             ""
         ));
         
-        dialog.setTitle("删除游戏")
+        dialog.setTitle(context.getString(R.string.delete_game_title))
               .setIcon(R.drawable.ic_close)
               .setOptions(options)
               .setCurrentValue("cancel")

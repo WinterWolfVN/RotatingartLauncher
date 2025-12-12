@@ -29,7 +29,7 @@
                 android:id="@+id/componentName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="组件名称"
+                android:text="@string/component_name_placeholder"
                 android:textColor="?attr/textPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -40,7 +40,7 @@
                 android:id="@+id/componentDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="组件描述"
+                android:text="@string/component_description_placeholder"
                 android:textColor="?attr/textSecondary"
                 android:textSize="12sp" />
 
@@ -58,7 +58,7 @@
             app:trackThickness="2.5dp"
             app:indicatorColor="?attr/colorPrimary"
             app:trackColor="?attr/backgroundSecondary"
-            android:contentDescription="组件安装进度" />
+            android:contentDescription="@string/content_desc_component_progress" />
 
     </LinearLayout>
 

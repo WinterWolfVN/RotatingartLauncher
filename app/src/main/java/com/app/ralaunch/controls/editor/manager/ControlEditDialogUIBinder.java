@@ -37,6 +37,7 @@ public class ControlEditDialogUIBinder {
         boolean isAutoSize();
         void setAutoSize(boolean autoSize);
         void notifyUpdate();
+        Context getContext();
     }
     
     /**
@@ -55,7 +56,7 @@ public class ControlEditDialogUIBinder {
             itemControlType.setOnClickListener(v -> {
                 ControlTypeManager.showTypeSelectDialog(dialog.getContext(), refs.getCurrentData(), 
                     (data) -> {
-                        ControlTypeManager.updateTypeDisplay(data, tvControlType);
+                        ControlTypeManager.updateTypeDisplay(dialog.getContext(), data, tvControlType);
                         refs.notifyUpdate();
                     });
             });
@@ -65,7 +66,7 @@ public class ControlEditDialogUIBinder {
             itemControlShape.setOnClickListener(v -> {
                 ControlShapeManager.showShapeSelectDialog(dialog.getContext(), refs.getCurrentData(), 
                     (data) -> {
-                        ControlShapeManager.updateShapeDisplay(data, tvControlShape, itemControlShape);
+                        ControlShapeManager.updateShapeDisplay(dialog.getContext(), data, tvControlShape, itemControlShape);
                         refs.notifyUpdate();
                     });
             });
@@ -78,7 +79,7 @@ public class ControlEditDialogUIBinder {
             itemJoystickMode.setOnClickListener(v -> {
                 ControlJoystickModeManager.showModeSelectDialog(dialog.getContext(), refs.getCurrentData(), 
                     (data) -> {
-                        ControlJoystickModeManager.updateModeDisplay(data, tvJoystickMode);
+                        ControlJoystickModeManager.updateModeDisplay(dialog.getContext(), data, tvJoystickMode);
                         // 模式改变时，更新摇杆左右选择的可见性
                         ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(view, data);
                         refs.notifyUpdate();
@@ -96,7 +97,7 @@ public class ControlEditDialogUIBinder {
                     (updatedData) -> {
                         // 更新显示
                         if (tvJoystickComboKeys != null) {
-                            ControlJoystickComboKeysManager.updateComboKeysDisplay(updatedData, tvJoystickComboKeys);
+                            ControlJoystickComboKeysManager.updateComboKeysDisplay(dialog.getContext(), updatedData, tvJoystickComboKeys);
                         }
                         refs.notifyUpdate();
                     });
@@ -150,7 +151,10 @@ public class ControlEditDialogUIBinder {
                     refs.getCurrentData().xboxUseRightStick = isChecked;
                     // 更新显示文本
                     if (tvJoystickStickSelect != null) {
-                        tvJoystickStickSelect.setText(isChecked ? "右摇杆" : "左摇杆");
+                        Context context = refs.getContext();
+                        tvJoystickStickSelect.setText(isChecked ? 
+                            context.getString(R.string.editor_right_stick) : 
+                            context.getString(R.string.editor_left_stick));
                     }
                     // 更新攻击模式选项的可见性
                     ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(view, refs.getCurrentData());

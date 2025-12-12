@@ -27,7 +27,9 @@
         <!-- 窗口宽度设置 -->
         <item name="android:windowMinWidthMajor">90%</item>
         <item name="android:windowMinWidthMinor">90%</item>
-        <!-- 不使用硬编码颜色，直接继承父主题的颜色 -->
+        <!-- 确保使用纯白色背景 -->
+        <item name="colorSurface">@color/md_theme_light_surface</item>
+        <item name="colorPrimaryContainer">@color/md_theme_light_surface</item>
     </style>
 
     <!-- 对话框动画样式 -->

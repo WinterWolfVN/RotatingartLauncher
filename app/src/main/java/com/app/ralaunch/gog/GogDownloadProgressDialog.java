@@ -110,7 +110,7 @@ public class GogDownloadProgressDialog extends DialogFragment {
             String gameFileName = getArguments().getString(ARG_GAME_FILE_NAME);
             String modLoaderName = getArguments().getString(ARG_MODLOADER_NAME);
             
-            tvTitle.setText("下载游戏");
+            tvTitle.setText(getString(R.string.gog_download_game));
             if (tvGameLabel != null && gameFileName != null) {
                 tvGameLabel.setText(gameFileName);
             }

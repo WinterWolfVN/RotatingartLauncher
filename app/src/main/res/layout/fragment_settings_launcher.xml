@@ -55,7 +55,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="自动导入游戏"
+                            android:text="@string/settings_auto_import"
                             android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -63,7 +63,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="启动时自动扫描并导入游戏"
+                            android:text="@string/settings_auto_import_desc"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -75,7 +75,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        android:text="关闭"
+                        android:text="@string/settings_off"
                         android:textColor="?attr/colorPrimary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -116,7 +116,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="显示隐藏游戏"
+                            android:text="@string/settings_show_hidden"
                             android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -124,7 +124,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="在游戏列表中显示已隐藏的游戏"
+                            android:text="@string/settings_show_hidden_desc"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -136,7 +136,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        android:text="关闭"
+                        android:text="@string/settings_off"
                         android:textColor="?attr/colorPrimary"
                         android:textSize="14sp"
                         android:textStyle="bold" />

@@ -8,15 +8,15 @@ import android.view.ViewGroup;
 import android.widget.*;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 
 import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
+import com.app.ralaunch.utils.LocalizedAlertDialog;
 
 /**
  * 控件属性编辑对话框
  */
-public class EditControlDialog extends AlertDialog {
+public class EditControlDialog extends LocalizedAlertDialog {
     private ControlData mControlData;
     private OnSaveListener mSaveListener;
     
@@ -41,6 +41,8 @@ public class EditControlDialog extends AlertDialog {
     }
     
     private void initDialog() {
+        Context localizedContext = getLocalizedContext();
+        // 布局创建使用原始Context（包含主题），字符串资源使用localizedContext
         View view = LayoutInflater.from(getContext()).inflate(
             android.R.layout.simple_list_item_1, null); // 临时使用简单布局
         
@@ -50,16 +52,19 @@ public class EditControlDialog extends AlertDialog {
         layout.setPadding(40, 40, 40, 40);
         
         // 名称
-        layout.addView(createLabel("控件名称:"));
+        layout.addView(createLabel(localizedContext.getString(R.string.editor_control_name_label)));
         mNameEdit = createEditText(mControlData.name);
         layout.addView(mNameEdit);
         
         // 类型
-        layout.addView(createLabel("类型:"));
+        layout.addView(createLabel(localizedContext.getString(R.string.editor_control_type_label)));
         mTypeSpinner = new Spinner(getContext());
-        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(getContext(),
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(localizedContext,
             android.R.layout.simple_spinner_item,
-            new String[]{"按钮", "摇杆"});
+            new String[]{
+                localizedContext.getString(R.string.editor_control_type_button),
+                localizedContext.getString(R.string.editor_control_type_joystick)
+            });
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mTypeSpinner.setAdapter(typeAdapter);
         mTypeSpinner.setSelection(mControlData.type);
@@ -68,11 +73,11 @@ public class EditControlDialog extends AlertDialog {
         // 位置
         LinearLayout posLayout = new LinearLayout(getContext());
         posLayout.setOrientation(LinearLayout.HORIZONTAL);
-        posLayout.addView(createLabel("X:"));
+        posLayout.addView(createLabel(localizedContext.getString(R.string.editor_position_x_label)));
         mXEdit = createNumberEdit(String.valueOf((int)mControlData.x));
         mXEdit.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         posLayout.addView(mXEdit);
-        posLayout.addView(createLabel(" Y:"));
+        posLayout.addView(createLabel(" " + localizedContext.getString(R.string.editor_position_y_label)));
         mYEdit = createNumberEdit(String.valueOf((int)mControlData.y));
         mYEdit.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         posLayout.addView(mYEdit);
@@ -81,23 +86,23 @@ public class EditControlDialog extends AlertDialog {
         // 大小
         LinearLayout sizeLayout = new LinearLayout(getContext());
         sizeLayout.setOrientation(LinearLayout.HORIZONTAL);
-        sizeLayout.addView(createLabel("宽:"));
+        sizeLayout.addView(createLabel(localizedContext.getString(R.string.editor_size_width_label)));
         mWidthEdit = createNumberEdit(String.valueOf((int)mControlData.width));
         mWidthEdit.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         sizeLayout.addView(mWidthEdit);
-        sizeLayout.addView(createLabel(" 高:"));
+        sizeLayout.addView(createLabel(" " + localizedContext.getString(R.string.editor_size_height_label)));
         mHeightEdit = createNumberEdit(String.valueOf((int)mControlData.height));
         mHeightEdit.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         sizeLayout.addView(mHeightEdit);
         layout.addView(sizeLayout);
         
         // 按键码
-        layout.addView(createLabel("按键码 (SDL):"));
+        layout.addView(createLabel(localizedContext.getString(R.string.editor_keycode_sdl)));
         mKeycodeEdit = createNumberEdit(String.valueOf(mControlData.keycode));
         layout.addView(mKeycodeEdit);
         
         // 透明度
-        layout.addView(createLabel("透明度: " + (int)(mControlData.opacity * 100) + "%"));
+        layout.addView(createLabel(localizedContext.getString(R.string.editor_opacity_label, (int)(mControlData.opacity * 100))));
         mOpacitySeek = new SeekBar(getContext());
         mOpacitySeek.setMax(100);
         mOpacitySeek.setProgress((int)(mControlData.opacity * 100));
@@ -105,13 +110,13 @@ public class EditControlDialog extends AlertDialog {
         
         // 切换按钮
         mToggleCheck = new CheckBox(getContext());
-        mToggleCheck.setText("切换按钮（按下保持）");
+        mToggleCheck.setText(localizedContext.getString(R.string.editor_toggle_button_press_hold));
         mToggleCheck.setChecked(mControlData.isToggle);
         layout.addView(mToggleCheck);
         
         // 摇杆按键（仅摇杆）
         if (mControlData.type == ControlData.TYPE_JOYSTICK && mControlData.joystickKeys != null) {
-            layout.addView(createLabel("摇杆按键 [上,右,下,左]:"));
+            layout.addView(createLabel(localizedContext.getString(R.string.editor_joystick_keys)));
             String keys = String.format("%d,%d,%d,%d", 
                 mControlData.joystickKeys[0],
                 mControlData.joystickKeys[1],
@@ -122,12 +127,12 @@ public class EditControlDialog extends AlertDialog {
         }
         
         setView(layout);
-        setTitle("编辑控件属性");
+        setTitle(localizedContext.getString(R.string.editor_edit_control_properties));
         
-        setButton(BUTTON_POSITIVE, "保存", (dialog, which) -> {
+        setButton(BUTTON_POSITIVE, localizedContext.getString(R.string.editor_save_button_label), (dialog, which) -> {
             saveChanges();
         });
-        setButton(BUTTON_NEGATIVE, "取消", (dialog, which) -> {
+        setButton(BUTTON_NEGATIVE, localizedContext.getString(R.string.cancel), (dialog, which) -> {
             dismiss();
         });
     }
@@ -181,7 +186,7 @@ public class EditControlDialog extends AlertDialog {
                 mSaveListener.onSave(mControlData);
             }
         } catch (Exception e) {
-            Toast.makeText(getContext(), "保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getLocalizedContext(), getLocalizedContext().getString(R.string.editor_save_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
 }

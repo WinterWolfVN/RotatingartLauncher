@@ -40,7 +40,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="X位置"
+                    android:text="@string/editor_position_x"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -48,7 +48,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="设置控件的X位置"
+                    android:text="@string/editor_position_x_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -114,7 +114,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Y位置"
+                    android:text="@string/editor_position_y"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -122,7 +122,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="设置控件的Y位置"
+                    android:text="@string/editor_position_y_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -188,7 +188,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="宽度"
+                    android:text="@string/editor_width"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -196,7 +196,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="设置控件的宽度"
+                    android:text="@string/editor_width_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -269,7 +269,7 @@ style="@style/Widget.App.CardView.Standard">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="高度"
+                android:text="@string/editor_height"
                 android:textColor="?attr/textPrimary"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -277,7 +277,7 @@ style="@style/Widget.App.CardView.Standard">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="设置控件的高度"
+                android:text="@string/editor_height_desc"
                 android:textColor="?attr/textSecondary"
                 android:textSize="12sp"
                 android:layout_marginTop="2dp" />
@@ -348,7 +348,7 @@ style="@style/Widget.App.CardView.Standard">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="自适应尺寸"
+            android:text="@string/editor_auto_size"
             android:textColor="?attr/textPrimary"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -356,7 +356,7 @@ style="@style/Widget.App.CardView.Standard">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="锁定宽高比，调整宽度时高度自动匹配"
+            android:text="@string/editor_auto_size_desc"
             android:textColor="?attr/textSecondary"
             android:textSize="12sp"
             android:layout_marginTop="2dp" />

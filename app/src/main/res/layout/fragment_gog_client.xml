@@ -65,7 +65,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="登录 GOG"
+                            android:text="@string/gog_login_title"
                             android:textSize="24sp"
                             android:textStyle="bold"
                             android:textColor="?attr/textPrimary"
@@ -74,7 +74,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="访问您的 DRM-Free 游戏库"
+                            android:text="@string/gog_login_subtitle"
                             android:textSize="14sp"
                             android:textColor="?attr/textSecondary"
                             android:layout_marginTop="4dp" />
@@ -89,7 +89,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
-                    android:hint="邮箱地址"
+                    android:hint="@string/gog_email_hint"
                     app:startIconDrawable="@drawable/ic_email"
                     app:boxCornerRadiusTopStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
@@ -112,7 +112,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="24dp"
-                    android:hint="密码"
+                    android:hint="@string/gog_password_hint"
                     app:startIconDrawable="@drawable/ic_lock"
                     app:boxCornerRadiusTopStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"
@@ -142,7 +142,7 @@
                         android:id="@+id/btnVisitGog"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="访问官网"
+                        android:text="@string/gog_visit_website"
                         android:layout_marginEnd="8dp"
                         style="@style/Widget.Material3.Button.TextButton" />
 
@@ -151,7 +151,7 @@
                         android:id="@+id/btnLogin"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="登录"
+                        android:text="@string/gog_login_button"
                         app:icon="@drawable/ic_login"
                         app:iconGravity="textStart"
                         app:iconPadding="8dp"
@@ -219,7 +219,7 @@
                             android:id="@+id/userName"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="GOG 用户"
+                            android:text="@string/gog_user"
                             android:textSize="18sp"
                             android:textStyle="bold"
                             android:textColor="?attr/textPrimary"
@@ -231,7 +231,7 @@
                             android:id="@+id/userEmail"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="已登录"
+                            android:text="@string/gog_logged_in"
                             android:textSize="13sp"
                             android:textColor="?attr/textSecondary"
                             android:layout_marginTop="4dp"
@@ -265,7 +265,7 @@
                             android:id="@+id/chipGameCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="2 款游戏"
+                            android:text="@string/gog_games_count_placeholder"
                             android:textSize="24sp"
                             android:textStyle="bold"
                             android:textColor="?attr/colorPrimary"
@@ -274,7 +274,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="游戏库"
+                            android:text="@string/gog_library"
                             android:textSize="12sp"
                             android:textColor="?attr/textSecondary"
                             android:layout_marginTop="4dp" />
@@ -288,7 +288,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
-                    android:hint="搜索游戏"
+                    android:hint="@string/gog_search_hint"
                     app:startIconDrawable="@drawable/ic_search"
                     app:endIconMode="clear_text"
                     app:boxCornerRadiusTopStart="12dp"
@@ -311,7 +311,7 @@
                     android:id="@+id/btnLogout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="登出"
+                    android:text="@string/gog_logout_button"
                     app:icon="@drawable/ic_logout"
                     app:iconGravity="textStart"
                     app:iconPadding="8dp"
@@ -367,7 +367,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="没有找到游戏"
+                        android:text="@string/gog_no_games_found"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="?attr/textSecondary"
@@ -377,7 +377,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="您的 GOG 库中暂无游戏"
+                        android:text="@string/gog_no_games_message"
                         android:textSize="14sp"
                         android:textColor="?attr/textSecondary" />
 
@@ -432,7 +432,7 @@
                     android:id="@+id/loadingText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="加载中..."
+                    android:text="@string/gog_loading"
                     android:textSize="14sp"
                     android:textColor="?attr/textPrimary"
                     android:layout_marginTop="16dp" />

@@ -30,17 +30,18 @@ public class ControlEditorOperations {
     /**
      * 添加按钮到配置
      * 
+     * @param context 上下文
      * @param config 控件配置
      * @param screenWidth 屏幕宽度
      * @param screenHeight 屏幕高度
      * @return 新创建的按钮数据
      */
-    public static ControlData addButton(ControlConfig config, int screenWidth, int screenHeight) {
+    public static ControlData addButton(Context context, ControlConfig config, int screenWidth, int screenHeight) {
         if (config == null || config.controls == null) {
             return null;
         }
         
-        ControlData button = new ControlData("按钮", ControlData.TYPE_BUTTON);
+        ControlData button = new ControlData(context.getString(R.string.editor_default_button_name), ControlData.TYPE_BUTTON);
         button.x = screenWidth / 2f;
         button.y = screenHeight / 2f;
         button.width = 100;
@@ -77,17 +78,19 @@ public class ControlEditorOperations {
     /**
      * 添加文本控件到配置
      * 
+     * @param context 上下文
      * @param config 控件配置
      * @param screenWidth 屏幕宽度
      * @param screenHeight 屏幕高度
      * @return 新创建的文本控件数据
      */
-    public static ControlData addText(ControlConfig config, int screenWidth, int screenHeight) {
+    public static ControlData addText(Context context, ControlConfig config, int screenWidth, int screenHeight) {
         if (config == null || config.controls == null) {
             return null;
         }
         
-        ControlData text = new ControlData("文本", ControlData.TYPE_TEXT);
+        String defaultTextName = context.getString(R.string.editor_default_text_name);
+        ControlData text = new ControlData(defaultTextName, ControlData.TYPE_TEXT);
         text.x = screenWidth / 2f;
         text.y = screenHeight / 2f;
         text.width = 150;
@@ -96,7 +99,7 @@ public class ControlEditorOperations {
         text.bgColor = 0xFF808080; // 灰色背景（更清晰可见）
         text.visible = true;
         text.shape = ControlData.SHAPE_RECTANGLE; // 默认方形
-        text.displayText = "文本"; // 默认文本
+        text.displayText = defaultTextName; // 默认文本
         text.keycode = ControlData.SDL_SCANCODE_UNKNOWN; // 文本控件不支持按键映射
         
         config.controls.add(text);
@@ -123,19 +126,19 @@ public class ControlEditorOperations {
         }
         
         if (joystickCount == 0) {
-            Toast.makeText(context, "当前布局中没有摇杆", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, context.getString(R.string.editor_no_joystick), Toast.LENGTH_SHORT).show();
             return;
         }
         
         final String[] modes = {
-            "键盘按键模式\n使用 WASD 等按键控制移动",
-            "鼠标移动模式\n控制鼠标指针移动（用于瞄准）",
-            "SDL 控制器模式\n模拟真实游戏手柄摇杆"
+            context.getString(R.string.editor_joystick_mode_keyboard),
+            context.getString(R.string.editor_joystick_mode_mouse),
+            context.getString(R.string.editor_joystick_mode_sdl)
         };
         
         new AlertDialog.Builder(context)
-            .setTitle("摇杆模式设置")
-            .setMessage("将为所有 " + joystickCount + " 个摇杆设置统一模式")
+            .setTitle(context.getString(R.string.editor_joystick_mode_settings))
+            .setMessage(context.getString(R.string.editor_joystick_mode_message, joystickCount))
             .setItems(modes, (dialog, which) -> {
                 int newMode;
                 String modeName;
@@ -143,22 +146,22 @@ public class ControlEditorOperations {
                 switch (which) {
                     case 0:
                         newMode = ControlData.JOYSTICK_MODE_KEYBOARD;
-                        modeName = "键盘按键模式";
+                        modeName = context.getString(R.string.editor_mode_keyboard_detailed);
                         break;
                     case 1:
                         newMode = ControlData.JOYSTICK_MODE_MOUSE;
-                        modeName = "鼠标移动模式";
+                        modeName = context.getString(R.string.editor_mode_mouse_detailed);
                         break;
                     case 2:
                         newMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
-                        modeName = "XBOX控制器模式";
+                        modeName = context.getString(R.string.editor_mode_xbox_detailed);
                         break;
                     default:
                         return;
                 }
                 
                 // 批量更新所有摇杆的模式
-                int updatedCount = updateJoystickModes(config, newMode);
+                int updatedCount = updateJoystickModes(context, config, newMode);
                 
                 // 通知布局已更新
                 if (onLayoutUpdated != null) {
@@ -166,22 +169,25 @@ public class ControlEditorOperations {
                 }
                 
                 Toast.makeText(context,
-                    "已将 " + updatedCount + " 个摇杆设置为" + modeName,
+                    context.getString(R.string.editor_joysticks_set, updatedCount, modeName),
                     Toast.LENGTH_SHORT).show();
             })
-            .setNegativeButton("取消", null)
+            .setNegativeButton(context.getString(R.string.cancel), null)
             .show();
     }
     
     /**
      * 批量更新摇杆模式
      * 
+     * @param context 上下文
      * @param config 控件配置
      * @param newMode 新模式
      * @return 更新的摇杆数量
      */
-    private static int updateJoystickModes(ControlConfig config, int newMode) {
+    private static int updateJoystickModes(Context context, ControlConfig config, int newMode) {
         int updatedCount = 0;
+        String rightStick = context.getString(R.string.editor_stick_right);
+        String leftStick = context.getString(R.string.editor_stick_left);
         
         for (ControlData control : config.controls) {
             if (control.type == ControlData.TYPE_JOYSTICK) {
@@ -204,9 +210,9 @@ public class ControlEditorOperations {
                 } else {
                     // SDL控制器模式：清除按键映射，设置默认为左摇杆
                     control.joystickKeys = null;
-                    if (control.name.contains("右")) {
+                    if (control.name != null && control.name.contains(rightStick)) {
                         control.xboxUseRightStick = true;
-                    } else if (control.name.contains("左")) {
+                    } else if (control.name != null && control.name.contains(leftStick)) {
                         control.xboxUseRightStick = false;
                     }
                     // do nothing for others
@@ -228,7 +234,7 @@ public class ControlEditorOperations {
      */
     public static boolean saveLayout(Context context, ControlConfig config, String layoutName) {
         if (config == null) {
-            Toast.makeText(context, "没有布局可保存", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, context.getString(R.string.editor_no_layout_to_save), Toast.LENGTH_SHORT).show();
             return false;
         }
         
@@ -255,11 +261,11 @@ public class ControlEditorOperations {
             // 保存到管理器
             manager.saveLayout(layout);
             
-            Toast.makeText(context, "布局已保存", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, context.getString(R.string.editor_layout_saved), Toast.LENGTH_SHORT).show();
             return true;
         } catch (Exception e) {
             AppLogger.error(TAG, "Failed to save layout", e);
-            Toast.makeText(context, "保存失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, context.getString(R.string.editor_save_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
             return false;
         }
     }
@@ -326,12 +332,12 @@ public class ControlEditorOperations {
     public static void resetToDefaultLayout(Context context, com.app.ralaunch.controls.ControlLayout controlLayout, 
                                            Runnable onResetComplete) {
         new AlertDialog.Builder(context)
-            .setTitle("重置为默认布局")
-            .setMessage("确定要重置为默认布局吗？")
+            .setTitle(context.getString(R.string.editor_reset_default))
+            .setMessage(context.getString(R.string.editor_reset_confirm))
             .setPositiveButton(R.string.game_menu_yes, (dialog, which) -> {
                 if (controlLayout != null) {
                     controlLayout.loadDefaultLayout();
-                    Toast.makeText(context, "已重置为默认布局", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, context.getString(R.string.editor_reset_complete), Toast.LENGTH_SHORT).show();
                 }
                 if (onResetComplete != null) {
                     onResetComplete.run();

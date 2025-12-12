@@ -1,5 +1,6 @@
 package com.app.ralaunch.controls.editor.manager;
 
+import android.content.Context;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -27,6 +28,7 @@ public class ControlEditDialogDataFiller {
         int getScreenWidth();
         int getScreenHeight();
         boolean isAutoSize();
+        Context getContext();
     }
     
     /**
@@ -39,14 +41,14 @@ public class ControlEditDialogDataFiller {
         
         if (refs.getCurrentData() == null) return;
         
-        ControlTypeManager.updateTypeDisplay(refs.getCurrentData(), tvControlType);
-        ControlShapeManager.updateShapeDisplay(refs.getCurrentData(), tvControlShape, 
+        ControlTypeManager.updateTypeDisplay(refs.getContext(), refs.getCurrentData(), tvControlType);
+        ControlShapeManager.updateShapeDisplay(refs.getContext(), refs.getCurrentData(), tvControlShape, 
             view.findViewById(R.id.item_control_shape));
         
         // 摇杆模式显示（仅摇杆类型显示）
         TextView tvJoystickMode = view.findViewById(R.id.tv_joystick_mode);
         if (tvJoystickMode != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
-            ControlJoystickModeManager.updateModeDisplay(refs.getCurrentData(), tvJoystickMode);
+            ControlJoystickModeManager.updateModeDisplay(refs.getContext(), refs.getCurrentData(), tvJoystickMode);
         }
         
         if (etName != null && refs.getCurrentData().name != null) {
@@ -69,7 +71,11 @@ public class ControlEditDialogDataFiller {
             switchJoystickStickSelect.setChecked(refs.getCurrentData().xboxUseRightStick);
             // 更新显示文本
             if (tvJoystickStickSelect != null) {
-                tvJoystickStickSelect.setText(refs.getCurrentData().xboxUseRightStick ? "右摇杆" : "左摇杆");
+                Context context = refs.getContext();
+                String text = refs.getCurrentData().xboxUseRightStick ? 
+                    context.getString(R.string.editor_right_stick) : 
+                    context.getString(R.string.editor_left_stick);
+                tvJoystickStickSelect.setText(text);
             }
         }
         
@@ -89,7 +95,7 @@ public class ControlEditDialogDataFiller {
         TextView tvJoystickComboKeys = view.findViewById(R.id.tv_joystick_combo_keys);
         if (tvJoystickComboKeys != null && refs.getCurrentData().type == ControlData.TYPE_JOYSTICK) {
             // 显示统一组合键
-            ControlJoystickComboKeysManager.updateComboKeysDisplay(refs.getCurrentData(), tvJoystickComboKeys);
+            ControlJoystickComboKeysManager.updateComboKeysDisplay(refs.getContext(), refs.getCurrentData(), tvJoystickComboKeys);
         }
     }
     
@@ -151,19 +157,20 @@ public class ControlEditDialogDataFiller {
         // 根据控件类型更新透明度标题和描述
         TextView tvOpacityTitle = view.findViewById(R.id.tv_opacity_title);
         TextView tvOpacityDesc = view.findViewById(R.id.tv_opacity_desc);
+        Context context = refs.getContext();
         if (data.type == ControlData.TYPE_JOYSTICK) {
             if (tvOpacityTitle != null) {
-                tvOpacityTitle.setText("摇杆背景透明度");
+                tvOpacityTitle.setText(context.getString(R.string.editor_joystick_bg_opacity));
             }
             if (tvOpacityDesc != null) {
-                tvOpacityDesc.setText("设置摇杆背景的透明度");
+                tvOpacityDesc.setText(context.getString(R.string.editor_joystick_bg_opacity_desc));
             }
         } else {
             if (tvOpacityTitle != null) {
-                tvOpacityTitle.setText("透明度");
+                tvOpacityTitle.setText(context.getString(R.string.editor_opacity));
             }
             if (tvOpacityDesc != null) {
-                tvOpacityDesc.setText("设置控件的透明度");
+                tvOpacityDesc.setText(context.getString(R.string.editor_opacity_desc));
             }
         }
         

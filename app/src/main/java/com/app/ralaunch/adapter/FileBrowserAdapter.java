@@ -1,5 +1,6 @@
 package com.app.ralaunch.adapter;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -86,20 +87,20 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
         // 设置文件类型/大小信息
         if (fileItem.isDirectory()) {
             if (fileItem.isParentDirectory()) {
-                holder.fileInfo.setText("返回上级");
+                holder.fileInfo.setText(holder.itemView.getContext().getString(R.string.filebrowser_parent_directory));
             } else {
-                holder.fileInfo.setText("文件夹");
+                holder.fileInfo.setText(holder.itemView.getContext().getString(R.string.filebrowser_folder));
             }
             holder.fileSize.setVisibility(View.GONE);
         } else {
             // 显示文件大小
             File file = new File(fileItem.getPath());
             if (file.exists()) {
-                holder.fileInfo.setText(getFileExtension(fileItem.getName()));
+                holder.fileInfo.setText(getFileExtension(holder.itemView.getContext(), fileItem.getName()));
                 holder.fileSize.setText(formatFileSize(file.length()));
                 holder.fileSize.setVisibility(View.VISIBLE);
             } else {
-                holder.fileInfo.setText("文件");
+                holder.fileInfo.setText(holder.itemView.getContext().getString(R.string.filebrowser_file));
                 holder.fileSize.setVisibility(View.GONE);
             }
         }
@@ -143,12 +144,13 @@ public class FileBrowserAdapter extends RecyclerView.Adapter<FileBrowserAdapter.
     /**
      * 获取文件扩展名
      */
-    private String getFileExtension(String fileName) {
+    private String getFileExtension(Context context, String fileName) {
         int lastDot = fileName.lastIndexOf('.');
         if (lastDot > 0 && lastDot < fileName.length() - 1) {
             return fileName.substring(lastDot + 1).toUpperCase();
         }
-        return "文件";
+        // 使用字符串资源
+        return context.getString(R.string.filebrowser_file_type);
     }
     
     /**

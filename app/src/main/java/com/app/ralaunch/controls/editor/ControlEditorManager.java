@@ -258,6 +258,7 @@ public class ControlEditorManager {
     private void initControlEditDialog() {
         if (mControlEditDialog != null) return;
         
+        // Context应该已经应用了语言设置（从Activity传递过来的）
         mControlEditDialog = new ControlEditDialogMD(mContext, mScreenWidth, mScreenHeight);
         
         // 设置实时更新监听器
@@ -347,7 +348,7 @@ public class ControlEditorManager {
             @Override
             public void onSaveLayout() {
                 saveLayout();
-                Toast.makeText(mContext, "布局已保存", Toast.LENGTH_SHORT).show();
+                Toast.makeText(mContext, mContext.getString(R.string.editor_layout_saved), Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -398,13 +399,13 @@ public class ControlEditorManager {
             mControlLayout.loadLayout(config);
         }
         
-        ControlData button = ControlEditorOperations.addButton(config, mScreenWidth, mScreenHeight);
+        ControlData button = ControlEditorOperations.addButton(mContext, config, mScreenWidth, mScreenHeight);
         
         if (button != null) {
             mControlLayout.loadLayout(config);
             disableClippingRecursive(mControlLayout);
             mHasUnsavedChanges = true;
-            Toast.makeText(mContext, "已添加按钮", Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext, mContext.getString(R.string.editor_button_added), Toast.LENGTH_SHORT).show();
             
             if (mLayoutChangedListener != null) {
                 mLayoutChangedListener.onLayoutChanged();
@@ -431,7 +432,7 @@ public class ControlEditorManager {
             mControlLayout.loadLayout(config);
             disableClippingRecursive(mControlLayout);
             mHasUnsavedChanges = true;
-            Toast.makeText(mContext, "已添加摇杆", Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext, mContext.getString(R.string.editor_joystick_added), Toast.LENGTH_SHORT).show();
             
             if (mLayoutChangedListener != null) {
                 mLayoutChangedListener.onLayoutChanged();
@@ -452,13 +453,13 @@ public class ControlEditorManager {
             mControlLayout.loadLayout(config);
         }
         
-        ControlData text = ControlEditorOperations.addText(config, mScreenWidth, mScreenHeight);
+        ControlData text = ControlEditorOperations.addText(mContext, config, mScreenWidth, mScreenHeight);
         
         if (text != null) {
             mControlLayout.loadLayout(config);
             disableClippingRecursive(mControlLayout);
             mHasUnsavedChanges = true;
-            Toast.makeText(mContext, "已添加文本", Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext, mContext.getString(R.string.editor_text_added), Toast.LENGTH_SHORT).show();
             
             if (mLayoutChangedListener != null) {
                 mLayoutChangedListener.onLayoutChanged();

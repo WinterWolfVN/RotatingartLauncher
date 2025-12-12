@@ -12,9 +12,12 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
+
 import com.app.ralaunch.R;
 import com.app.ralaunch.controls.*;
 import com.app.ralaunch.controls.ControlDataConverter;
+import com.app.ralaunch.utils.LocaleManager;
 
 import java.io.File;
 import java.io.InputStream;
@@ -44,6 +47,12 @@ public class ControlEditorActivity extends AppCompatActivity {
     // 布局管理
     private com.app.ralaunch.utils.ControlLayoutManager mLayoutManager;
     private String mCurrentLayoutName;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        // 应用语言设置
+        super.attachBaseContext(LocaleManager.applyLanguage(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -230,7 +239,7 @@ public class ControlEditorActivity extends AppCompatActivity {
     
     private void loadDefaultLayout() {
         mCurrentConfig = new ControlConfig();
-        mCurrentConfig.name = "默认布局";
+        mCurrentConfig.name = getString(R.string.control_layout_default_name);
         mCurrentConfig.controls = new java.util.ArrayList<>();
         
 //        ControlData joystick = ControlData.createDefaultJoystick();
@@ -314,16 +323,16 @@ public class ControlEditorActivity extends AppCompatActivity {
 
         // 显示退出确认对话框
         new AlertDialog.Builder(this)
-            .setTitle("退出编辑器")
-            .setMessage("是否保存当前布局？")
-            .setPositiveButton("保存并退出", (dialog, which) -> {
+            .setTitle(getString(R.string.editor_exit_title))
+            .setMessage(getString(R.string.editor_exit_save_confirm))
+            .setPositiveButton(getString(R.string.editor_save_and_exit), (dialog, which) -> {
                 if (mEditorManager != null) {
                     mEditorManager.saveLayout(mCurrentLayoutName);
                 }
                 finish();
             })
-            .setNegativeButton("直接退出", (dialog, which) -> finish())
-            .setNeutralButton("取消", null)
+            .setNegativeButton(getString(R.string.editor_exit), (dialog, which) -> finish())
+            .setNeutralButton(getString(R.string.cancel), null)
             .show();
     }
 }

@@ -68,8 +68,10 @@ public class ControlLayoutAdapter extends RecyclerView.Adapter<ControlLayoutAdap
         ControlLayout layout = layouts.get(position);
         boolean isDefault = layout.getName().equals(defaultLayoutId);
 
-        holder.layoutName.setText(layout.getName());
-        holder.layoutInfo.setText(layout.getElements().size() + " 个控件");
+        // 获取显示名称（如果是默认布局，显示本地化名称）
+        String displayName = getDisplayName(layout.getName(), holder.itemView.getContext());
+        holder.layoutName.setText(displayName);
+        holder.layoutInfo.setText(holder.itemView.getContext().getString(R.string.control_count, layout.getElements().size()));
 
         // 显示或隐藏默认标识
         holder.defaultChip.setVisibility(isDefault ? View.VISIBLE : View.GONE);
@@ -134,6 +136,20 @@ public class ControlLayoutAdapter extends RecyclerView.Adapter<ControlLayoutAdap
     public void updateLayouts(List<ControlLayout> newLayouts) {
         this.layouts = newLayouts;
         notifyDataSetChanged();
+    }
+
+    /**
+     * 获取布局的显示名称（用于UI显示）
+     * 如果是默认布局，返回本地化的名称；否则返回原始名称
+     */
+    private String getDisplayName(String layoutName, android.content.Context context) {
+        if ("keyboard_mode".equals(layoutName)) {
+            return context.getString(R.string.control_layout_keyboard_mode);
+        } else if ("gamepad_mode".equals(layoutName)) {
+            return context.getString(R.string.control_layout_gamepad_mode);
+        } else {
+            return layoutName;
+        }
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

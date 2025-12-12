@@ -183,9 +183,9 @@ public class LocalImportFragment extends BaseFragment {
         if (detailText != null) {
             String detail;
             if (progress == 100) {
-                detail = "完成";
+                detail = getString(R.string.init_complete);
             } else if (progress == 0) {
-                detail = "开始";
+                detail = getString(R.string.init_start_extracting);
             } else {
                 detail = String.format("%.1f%%", (float) progress);
             }
@@ -210,7 +210,7 @@ public class LocalImportFragment extends BaseFragment {
             // 确保UI更新在主线程执行
             runOnUiThread(() -> {
                 if (isFragmentValid()) {
-                    gameFileText.setText("已选择: " + file.getName());
+                    gameFileText.setText(getString(R.string.import_file_selected, file.getName()));
                     updateImportButtonState();
                 }
             });
@@ -224,12 +224,12 @@ public class LocalImportFragment extends BaseFragment {
                             gameName = gdzf.id;
                             gameVersion = gdzf.version;
                             gameIconPath = null; // TODO: 从 gdzf 提取图标路径
-                            showToast("检测到游戏: " + gameName + " " + gameVersion);
+                            showToast(getString(R.string.import_game_detected, gameName, gameVersion));
                             AppLogger.debug(TAG, "Game data zip file: " + gdzf);
                             AppLogger.debug(TAG, "Icon path: " + gameIconPath);
                         } else {
-                            gameName = "未知游戏";
-                            showToast("无法读取游戏信息，使用默认名称");
+                            gameName = getString(R.string.import_unknown_game);
+                            showToast(getString(R.string.import_cannot_read_info));
                         }
                     }
                 });
@@ -255,7 +255,7 @@ public class LocalImportFragment extends BaseFragment {
             // 确保UI更新在主线程执行
             runOnUiThread(() -> {
                 if (isFragmentValid()) {
-                    modLoaderFileText.setText("已选择: " + fileName);
+                    modLoaderFileText.setText(getString(R.string.import_file_selected, fileName));
                     updateImportButtonState();
                 }
             });
@@ -292,7 +292,7 @@ public class LocalImportFragment extends BaseFragment {
 
     private void startImport() {
         if (gameFilePath == null) {
-            showToast("请先选择游戏文件");
+            showToast(getString(R.string.import_select_game_first));
             return;
         }
         
@@ -321,7 +321,7 @@ public class LocalImportFragment extends BaseFragment {
         // 如果游戏信息丢失，重新解析
         if (gameName == null || gameVersion == null) {
             AppLogger.warn(TAG, "Game info lost, re-parsing...");
-            updateProgress("正在读取游戏信息...", 0);
+            updateProgress(getString(R.string.import_reading_info), 0);
 
             new Thread(() -> {
                 var gdzf = GogShFileExtractor.GameDataZipFile.parseFromGogShFile(Paths.get(gameFilePath));
@@ -337,9 +337,9 @@ public class LocalImportFragment extends BaseFragment {
                             // 继续导入
                             continueImport();
                         } else {
-                            updateProgress("无法读取游戏信息", 0);
+                            updateProgress(getString(R.string.import_cannot_read_info_failed), 0);
                             startImportButton.setEnabled(true);
-                            showToast("无法读取游戏信息，导入失败");
+                            showToast(getString(R.string.import_cannot_read_info_failed));
                         }
                     }
                 });
@@ -420,7 +420,7 @@ public class LocalImportFragment extends BaseFragment {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
                                     isImporting = false; // 重置导入标志
-                                    updateProgress("导入完成！", 100);
+                                    updateProgress(getString(R.string.import_complete_exclamation), 100);
 
                                     AppLogger.info(TAG, "=== 导入完成回调 ===");
                                     AppLogger.info(TAG, "游戏路径: " + gamePath);
@@ -533,10 +533,10 @@ public class LocalImportFragment extends BaseFragment {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
                                     isImporting = false; // 重置导入标志
-                                    updateProgress("导入失败: " + error, 0);
+                                    updateProgress(getString(R.string.import_failed_colon, error), 0);
                                     if (getActivity() != null) {
                                         // 使用 RALib 的错误弹窗代替普通 Toast
-                                        ErrorHandler.showWarning("导入失败", error);
+                                        ErrorHandler.showWarning(getString(R.string.import_error, ""), error);
                                     }
                                     startImportButton.setEnabled(true);
                                 });
@@ -560,7 +560,7 @@ public class LocalImportFragment extends BaseFragment {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
                                     isImporting = false; // 重置导入标志
-                                    updateProgress("导入完成！", 100);
+                                    updateProgress(getString(R.string.import_complete_exclamation), 100);
 
 
                                     String finalGamePath;
@@ -613,10 +613,10 @@ public class LocalImportFragment extends BaseFragment {
                             if (getActivity() != null && isAdded()) {
                                 getActivity().runOnUiThread(() -> {
                                     isImporting = false; // 重置导入标志
-                                    updateProgress("导入失败: " + error, 0);
+                                    updateProgress(getString(R.string.import_failed_colon, error), 0);
                                     if (getActivity() != null) {
                                         // 使用 RALib 的错误弹窗代替普通 Toast
-                                        ErrorHandler.showWarning("导入失败", error);
+                                        ErrorHandler.showWarning(getString(R.string.import_error, ""), error);
                                     }
                                     startImportButton.setEnabled(true);
                                 });

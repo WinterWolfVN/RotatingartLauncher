@@ -63,9 +63,9 @@ public class GameAdapter extends RecyclerView.Adapter<GameAdapter.GameViewHolder
         String description = game.getGameDescription();
         if (game.isShortcut()) {
             if (description == null || description.isEmpty()) {
-                description = "快捷方式";
+                description = holder.itemView.getContext().getString(R.string.game_shortcut);
             } else {
-                description = "🔗 " + description + " (快捷方式)";
+                description = holder.itemView.getContext().getString(R.string.game_shortcut_with_desc, description);
             }
         }
         holder.gameDescription.setText(description);

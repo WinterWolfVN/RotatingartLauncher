@@ -144,7 +144,7 @@
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="请选择一个游戏"
+                                        android:text="@string/main_select_game_hint"
                                         android:textColor="?attr/textSecondary"
                                         android:textSize="16sp"
                                         android:textStyle="bold" />
@@ -153,7 +153,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:layout_marginTop="8dp"
-                                        android:text="点击左侧游戏开始"
+                                        android:text="@string/main_select_game_instruction"
                                         android:textColor="?attr/textHint"
                                         android:textSize="13sp" />
 
@@ -202,7 +202,7 @@
                                             android:layout_height="wrap_content"
                                             android:layout_marginTop="16dp"
                                             android:gravity="center"
-                                            android:text="游戏名称"
+                                            android:text="@string/game_name"
                                             android:textSize="18sp"
                                             android:textStyle="bold"
                                             android:maxLines="1"
@@ -216,7 +216,7 @@
                                             android:layout_height="wrap_content"
                                             android:layout_marginTop="8dp"
                                             android:gravity="center"
-                                            android:text="游戏描述"
+                                            android:text="@string/game_description"
                                             android:maxLines="2"
                                             android:ellipsize="end"
                                             android:textColor="?attr/textSecondary"
@@ -239,7 +239,7 @@
                                                 android:layout_width="0dp"
                                                 android:layout_height="wrap_content"
                                                 android:layout_weight="1"
-                                                android:text="启用 ModLoader"
+                                                android:text="@string/main_enable_modloader"
                                                 android:textColor="?attr/textPrimary"
                                                 android:textSize="14sp"
                                                 android:textStyle="bold" />
@@ -301,7 +301,7 @@
                                     <TextView
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text=".NET 运行时"
+                                        android:text="@string/main_runtime_title"
                                         android:textSize="10sp"
                                         android:textColor="?attr/textSecondary" />
 
@@ -334,7 +334,7 @@
                             android:layout_height="56dp"
                             android:layout_marginTop="8dp"
                             android:layout_marginBottom="16dp"
-                            android:text="启动游戏"
+                            android:text="@string/main_launch_game"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             app:icon="@drawable/ic_play"

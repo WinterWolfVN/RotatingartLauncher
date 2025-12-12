@@ -114,19 +114,19 @@ public class GogClientFragment extends Fragment {
 
                     // 根据验证类型设置提示
                     if ("email".equals(type)) {
-                        tvTitle.setText("邮箱验证");
-                        tvMessage.setText("请输入发送到您邮箱的 4 位验证码");
-                        codeLayout.setHint("4位验证码");
+                        tvTitle.setText(getString(R.string.gog_email_verification));
+                        tvMessage.setText(getString(R.string.gog_email_code_prompt));
+                        codeLayout.setHint(getString(R.string.gog_4_digit_code));
                     } else {
-                        tvTitle.setText("身份验证器");
-                        tvMessage.setText("请输入您的 TOTP 验证器中的 6 位验证码");
-                        codeLayout.setHint("6位验证码");
+                        tvTitle.setText(getString(R.string.gog_authenticator));
+                        tvMessage.setText(getString(R.string.gog_totp_code_prompt));
+                        codeLayout.setHint(getString(R.string.gog_6_digit_code));
                     }
 
                     AppLogger.info(TAG, "准备显示MaterialAlertDialog");
                     new MaterialAlertDialogBuilder(requireContext())
                             .setView(dialogView)
-                            .setPositiveButton("确定", (dialog, which) -> {
+                            .setPositiveButton(getString(R.string.ok), (dialog, which) -> {
                                 AppLogger.info(TAG, "用户点击确定按钮");
                                 synchronized (lock) {
                                     result[0] = editCode.getText() != null ? editCode.getText().toString() : "";
@@ -134,7 +134,7 @@ public class GogClientFragment extends Fragment {
                                     lock.notify();
                                 }
                             })
-                            .setNegativeButton("取消", (dialog, which) -> {
+                            .setNegativeButton(getString(R.string.cancel), (dialog, which) -> {
                                 AppLogger.info(TAG, "用户点击取消按钮");
                                 synchronized (lock) {
                                     lock.notify();
@@ -294,7 +294,7 @@ public class GogClientFragment extends Fragment {
      */
     private void updateGameCount(int count) {
         if (chipGameCount != null) {
-            chipGameCount.setText(count + " 款游戏");
+            chipGameCount.setText(getString(R.string.gog_games_count, count));
         }
     }
 
@@ -329,7 +329,7 @@ public class GogClientFragment extends Fragment {
      * 加载用户信息和游戏列表
      */
     private void loadUserInfoAndGames() {
-        showLoading("加载用户信息...");
+        showLoading(getString(R.string.gog_loading_user_info));
 
         new Thread(() -> {
             try {
@@ -342,7 +342,7 @@ public class GogClientFragment extends Fragment {
                             userName.setText(userInfo.username);
                         }
                         if (userEmail != null) {
-                            userEmail.setText(userInfo.email.isEmpty() ? "已登录" : userInfo.email);
+                            userEmail.setText(userInfo.email.isEmpty() ? getString(R.string.gog_logged_in) : userInfo.email);
                         }
 
                         // 加载用户头像
@@ -381,16 +381,16 @@ public class GogClientFragment extends Fragment {
         String password = editPassword.getText() != null ? editPassword.getText().toString().trim() : "";
 
         if (username.isEmpty()) {
-            Toast.makeText(requireContext(), "请输入邮箱地址", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.gog_enter_email), Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (password.isEmpty()) {
-            Toast.makeText(requireContext(), "请输入密码", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.gog_enter_password), Toast.LENGTH_SHORT).show();
             return;
         }
 
-        showLoading("正在登录...");
+        showLoading(getString(R.string.gog_logging_in));
 
         new Thread(() -> {
             try {
@@ -399,19 +399,19 @@ public class GogClientFragment extends Fragment {
                 requireActivity().runOnUiThread(() -> {
                     hideLoading();
                     if (success) {
-                        Toast.makeText(requireContext(), "登录成功", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), getString(R.string.gog_login_success), Toast.LENGTH_SHORT).show();
                         // 清空密码
                         editPassword.setText("");
                         updateLoginState();
                     } else {
-                        Toast.makeText(requireContext(), "登录失败，请检查邮箱和密码", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), getString(R.string.gog_login_failed), Toast.LENGTH_SHORT).show();
                     }
                 });
             } catch (IOException e) {
                 AppLogger.error(TAG, "登录异常", e);
                 requireActivity().runOnUiThread(() -> {
                     hideLoading();
-                    Toast.makeText(requireContext(), "登录异常: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), getString(R.string.gog_login_error, e.getMessage()), Toast.LENGTH_SHORT).show();
                 });
             }
         }).start();
@@ -421,7 +421,7 @@ public class GogClientFragment extends Fragment {
      * 刷新游戏列表
      */
     private void refreshGames() {
-        showLoading("加载游戏列表...");
+        showLoading(getString(R.string.gog_loading_games));
 
         new Thread(() -> {
             try {
@@ -436,10 +436,10 @@ public class GogClientFragment extends Fragment {
                     updateEmptyState();
 
                     if (games.isEmpty()) {
-                        Toast.makeText(requireContext(), "您的游戏库为空", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), getString(R.string.gog_library_empty), Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(requireContext(),
-                                "已加载 " + games.size() + " 款游戏",
+                                getString(R.string.gog_games_count, games.size()),
                                 Toast.LENGTH_SHORT).show();
                     }
                 });
@@ -448,7 +448,7 @@ public class GogClientFragment extends Fragment {
                 requireActivity().runOnUiThread(() -> {
                     hideLoading();
                     Toast.makeText(requireContext(),
-                            "获取游戏列表失败: " + e.getMessage(),
+                            getString(R.string.gog_load_games_failed, e.getMessage()),
                             Toast.LENGTH_SHORT).show();
                 });
             }
@@ -460,9 +460,9 @@ public class GogClientFragment extends Fragment {
      */
     private void logout() {
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle("确认登出")
-                .setMessage("确定要登出 GOG 账户吗？")
-                .setPositiveButton("确定", (dialog, which) -> {
+                .setTitle(getString(R.string.gog_logout_confirm_title))
+                .setMessage(getString(R.string.gog_logout_confirm_message))
+                .setPositiveButton(getString(R.string.ok), (dialog, which) -> {
                     apiClient.logout();
                     allGames.clear();
                     filteredGames.clear();
@@ -471,9 +471,9 @@ public class GogClientFragment extends Fragment {
                         editSearch.setText("");
                     }
                     updateLoginState();
-                    Toast.makeText(requireContext(), "已登出", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), getString(R.string.gog_logged_out), Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("取消", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
@@ -487,14 +487,14 @@ public class GogClientFragment extends Fragment {
         ModLoaderConfigManager.ModLoaderRule rule = modLoaderConfigManager.getRule(game.id);
         if (rule == null) {
             AppLogger.info(TAG, "[flow] no modloader rule for game " + game.id + ", ignore click");
-            Toast.makeText(requireContext(), "该游戏暂不支持一键安装", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.gog_one_click_not_supported), Toast.LENGTH_SHORT).show();
             return;
         }
         
         AppLogger.info(TAG, "[flow] ✓ game clicked, loading versions: " + game.title + " (" + game.id + ")");
         
         // 显示加载状态
-        showLoading("正在获取 " + game.title + " 的版本信息...");
+        showLoading(getString(R.string.gog_loading_version_info, game.title));
 
         new Thread(() -> {
             try {
@@ -513,20 +513,20 @@ public class GogClientFragment extends Fragment {
                     // 根据错误类型给出友好提示
                     String errorMsg;
                     if (e.getMessage() != null && e.getMessage().contains("connection abort")) {
-                        errorMsg = "网络连接中断，请检查网络后重试";
+                        errorMsg = getString(R.string.gog_network_abort);
                     } else if (e.getMessage() != null && e.getMessage().contains("timeout")) {
-                        errorMsg = "连接超时，请检查网络或稍后重试";
+                        errorMsg = getString(R.string.gog_network_timeout);
                     } else if (e.getMessage() != null && e.getMessage().contains("DNS")) {
-                        errorMsg = "无法连接到 GOG 服务器，请检查网络或使用 VPN";
+                        errorMsg = getString(R.string.gog_network_dns);
                     } else {
-                        errorMsg = "获取游戏详情失败，请重试";
+                        errorMsg = getString(R.string.gog_get_details_failed);
                     }
                     
                     new MaterialAlertDialogBuilder(requireContext())
-                            .setTitle("加载失败")
-                            .setMessage(errorMsg + "\n\n错误详情: " + e.getMessage())
-                            .setPositiveButton("重试", (dialog, which) -> onGameClick(game))
-                            .setNegativeButton("取消", null)
+                            .setTitle(getString(R.string.gog_load_failed_title))
+                            .setMessage(errorMsg + "\n\n" + getString(R.string.gog_error_details, e.getMessage()))
+                            .setPositiveButton(getString(R.string.gog_retry), (dialog, which) -> onGameClick(game))
+                            .setNegativeButton(getString(R.string.cancel), null)
                             .show();
                 });
             }
@@ -544,14 +544,14 @@ public class GogClientFragment extends Fragment {
         // 构建游戏版本列表
         List<GogApiClient.GameFile> gameVersions = details.installers;
         if (gameVersions.isEmpty()) {
-            Toast.makeText(requireContext(), "没有可用的游戏版本", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.gog_no_game_version), Toast.LENGTH_SHORT).show();
             return;
         }
         
         // 构建ModLoader版本列表
         List<ModLoaderConfigManager.ModLoaderVersion> modLoaderVersions = rule.versions;
         if (modLoaderVersions.isEmpty()) {
-            Toast.makeText(requireContext(), "没有可用的 ModLoader 版本", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.gog_no_modloader_version), Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -585,8 +585,8 @@ public class GogClientFragment extends Fragment {
         MaterialButton btnInstall = dialogView.findViewById(R.id.btnInstall);
         
         // 设置标题
-        tvDialogTitle.setText("安装 " + game.title);
-        tvModLoaderTitle.setText(rule.name + " 版本");
+        tvDialogTitle.setText(getString(R.string.gog_install_game, game.title));
+        tvModLoaderTitle.setText(getString(R.string.gog_modloader_version, rule.name));
         
         // 设置游戏版本适配器
         android.widget.ArrayAdapter<String> gameAdapter = new android.widget.ArrayAdapter<>(
@@ -680,7 +680,7 @@ public class GogClientFragment extends Fragment {
             if (external == null) {
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) progressDialog.dismiss();
-                    Toast.makeText(requireContext(), "无法访问外部存储", Toast.LENGTH_LONG).show();
+                    Toast.makeText(requireContext(), getString(R.string.gog_cannot_access_storage), Toast.LENGTH_LONG).show();
                 });
                 return;
             }
@@ -688,7 +688,7 @@ public class GogClientFragment extends Fragment {
             // 获取安装程序链接
             requireActivity().runOnUiThread(() -> {
                 if (progressDialog != null) {
-                    progressDialog.setGameDownloadStatus("获取链接中");
+                    progressDialog.setGameDownloadStatus(getString(R.string.gog_download_status_getting_link));
                 }
             });
             String installerUrl = resolveDownloadUrl(game.id, installer);
@@ -696,7 +696,7 @@ public class GogClientFragment extends Fragment {
                 AppLogger.warn(TAG, "[modloader] installer url empty, manual=" + installer.manualUrl + " path=" + installer.path);
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) progressDialog.dismiss();
-                    Toast.makeText(requireContext(), "无法获取安装程序下载链接", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), getString(R.string.gog_cannot_get_download_link), Toast.LENGTH_SHORT).show();
                 });
             return;
         }
@@ -704,7 +704,7 @@ public class GogClientFragment extends Fragment {
             // 校验 ModLoader 链接
             requireActivity().runOnUiThread(() -> {
                 if (progressDialog != null) {
-                    progressDialog.setModLoaderDownloadStatus("获取链接中");
+                    progressDialog.setModLoaderDownloadStatus(getString(R.string.gog_download_status_getting_link));
                 }
             });
             String modLoaderUrl = modLoaderVersion.url;
@@ -712,7 +712,7 @@ public class GogClientFragment extends Fragment {
                 AppLogger.warn(TAG, "[modloader] modLoaderUrl invalid for game " + game.id + ", version=" + modLoaderVersion.version);
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) progressDialog.dismiss();
-                    Toast.makeText(requireContext(), "ModLoader 链接无效", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), getString(R.string.gog_modloader_link_invalid), Toast.LENGTH_SHORT).show();
                 });
                 return;
             }
@@ -727,38 +727,40 @@ public class GogClientFragment extends Fragment {
 
             try {
                 // 下载游戏本体
+                String downloadingStatus = getString(R.string.gog_download_status_downloading);
+                String completedStatus = getString(R.string.gog_download_status_completed);
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) {
-                        progressDialog.setGameDownloadStatus("下载中");
+                        progressDialog.setGameDownloadStatus(downloadingStatus);
                     }
                 });
                 apiClient.downloadWithAuth(installerUrl, installerFile,
                         (downloaded, total) -> {
                             if (progressDialog != null) {
-                                progressDialog.updateGameDownloadProgress(downloaded, total, "下载中");
+                                progressDialog.updateGameDownloadProgress(downloaded, total, downloadingStatus);
                             }
                         });
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) {
-                        progressDialog.setGameDownloadStatus("已完成");
+                        progressDialog.setGameDownloadStatus(completedStatus);
                     }
                 });
 
                 // 下载 ModLoader
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) {
-                        progressDialog.setModLoaderDownloadStatus("下载中");
+                        progressDialog.setModLoaderDownloadStatus(downloadingStatus);
                     }
                 });
                 apiClient.downloadWithAuth(modLoaderUrl, modLoaderFile,
                         (downloaded, total) -> {
                             if (progressDialog != null) {
-                                progressDialog.updateModLoaderDownloadProgress(downloaded, total, "下载中");
+                                progressDialog.updateModLoaderDownloadProgress(downloaded, total, downloadingStatus);
                             }
                         });
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) {
-                        progressDialog.setModLoaderDownloadStatus("已完成");
+                        progressDialog.setModLoaderDownloadStatus(completedStatus);
                     }
                 });
 
@@ -799,7 +801,7 @@ public class GogClientFragment extends Fragment {
                             activity.onImportComplete(gameType, newGame);
                             
                             Toast.makeText(requireContext(), 
-                                    "已安装并添加到主页: " + newGame.getGameName(), 
+                                    getString(R.string.gog_installed_and_added, newGame.getGameName()), 
                                     Toast.LENGTH_SHORT).show();
                         });
                         importFragment.setOnBackListener(() -> {
@@ -839,7 +841,7 @@ public class GogClientFragment extends Fragment {
                 AppLogger.error(TAG, "下载或安装失败", e);
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) progressDialog.dismiss();
-                    Toast.makeText(requireContext(), "下载失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(requireContext(), getString(R.string.gog_download_failed, e.getMessage()), Toast.LENGTH_LONG).show();
                 });
             }
         });

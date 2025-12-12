@@ -19,4 +19,9 @@
     <string name="restart_app_message">语言设置已更改，需要重启应用才能生效</string>
     <string name="ok">确定</string>
     <string name="later">稍后</string>
+    <string name="cancel">取消</string>
+
+    <!-- 所有其他字符串资源与 values/strings.xml 保持一致 -->
+    <!-- 由于 values/strings.xml 已经是中文版本，values-zh/strings.xml 只需要包含差异部分 -->
+    <!-- 如果需要覆盖某些字符串，可以在这里添加 -->
 </resources>

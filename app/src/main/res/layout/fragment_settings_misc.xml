@@ -63,7 +63,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="切换应用主题外观"
+                            android:text="@string/settings_theme_switch"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -75,7 +75,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        android:text="跟随系统"
+                        android:text="@string/theme_system"
                         android:textColor="?attr/textSecondary"
                         android:textSize="12sp" />
 
@@ -166,7 +166,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="自定义背景设置"
+                            android:text="@string/background_custom"
                             android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -174,7 +174,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="选择图片或视频作为启动器背景"
+                            android:text="@string/background_custom_desc"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -186,7 +186,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        android:text="未设置"
+                        android:text="@string/appearance_not_set"
                         android:textColor="?attr/textSecondary"
                         android:textSize="12sp" />
 
@@ -226,7 +226,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="视频背景"
+                            android:text="@string/background_video"
                             android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -234,7 +234,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="选择视频文件作为动态背景"
+                            android:text="@string/background_video_desc"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -246,7 +246,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        android:text="未设置"
+                        android:text="@string/appearance_not_set"
                         android:textColor="?attr/textSecondary"
                         android:textSize="12sp" />
 
@@ -286,7 +286,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="恢复默认背景"
+                            android:text="@string/background_restore_default"
                             android:textColor="?attr/textPrimary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -294,7 +294,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="恢复为系统默认背景"
+                            android:text="@string/background_restore_default_desc"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -345,7 +345,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="选择应用界面语言"
+                            android:text="@string/language_select"
                             android:textColor="?attr/textSecondary"
                             android:textSize="12sp"
                             android:layout_marginTop="2dp" />
@@ -357,7 +357,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
-                        android:text="跟随系统"
+                        android:text="@string/theme_system"
                         android:textColor="?attr/textSecondary"
                         android:textSize="12sp" />
 

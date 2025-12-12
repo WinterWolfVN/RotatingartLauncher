@@ -58,15 +58,13 @@ public class UnifiedEditorSettingsDialog {
      */
     public enum DialogMode {
         /** 编辑器模式：独立的编辑器界面 */
-        EDITOR("游戏设置"),
+        EDITOR,
 
         /** 游戏模式：游戏内编辑 */
-        GAME("游戏设置");
+        GAME;
 
-        private final String title;
-
-        DialogMode(String title) {
-            this.title = title;
+        public String getTitle(Context context) {
+            return context.getString(R.string.editor_game_settings);
         }
     }
 
@@ -319,7 +317,7 @@ public class UnifiedEditorSettingsDialog {
      */
     private void configureUIForMode() {
         // 设置标题
-        mTvDialogTitle.setText(mMode.title);
+        mTvDialogTitle.setText(mMode.getTitle(mContext));
     }
 
     /**
@@ -403,12 +401,12 @@ public class UnifiedEditorSettingsDialog {
         if (mTvToggleEditModeText != null && mIvToggleEditModeIcon != null) {
             if (mIsEditModeEnabled) {
                 // 已进入编辑模式，显示"退出编辑模式"
-                mTvToggleEditModeText.setText("退出编辑模式");
+                mTvToggleEditModeText.setText(mContext.getString(R.string.editor_exit_edit_mode));
                 mIvToggleEditModeIcon.setImageResource(R.drawable.ic_close);
                 mIvToggleEditModeIcon.setColorFilter(android.graphics.Color.parseColor("#F44336")); // 红色
             } else {
                 // 未进入编辑模式，显示"进入编辑模式"
-                mTvToggleEditModeText.setText("进入编辑模式");
+                mTvToggleEditModeText.setText(mContext.getString(R.string.editor_enter_edit_mode));
                 mIvToggleEditModeIcon.setImageResource(R.drawable.ic_edit);
                 // 恢复默认颜色
                 mIvToggleEditModeIcon.setColorFilter(null);

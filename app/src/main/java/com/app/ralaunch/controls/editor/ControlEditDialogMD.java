@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
 import com.app.ralaunch.controls.KeyMapper;
+import com.app.ralaunch.utils.LocalizedDialog;
 import com.app.ralaunch.controls.editor.manager.ControlTypeManager;
 import com.app.ralaunch.controls.editor.manager.ControlShapeManager;
 import com.app.ralaunch.controls.editor.manager.ControlEditDialogVisibilityManager;
@@ -37,7 +38,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
  * MD3风格的控件编辑对话框
  * 使用垂直滚动的卡片列表，类似 dialog_element_properties 风格
  */
-public class ControlEditDialogMD extends Dialog {
+public class ControlEditDialogMD extends LocalizedDialog {
 
     private ControlData mCurrentData;
     private int mScreenWidth, mScreenHeight;
@@ -89,7 +90,7 @@ public class ControlEditDialogMD extends Dialog {
         // 设置无标题栏
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        // 加载布局
+        // 布局加载使用原始Context（包含主题），字符串资源使用getLocalizedContext()
         View view = LayoutInflater.from(getContext()).inflate(R.layout.dialog_control_edit_md, null);
         setContentView(view);
 
@@ -396,6 +397,11 @@ public class ControlEditDialogMD extends Dialog {
             public void notifyUpdate() {
                 ControlEditDialogMD.this.notifyUpdate();
             }
+            
+            @Override
+            public Context getContext() {
+                return ControlEditDialogMD.this.getLocalizedContext();
+            }
         };
     }
     
@@ -422,6 +428,11 @@ public class ControlEditDialogMD extends Dialog {
             @Override
             public boolean isAutoSize() {
                 return mIsAutoSize;
+            }
+            
+            @Override
+            public Context getContext() {
+                return ControlEditDialogMD.this.getLocalizedContext();
             }
         };
     }
@@ -547,7 +558,7 @@ public class ControlEditDialogMD extends Dialog {
         if (mCurrentData == null || mContentBasic == null) return;
         TextView tvControlType = mContentBasic.findViewById(R.id.tv_control_type);
         if (tvControlType != null) {
-            ControlTypeManager.updateTypeDisplay(mCurrentData, tvControlType);
+            ControlTypeManager.updateTypeDisplay(getLocalizedContext(), mCurrentData, tvControlType);
         }
         
         // 类型改变时，更新所有选项的可见性
@@ -566,7 +577,7 @@ public class ControlEditDialogMD extends Dialog {
         TextView tvControlShape = mContentBasic.findViewById(R.id.tv_control_shape);
         View itemControlShape = mContentBasic.findViewById(R.id.item_control_shape);
         if (tvControlShape != null && itemControlShape != null) {
-            ControlShapeManager.updateShapeDisplay(mCurrentData, tvControlShape, itemControlShape);
+            ControlShapeManager.updateShapeDisplay(getLocalizedContext(), mCurrentData, tvControlShape, itemControlShape);
         }
         
         // 形状改变时，更新外观选项的可见性
@@ -579,7 +590,7 @@ public class ControlEditDialogMD extends Dialog {
      * 显示形状选择对话框
      */
     private void showShapeSelectDialog() {
-        ControlShapeManager.showShapeSelectDialog(getContext(), mCurrentData, 
+        ControlShapeManager.showShapeSelectDialog(getLocalizedContext(), mCurrentData, 
             (data) -> {
                 updateShapeDisplay();
                 notifyUpdate();
@@ -590,7 +601,7 @@ public class ControlEditDialogMD extends Dialog {
      * 显示类型选择对话框
      */
     private void showTypeSelectDialog() {
-        ControlTypeManager.showTypeSelectDialog(getContext(), mCurrentData, 
+        ControlTypeManager.showTypeSelectDialog(getLocalizedContext(), mCurrentData, 
             (data) -> {
                 updateTypeDisplay();
                 // 类型改变时，更新键值设置分类的可见性
@@ -604,7 +615,7 @@ public class ControlEditDialogMD extends Dialog {
      * 显示颜色选择对话框
      */
     private void showColorPickerDialog(boolean isBackground) {
-        ControlColorManager.showColorPickerDialog(getContext(), mCurrentData, isBackground,
+        ControlColorManager.showColorPickerDialog(getLocalizedContext(), mCurrentData, isBackground,
             (data, color, isBg) -> {
                 updateColorViews();
                 notifyUpdate();
@@ -617,16 +628,17 @@ public class ControlEditDialogMD extends Dialog {
     private void deleteControl() {
         if (mCurrentData == null) return;
 
-        new MaterialAlertDialogBuilder(getContext())
-            .setTitle("删除控件")
-            .setMessage("确定要删除这个控件吗？")
-            .setPositiveButton("确定", (dialog, which) -> {
+        Context localizedContext = getLocalizedContext();
+        new MaterialAlertDialogBuilder(localizedContext)
+            .setTitle(localizedContext.getString(R.string.editor_delete_control))
+            .setMessage(localizedContext.getString(R.string.editor_delete_control_confirm))
+            .setPositiveButton(localizedContext.getString(R.string.ok), (dialog, which) -> {
                 if (mDeleteListener != null) {
                     mDeleteListener.onControlDeleted(mCurrentData);
                 }
                 dismiss();
             })
-            .setNegativeButton("取消", null)
+            .setNegativeButton(localizedContext.getString(R.string.cancel), null)
             .show();
     }
 
@@ -639,10 +651,11 @@ public class ControlEditDialogMD extends Dialog {
         // 创建控件的深拷贝
         ControlData copiedData = new ControlData(mCurrentData);
         // 为新控件设置一个唯一的名称（添加"副本"后缀）
+        Context localizedContext = getLocalizedContext();
         if (copiedData.name != null) {
-            copiedData.name = copiedData.name + " 副本";
+            copiedData.name = copiedData.name + " " + localizedContext.getString(R.string.editor_copy_suffix);
         } else {
-            copiedData.name = "控件 副本";
+            copiedData.name = localizedContext.getString(R.string.editor_control_copy);
         }
         // 稍微偏移位置，避免完全重叠
         copiedData.x += copiedData.width * 0.1f;

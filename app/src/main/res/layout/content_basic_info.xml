@@ -41,7 +41,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="控件名称"
+                    android:text="@string/editor_control_name"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -49,7 +49,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="设置控件的显示名称"
+                    android:text="@string/editor_control_name_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -61,7 +61,7 @@
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:hint="控件名称"
+                android:hint="@string/editor_control_name_hint"
                 android:textColor="?attr/colorPrimary"
                 android:textColorHint="?attr/colorPrimary"
                 android:textSize="14sp"
@@ -105,7 +105,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="文本内容"
+                    android:text="@string/editor_text_content"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -113,7 +113,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="设置文本控件显示的文本内容"
+                    android:text="@string/editor_text_content_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -125,7 +125,7 @@
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:hint="文本内容"
+                android:hint="@string/editor_text_content_hint"
                 android:textColor="?attr/colorPrimary"
                 android:textColorHint="?attr/colorPrimary"
                 android:textSize="14sp"
@@ -171,7 +171,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="控件类型"
+                    android:text="@string/editor_control_type"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -179,7 +179,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="选择控件类型（按钮、摇杆或手柄控件）"
+                    android:text="@string/editor_control_type_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -191,7 +191,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="按钮"
+                android:text="@string/editor_control_type_button"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -233,7 +233,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="控件形状"
+                    android:text="@string/editor_control_shape"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -241,7 +241,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="选择控件形状（矩形或圆形）"
+                    android:text="@string/editor_control_shape_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -253,7 +253,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="矩形"
+                android:text="@string/control_shape_rectangle"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -295,7 +295,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="摇杆模式"
+                    android:text="@string/editor_joystick_mode"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -303,7 +303,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="选择摇杆的工作模式"
+                    android:text="@string/editor_joystick_mode_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -315,7 +315,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="键盘模式"
+                android:text="@string/editor_mode_keyboard"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -357,7 +357,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="摇杆选择"
+                    android:text="@string/editor_joystick_stick_select"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -366,7 +366,7 @@
                     android:id="@+id/tv_joystick_stick_select"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="左摇杆"
+                    android:text="@string/editor_left_stick"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -420,7 +420,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="攻击模式"
+                    android:text="@string/editor_attack_mode"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -438,7 +438,7 @@
                     android:id="@+id/rb_attack_mode_hold"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="长按 - 按住鼠标左键不放"
+                    android:text="@string/editor_attack_mode_hold"
                     android:textColor="?attr/textPrimary"
                     android:textSize="14sp" />
 
@@ -446,7 +446,7 @@
                     android:id="@+id/rb_attack_mode_click"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="点击 - 快速连续点击"
+                    android:text="@string/editor_attack_mode_click"
                     android:textColor="?attr/textPrimary"
                     android:textSize="14sp" />
 
@@ -454,7 +454,7 @@
                     android:id="@+id/rb_attack_mode_continuous"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="持续 - 保持按住状态"
+                    android:text="@string/editor_attack_mode_continuous"
                     android:textColor="?attr/textPrimary"
                     android:textSize="14sp" />
 
@@ -502,7 +502,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="鼠标移动范围"
+                    android:text="@string/editor_mouse_range"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -520,7 +520,7 @@
                 <TextView
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
-                    android:text="左"
+                    android:text="@string/editor_mouse_range_left"
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
@@ -557,7 +557,7 @@
                 <TextView
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
-                    android:text="上"
+                    android:text="@string/editor_mouse_range_top"
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
@@ -594,7 +594,7 @@
                 <TextView
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
-                    android:text="右"
+                    android:text="@string/editor_mouse_range_right"
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
@@ -631,7 +631,7 @@
                 <TextView
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
-                    android:text="下"
+                    android:text="@string/editor_mouse_range_bottom"
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
@@ -668,7 +668,7 @@
                 <TextView
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
-                    android:text="速度"
+                    android:text="@string/editor_mouse_speed"
                     android:textColor="?attr/textSecondary"
                     android:textSize="14sp" />
 
@@ -737,7 +737,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="组合键映射"
+                    android:text="@string/editor_combo_keys"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -745,7 +745,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="为摇杆方向设置组合手柄按钮（如R+B）"
+                    android:text="@string/editor_combo_keys_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />
@@ -757,7 +757,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="未设置"
+                android:text="@string/editor_combo_keys_not_set"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -799,7 +799,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="触摸穿透"
+                    android:text="@string/editor_pass_through"
                     android:textColor="?attr/textPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -807,7 +807,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="开启后触摸此控件也会触发游戏点击"
+                    android:text="@string/editor_pass_through_desc"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="2dp" />

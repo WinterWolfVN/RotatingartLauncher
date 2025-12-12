@@ -30,7 +30,7 @@
         android:alpha="0.6"
         android:clickable="true"
         android:focusable="true"
-        android:contentDescription="设置">
+        android:contentDescription="@string/content_desc_settings">
         
         <ImageView
             android:layout_width="20dp"

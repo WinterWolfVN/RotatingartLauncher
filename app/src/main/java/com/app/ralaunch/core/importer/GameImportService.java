@@ -1,5 +1,8 @@
 package com.app.ralaunch.core.importer;
 
+import android.content.Context;
+import com.app.ralaunch.R;
+import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.utils.GameExtractor;
 import com.app.ralib.extractors.ExtractorCollection;
@@ -74,9 +77,13 @@ public class GameImportService {
             }
 
         } catch (Exception e) {
-            AppLogger.error(TAG, "导入失败: " + e.getMessage(), e);
+            AppLogger.error(TAG, "Import failed: " + e.getMessage(), e);
             if (listener != null) {
-                listener.onError("导入失败: " + e.getMessage());
+                Context context = RaLaunchApplication.getAppContext();
+                String errorMsg = context != null ?
+                    context.getString(R.string.import_error, e.getMessage()) :
+                    "Import failed: " + e.getMessage();
+                listener.onError(errorMsg);
             }
         }
     }
@@ -85,9 +92,12 @@ public class GameImportService {
      * 验证文件有效性
      */
     private static boolean validateFiles(ImportTask task, ImportProgressListener listener) {
+        Context context = RaLaunchApplication.getAppContext();
         File gameFile = new File(task.getGameFilePath());
         if (!gameFile.exists()) {
-            String error = "游戏文件不存在: " + task.getGameFilePath();
+            String error = context != null ? 
+                context.getString(R.string.import_game_file_not_exist, task.getGameFilePath()) :
+                "Game file does not exist: " + task.getGameFilePath();
             AppLogger.error(TAG, error);
             if (listener != null) {
                 listener.onError(error);
@@ -98,7 +108,9 @@ public class GameImportService {
         if (task.hasModLoader()) {
             File modLoaderFile = new File(task.getModLoaderFilePath());
             if (!modLoaderFile.exists()) {
-                String error = "ModLoader文件不存在: " + task.getModLoaderFilePath();
+                String error = context != null ? 
+                    context.getString(R.string.import_modloader_file_not_exist, task.getModLoaderFilePath()) :
+                    "ModLoader file does not exist: " + task.getModLoaderFilePath();
                 AppLogger.error(TAG, error);
                 if (listener != null) {
                     listener.onError(error);
@@ -121,11 +133,14 @@ public class GameImportService {
         long requiredSpace = gameFile.length() * 3; // 预留3倍空间
 
         if (availableSpace < requiredSpace) {
-            String error = String.format(
-                    "存储空间不足!\n需要约 %.1f GB\n可用 %.1f GB",
+            Context context = RaLaunchApplication.getAppContext();
+            String error = context != null ? 
+                context.getString(R.string.import_storage_insufficient,
                     requiredSpace / 1024.0 / 1024 / 1024,
-                    availableSpace / 1024.0 / 1024 / 1024
-            );
+                    availableSpace / 1024.0 / 1024 / 1024) :
+                String.format("Insufficient storage!\nRequired: %.1f GB\nAvailable: %.1f GB",
+                    requiredSpace / 1024.0 / 1024 / 1024,
+                    availableSpace / 1024.0 / 1024 / 1024);
             AppLogger.error(TAG, error);
             if (listener != null) {
                 listener.onError(error);
@@ -133,7 +148,7 @@ public class GameImportService {
             return false;
         }
 
-        AppLogger.debug(TAG, String.format("存储空间检查通过: 可用 %.1f GB",
+        AppLogger.debug(TAG, String.format("Storage check passed: available %.1f GB",
                 availableSpace / 1024.0 / 1024 / 1024));
         return true;
     }
@@ -143,7 +158,11 @@ public class GameImportService {
      */
     private static String extractGameFiles(ImportTask task, ImportProgressListener listener) {
         if (listener != null) {
-            listener.onProgress("正在解压游戏文件...", 0);
+            Context context = RaLaunchApplication.getAppContext();
+            String message = context != null ?
+                context.getString(R.string.import_extracting) :
+                "Extracting game files...";
+            listener.onProgress(message, 0);
         }
 
         // 使用GameExtractor进行解压
@@ -198,7 +217,11 @@ public class GameImportService {
      */
     private static String extractModLoader(ImportTask task, ImportProgressListener listener) {
         if (listener != null) {
-            listener.onProgress("正在安装ModLoader...", 80);
+            Context context = RaLaunchApplication.getAppContext();
+            String message = context != null ?
+                context.getString(R.string.import_installing_modloader) :
+                "Installing ModLoader...";
+            listener.onProgress(message, 80);
         }
 
         // TODO: 实现ModLoader解压逻辑

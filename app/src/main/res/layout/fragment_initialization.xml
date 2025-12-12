@@ -35,7 +35,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="法律声明"
+                    android:text="@string/init_legal_title"
                     android:textColor="?attr/textPrimary"
                     android:textSize="22sp"
                     android:textStyle="bold"
@@ -44,7 +44,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="请仔细阅读以下条款"
+                    android:text="@string/init_legal_subtitle"
                     android:textColor="?attr/textSecondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="12dp" />
@@ -79,7 +79,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="⚠ 重要声明"
+                            android:text="@string/init_legal_important"
                             android:textColor="#FF5722"
                             android:textSize="15sp"
                             android:textStyle="bold"
@@ -88,7 +88,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="本软件完全免费且开源！如果您是付费购买获得，请立即申请退款并举报卖家。任何倒卖、转售本软件的行为均属违法，开发者保留追究法律责任的权利。"
+                            android:text="@string/init_legal_important_message"
                             android:textColor="?attr/textPrimary"
                             android:textSize="13sp"
                             android:lineSpacingExtra="4dp"
@@ -98,7 +98,7 @@
                             android:id="@+id/officialDownloadLink"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="官方下载：https://github.com/FireworkSky/RotatingartLauncher"
+                            android:text="@string/init_legal_official_download"
                             android:textColor="#64B5F6"
                             android:textSize="12sp"
                             android:textStyle="bold"
@@ -112,7 +112,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="1. 软件性质：本启动器为第三方开源工具，需用户自行提供合法授权的游戏文件。\n\n2. 版权声明：您必须拥有所运行游戏的合法授权副本，开发者与游戏版权方无关联。\n\n3. 使用限制：仅供个人学习研究使用，不得用于商业目的或逆向工程。\n\n4. 免责声明：软件按现状提供，开发者不对使用导致的任何损失负责。\n\n5. 隐私保护：不收集任何个人信息，所有数据仅存储在本地。\n\n6. 权限说明：需要存储权限以访问游戏文件，仅访问游戏相关文件。\n\n7. 法律责任：用户违法使用由用户自行承担责任。\n\n8. 条款变更：开发者保留随时修改本声明的权利。"
+                        android:text="@string/init_legal_terms"
                         android:textColor="?attr/textSecondary"
                         android:textSize="13sp"
                         android:lineSpacingExtra="4dp"
@@ -128,7 +128,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="点击【接受并继续】即表示同意上述条款"
+                        android:text="@string/init_legal_accept_hint"
                         android:textColor="?attr/textPrimary"
                         android:textSize="10sp"
                         android:textStyle="bold"
@@ -155,21 +155,21 @@
                     android:layout_height="40dp"
                     android:layout_marginEnd="10dp"
                     android:background="@drawable/secondary_button"
-                    android:text="退出"
+                    android:text="@string/init_exit"
                     android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
-                    android:contentDescription="退出应用按钮" />
+                    android:contentDescription="@string/content_desc_exit_app_button" />
 
                 <Button
                     android:id="@+id/btnAcceptLegal"
                     android:layout_width="130dp"
                     android:layout_height="40dp"
                     android:background="@drawable/selector_button"
-                    android:text="接受并继续"
+                    android:text="@string/init_accept_and_continue"
                     android:textColor="?attr/textPrimary"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:contentDescription="接受法律声明并继续按钮" />
+                    android:contentDescription="@string/content_desc_accept_legal_button" />
 
             </LinearLayout>
 
@@ -204,7 +204,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="授予权限"
+                            android:text="@string/permission_grant"
                             android:textColor="?attr/textPrimary"
                             android:textSize="22sp"
                             android:textStyle="bold"
@@ -213,7 +213,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="启动器需要存储权限以读取和管理游戏文件"
+                            android:text="@string/init_permission_desc"
                             android:textColor="?attr/textSecondary"
                             android:textSize="14sp"
                             android:gravity="center"
@@ -242,21 +242,21 @@
                                 android:layout_height="40dp"
                                 android:layout_marginEnd="12dp"
                                 android:background="@drawable/secondary_button"
-                                android:text="跳过"
+                                android:text="@string/init_skip"
                                 android:textColor="?attr/textPrimary"
                                 android:textSize="14sp"
-                                android:contentDescription="暂时跳过权限授予按钮" />
+                                android:contentDescription="@string/content_desc_skip_permission_button" />
 
                             <Button
                                 android:id="@+id/btnRequestPermissions"
                                 android:layout_width="120dp"
                                 android:layout_height="40dp"
                                 android:background="@drawable/selector_button"
-                                android:text="授予权限"
+                                android:text="@string/permission_grant"
                                 android:textColor="?attr/textPrimary"
                                 android:textSize="14sp"
                                 android:textStyle="bold"
-                                android:contentDescription="授予权限按钮" />
+                                android:contentDescription="@string/content_desc_grant_permission_button" />
 
                         </LinearLayout>
 

@@ -164,7 +164,7 @@ public class AppearanceSettingsModule implements SettingsModule {
                 } catch (Exception e) {
                     AppLogger.error("AppearanceSettingsModule", "启动图片选择器失败: " + e.getMessage(), e);
                     if (fragment.isAdded() && fragment.getContext() != null) {
-                        Toast.makeText(fragment.requireContext(), "无法打开图片选择器", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_cannot_open_image_picker), Toast.LENGTH_SHORT).show();
                     }
                 }
             });
@@ -185,7 +185,7 @@ public class AppearanceSettingsModule implements SettingsModule {
                 } catch (Exception e) {
                     AppLogger.error("AppearanceSettingsModule", "启动视频选择器失败: " + e.getMessage(), e);
                     if (fragment.isAdded() && fragment.getContext() != null) {
-                        Toast.makeText(fragment.requireContext(), "无法打开视频选择器", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_cannot_open_video_picker), Toast.LENGTH_SHORT).show();
                     }
                 }
             });
@@ -214,7 +214,7 @@ public class AppearanceSettingsModule implements SettingsModule {
                         ((MainActivity) activity).updateVideoBackground();
                     }
                     
-                    Toast.makeText(fragment.requireContext(), "已恢复默认背景", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_background_restored), Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -323,7 +323,7 @@ public class AppearanceSettingsModule implements SettingsModule {
             }
             textView.setText(fileName);
         } else {
-            textView.setText("未设置");
+            textView.setText(fragment.getString(R.string.appearance_not_set));
         }
     }
 
@@ -338,18 +338,18 @@ public class AppearanceSettingsModule implements SettingsModule {
             }
             textView.setText(fileName);
         } else {
-            textView.setText("未设置");
+            textView.setText(fragment.getString(R.string.appearance_not_set));
         }
     }
     
     private void handleImageSelection(Uri uri) {
         if (uri == null) {
-            Toast.makeText(fragment.requireContext(), "未选择文件", Toast.LENGTH_SHORT).show();
+            Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_no_file_selected), Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (rootView == null) {
-            Toast.makeText(fragment.requireContext(), "界面未初始化", Toast.LENGTH_SHORT).show();
+            Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_ui_not_initialized), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -357,7 +357,7 @@ public class AppearanceSettingsModule implements SettingsModule {
         if (imagePath != null && !imagePath.isEmpty()) {
             java.io.File imageFile = new java.io.File(imagePath);
             if (!imageFile.exists()) {
-                Toast.makeText(fragment.requireContext(), "文件不存在: " + imagePath, Toast.LENGTH_LONG).show();
+                Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_file_not_exist, imagePath), Toast.LENGTH_LONG).show();
                 AppLogger.error("AppearanceSettingsModule", "图片文件不存在: " + imagePath);
                 return;
             }
@@ -381,22 +381,22 @@ public class AppearanceSettingsModule implements SettingsModule {
                     ((MainActivity) activity).updateVideoBackground();
                 }
                 
-                Toast.makeText(fragment.requireContext(), "背景图片已设置", Toast.LENGTH_SHORT).show();
+                Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_background_image_set), Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(fragment.requireContext(), "无法获取文件路径，请重试", Toast.LENGTH_LONG).show();
+            Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_cannot_get_file_path), Toast.LENGTH_LONG).show();
             AppLogger.error("AppearanceSettingsModule", "无法从 URI 获取图片路径: " + uri.toString());
         }
     }
 
     private void handleVideoSelection(Uri uri) {
         if (uri == null) {
-            Toast.makeText(fragment.requireContext(), "未选择文件", Toast.LENGTH_SHORT).show();
+            Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_no_file_selected), Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (rootView == null) {
-            Toast.makeText(fragment.requireContext(), "界面未初始化", Toast.LENGTH_SHORT).show();
+            Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_ui_not_initialized), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -404,7 +404,7 @@ public class AppearanceSettingsModule implements SettingsModule {
         if (videoPath != null && !videoPath.isEmpty()) {
             java.io.File videoFile = new java.io.File(videoPath);
             if (!videoFile.exists()) {
-                Toast.makeText(fragment.requireContext(), "文件不存在: " + videoPath, Toast.LENGTH_LONG).show();
+                Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_file_not_exist, videoPath), Toast.LENGTH_LONG).show();
                 AppLogger.error("AppearanceSettingsModule", "视频文件不存在: " + videoPath);
                 return;
             }
@@ -428,10 +428,10 @@ public class AppearanceSettingsModule implements SettingsModule {
                     ((MainActivity) activity).updateVideoBackground();
                 }
                 
-                Toast.makeText(fragment.requireContext(), "视频背景已设置", Toast.LENGTH_SHORT).show();
+                Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_background_video_set), Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(fragment.requireContext(), "无法获取文件路径，请重试", Toast.LENGTH_LONG).show();
+            Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_cannot_get_file_path), Toast.LENGTH_LONG).show();
             AppLogger.error("AppearanceSettingsModule", "无法从 URI 获取视频路径: " + uri.toString());
         }
     }

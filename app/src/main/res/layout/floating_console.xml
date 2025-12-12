@@ -48,7 +48,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:layout_weight="1"
-                    android:text="开发者控制台"
+                    android:text="@string/developer_console_title"
                     android:textColor="@color/console_text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -59,7 +59,7 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="最小化"
+                    android:contentDescription="@string/content_desc_minimize"
                     android:padding="6dp"
                     android:src="@drawable/ralib_ic_arrow_up"
                     android:tint="@color/console_text_secondary" />
@@ -70,7 +70,7 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="清除"
+                    android:contentDescription="@string/content_desc_clear"
                     android:padding="6dp"
                     android:src="@drawable/ralib_ic_close"
                     android:tint="@color/console_text_secondary" />
@@ -81,7 +81,7 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="关闭"
+                    android:contentDescription="@string/content_desc_close"
                     android:padding="6dp"
                     android:src="@drawable/ralib_ic_close"
                     android:tint="@color/console_error" />
@@ -108,7 +108,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="消息: 0"
+                        android:text="@string/console_message_count"
                         android:textColor="@color/console_text_secondary"
                         android:textSize="12sp" />
 
@@ -117,7 +117,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="错误: 0"
+                        android:text="@string/console_error_count"
                         android:textColor="@color/console_error"
                         android:textSize="12sp" />
 
@@ -126,7 +126,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="警告: 0"
+                        android:text="@string/console_warning_count"
                         android:textColor="@color/console_warning"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -143,7 +143,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="monospace"
                         android:padding="12dp"
-                        android:text="控制台就绪...\n"
+                        android:text="@string/console_ready"
                         android:textColor="@color/console_text_primary"
                         android:textIsSelectable="true"
                         android:textSize="12sp" />
@@ -165,7 +165,7 @@
                         android:layout_weight="1"
                         android:background="@color/console_surface_variant"
                         android:fontFamily="monospace"
-                        android:hint="输入命令..."
+                        android:hint="@string/console_input_hint"
                         android:imeOptions="actionSend"
                         android:inputType="text"
                         android:padding="12dp"
@@ -179,7 +179,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:backgroundTint="@color/console_accent"
-                        android:text="发送"
+                        android:text="@string/console_send_button"
                         android:textColor="@color/console_text_primary" />
                 </LinearLayout>
             </LinearLayout>

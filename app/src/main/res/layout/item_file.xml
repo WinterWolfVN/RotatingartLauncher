@@ -53,7 +53,7 @@
                 android:id="@+id/fileName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="文件名"
+                android:text="@string/file_name_placeholder"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:maxLines="1"
@@ -64,7 +64,7 @@
                 android:id="@+id/fileInfo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="文件类型"
+                android:text="@string/file_type_placeholder"
                 android:layout_marginTop="2dp"
                 style="@style/TextAppearance.App.Small" />
 

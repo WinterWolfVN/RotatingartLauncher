@@ -221,15 +221,15 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
 
     private String getPageTitle() {
         if (fileType == null) {
-            return "选择文件";
+            return getString(R.string.filebrowser_select_file_generic);
         }
         switch (fileType) {
             case "game":
-                return "选择游戏文件";
+                return getString(R.string.filebrowser_select_game_file);
             case "modloader":
-                return "选择 ModLoader 文件";
+                return getString(R.string.filebrowser_select_modloader_file);
             default:
-                return "选择文件";
+                return getString(R.string.filebrowser_select_file_generic);
         }
     }
 
@@ -360,9 +360,9 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
             emptyState.setVisibility(View.VISIBLE);
             fileRecyclerView.setVisibility(View.GONE);
             if (hasParentDirectory) {
-                emptyText.setText("当前文件夹为空");
+                emptyText.setText(getString(R.string.filebrowser_folder_empty));
             } else {
-                emptyText.setText("当前目录为空");
+                emptyText.setText(getString(R.string.filebrowser_directory_empty));
             }
         } else {
             emptyState.setVisibility(View.GONE);
@@ -379,11 +379,11 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
         if (selectedFile != null) {
             confirmButton.setEnabled(true);
             confirmButton.setBackgroundTintList(getResources().getColorStateList(R.color.button_secondary));
-            confirmButton.setText("确认选择: " + selectedFile.getName());
+            confirmButton.setText(getString(R.string.filebrowser_confirm_select, selectedFile.getName()));
         } else {
             confirmButton.setEnabled(false);
             confirmButton.setBackgroundTintList(getResources().getColorStateList(R.color.button_disabled));
-            confirmButton.setText("选择文件");
+            confirmButton.setText(getString(R.string.filebrowser_select_file));
         }
     }
 
@@ -431,16 +431,16 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
         if (mode != MODE_SELECT_ASSEMBLY && addToGameListListener != null) {
             options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
                 "add_to_game_list", 
-                "添加到游戏列表", 
-                "将此程序集添加到游戏列表以便快速启动"
+                getString(R.string.filebrowser_add_to_list), 
+                getString(R.string.filebrowser_add_to_list_desc)
             ));
         }
         
         // 选择此文件选项
         options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
             "select_file", 
-            "选择此文件", 
-            "确认选择此文件"
+            getString(R.string.filebrowser_select_this_file), 
+            getString(R.string.filebrowser_select_this_file_desc)
         ));
         
         if (options.isEmpty()) {
@@ -449,7 +449,7 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
         
         // 显示选项对话框
         new com.app.ralib.dialog.OptionSelectorDialog()
-            .setTitle("文件操作: " + fileName)
+            .setTitle(getString(R.string.filebrowser_file_action, fileName))
             .setIcon(R.drawable.ic_file)
             .setOptions(options)
             .setOnOptionSelectedListener(value -> {
@@ -550,13 +550,13 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
      */
     private void showSortMenu() {
         java.util.List<com.app.ralib.dialog.OptionSelectorDialog.Option> options = java.util.Arrays.asList(
-            new com.app.ralib.dialog.OptionSelectorDialog.Option("0", "按名称排序", "A-Z 字母顺序"),
-            new com.app.ralib.dialog.OptionSelectorDialog.Option("1", "按大小排序", "从大到小"),
-            new com.app.ralib.dialog.OptionSelectorDialog.Option("2", "按时间排序", "最新修改的在前")
+            new com.app.ralib.dialog.OptionSelectorDialog.Option("0", getString(R.string.filebrowser_sort_by_name), getString(R.string.filebrowser_sort_by_name_desc)),
+            new com.app.ralib.dialog.OptionSelectorDialog.Option("1", getString(R.string.filebrowser_sort_by_size), getString(R.string.filebrowser_sort_by_size_desc)),
+            new com.app.ralib.dialog.OptionSelectorDialog.Option("2", getString(R.string.filebrowser_sort_by_time), getString(R.string.filebrowser_sort_by_time_desc))
         );
         
         new com.app.ralib.dialog.OptionSelectorDialog()
-            .setTitle("排序方式")
+            .setTitle(getString(R.string.filebrowser_sort_by))
             .setIcon(R.drawable.ic_sort)
             .setOptions(options)
             .setCurrentValue(String.valueOf(sortMode))
@@ -565,8 +565,8 @@ public class FileBrowserFragment extends BaseFragment implements FileBrowserAdap
                 sortFileList();
                 filterFiles(searchInput.getText().toString());
                 
-                String sortName = sortMode == 0 ? "名称" : sortMode == 1 ? "大小" : "时间";
-                showToast("已按" + sortName + "排序");
+                String sortName = sortMode == 0 ? getString(R.string.filebrowser_sort_name) : sortMode == 1 ? getString(R.string.filebrowser_sort_size) : getString(R.string.filebrowser_sort_time);
+                showToast(getString(R.string.filebrowser_sorted_by, sortName));
             })
             .show(getParentFragmentManager(), "sort_options");
     }

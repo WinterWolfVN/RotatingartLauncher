@@ -44,7 +44,7 @@
                 android:layout_gravity="center"
                 android:src="@drawable/ic_close"
                 android:tint="#FFFFFF"
-                android:contentDescription="删除游戏" />
+                android:contentDescription="@string/content_desc_delete_game" />
         </com.google.android.material.card.MaterialCardView>
 
         <!-- 游戏图标容器 -->
@@ -76,7 +76,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
-                    android:contentDescription="游戏图标" />
+                    android:contentDescription="@string/content_desc_game_icon" />
             </com.google.android.material.card.MaterialCardView>
         </FrameLayout>
 
@@ -96,7 +96,7 @@
                 android:id="@+id/gameName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="游戏名称"
+                android:text="@string/game_name_placeholder"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:gravity="center"
@@ -111,7 +111,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="游戏描述"
+                android:text="@string/game_description"
                 android:textSize="11sp"
                 android:gravity="center"
                 android:maxLines="1"

@@ -33,7 +33,7 @@
             android:id="@+id/tvTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="下载游戏"
+            android:text="@string/gog_download_title"
             android:textColor="?attr/colorOnSurface"
             android:textSize="22sp"
             android:textStyle="bold"
@@ -51,7 +51,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="游戏本体"
+                android:text="@string/gog_download_game_main"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp"
                 android:layout_marginBottom="4dp" />
@@ -60,7 +60,7 @@
                 android:id="@+id/tvGameLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="游戏本体"
+                android:text="@string/gog_download_game_main"
                 android:textColor="?attr/colorOnSurface"
                 android:textSize="15sp"
                 android:textStyle="bold"
@@ -70,7 +70,7 @@
                 android:id="@+id/tvGameStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="等待中"
+                android:text="@string/gog_download_waiting"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="13sp" />
         </LinearLayout>
@@ -84,7 +84,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="模组加载器"
+                android:text="@string/gog_download_modloader"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp"
                 android:layout_marginBottom="4dp" />
@@ -103,7 +103,7 @@
                 android:id="@+id/tvModLoaderStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="等待中"
+                android:text="@string/gog_download_waiting"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="13sp" />
         </LinearLayout>
@@ -148,7 +148,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="游戏进度"
+                            android:text="@string/gog_download_game_progress"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp"
                             android:layout_marginBottom="4dp" />
@@ -213,7 +213,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="模组进度"
+                            android:text="@string/gog_download_modloader_progress"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp"
                             android:layout_marginBottom="4dp" />
@@ -260,7 +260,7 @@
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="取消"
+                android:text="@string/cancel"
                 android:textSize="15sp"
                 android:minWidth="100dp"
                 android:layout_marginEnd="8dp" />
@@ -270,7 +270,7 @@
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="后台运行"
+                android:text="@string/gog_download_background"
                 android:textSize="15sp"
                 android:minWidth="110dp"
                 android:visibility="gone" />

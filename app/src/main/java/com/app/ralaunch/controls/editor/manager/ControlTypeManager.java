@@ -5,6 +5,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -17,36 +18,36 @@ public class ControlTypeManager {
     /**
      * 获取控件类型显示名称
      */
-    public static String getTypeDisplayName(ControlData data) {
+    public static String getTypeDisplayName(Context context, ControlData data) {
         if (data == null) {
-            return "未知";
+            return context.getString(R.string.control_unknown);
         }
         
         if (data.type == ControlData.TYPE_JOYSTICK) {
-            return "摇杆";
+            return context.getString(R.string.control_type_joystick);
         } else if (data.type == ControlData.TYPE_TEXT) {
-            return "文本";
+            return context.getString(R.string.control_type_text);
         } else if (data.type == ControlData.TYPE_BUTTON) {
             // 按钮类型：区分键盘和手柄
             if (data.buttonMode == ControlData.BUTTON_MODE_GAMEPAD) {
-                return "按钮（手柄）";
+                return context.getString(R.string.control_type_button_gamepad);
             } else {
-                return "按钮（键盘）";
+                return context.getString(R.string.control_type_button_keyboard);
             }
         } else {
-            return "按钮";
+            return context.getString(R.string.control_type_button);
         }
     }
 
     /**
      * 更新类型显示
      */
-    public static void updateTypeDisplay(ControlData data, TextView textView) {
+    public static void updateTypeDisplay(Context context, ControlData data, TextView textView) {
         if (data == null || textView == null) {
             return;
         }
         
-        String typeName = getTypeDisplayName(data);
+        String typeName = getTypeDisplayName(context, data);
         textView.setText(typeName);
     }
 
@@ -60,7 +61,12 @@ public class ControlTypeManager {
             return;
         }
 
-        String[] types = {"按钮（键盘）", "按钮（手柄）", "摇杆", "文本"};
+        String[] types = {
+            context.getString(R.string.control_type_button_keyboard),
+            context.getString(R.string.control_type_button_gamepad),
+            context.getString(R.string.control_type_joystick),
+            context.getString(R.string.control_type_text)
+        };
         
         // 确定当前选中的索引
         int currentIndex;
@@ -81,7 +87,7 @@ public class ControlTypeManager {
         }
 
         new MaterialAlertDialogBuilder(context)
-            .setTitle("选择控件类型")
+            .setTitle(context.getString(R.string.editor_select_control_type))
             .setSingleChoiceItems(types, currentIndex, (dialog, which) -> {
                 if (which == 0) {
                     // 按钮（键盘）
@@ -102,7 +108,7 @@ public class ControlTypeManager {
                     data.shape = ControlData.SHAPE_RECTANGLE; // 默认方形
                     data.displayText = data.displayText != null && !data.displayText.isEmpty() 
                         ? data.displayText 
-                        : "文本"; // 默认文本
+                        : context.getString(R.string.control_type_text); // 默认文本
                     data.keycode = ControlData.SDL_SCANCODE_UNKNOWN; // 文本控件不支持按键映射
                 }
                 
@@ -112,7 +118,7 @@ public class ControlTypeManager {
                 
                 dialog.dismiss();
             })
-            .setNegativeButton("取消", null)
+            .setNegativeButton(context.getString(R.string.cancel), null)
             .show();
     }
 

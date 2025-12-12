@@ -24,7 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="当前目录为空"
+        android:text="@string/empty_directory_message"
         android:textSize="14sp"
         android:textStyle="bold"
         android:textColor="?attr/textHint" />

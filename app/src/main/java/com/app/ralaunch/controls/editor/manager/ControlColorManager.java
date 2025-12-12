@@ -8,6 +8,7 @@ import android.widget.GridLayout;
 
 import androidx.annotation.NonNull;
 
+import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlData;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -75,10 +76,11 @@ public class ControlColorManager {
         gridLayout.setPadding(padding, padding, padding, padding);
 
         // 创建对话框并保存引用
+        String title = isBackground ? context.getString(R.string.editor_select_bg_color) : context.getString(R.string.editor_select_border_color);
         android.app.Dialog colorDialog = new MaterialAlertDialogBuilder(context)
-            .setTitle(isBackground ? "选择背景色" : "选择边框色")
+            .setTitle(title)
             .setView(gridLayout)
-            .setNegativeButton("取消", null)
+            .setNegativeButton(context.getString(R.string.cancel), null)
             .create();
 
         for (int color : presetColors) {

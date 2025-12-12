@@ -57,7 +57,7 @@
                 android:id="@+id/gameTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="游戏标题"
+                android:text="@string/gog_game_title_placeholder"
                 android:textSize="15sp"
                 android:textStyle="bold"
                 android:maxLines="2"

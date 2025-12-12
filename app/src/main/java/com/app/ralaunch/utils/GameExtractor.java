@@ -1,5 +1,8 @@
 package com.app.ralaunch.utils;
 
+import android.content.Context;
+import com.app.ralaunch.R;
+import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralib.extractors.BasicSevenZipExtractor;
 import com.app.ralib.extractors.ExtractorCollection;
 import com.app.ralib.extractors.GogShFileExtractor;
@@ -52,11 +55,14 @@ public class GameExtractor {
                 requiredSpace / 1024.0 / 1024 / 1024));
 
         if (availableSpace < requiredSpace) {
-            String errorMsg = String.format(
-                    "存储空间不足！\n需要约 %.1f GB\n可用 %.1f GB\n\n请释放更多空间后重试",
+            Context context = RaLaunchApplication.getAppContext();
+            String errorMsg = context != null ? 
+                context.getString(R.string.import_storage_insufficient,
                     requiredSpace / 1024.0 / 1024 / 1024,
-                    availableSpace / 1024.0 / 1024 / 1024
-            );
+                    availableSpace / 1024.0 / 1024 / 1024) :
+                String.format("Insufficient storage!\nRequired: %.1f GB\nAvailable: %.1f GB\n\nPlease free up space and try again",
+                    requiredSpace / 1024.0 / 1024 / 1024,
+                    availableSpace / 1024.0 / 1024 / 1024);
             AppLogger.error(TAG, errorMsg);
             if (listener != null) {
                 listener.onError(errorMsg);
@@ -102,7 +108,11 @@ public class GameExtractor {
                             var gamePath = (Path)state.get(GogShFileExtractor.STATE_KEY_GAME_PATH);
                             if (gamePath == null) {
                                 AppLogger.error(TAG, "Game path is null in state");
-                                listener.onError("无法获取游戏路径");
+                                Context context = RaLaunchApplication.getAppContext();
+                                String errorMsg = context != null ? 
+                                    context.getString(R.string.import_cannot_read_info_failed) :
+                                    "Cannot get game path";
+                                listener.onError(errorMsg);
                                 return;
                             }
                             var modLoaderPath = Paths.get(outputDir, "GoG Games", "ModLoader");
@@ -131,7 +141,11 @@ public class GameExtractor {
         } catch (Exception e) {
             AppLogger.error(TAG, "Complete installation failed", e);
             if (listener != null) {
-                listener.onError("安装失败: " + e.getMessage());
+                Context context = RaLaunchApplication.getAppContext();
+                String errorMsg = context != null ?
+                    context.getString(R.string.import_install_failed, e.getMessage()) :
+                    "Installation failed: " + e.getMessage();
+                listener.onError(errorMsg);
             }
         }
     }
@@ -168,7 +182,11 @@ public class GameExtractor {
                         var gamePath = (Path)state.get(GogShFileExtractor.STATE_KEY_GAME_PATH);
                         if (gamePath == null) {
                             AppLogger.error(TAG, "Game path is null in state");
-                            listener.onError("无法获取游戏路径");
+                            Context context = RaLaunchApplication.getAppContext();
+                            String errorMsg = context != null ?
+                                context.getString(R.string.import_cannot_read_info_failed) :
+                                "Cannot get game path";
+                            listener.onError(errorMsg);
                             return;
                         }
                         listener.onComplete(gamePath.toString(), null);

@@ -19,7 +19,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="导入游戏"
+            android:text="@string/import_game_title"
             android:textColor="?attr/colorOnSurface"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -31,7 +31,7 @@
             android:id="@+id/statusText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="正在处理..."
+            android:text="@string/import_processing"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="15sp"
             android:lineSpacingExtra="4dp" />
@@ -75,7 +75,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="进度"
+                            android:text="@string/import_progress"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp"
                             android:layout_marginBottom="4dp" />
@@ -102,7 +102,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="步骤"
+                            android:text="@string/import_step"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp"
                             android:layout_marginBottom="4dp"
@@ -154,7 +154,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="准备开始..."
+                        android:text="@string/import_preparing"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
 

@@ -183,7 +183,7 @@ public class InitializationFragment extends Fragment {
         // GL4ES - OpenGL ES 兼容层（预编译库，不需要解压）
         componentList.add(new ComponentItem(
             "GL4ES",
-            "OpenGL2.0转换为OpenGL ES兼容层",
+            getString(R.string.init_component_gl4es_desc),
             "gl4es.tar.xz",
             false  // 不需要解压
         ));
@@ -191,7 +191,7 @@ public class InitializationFragment extends Fragment {
         // SDL - Simple DirectMedia Layer（预编译库，不需要解压）
         componentList.add(new ComponentItem(
             "SDL",
-            "跨平台多媒体和输入处理库",
+            getString(R.string.init_component_sdl_desc),
             "sdl.tar.xz",
             false  // 不需要解压
         ));
@@ -199,7 +199,7 @@ public class InitializationFragment extends Fragment {
         // .NET Core Host（预编译库，不需要解压）
         componentList.add(new ComponentItem(
             "NETCoreclr",
-            ".NET核心运行时宿主",
+            getString(R.string.init_component_netcorehost_desc),
             "netcorehost.tar.xz",
             false  // 不需要解压
         ));
@@ -207,7 +207,7 @@ public class InitializationFragment extends Fragment {
         // .NET 运行时（需要解压）
         componentList.add(new ComponentItem(
             "dotnet",
-            ".NET10运行时环境",
+            getString(R.string.init_component_dotnet_desc),
             "dotnet.tar.xz",
             true  // 需要解压
         ));
@@ -215,7 +215,7 @@ public class InitializationFragment extends Fragment {
         // MonoMod 补丁框架（不在初始化时解压，按需解压）
         componentList.add(new ComponentItem(
             "MonoMod",
-            "MonoMod是一个通用的.NET程序集模组化工具",
+            getString(R.string.init_component_monomod_desc),
             "MonoMod_Patch.tar.xz",
             false  // 不在初始化时解压
         ));
@@ -223,7 +223,7 @@ public class InitializationFragment extends Fragment {
         // 游戏补丁集合（不在初始化时解压，按需解压）
         componentList.add(new ComponentItem(
             "patches",
-            "游戏修复补丁",
+            getString(R.string.init_component_patches_desc),
             "patches.tar.xz",
             false  // 不在初始化时解压
         ));
@@ -278,7 +278,7 @@ public class InitializationFragment extends Fragment {
         
         // 重置为初始未授权状态
         permissionStatusText.setVisibility(View.GONE);
-        btnRequestPermissions.setText("授予权限");
+        btnRequestPermissions.setText(getString(R.string.init_grant_permissions));
         btnRequestPermissions.setEnabled(true);
         btnSkipPermissions.setVisibility(View.VISIBLE);
         
@@ -298,7 +298,7 @@ public class InitializationFragment extends Fragment {
         resetComponentsState();
         
         // 重置进度
-        updateOverallProgress(0, "点击【同意并安装】开始");
+        updateOverallProgress(0, getString(R.string.init_click_to_start));
         
         animateViewEntrance(extractionLayout);
         
@@ -347,7 +347,7 @@ public class InitializationFragment extends Fragment {
             startActivity(intent);
         } catch (Exception e) {
             AppLogger.error(TAG, "Failed to open official download page", e);
-            Toast.makeText(requireActivity(), "无法打开浏览器", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireActivity(), getString(R.string.init_cannot_open_browser), Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -357,7 +357,7 @@ public class InitializationFragment extends Fragment {
     private void handleRequestPermissions() {
         if (permissionManager == null) {
             AppLogger.error(TAG, "PermissionManager is null");
-            Toast.makeText(requireActivity(), "权限管理器初始化失败", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireActivity(), getString(R.string.init_permission_manager_failed), Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -370,7 +370,7 @@ public class InitializationFragment extends Fragment {
         }
         
         btnRequestPermissions.setEnabled(false);
-        btnRequestPermissions.setText("请求权限中...");
+        btnRequestPermissions.setText(getString(R.string.init_requesting_permissions));
         
         permissionManager.requestRequiredPermissions(new PermissionManager.PermissionCallback() {
             @Override
@@ -379,7 +379,7 @@ public class InitializationFragment extends Fragment {
                 SharedPreferences prefs = requireActivity().getSharedPreferences(PREFS_NAME, 0);
                 prefs.edit().putBoolean(KEY_PERMISSIONS_GRANTED, true).apply();
                 
-                Toast.makeText(requireActivity(), "权限授予成功", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireActivity(), getString(R.string.init_permissions_granted), Toast.LENGTH_SHORT).show();
                 showExtractionState();
             }
             
@@ -387,10 +387,10 @@ public class InitializationFragment extends Fragment {
             public void onPermissionsDenied() {
                 // 权限被拒绝，恢复按钮状态
                 btnRequestPermissions.setEnabled(true);
-                btnRequestPermissions.setText("授予权限");
+                btnRequestPermissions.setText(getString(R.string.init_grant_permissions));
                 
                 Toast.makeText(requireActivity(), 
-                    "权限被拒绝，部分功能可能无法使用", 
+                    getString(R.string.init_permissions_denied), 
                     Toast.LENGTH_LONG).show();
             }
         });
@@ -403,12 +403,12 @@ public class InitializationFragment extends Fragment {
         // 用户选择跳过权限，直接进入解压界面
         // 不保存权限已授予状态，下次启动时会再次询问
         new androidx.appcompat.app.AlertDialog.Builder(requireActivity())
-            .setTitle("跳过权限授予")
-            .setMessage("跳过权限授予可能会导致应用无法正常访问游戏文件。您确定要跳过吗？")
-            .setPositiveButton("继续跳过", (dialog, which) -> {
+            .setTitle(getString(R.string.init_skip_permissions_title))
+            .setMessage(getString(R.string.init_skip_permissions_message))
+            .setPositiveButton(getString(R.string.init_skip_continue), (dialog, which) -> {
                 showExtractionState();
             })
-            .setNegativeButton("返回", null)
+            .setNegativeButton(getString(R.string.init_skip_back), null)
             .show();
     }
     
@@ -424,13 +424,13 @@ public class InitializationFragment extends Fragment {
         
         if (hasPermissions) {
             permissionStatusText.setVisibility(View.VISIBLE);
-            permissionStatusText.setText("✓ 权限已授予");
-            btnRequestPermissions.setText("继续");
+            permissionStatusText.setText(getString(R.string.init_permissions_granted_check));
+            btnRequestPermissions.setText(getString(R.string.init_continue));
             btnRequestPermissions.setEnabled(true);
             btnSkipPermissions.setVisibility(View.GONE);
         } else {
             permissionStatusText.setVisibility(View.GONE);
-            btnRequestPermissions.setText("授予权限");
+            btnRequestPermissions.setText(getString(R.string.init_grant_permissions));
             btnRequestPermissions.setEnabled(true);
             btnSkipPermissions.setVisibility(View.VISIBLE);
         }
@@ -456,7 +456,7 @@ public class InitializationFragment extends Fragment {
 
         // 更新按钮状态
         btnStartExtraction.setEnabled(false);
-        btnStartExtraction.setText("安装中...");
+        btnStartExtraction.setText(getString(R.string.init_installing));
         
         // 在后台线程执行解压
         executorService.execute(() -> {
@@ -502,18 +502,18 @@ public class InitializationFragment extends Fragment {
             ComponentItem component = components.get(i);
             
             // 更新组件状态为开始解压
-            updateComponentStatus(i, 10, "开始解压...");
+            updateComponentStatus(i, 10, getString(R.string.init_start_extracting));
             
             // 执行解压
             boolean success = extractComponent(component, i);
             
             if (success) {
                 // 标记为已安装
-                updateComponentStatus(i, 100, "解压完成");
+                updateComponentStatus(i, 100, getString(R.string.init_extraction_complete));
                 component.setInstalled(true);
 
             } else {
-                throw new Exception("解压 " + component.getName() + " 失败");
+                throw new Exception(getString(R.string.init_extraction_failed_component, component.getName()));
             }
         }
     }
@@ -525,7 +525,7 @@ public class InitializationFragment extends Fragment {
         // 检查是否需要解压
         if (!component.needsExtraction()) {
             AppLogger.info(TAG, "组件 " + component.getName() + " 不需要解压，跳过...");
-            updateComponentStatus(componentIndex, 100, "无需解压");
+            updateComponentStatus(componentIndex, 100, getString(R.string.init_no_extraction_needed));
             return true;  // 直接标记为成功
         }
 
@@ -536,11 +536,11 @@ public class InitializationFragment extends Fragment {
             // 1. 创建临时文件
             tempArchiveFile = new File(requireActivity().getCacheDir(), 
                                  "temp_" + component.getFileName());
-            updateComponentStatus(componentIndex, 20, "准备文件...");
+            updateComponentStatus(componentIndex, 20, getString(R.string.init_preparing_file));
             
             // 2. 从assets复制到临时文件
             copyAssetToFile(assetManager, component.getFileName(), tempArchiveFile);
-            updateComponentStatus(componentIndex, 30, "文件准备完成");
+            updateComponentStatus(componentIndex, 30, getString(R.string.init_file_ready));
 
             // 3. 根据组件名称确定目标目录
             String dirName = component.getName(); // 使用组件名称作为目录名
@@ -603,7 +603,7 @@ public class InitializationFragment extends Fragment {
              org.apache.commons.compress.archivers.tar.TarArchiveInputStream tarIn = 
                  new org.apache.commons.compress.archivers.tar.TarArchiveInputStream(xzIn)) {
             
-            updateComponentStatus(componentIndex, 40, "解压中...");
+            updateComponentStatus(componentIndex, 40, getString(R.string.init_extracting));
             
             org.apache.commons.compress.archivers.tar.TarArchiveEntry entry;
             int processedFiles = 0;
@@ -675,17 +675,17 @@ public class InitializationFragment extends Fragment {
                 if (processedFiles % 10 == 0) {
                     int progress = 40 + (int)((processedFiles * 50.0) / Math.max(estimatedFiles, processedFiles));
                     updateComponentStatus(componentIndex, Math.min(progress, 90), 
-                        "解压中 (" + processedFiles + " 文件)...");
+                        getString(R.string.init_extracting_files, processedFiles));
                 }
             }
             
-            updateComponentStatus(componentIndex, 100, "完成");
+            updateComponentStatus(componentIndex, 100, getString(R.string.init_complete));
             AppLogger.info(TAG, "Extracted " + processedFiles + " files from tar.xz");
             return true;
             
         } catch (Exception e) {
             AppLogger.error(TAG, "Failed to extract tar.xz: " + archiveFile.getName(), e);
-            updateComponentStatus(componentIndex, 0, "解压失败");
+            updateComponentStatus(componentIndex, 0, getString(R.string.init_extraction_failed_status));
             return false;
         }
     }
@@ -758,9 +758,9 @@ public class InitializationFragment extends Fragment {
      */
     private void handleExtractionError(Exception error) {
         btnStartExtraction.setEnabled(true);
-        btnStartExtraction.setText("重试安装");
+        btnStartExtraction.setText(getString(R.string.init_retry_install));
         
-        String errorMessage = "解压失败: " + error.getMessage();
+        String errorMessage = getString(R.string.init_extraction_failed, error.getMessage());
         Toast.makeText(requireActivity(), errorMessage, Toast.LENGTH_LONG).show();
 
         AppLogger.error(TAG, "Extraction error handled", error);
@@ -775,20 +775,20 @@ public class InitializationFragment extends Fragment {
         prefs.edit().putBoolean(KEY_COMPONENTS_EXTRACTED, true).apply();
         
         // 更新UI显示成功状态
-        updateOverallProgress(100, "安装完成");
+        updateOverallProgress(100, getString(R.string.init_install_complete));
         
         // 显示安装的运行时版本信息
         try {
             java.util.List<String> versions = com.app.ralaunch.utils.RuntimeManager.listInstalledVersions(requireActivity());
             if (!versions.isEmpty()) {
-                String versionInfo = "已安装 .NET 运行时版本：" + String.join(", ", versions);
+                String versionInfo = getString(R.string.init_installed_runtime_versions, String.join(", ", versions));
                 Toast.makeText(requireActivity(), versionInfo, Toast.LENGTH_LONG).show();
 
             } else {
-                Toast.makeText(requireActivity(), ".NET 环境安装成功！", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireActivity(), getString(R.string.init_dotnet_install_success), Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
-            Toast.makeText(requireActivity(), ".NET 环境安装成功！", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireActivity(), getString(R.string.init_dotnet_install_success), Toast.LENGTH_SHORT).show();
             AppLogger.warn(TAG, "Failed to get installed versions", e);
         }
         

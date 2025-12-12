@@ -170,19 +170,19 @@ public class GogApiClient {
                     Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    throw new IOException("重试被中断", ie);
+                    throw new IOException("Retry interrupted", ie);
                 }
             }
         }
 
         // 所有重试都失败
-        AppLogger.error(TAG, operationName + " - 所有重试都失败");
+        AppLogger.error(TAG, operationName + " - All retries failed");
         if (lastException instanceof java.net.UnknownHostException) {
-            throw new IOException("无法连接到 GOG 服务器 - DNS解析失败。请检查网络连接或尝试使用VPN", lastException);
+            throw new IOException("Cannot connect to GOG server - DNS resolution failed. Please check your network connection or try using VPN", lastException);
         } else if (lastException instanceof java.net.SocketTimeoutException) {
-            throw new IOException("连接 GOG 服务器超时。请检查网络连接", lastException);
+            throw new IOException("Connection to GOG server timed out. Please check your network connection", lastException);
         } else {
-            throw new IOException("网络请求失败", lastException);
+            throw new IOException("Network request failed", lastException);
         }
     }
 
@@ -190,11 +190,11 @@ public class GogApiClient {
      * 使用当前认证信息下载文件
      */
     public void downloadWithAuth(String urlString, File targetFile, DownloadProgress progress) throws IOException {
-        if (targetFile == null) throw new IOException("目标文件无效");
+        if (targetFile == null) throw new IOException("Invalid target file");
         File parent = targetFile.getParentFile();
         if (parent != null && !parent.exists()) {
             if (!parent.mkdirs()) {
-                throw new IOException("无法创建下载目录: " + parent.getAbsolutePath());
+                throw new IOException("Cannot create download directory: " + parent.getAbsolutePath());
             }
         }
 
@@ -215,7 +215,7 @@ public class GogApiClient {
 
                 int code = conn.getResponseCode();
                 if (code >= 400) {
-                    throw new IOException("下载失败，HTTP " + code);
+                    throw new IOException("Download failed, HTTP " + code);
                 }
 
                 long total = conn.getContentLengthLong();
@@ -404,8 +404,8 @@ public class GogApiClient {
                         return extractCodeFromUrl(location);
                     } else if (location.contains("/login")) {
                         // 重定向回登录页面，说明登录失败
-                        AppLogger.error(TAG, "登录失败 - 用户名或密码错误");
-                        throw new IOException("登录失败 - 请检查用户名和密码");
+                        AppLogger.error(TAG, "Login failed - incorrect username or password");
+                        throw new IOException("Login failed - Please check username and password");
                     } else {
                         // 其他重定向，可能需要跟随重定向链
                         AppLogger.info(TAG, "跟随登录重定向链");
@@ -417,13 +417,13 @@ public class GogApiClient {
                 String response = readResponse(conn.getInputStream());
                 AppLogger.warn(TAG, "登录返回200但未重定向，响应长度: " + response.length());
                 if (response.contains("error") || response.contains("invalid")) {
-                    AppLogger.error(TAG, "登录失败 - 服务器返回错误");
-                    throw new IOException("登录失败 - 用户名或密码错误");
+                    AppLogger.error(TAG, "Login failed - server returned error");
+                    throw new IOException("Login failed - Incorrect username or password");
                 }
             }
 
-            AppLogger.error(TAG, "登录失败 - 未预期的响应码: " + responseCode);
-            throw new IOException("登录失败 - 响应码: " + responseCode);
+            AppLogger.error(TAG, "Login failed - unexpected response code: " + responseCode);
+            throw new IOException("Login failed - Response code: " + responseCode);
         } finally {
             conn.disconnect();
         }
@@ -472,13 +472,13 @@ public class GogApiClient {
             // 处理重定向
             if (responseCode == 302 || responseCode == 303) {
                 String location = conn.getHeaderField("Location");
-                AppLogger.warn(TAG, "两步验证页面被重定向到: " + location);
-                throw new IOException("两步验证页面重定向，可能session已失效");
+                AppLogger.warn(TAG, "Two-factor authentication page redirected to: " + location);
+                throw new IOException("Two-factor authentication page redirected, session may have expired");
             }
 
             if (responseCode != 200) {
-                AppLogger.error(TAG, "两步验证页面返回异常响应码: " + responseCode);
-                throw new IOException("无法访问两步验证页面");
+                AppLogger.error(TAG, "Two-factor authentication page returned unexpected response code: " + responseCode);
+                throw new IOException("Cannot access two-factor authentication page");
             }
 
             html = readResponse(conn.getInputStream());
@@ -1102,7 +1102,7 @@ public class GogApiClient {
     public GameDetails getGameDetails(String productId) throws IOException {
         JSONObject json = getProductInfo(productId);
         if (json == null || json.length() == 0) {
-            throw new IOException("无法获取游戏信息");
+            throw new IOException("Cannot get game information");
         }
 
         String title = json.optString("title", "");
@@ -1244,7 +1244,7 @@ public class GogApiClient {
      */
     public List<GogGame> getOwnedGames() throws IOException {
         String accessToken = getAccessToken();
-        if (accessToken == null) throw new IOException("未登录");
+        if (accessToken == null) throw new IOException("Not logged in");
 
         List<GogGame> games = new ArrayList<>();
         int page = 1;

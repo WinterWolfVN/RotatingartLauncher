@@ -80,14 +80,14 @@ public class RuntimeSelectorManager {
             String description = getVersionDescription(version);
             options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
                 version,
-                ".NET " + version,
+                context.getString(R.string.runtime_dotnet_version, version),
                 description
             ));
         }
         
         // 创建并配置对话框
         com.app.ralib.dialog.OptionSelectorDialog dialog = new com.app.ralib.dialog.OptionSelectorDialog()
-            .setTitle(".NET 运行时版本")
+            .setTitle(context.getString(R.string.runtime_selector_title))
             .setIcon(R.drawable.ic_settings)
             .setOptions(options)
             .setCurrentValue(currentVersion)
@@ -126,14 +126,14 @@ public class RuntimeSelectorManager {
             String description = getVersionDescription(version);
             options.add(new com.app.ralib.dialog.OptionSelectorDialog.Option(
                 version,
-                ".NET " + version,
+                context.getString(R.string.runtime_dotnet_version, version),
                 description
             ));
         }
         
         // 创建并配置对话框
         com.app.ralib.dialog.OptionSelectorDialog dialog = new com.app.ralib.dialog.OptionSelectorDialog()
-            .setTitle(".NET 运行时版本")
+            .setTitle(context.getString(R.string.runtime_selector_title))
             .setIcon(R.drawable.ic_settings)
             .setOptions(options)
             .setCurrentValue(currentVersion)
@@ -163,15 +163,15 @@ public class RuntimeSelectorManager {
      */
     private String getVersionDescription(String version) {
         if (version.startsWith("10.")) {
-            return "最新版本 - 推荐使用";
+            return context.getString(R.string.runtime_version_latest_recommended);
         } else if (version.startsWith("9.")) {
-            return "稳定版本 - 推荐使用";
+            return context.getString(R.string.runtime_version_stable_recommended);
         } else if (version.startsWith("8.")) {
-            return "长期支持版本 (LTS)";
+            return context.getString(R.string.runtime_version_lts_desc);
         } else if (version.startsWith("7.")) {
-            return "长期支持版本 (LTS)";
+            return context.getString(R.string.runtime_version_lts_desc);
         }
-        return "稳定版本";
+        return context.getString(R.string.runtime_version_stable);
     }
     
     /**

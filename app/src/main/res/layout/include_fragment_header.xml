@@ -11,7 +11,7 @@
     <ImageButton
         android:id="@+id/backButton"
         android:src="@drawable/ic_arrow_back"
-        android:contentDescription="返回"
+        android:contentDescription="@string/content_desc_back"
         style="@style/Widget.App.ImageButton.Back" />
 
     <TextView
