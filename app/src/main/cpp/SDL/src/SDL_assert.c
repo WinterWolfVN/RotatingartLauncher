@@ -230,7 +230,7 @@ static SDL_assert_state SDLCALL SDL_PromptAssertion(const SDL_assert_data *data,
     window = SDL_GetFocusWindow();
     if (window) {
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
-            SDL_MinimizeWindow(window);
+//            SDL_MinimizeWindow(window);
         } else {
             /* !!! FIXME: ungrab the input if we're not fullscreen? */
             /* No need to mess with the window */
