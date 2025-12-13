@@ -9,16 +9,7 @@ using Terraria.Localization;
 
 namespace HostAndPlayPatch;
 
-/// <summary>
-/// Host & Play 补丁 - Android 多进程方案
-/// 
-/// 工作原理：
-/// 1. 拦截 OnSubmitServerPassword() 方法
-/// 2. C# 构建完整的服务器参数（-server -world xxx -maxplayers xxx 等）
-/// 3. 通过 P/Invoke 传递参数给 native 层
-/// 4. Native 层通过 JNI 调用通用的 ProcessLauncherService
-/// 5. 主进程以客户端模式连接 127.0.0.1:7777
-/// </summary>
+
 public static class HostAndPlayPatcher
 {
     private static Harmony? _harmony;
@@ -38,9 +29,6 @@ public static class HostAndPlayPatcher
         {
             Console.WriteLine("========================================");
             Console.WriteLine("[HostAndPlayPatch] Android Multi-Process Host & Play");
-            Console.WriteLine("========================================");
-            Console.WriteLine("[HostAndPlayPatch] C# 控制所有服务器逻辑");
-            Console.WriteLine("[HostAndPlayPatch] Java 仅提供通用进程启动");
             Console.WriteLine("========================================");
 
             ApplyHarmonyPatches();

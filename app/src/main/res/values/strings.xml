@@ -42,6 +42,9 @@
     <string name="import_optional">(可选)</string>
     <string name="import_start">开始导入</string>
     <string name="import_extracting">正在解压游戏文件...</string>
+    <string name="import_extracting_file">正在解压: %s</string>
+    <string name="import_extraction_complete">解压完成</string>
+    <string name="import_extraction_failed">解压失败</string>
     <string name="import_installing_modloader">正在安装ModLoader...</string>
     <string name="import_complete">导入完成</string>
     <string name="import_error">导入失败: %s</string>

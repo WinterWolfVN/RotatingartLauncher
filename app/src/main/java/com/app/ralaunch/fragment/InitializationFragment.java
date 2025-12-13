@@ -224,8 +224,26 @@ public class InitializationFragment extends Fragment {
         componentList.add(new ComponentItem(
             "patches",
             getString(R.string.init_component_patches_desc),
-            "patches.tar.xz",
+            "patches.zip",
             false  // 不在初始化时解压
+        ));
+
+        // Box64 x64 库（需要解压）
+        // 注意：Android 构建系统会自动解压 .tar.gz，所以 assets 中是 .tar 文件
+        componentList.add(new ComponentItem(
+            "Box64 x64 Libs",
+            "Box64 x86_64 模拟库文件",
+            "box64-x64-libs.tar",
+            true  // 需要解压
+        ));
+
+        // SteamCMD（需要解压）
+        // 注意：Android 构建系统会自动解压 .tar.gz，所以 assets 中是 .tar 文件
+        componentList.add(new ComponentItem(
+            "SteamCMD",
+            "Steam 命令行工具",
+            "steamcmd.tar",
+            true  // 需要解压
         ));
 
         return componentList;
@@ -543,7 +561,14 @@ public class InitializationFragment extends Fragment {
             updateComponentStatus(componentIndex, 30, getString(R.string.init_file_ready));
 
             // 3. 根据组件名称确定目标目录
-            String dirName = component.getName(); // 使用组件名称作为目录名
+            String dirName;
+            if (component.getName().equals("Box64 x64 Libs")) {
+                dirName = "x64lib";  // Box64 库解压到 x64lib 目录
+            } else if (component.getName().equals("SteamCMD")) {
+                dirName = "steamcmd";  // SteamCMD 解压到 steamcmd 目录
+            } else {
+                dirName = component.getName(); // 其他组件使用组件名称作为目录名
+            }
             File outputDir = new File(requireActivity().getFilesDir(), dirName);
             
             if (!outputDir.exists()) {
@@ -575,20 +600,198 @@ public class InitializationFragment extends Fragment {
      */
     private void copyAssetToFile(AssetManager assetManager, String assetFileName, 
                                   File targetFile) throws IOException {
+        // 调试：列出所有 assets 文件
+        try {
+            String[] assetFiles = assetManager.list("");
+            AppLogger.debug(TAG, "Available assets files: " + java.util.Arrays.toString(assetFiles));
+            AppLogger.debug(TAG, "Looking for: " + assetFileName);
+        } catch (Exception e) {
+            AppLogger.warn(TAG, "Failed to list assets", e);
+        }
+        
         try (InputStream inputStream = assetManager.open(assetFileName)) {
             java.nio.file.Files.copy(inputStream, targetFile.toPath(),
                 java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-
+            AppLogger.info(TAG, "Successfully copied asset: " + assetFileName + " to " + targetFile.getAbsolutePath());
+        } catch (FileNotFoundException e) {
+            AppLogger.error(TAG, "Asset file not found: " + assetFileName, e);
+            // 尝试列出 assets 目录内容以便调试
+            try {
+                String[] files = assetManager.list("");
+                AppLogger.error(TAG, "Available assets: " + java.util.Arrays.toString(files));
+            } catch (Exception ex) {
+                AppLogger.error(TAG, "Failed to list assets for debugging", ex);
+            }
+            throw e;
         }
     }
     
     /**
-     * 解压归档文件（tar.xz 格式）
+     * 解压归档文件（支持 tar.xz、tar.gz 和 tar 格式）
      */
     private boolean extractArchiveFile(File archiveFile, File targetDir, 
                                        ComponentItem component, int componentIndex) {
-        AppLogger.info(TAG, "Extracting tar.xz with Apache Commons Compress");
-        return extractTarXz(archiveFile, targetDir, component, componentIndex);
+        String fileName = component.getFileName().toLowerCase();
+        
+        if (fileName.endsWith(".tar.gz") || fileName.endsWith(".tgz")) {
+            // 使用通用解压工具处理 tar.gz
+            AppLogger.info(TAG, "Extracting tar.gz: " + component.getName());
+            return extractTarGz(archiveFile, targetDir, component, componentIndex);
+        } else if (fileName.endsWith(".tar.xz")) {
+            // 使用现有方法处理 tar.xz
+            AppLogger.info(TAG, "Extracting tar.xz: " + component.getName());
+            return extractTarXz(archiveFile, targetDir, component, componentIndex);
+        } else if (fileName.endsWith(".tar") && !fileName.endsWith(".tar.gz") && !fileName.endsWith(".tar.xz")) {
+            // 处理纯 tar 文件（Android 构建系统自动解压了 .tar.gz）
+            AppLogger.info(TAG, "Extracting tar: " + component.getName());
+            return extractTar(archiveFile, targetDir, component, componentIndex);
+        } else {
+            AppLogger.error(TAG, "Unsupported archive format: " + fileName);
+            return false;
+        }
+    }
+    
+    /**
+     * 使用通用解压工具解压纯 tar 文件（无压缩）
+     */
+    private boolean extractTar(File archiveFile, File targetDir, 
+                               ComponentItem component, int componentIndex) {
+        try {
+            updateComponentStatus(componentIndex, 40, getString(R.string.init_extracting));
+            
+            // 根据组件名称确定前缀
+            String stripPrefix = null;
+            if (component.getName().equals("Box64 x64 Libs")) {
+                stripPrefix = "usr/lib/";  // 移除 usr/lib/ 前缀
+            } else if (component.getName().equals("SteamCMD")) {
+                stripPrefix = "steamcmd/";  // 移除 steamcmd/ 前缀
+            }
+            
+            // 使用 Apache Commons Compress 解压 tar 文件
+            try (FileInputStream fis = new FileInputStream(archiveFile);
+                 BufferedInputStream bis = new BufferedInputStream(fis);
+                 org.apache.commons.compress.archivers.tar.TarArchiveInputStream tarIn = 
+                     new org.apache.commons.compress.archivers.tar.TarArchiveInputStream(bis)) {
+                
+                org.apache.commons.compress.archivers.tar.TarArchiveEntry entry;
+                int processedFiles = 0;
+                
+                while ((entry = tarIn.getNextTarEntry()) != null) {
+                    String entryName = entry.getName();
+                    
+                    // 跳过根目录和空条目
+                    if (entryName.isEmpty() || entryName.equals(".") || entryName.equals("..")) {
+                        continue;
+                    }
+                    
+                    // 移除前导的 ./
+                    if (entryName.startsWith("./")) {
+                        entryName = entryName.substring(2);
+                    }
+                    
+                    // 移除指定的前缀
+                    if (stripPrefix != null && !stripPrefix.isEmpty()) {
+                        if (entryName.startsWith("./" + stripPrefix)) {
+                            entryName = entryName.substring(2 + stripPrefix.length());
+                        } else if (entryName.startsWith(stripPrefix)) {
+                            entryName = entryName.substring(stripPrefix.length());
+                        } else if (entryName.contains(stripPrefix)) {
+                            int idx = entryName.indexOf(stripPrefix);
+                            entryName = entryName.substring(idx + stripPrefix.length());
+                        } else {
+                            // 对于 Box64 库，同时支持 x86_64 和 i386 架构
+                            if (stripPrefix.equals("usr/lib/") && 
+                                !entryName.contains("box64-x86_64-linux-gnu/") && 
+                                !entryName.contains("box64-i386-linux-gnu/")) {
+                                continue;
+                            }
+                        }
+                    }
+                    
+                    if (entryName.isEmpty()) {
+                        continue;
+                    }
+                    
+                    File targetFile = new File(targetDir, entryName);
+                    
+                    // 安全检查
+                    String canonicalDestPath = targetDir.getCanonicalPath();
+                    String canonicalEntryPath = targetFile.getCanonicalPath();
+                    if (!canonicalEntryPath.startsWith(canonicalDestPath + File.separator) && 
+                        !canonicalEntryPath.equals(canonicalDestPath)) {
+                        AppLogger.warn(TAG, "跳过不安全的路径: " + entryName);
+                        continue;
+                    }
+                    
+                    if (entry.isDirectory()) {
+                        if (!targetFile.exists()) {
+                            targetFile.mkdirs();
+                        }
+                    } else {
+                        File parent = targetFile.getParentFile();
+                        if (parent != null && !parent.exists()) {
+                            parent.mkdirs();
+                        }
+                        
+                        try (FileOutputStream fos = new FileOutputStream(targetFile);
+                             BufferedOutputStream bos = new BufferedOutputStream(fos)) {
+                            byte[] buffer = new byte[8192];
+                            int bytesRead;
+                            while ((bytesRead = tarIn.read(buffer)) != -1) {
+                                bos.write(buffer, 0, bytesRead);
+                            }
+                        }
+                        
+                        if ((entry.getMode() & 0100) != 0) {
+                            targetFile.setExecutable(true, false);
+                        }
+                        targetFile.setReadable(true, false);
+                    }
+                    
+                    processedFiles++;
+                }
+                
+                updateComponentStatus(componentIndex, 100, getString(R.string.init_complete));
+                AppLogger.info(TAG, "Extracted " + processedFiles + " files from tar");
+                return true;
+            }
+            
+        } catch (Exception e) {
+            AppLogger.error(TAG, "Failed to extract tar: " + archiveFile.getName(), e);
+            updateComponentStatus(componentIndex, 0, getString(R.string.init_extraction_failed_status));
+            return false;
+        }
+    }
+    
+    /**
+     * 使用通用解压工具解压 tar.gz 文件
+     */
+    private boolean extractTarGz(File archiveFile, File targetDir, 
+                                  ComponentItem component, int componentIndex) {
+        try {
+            updateComponentStatus(componentIndex, 40, getString(R.string.init_extracting));
+            
+            // 根据组件名称确定前缀
+            String stripPrefix = null;
+            if (component.getName().equals("Box64 x64 Libs")) {
+                stripPrefix = "usr/lib/";  // 移除 usr/lib/ 前缀
+            } else if (component.getName().equals("SteamCMD")) {
+                stripPrefix = "steamcmd/";  // 移除 steamcmd/ 前缀
+            }
+            
+            // 使用通用解压工具
+            int fileCount = com.app.ralaunch.utils.ArchiveExtractor.extractTarGz(
+                archiveFile, targetDir, stripPrefix);
+            
+            updateComponentStatus(componentIndex, 100, getString(R.string.init_complete));
+            AppLogger.info(TAG, "Extracted " + fileCount + " files from tar.gz");
+            return true;
+            
+        } catch (Exception e) {
+            AppLogger.error(TAG, "Failed to extract tar.gz: " + archiveFile.getName(), e);
+            updateComponentStatus(componentIndex, 0, getString(R.string.init_extraction_failed_status));
+            return false;
+        }
     }
     
     /**

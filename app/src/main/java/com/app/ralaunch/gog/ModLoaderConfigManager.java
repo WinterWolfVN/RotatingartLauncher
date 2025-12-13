@@ -1,6 +1,7 @@
 package com.app.ralaunch.gog;
 
 import android.content.Context;
+import com.app.ralaunch.R;
 import com.app.ralaunch.utils.AppLogger;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -95,9 +96,22 @@ public class ModLoaderConfigManager {
         public String fileName;
         public boolean stable;
         
+        /**
+         * 获取显示字符串（用于UI显示，支持多语言）
+         */
+        public String getDisplayString(Context context) {
+            if (stable) {
+                return version + " (" + context.getString(R.string.runtime_version_stable) + ")";
+            }
+            return version;
+        }
+        
+        /**
+         * toString 方法用于日志和调试，只返回版本号（不包含稳定版标识）
+         */
         @Override
         public String toString() {
-            return version + (stable ? " (稳定版)" : "");
+            return version;
         }
     }
 }

@@ -569,7 +569,7 @@ public class GogClientFragment extends Fragment {
         // 构建ModLoader版本字符串数组
         String[] modLoaderVersionNames = new String[modLoaderVersions.size()];
         for (int i = 0; i < modLoaderVersions.size(); i++) {
-            modLoaderVersionNames[i] = modLoaderVersions.get(i).toString();
+            modLoaderVersionNames[i] = modLoaderVersions.get(i).getDisplayString(requireContext());
         }
         
         // 加载 XML 布局

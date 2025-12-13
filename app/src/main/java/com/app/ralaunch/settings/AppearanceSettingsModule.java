@@ -278,11 +278,38 @@ public class AppearanceSettingsModule implements SettingsModule {
     }
     
     private void setupAuthorLink() {
-        TextView tvAuthorLink = rootView.findViewById(R.id.tvAuthorLink);
-        if (tvAuthorLink != null) {
-            // Set the HTML text and make links clickable
-            tvAuthorLink.setText(Html.fromHtml(tvAuthorLink.getText().toString(), Html.FROM_HTML_MODE_LEGACY));
-            tvAuthorLink.setMovementMethod(LinkMovementMethod.getInstance());
+        // 设置项目作者 GitHub 按钮
+        com.google.android.material.button.MaterialButton btnAuthorGithub = 
+            rootView.findViewById(R.id.btnAuthorGithub);
+        if (btnAuthorGithub != null) {
+            btnAuthorGithub.setOnClickListener(v -> {
+                openGitHubProfile("FireworkSky");
+            });
+        }
+        
+        // 设置贡献者 GitHub 按钮
+        com.google.android.material.button.MaterialButton btnContributorGithub = 
+            rootView.findViewById(R.id.btnContributorGithub);
+        if (btnContributorGithub != null) {
+            btnContributorGithub.setOnClickListener(v -> {
+                openGitHubProfile("LaoSparrow");
+            });
+        }
+    }
+    
+    private void openGitHubProfile(String username) {
+        try {
+            android.content.Intent intent = new android.content.Intent(
+                android.content.Intent.ACTION_VIEW, 
+                Uri.parse("https://github.com/" + username)
+            );
+            fragment.startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(
+                fragment.requireContext(), 
+                "无法打开浏览器", 
+                Toast.LENGTH_SHORT
+            ).show();
         }
     }
 

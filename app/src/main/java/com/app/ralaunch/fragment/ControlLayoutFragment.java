@@ -19,6 +19,7 @@ import com.app.ralaunch.model.ControlLayout;
 import com.app.ralaunch.model.ControlElement;
 import com.app.ralaunch.utils.ControlLayoutManager;
 import com.app.ralaunch.adapter.ControlLayoutAdapter;
+import com.app.ralaunch.utils.AppLogger;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -553,4 +554,5 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
             Toast.makeText(getContext(), getString(R.string.control_import_failed, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
+
 }

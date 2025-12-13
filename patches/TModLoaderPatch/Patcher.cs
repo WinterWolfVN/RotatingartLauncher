@@ -1,11 +1,10 @@
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Runtime.InteropServices;
-using HarmonyLib;
 using static System.Net.WebRequestMethods;
 
 namespace TModLoaderPatch;
@@ -30,8 +29,6 @@ public static class Patcher
             Console.WriteLine("[TModLoaderPatch] Initializing Android/ARM64 fix patch...");
             Console.WriteLine("========================================");
 
-            // 打印补丁信息
-            PrintPatchInfo();
 
             // 应用 Harmony 补丁
             ApplyHarmonyPatches();
@@ -49,20 +46,7 @@ public static class Patcher
         }
     }
 
-    /// <summary>
-    /// 打印补丁信息
-    /// </summary>
-    private static void PrintPatchInfo()
-    {
-        var assembly = Assembly.GetExecutingAssembly();
-        var version = assembly.GetName().Version;
-
-        Console.WriteLine($"Patch Assembly: {assembly.GetName().Name}");
-        Console.WriteLine($"Version: {version}");
-        Console.WriteLine($"Location: {assembly.Location}");
-        Console.WriteLine($".NET Version: {Environment.Version}");
-        Console.WriteLine($"Harmony Version: {typeof(Harmony).Assembly.GetName().Version}");
-    }
+   
 
     /// <summary>
     /// 应用 Harmony 补丁
@@ -79,16 +63,14 @@ public static class Patcher
 
             if (tModLoaderAssembly != null)
             {
-                Console.WriteLine("[TModLoaderPatch] tModLoader assembly already loaded, patching directly...");
+            
                 ApplyPatchesInternal(tModLoaderAssembly);
-                Console.WriteLine("[TModLoaderPatch] tModLoader assembly already loaded, patched!");
+                
             }
             else
             {
-                Console.WriteLine("[TModLoaderPatch] tModLoader not loaded yet, will patch on AssemblyLoad event");
-                // 监听程序集加载事件，在 tModLoader 程序集加载后应用补丁
+               
                 AppDomain.CurrentDomain.AssemblyLoad += OnAssemblyLoaded;
-                Console.WriteLine("[TModLoaderPatch] Harmony patches registered");
             }
         }
         catch (Exception ex)
@@ -128,13 +110,14 @@ public static class Patcher
     /// </summary>
     private static void ApplyPatchesInternal(Assembly assembly)
     {
-        Console.WriteLine("[TModLoaderPatch] Applying patches and mitigations...");
-        
+         
         InstallVerifierBugMitigation(assembly);
         LoggingHooksHarmonyPatch(assembly);
         TMLContentManagerPatch(assembly);
-    
-        Console.WriteLine("[TModLoaderPatch] All patches applied successfully!");
+        
+
+
+
     }
 
   
@@ -143,18 +126,12 @@ public static class Patcher
         // Get the type for LoggingHooks from the external assembly
         Type? loggingHooksType = assembly.GetType("Terraria.ModLoader.Engine.LoggingHooks");
 
-        if (loggingHooksType == null)
-        {
-            Console.WriteLine("[TModLoaderPatch] LoggingHooks class not found in the external assembly.");
-            return;
-        }
-
         // Get the MethodInfo for the method you want to patch
-        MethodInfo? originalMethod = loggingHooksType.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic);
-
+        MethodInfo? originalMethod = loggingHooksType?.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic);
+        
         if (originalMethod == null)
         {
-            Console.WriteLine("[TModLoaderPatch] Init method not found in LoggingHooks.");
+            Console.WriteLine("[TModLoaderPatch] LoggingHooks.Init method not found");
             return;
         }
         
@@ -181,18 +158,13 @@ public static class Patcher
         // Get the type for TMLContentManager from the external assembly
         Type? tmlContentManagerType = assembly.GetType("Terraria.ModLoader.Engine.TMLContentManager");
 
-        if (tmlContentManagerType == null)
-        {
-            Console.WriteLine("[TModLoaderPatch] TMLContentManager class not found in the external assembly.");
-            return;
-        }
-
+       
         // Get the MethodInfo for the method you want to patch
-        MethodInfo? originalMethod = tmlContentManagerType.GetMethod("TryFixFileCasings", BindingFlags.Static | BindingFlags.NonPublic);
+        MethodInfo? originalMethod = tmlContentManagerType?.GetMethod("TryFixFileCasings", BindingFlags.Static | BindingFlags.NonPublic);
 
         if (originalMethod == null)
         {
-            Console.WriteLine("[TModLoaderPatch] TryFixFileCasings method not found in TMLContentManager.");
+            Console.WriteLine("[TModLoaderPatch] TMLContentManager.TryFixFileCasings method not found");
             return;
         }
 
@@ -248,20 +220,6 @@ public static class Patcher
         var IsSteamUnsupported =
             installVerifierType.GetProperty("IsSteamUnsupported", BindingFlags.Static | BindingFlags.NonPublic);
 
-        if (steamAPIPath == null ||
-            steamAPIHash == null ||
-            vanillaSteamAPI == null ||
-            gogHash == null ||
-            steamHash == null)
-        {
-            Console.WriteLine("[TModLoaderPatch] [WARN] some fields not found in InstallVerifier class.");
-        }
-
-        if (IsSteamUnsupported == null)
-        {
-            Console.WriteLine("[TModLoaderPatch] [WARN] IsSteamUnsupported not found in InstallVerifier class. It is normal when lower version of tModLoader is loaded");
-        }
-        
         steamAPIPath?.SetValue(null, "libsteam_api.so");
         steamAPIHash?.SetValue(null, Convert.FromHexString("4b7a8cabaa354fcd25743aabfb4b1366"));
         vanillaSteamAPI?.SetValue(null, "libsteam_api.so");
@@ -272,4 +230,9 @@ public static class Patcher
         
         Console.WriteLine("[TModLoaderPatch] InstallVerifier class mitigations applied successfully!");
     }
+
+
+
+
+
 }

@@ -13,6 +13,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * 补丁提取工具
@@ -37,15 +39,36 @@ public class PatchExtractor {
         boolean needExtractPatches = !patchesExtracted;
         boolean needExtractMonoMod = !monomodExtracted;
         
-        // 双重检查：验证目录是否真的有文件
+        // 双重检查：验证目录是否真的存在且有文件
         if (patchesExtracted) {
             File patchesDir = new File(context.getExternalFilesDir(null), "patches");
-            File[] existingFiles = patchesDir.listFiles((dir, name) -> 
-                !name.equals("patch_metadata.json") && !name.equals(".nomedia"));
             
-            if (existingFiles == null || existingFiles.length == 0) {
-                AppLogger.warn(TAG, "补丁标记为已提取，但目录为空，重新提取");
+            // 检查目录是否存在
+            if (!patchesDir.exists() || !patchesDir.isDirectory()) {
+                AppLogger.warn(TAG, "补丁标记为已提取，但目录不存在，重新提取");
                 needExtractPatches = true;
+            } else {
+                // 检查目录是否有文件（排除元数据文件）
+                File[] existingFiles = patchesDir.listFiles((dir, name) -> 
+                    !name.equals("patch_metadata.json") && !name.equals(".nomedia"));
+                
+                if (existingFiles == null || existingFiles.length == 0) {
+                    AppLogger.warn(TAG, "补丁标记为已提取，但目录为空，重新提取");
+                    needExtractPatches = true;
+                } else {
+                    // 进一步检查：确保至少有一个补丁文件夹存在
+                    boolean hasPatchFolder = false;
+                    for (File file : existingFiles) {
+                        if (file.isDirectory()) {
+                            hasPatchFolder = true;
+                            break;
+                        }
+                    }
+                    if (!hasPatchFolder) {
+                        AppLogger.warn(TAG, "补丁标记为已提取，但没有补丁文件夹，重新提取");
+                        needExtractPatches = true;
+                    }
+                }
             }
         }
         
@@ -87,44 +110,34 @@ public class PatchExtractor {
     }
     
     /**
-     * 从 assets/patches.tar.xz 提取补丁到外部存储
+     * 从 assets/patches.zip 提取补丁到外部存储
      */
     private static void extractPatches(Context context) throws Exception {
         AppLogger.info(TAG, "开始从 assets 提取补丁...");
         
         // 获取外部存储的补丁目录
         File patchesDir = new File(context.getExternalFilesDir(null), "patches");
-        if (!patchesDir.exists()) {
-            patchesDir.mkdirs();
+        
+        // 如果目录已存在，先清空它（确保重新提取时不会有残留文件）
+        if (patchesDir.exists()) {
+            AppLogger.info(TAG, "清空现有补丁目录: " + patchesDir.getAbsolutePath());
+            deleteDirectory(patchesDir);
         }
         
-        // 从 assets 复制 patches.tar.xz 到缓存
-        File patchesTarXz = new File(context.getCacheDir(), "patches.tar.xz");
-        try (InputStream is = context.getAssets().open("patches.tar.xz");
-             FileOutputStream fos = new FileOutputStream(patchesTarXz)) {
-            byte[] buffer = new byte[8192];
-            int read;
-            while ((read = is.read(buffer)) != -1) {
-                fos.write(buffer, 0, read);
-            }
-        }
+        // 创建新目录
+        patchesDir.mkdirs();
         
-        AppLogger.info(TAG, "开始解压 patches.tar.xz 到: " + patchesDir.getAbsolutePath());
+        AppLogger.info(TAG, "开始解压 patches.zip 到: " + patchesDir.getAbsolutePath());
         
-        // 解压 tar.xz
+        // 直接从 assets 解压 zip 文件
         int fileCount = 0;
-        try (FileInputStream fis = new FileInputStream(patchesTarXz);
-             BufferedInputStream bis = new BufferedInputStream(fis);
-             XZCompressorInputStream xzIn = new XZCompressorInputStream(bis);
-             TarArchiveInputStream tarIn = new TarArchiveInputStream(xzIn)) {
+        try (InputStream is = context.getAssets().open("patches.zip");
+             BufferedInputStream bis = new BufferedInputStream(is);
+             ZipInputStream zis = new ZipInputStream(bis)) {
             
-            TarArchiveEntry entry;
+            ZipEntry entry;
             
-            while ((entry = tarIn.getNextTarEntry()) != null) {
-                if (!tarIn.canReadEntryData(entry)) {
-                    continue;
-                }
-                
+            while ((entry = zis.getNextEntry()) != null) {
                 String entryName = entry.getName();
                 
                 // 跳过顶层 patches 目录
@@ -133,6 +146,7 @@ public class PatchExtractor {
                 }
                 
                 if (entryName.isEmpty()) {
+                    zis.closeEntry();
                     continue;
                 }
                 
@@ -143,6 +157,7 @@ public class PatchExtractor {
                 String canonicalEntryPath = targetFile.getCanonicalPath();
                 if (!canonicalEntryPath.startsWith(canonicalDestPath + File.separator)) {
                     AppLogger.warn(TAG, "跳过不安全的路径: " + entryName);
+                    zis.closeEntry();
                     continue;
                 }
                 
@@ -158,11 +173,11 @@ public class PatchExtractor {
                     }
                     
                     // 写入文件
-                    try (FileOutputStream tfos = new FileOutputStream(targetFile);
-                         BufferedOutputStream bos = new BufferedOutputStream(tfos)) {
+                    try (FileOutputStream fos = new FileOutputStream(targetFile);
+                         BufferedOutputStream bos = new BufferedOutputStream(fos)) {
                         byte[] buffer = new byte[8192];
                         int bytesRead;
-                        while ((bytesRead = tarIn.read(buffer)) != -1) {
+                        while ((bytesRead = zis.read(buffer)) != -1) {
                             bos.write(buffer, 0, bytesRead);
                         }
                     }
@@ -172,13 +187,12 @@ public class PatchExtractor {
                         AppLogger.debug(TAG, "已解压 " + fileCount + " 个文件...");
                     }
                 }
+                
+                zis.closeEntry();
             }
         }
         
-        // 清理临时文件
-        patchesTarXz.delete();
-        
-        AppLogger.info(TAG, "patches.tar.xz 解压完成，共 " + fileCount + " 个文件");
+        AppLogger.info(TAG, "patches.zip 解压完成，共 " + fileCount + " 个文件");
         
         // 解压完成后，安装补丁 ZIP 文件
         installPatchZips(context, patchesDir);

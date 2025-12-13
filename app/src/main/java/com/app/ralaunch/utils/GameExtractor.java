@@ -80,10 +80,12 @@ public class GameExtractor {
                 public void onProgress(String message, float progress, HashMap<String, Object> state) {
                     if (listener != null) {
                         var extractorIndex = (int)state.get(ExtractorCollection.STATE_KEY_EXTRACTOR_INDEX); // Im sure it wont be null
+                        // 本地化来自 BasicSevenZipExtractor 的消息
+                        String localizedMessage = localizeExtractionMessage(message);
                         if (extractorIndex == 0) { // GogShFileExtractor
-                            listener.onProgress(message, (int)(progress*0.7f*100));
+                            listener.onProgress(localizedMessage, (int)(progress*0.7f*100));
                         } else if (extractorIndex == 1) { // BasicSevenZipExtractor
-                            listener.onProgress(message, (int)((0.7f+progress*0.3f)*100));
+                            listener.onProgress(localizedMessage, (int)((0.7f+progress*0.3f)*100));
                         } else {
                             AppLogger.warn(TAG, "Unknown extractor index: " + extractorIndex);
                         }
@@ -93,7 +95,9 @@ public class GameExtractor {
                 @Override
                 public void onError(String message, Exception ex, HashMap<String, Object> state) {
                     if (listener != null) {
-                        listener.onError(message);
+                        // 本地化错误消息
+                        String localizedMessage = localizeExtractionMessage(message);
+                        listener.onError(localizedMessage);
                     }
                 }
 
@@ -159,8 +163,10 @@ public class GameExtractor {
             public void onProgress(String message, float progress, HashMap<String, Object> state) {
                 if (listener != null) {
                     var extractorIndex = (int)state.get(ExtractorCollection.STATE_KEY_EXTRACTOR_INDEX); // Im sure it wont be null
+                    // 本地化消息
+                    String localizedMessage = localizeExtractionMessage(message);
                     if (extractorIndex == 0) { // GogShFileExtractor
-                        listener.onProgress(message, (int)(progress*100));
+                        listener.onProgress(localizedMessage, (int)(progress*100));
                     } else {
                         AppLogger.warn(TAG, "Unknown extractor index: " + extractorIndex);
                     }
@@ -170,7 +176,9 @@ public class GameExtractor {
             @Override
             public void onError(String message, Exception ex, HashMap<String, Object> state) {
                 if (listener != null) {
-                    listener.onError(message);
+                    // 本地化错误消息
+                    String localizedMessage = localizeExtractionMessage(message);
+                    listener.onError(localizedMessage);
                 }
             }
 
@@ -205,6 +213,34 @@ public class GameExtractor {
                 ))
                 .build()
                 .extractAllInNewThread();
+    }
+
+    /**
+     * 本地化解压消息（将 ralib 模块中的硬编码中文消息替换为本地化字符串）
+     */
+    private static String localizeExtractionMessage(String message) {
+        if (message == null) {
+            return message;
+        }
+        
+        Context context = RaLaunchApplication.getAppContext();
+        if (context == null) {
+            return message;
+        }
+        
+        // 匹配硬编码的中文消息并替换为本地化字符串
+        if (message.equals("解压完成")) {
+            return context.getString(R.string.import_extraction_complete);
+        } else if (message.startsWith("正在解压: ")) {
+            // 提取文件名
+            String fileName = message.substring("正在解压: ".length());
+            return context.getString(R.string.import_extracting_file, fileName);
+        } else if (message.equals("基础7z解压器解压失败")) {
+            return context.getString(R.string.import_extraction_failed);
+        }
+        
+        // 如果消息不匹配，返回原消息
+        return message;
     }
 
     /**

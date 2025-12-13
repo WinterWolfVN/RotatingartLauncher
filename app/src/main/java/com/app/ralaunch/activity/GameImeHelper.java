@@ -53,9 +53,24 @@ public class GameImeHelper {
     public static void disableSDLTextInput() {
         try {
             Class<?> sdlActivityClass = Class.forName("org.libsdl.app.SDLActivity");
-            java.lang.reflect.Method hideTextInput = sdlActivityClass.getDeclaredMethod("hideTextInput");
-            hideTextInput.setAccessible(true);
-            hideTextInput.invoke(null);
+            
+            // 获取 COMMAND_TEXTEDIT_HIDE 常量值 (值为 3)
+            int COMMAND_TEXTEDIT_HIDE = 3;
+            
+            // 获取 mSingleton 字段
+            java.lang.reflect.Field mSingletonField = sdlActivityClass.getDeclaredField("mSingleton");
+            mSingletonField.setAccessible(true);
+            Object mSingleton = mSingletonField.get(null);
+            
+            if (mSingleton == null) {
+                Log.w(TAG, "SDLActivity.mSingleton is null, cannot hide text input");
+                return;
+            }
+            
+            // 调用 sendCommand 方法
+            java.lang.reflect.Method sendCommandMethod = sdlActivityClass.getDeclaredMethod("sendCommand", int.class, Object.class);
+            sendCommandMethod.setAccessible(true);
+            sendCommandMethod.invoke(mSingleton, COMMAND_TEXTEDIT_HIDE, null);
         } catch (Exception e) {
             Log.e(TAG, "禁用SDL文本输入失败", e);
         }
