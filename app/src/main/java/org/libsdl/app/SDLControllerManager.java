@@ -537,26 +537,6 @@ class SDLJoyStickHandler_API19_VirtualJoystick extends SDLJoystickHandler_API19 
 
     @Override
     public void pollInputDevices() {
-        // Register virtual Xbox controller on first poll
-        if (!virtualJoystickAdded) {
-            mJoysticks.add(virtualJoystick);
-
-            SDLControllerManager.nativeAddJoystick(
-                virtualJoystick.device_id,
-                virtualJoystick.name,
-                virtualJoystick.desc,
-                VirtualXboxController.XBOX_VENDOR_ID,
-                VirtualXboxController.XBOX_PRODUCT_ID,
-                false,  // is_accelerometer
-                controller.getButtonMask(),
-                VirtualXboxController.NUM_AXES,
-                controller.getAxisMask(),
-                0,  // nhats (we use buttons for dpad)
-                0   // nballs
-            );
-            virtualJoystickAdded = true;
-        }
-
         // Process physical joysticks
         int[] deviceIds = InputDevice.getDeviceIds();
         for (int device_id : deviceIds) {
@@ -637,6 +617,27 @@ class SDLJoyStickHandler_API19_VirtualJoystick extends SDLJoystickHandler_API19 
                     }
                 }
             }
+        }
+
+        // Register virtual Xbox controller on first poll
+        // Well we do this because some game only recognize first controller connected
+        if (!virtualJoystickAdded) {
+            mJoysticks.add(virtualJoystick);
+
+            SDLControllerManager.nativeAddJoystick(
+                    virtualJoystick.device_id,
+                    virtualJoystick.name,
+                    virtualJoystick.desc,
+                    VirtualXboxController.XBOX_VENDOR_ID,
+                    VirtualXboxController.XBOX_PRODUCT_ID,
+                    false,  // is_accelerometer
+                    controller.getButtonMask(),
+                    VirtualXboxController.NUM_AXES,
+                    controller.getAxisMask(),
+                    0,  // nhats (we use buttons for dpad)
+                    0   // nballs
+            );
+            virtualJoystickAdded = true;
         }
     }
 }
