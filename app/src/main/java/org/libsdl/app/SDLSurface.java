@@ -18,6 +18,8 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.WindowManager;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.app.ralaunch.controls.TouchPointerTracker;
 
@@ -36,7 +38,9 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     private static native void nativeSetTouchData(int count, float[] x, float[] y, int screenWidth, int screenHeight);
     private static native void nativeClearTouchData();
     
-    // Touch bridge availability flag (lazy init)
+      private com.app.ralaunch.activity.GameVirtualControlsManager mVirtualControlsManager;
+      
+      // Touch bridge availability flag (lazy init)
     private static Boolean sTouchBridgeAvailable = null;
     
     private static boolean isTouchBridgeAvailable() {
@@ -482,4 +486,16 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
 
         return false;
     }
+    
+    /**
+     * 设置虚拟控件管理器（用于更新虚拟鼠标光标）
+     */
+    public void setVirtualControlsManager(com.app.ralaunch.activity.GameVirtualControlsManager manager) {
+        mVirtualControlsManager = manager;
+    }
+    
+    /**
+     * 处理虚拟鼠标触摸事件（使用右摇杆的虚拟鼠标移动方式）
+     * @return true 如果事件被虚拟鼠标消费，false 否则
+     */
 }

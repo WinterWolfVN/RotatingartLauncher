@@ -67,7 +67,11 @@ public class ControlEditDialogSeekBarManager {
         
         // 设置初始值（从配置中获取当前值，确保使用最新的数据）
         float currentValue = config.getCurrentValue();
+        // 确保值在有效范围内，防止 Slider 崩溃
+        currentValue = Math.max(0f, Math.min(1f, currentValue));
         float sliderValue = currentValue * config.getMaxValue();
+        // 确保 sliderValue 在 Slider 的 valueFrom 和 valueTo 范围内
+        sliderValue = Math.max(slider.getValueFrom(), Math.min(slider.getValueTo(), sliderValue));
         slider.setValue(sliderValue);
         textView.setText(config.getDisplayText(currentValue));
         
@@ -101,7 +105,11 @@ public class ControlEditDialogSeekBarManager {
         }
         
         float currentValue = config.getCurrentValue();
+        // 确保值在有效范围内，防止 Slider 崩溃
+        currentValue = Math.max(0f, Math.min(1f, currentValue));
         float sliderValue = currentValue * config.getMaxValue();
+        // 确保 sliderValue 在 Slider 的 valueFrom 和 valueTo 范围内
+        sliderValue = Math.max(slider.getValueFrom(), Math.min(slider.getValueTo(), sliderValue));
         slider.setValue(sliderValue);
         textView.setText(config.getDisplayText(currentValue));
     }

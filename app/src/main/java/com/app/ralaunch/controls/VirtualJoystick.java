@@ -358,9 +358,13 @@ public class VirtualJoystick extends View implements ControlView {
                     TouchPointerTracker.consumePointer(pointerId);
                 }
 
-                // 如果是右摇杆鼠标模式，启用虚拟鼠标系统
+                // 如果是右摇杆鼠标模式，初始化并设置虚拟鼠标范围
                 if (mData.joystickMode == ControlData.JOYSTICK_MODE_MOUSE && mData.xboxUseRightStick) {
-                    enableVirtualMouse();
+                    // 初始化虚拟鼠标（使用实际屏幕尺寸）
+                    if (mInputBridge instanceof SDLInputBridge) {
+                        ((SDLInputBridge) mInputBridge).initVirtualMouse(mScreenWidth, mScreenHeight);
+                    }
+                    setVirtualMouseRange();
                 }
 
                 handleMove(touchX, touchY);
@@ -915,44 +919,71 @@ public class VirtualJoystick extends View implements ControlView {
         float mouseX = normalizedDeltaX * sensitivity;
         float mouseY = normalizedDeltaY * sensitivity;
         
-        // 发送真正的鼠标相对移动事件（使用 SDL onNativeMouse）
-        mInputBridge.sendMouseMove(mouseX, mouseY);
+        // 更新虚拟鼠标位置追踪（用于松开时恢复位置，并应用范围限制）
+        float actualMouseX = mouseX;
+        float actualMouseY = mouseY;
         
-        // 同时更新虚拟鼠标位置追踪（用于松开时恢复位置）
         if (mInputBridge instanceof SDLInputBridge) {
-            ((SDLInputBridge) mInputBridge).updateVirtualMouseDelta(mouseX, mouseY);
+            // 更新虚拟鼠标位置，获取实际移动的量（经过范围限制）
+            float[] actualDelta = ((SDLInputBridge) mInputBridge).updateVirtualMouseDelta(mouseX, mouseY);
+            actualMouseX = actualDelta[0];
+            actualMouseY = actualDelta[1];
         }
         
-        // Log.v(TAG, "Mouse move: delta=(" + mouseX + ", " + mouseY + "), speed=" + sensitivity);
+        // 发送真正的鼠标相对移动事件（使用实际移动量，而不是请求的移动量）
+        mInputBridge.sendMouseMove(actualMouseX, actualMouseY);
+        
+        // Log.v(TAG, "Mouse move: requested=(" + mouseX + ", " + mouseY + "), actual=(" + actualMouseX + ", " + actualMouseY + ")");
     }
     
     /**
-     * 启用虚拟鼠标（右摇杆鼠标移动模式）
+     * 设置虚拟鼠标范围（右摇杆鼠标移动模式）
      */
-    private void enableVirtualMouse() {
+    private void setVirtualMouseRange() {
         if (mInputBridge instanceof SDLInputBridge) {
             SDLInputBridge bridge = (SDLInputBridge) mInputBridge;
-            // 先设置鼠标移动范围（从全局设置读取）
-            float left = mGlobalMouseRangeLeft;
-            float top = mGlobalMouseRangeTop;
-            float right = mGlobalMouseRangeRight;
-            float bottom = mGlobalMouseRangeBottom;
-            
-            Log.i(TAG, "enableVirtualMouse: global range=(" + left + "," + top + "," + right + "," + bottom + 
-                  "), speed=" + mGlobalMouseSpeed);
-            
-            bridge.setVirtualMouseRange(left, top, right, bottom);
-            // 然后启用虚拟鼠标
-            bridge.enableVirtualMouse();
-        }
-    }
-    
-    /**
-     * 禁用虚拟鼠标
-     */
-    private void disableVirtualMouse() {
-        if (mInputBridge instanceof SDLInputBridge) {
-            ((SDLInputBridge) mInputBridge).disableVirtualMouse();
+            // 从全局设置实时读取最新的范围值（而不是使用缓存的变量）
+            try {
+                com.app.ralaunch.data.SettingsManager settingsManager = 
+                    com.app.ralaunch.data.SettingsManager.getInstance(getContext());
+                float left = settingsManager.getMouseRightStickRangeLeft();
+                float top = settingsManager.getMouseRightStickRangeTop();
+                float right = settingsManager.getMouseRightStickRangeRight();
+                float bottom = settingsManager.getMouseRightStickRangeBottom();
+                
+                Log.i(TAG, "setVirtualMouseRange: Read from settings: left=" + left + ", top=" + top + 
+                      ", right=" + right + ", bottom=" + bottom);
+                
+                // 验证范围有效性（0.0-1.0）
+                if (left < 0 || left > 1.0) {
+                    Log.w(TAG, "Invalid left range: " + left + ", resetting to 1.0");
+                    left = 1.0f;
+                }
+                if (top < 0 || top > 1.0) {
+                    Log.w(TAG, "Invalid top range: " + top + ", resetting to 1.0");
+                    top = 1.0f;
+                }
+                if (right < 0 || right > 1.0) {
+                    Log.w(TAG, "Invalid right range: " + right + ", resetting to 1.0");
+                    right = 1.0f;
+                }
+                if (bottom < 0 || bottom > 1.0) {
+                    Log.w(TAG, "Invalid bottom range: " + bottom + ", resetting to 1.0");
+                    bottom = 1.0f;
+                }
+                
+                Log.i(TAG, "setVirtualMouseRange: Applying range to native: left=" + left + ", top=" + top + 
+                      ", right=" + right + ", bottom=" + bottom + " (in percentage: " + 
+                      (int)(left*100) + "%, " + (int)(top*100) + "%, " + 
+                      (int)(right*100) + "%, " + (int)(bottom*100) + "%)");
+                
+                bridge.setVirtualMouseRange(left, top, right, bottom);
+            } catch (Exception e) {
+                // 如果读取失败，使用缓存的默认值
+                Log.w(TAG, "Failed to read mouse range settings, using cached values", e);
+                bridge.setVirtualMouseRange(mGlobalMouseRangeLeft, mGlobalMouseRangeTop, 
+                    mGlobalMouseRangeRight, mGlobalMouseRangeBottom);
+            }
         }
     }
     

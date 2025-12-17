@@ -13,6 +13,7 @@ import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.utils.ControlLayoutManager;
 import com.app.ralaunch.model.ControlElement;
 import com.app.ralaunch.controls.ControlDataConverter;
+import com.app.ralaunch.controls.rule.TouchDispatchManager;
 import org.libsdl.app.SDLActivity;
 
 import java.util.ArrayList;
@@ -23,13 +24,21 @@ import java.util.List;
  * 负责管理所有虚拟控制元素的布局和显示
  * 
  * 重要：所有触摸事件都会转发给 SDLSurface，确保游戏能收到完整的多点触控输入
+ *
+ * - 设计图基准：2560x1080px
+ * - density 会在 Activity.onCreate() 中动态调整
+ * - JSON 中的 px 值会自动通过 density 适配到不同屏幕
+ * - 无需手动进行尺寸转换，系统会自动处理
  */
 public class ControlLayout extends FrameLayout {
     private static final String TAG = "ControlLayout";
-    
+
     // SDLSurface 引用，用于转发触摸事件
     private View mSDLSurface;
-    
+
+    // 触摸事件分发管理器（规则系统核心）
+    private TouchDispatchManager mTouchDispatchManager;
+
     private List<ControlView> mControls;
     private ControlInputBridge mInputBridge;
     private ControlConfig mConfig;
@@ -53,11 +62,14 @@ public class ControlLayout extends FrameLayout {
     private void init() {
         mControls = new ArrayList<>();
         setWillNotDraw(false);
-        
+
+        // 初始化触摸事件分发管理器
+        mTouchDispatchManager = TouchDispatchManager.getInstance();
+
         // 禁用子View裁剪，让控件的绘制效果（如摇杆方向线）完整显示
         setClipChildren(false);
         setClipToPadding(false);
-        
+
         // 启用硬件加速层，以支持 RippleDrawable 等需要硬件加速的动画
         // 在硬件加速的 Activity 上，硬件加速层可以进一步提升性能
         setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -68,40 +80,59 @@ public class ControlLayout extends FrameLayout {
      */
     public void setSDLSurface(View sdlSurface) {
         mSDLSurface = sdlSurface;
+
+        // 初始化触摸分发管理器的屏幕尺寸
+        if (sdlSurface != null) {
+            DisplayMetrics metrics = getResources().getDisplayMetrics();
+            mTouchDispatchManager.initialize(metrics.widthPixels, metrics.heightPixels);
+        }
     }
     
     /**
      * 重写 dispatchTouchEvent 确保 SDLSurface 能收到所有触摸事件
      * 这解决了虚拟控件消费事件后 SDLSurface 收不到多点触控的问题
-     * 
-     * 事件处理顺序：
-     * 1. 先让虚拟控件处理（会调用 TouchPointerTracker.consumePointer 标记被占用的触摸点）
-     * 2. 再转发给 SDLSurface（SDL 层会根据 consumed fingers 列表决定是否生成鼠标事件）
-     * 
-     * 穿透模式（passThrough=true）：虚拟控件不标记触摸点 → SDL 正常生成鼠标事件
-     * 非穿透模式（passThrough=false）：虚拟控件标记触摸点 → SDL 跳过鼠标事件
+     *
+     * 事件处理顺序（使用规则系统）：
+     * 1. 通过 TouchDispatchManager 处理触摸事件
+     * 2. 让虚拟控件处理（会通过规则系统判断是否允许处理）
+     * 3. 转发给 SDLSurface（SDL 层会根据规则系统过滤）
+     *
+     * 规则系统确保：
+     * - 虚拟鼠标与虚拟控件互不干扰
+     * - 虚拟摇杆与虚拟按钮基于优先级处理
+     * - 游戏原生触摸只接收未被虚拟控件占用的触摸点
      */
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
-        // 先让虚拟控件处理事件
-        // 这样 TouchPointerTracker 会先标记被占用的触摸点
+        // 1. 通过规则系统处理触摸事件
+        mTouchDispatchManager.dispatchTouchEvent(event);
+
+        // 2. 先让虚拟控件处理事件
+        // 虚拟控件会通过 TouchDispatchManager 请求处理触摸点
         boolean handled = super.dispatchTouchEvent(event);
-        
-        // 再转发给 SDLSurface（如果存在）
-        // SDLSurface 会处理触屏转鼠标的逻辑，SDL 层会根据 consumed fingers 列表过滤
+
+        // 3. 再转发给 SDLSurface（如果存在）
+        // SDLSurface 会处理触屏转鼠标的逻辑，SDL 层会根据规则系统过滤
         if (mSDLSurface != null) {
             mSDLSurface.dispatchTouchEvent(event);
         }
-        
+
         // 重要：始终返回 true 表示事件已被消费
         // 这样 Android 系统就不会再次把事件传递给 SDLSurface
         // 避免重复处理导致的问题（如鼠标点击需要多次才能触发）
         return true;
     }
-    
+
     @Override
     protected void onDraw(android.graphics.Canvas canvas) {
         super.onDraw(canvas);
+    }
+
+    /**
+     * 获取触摸事件分发管理器（用于自定义规则）
+     */
+    public TouchDispatchManager getTouchDispatchManager() {
+        return mTouchDispatchManager;
     }
     
     /**
@@ -127,20 +158,35 @@ public class ControlLayout extends FrameLayout {
         clearControls();
         
         if (config == null || config.controls == null) {
+            AppLogger.warn(TAG, "Config or controls is null, loading default layout");
+            loadDefaultLayout();
+            return;
+        }
+        
+        // 如果控件列表为空，尝试加载默认布局
+        if (config.controls.isEmpty()) {
+            AppLogger.warn(TAG, "Controls list is empty, loading default layout");
             loadDefaultLayout();
             return;
         }
         
         // 创建虚拟控制元素
+        int addedCount = 0;
         for (ControlData data : config.controls) {
             if (!data.visible) continue;
             
             ControlView controlView = createControlView(data);
             if (controlView != null) {
                 addControlView(controlView, data);
+                addedCount++;
             }
         }
         
+        if (addedCount == 0) {
+            AppLogger.warn(TAG, "No visible controls were added, layout may appear empty");
+        } else {
+            AppLogger.debug(TAG, "Loaded " + addedCount + " controls from layout: " + config.name);
+        }
     }
     
     /**
@@ -278,11 +324,15 @@ public class ControlLayout extends FrameLayout {
     
     /**
      * 添加控制View到布局
+     *
+     * - data.x, data.y, data.width, data.height 都是设计图的像素值（基于2560x1080）
+     * - 由于 density 已在 Activity 中调整，这些值会自动缩放到当前屏幕
+     * - 例如：1920px宽的屏幕，density=1920/2560=0.75，设计图上的100px会渲染为75px
      */
     private void addControlView(ControlView controlView, ControlData data) {
         View view = (View) controlView;
         
-        // 设置布局参数（x, y, width, height都是像素值，不需要转换）
+        // 设置布局参数（使用设计图的像素值，系统会根据 density 自动缩放）
         LayoutParams params = new LayoutParams(
             (int) data.width,
             (int) data.height

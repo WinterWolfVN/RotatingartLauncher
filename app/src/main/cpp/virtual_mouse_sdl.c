@@ -10,8 +10,8 @@
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
 
-// 虚拟鼠标状态
-static int g_vm_enabled = 0;
+// 虚拟鼠标状态（右摇杆使用，自动初始化）
+static int g_vm_initialized = 0;
 static float g_vm_x = 0.0f;
 static float g_vm_y = 0.0f;
 static int g_vm_screen_width = 1920;
@@ -26,66 +26,65 @@ static float g_vm_range_top = 1.0f;    // 默认100%（全屏）
 static float g_vm_range_right = 1.0f;  // 默认100%（全屏）
 static float g_vm_range_bottom = 1.0f; // 默认100%（全屏）
 
-// 鼠标按钮状态
-static int g_vm_left_pressed = 0;
-static int g_vm_right_pressed = 0;
 
 // 获取 SDL 窗口
 static SDL_Window* get_sdl_window(void) {
+    // 检查 SDL 是否已初始化
+    if (!SDL_WasInit(SDL_INIT_VIDEO)) {
+        LOGW("SDL video not initialized yet");
+        return NULL;
+    }
+    
     // SDL 通常只有一个窗口
-    SDL_Window* window = SDL_GetGrabbedWindow();
-    if (!window) {
-        window = SDL_GetKeyboardFocus();
+    SDL_Window* window = NULL;
+    
+    // 安全地尝试获取窗口
+    // SDL_GetGrabbedWindow() 可能在窗口未准备好时崩溃，所以先检查
+    if (SDL_WasInit(SDL_INIT_VIDEO)) {
+        window = SDL_GetGrabbedWindow();
+        if (!window) {
+            window = SDL_GetKeyboardFocus();
+        }
+        if (!window) {
+            window = SDL_GetMouseFocus();
+        }
     }
-    if (!window) {
-        window = SDL_GetMouseFocus();
-    }
+    
     return window;
 }
 
 // ===== JNI 函数：Java 调用这些函数控制虚拟鼠标 =====
 
 /**
- * 启用虚拟鼠标
+ * 自动初始化虚拟鼠标（如果未初始化）
  */
-JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeEnableVirtualMouseSDL(
-    JNIEnv *env, jclass clazz, int screenWidth, int screenHeight) {
-    
-    // 如果已经启用，只更新屏幕尺寸，不重置鼠标位置
-    int wasEnabled = g_vm_enabled;
-    g_vm_enabled = 1;
-    g_vm_screen_width = screenWidth > 0 ? screenWidth : 1920;
-    g_vm_screen_height = screenHeight > 0 ? screenHeight : 1080;
-    
-    // 只在第一次启用时初始化位置到屏幕中心
-    if (!wasEnabled) {
+static void ensure_virtual_mouse_initialized(int screenWidth, int screenHeight) {
+    if (!g_vm_initialized) {
+        g_vm_screen_width = screenWidth > 0 ? screenWidth : 1920;
+        g_vm_screen_height = screenHeight > 0 ? screenHeight : 1080;
         g_vm_x = g_vm_screen_width / 2.0f;
         g_vm_y = g_vm_screen_height / 2.0f;
-        
-        LOGI("Virtual mouse SDL enabled (first time): screen=%dx%d, pos=(%.0f,%.0f)", 
-            g_vm_screen_width, g_vm_screen_height, g_vm_x, g_vm_y);
-        
-        // 发送初始鼠标位置到 SDL
-        SDL_Window* window = get_sdl_window();
-        if (window) {
-            SDL_WarpMouseInWindow(window, (int)g_vm_x, (int)g_vm_y);
-        }
-    } else {
-        LOGI("Virtual mouse SDL re-enabled: screen=%dx%d, keeping pos=(%.0f,%.0f)", 
+        g_vm_initialized = 1;
+        LOGI("Virtual mouse auto-initialized: screen=%dx%d, pos=(%.0f,%.0f)", 
             g_vm_screen_width, g_vm_screen_height, g_vm_x, g_vm_y);
     }
 }
 
 /**
- * 禁用虚拟鼠标
+ * 初始化虚拟鼠标（使用实际屏幕尺寸）
  */
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeDisableVirtualMouseSDL(
-    JNIEnv *env, jclass clazz) {
+Java_com_app_ralaunch_controls_SDLInputBridge_nativeInitVirtualMouseSDL(
+    JNIEnv *env, jclass clazz, int screenWidth, int screenHeight) {
     
-    g_vm_enabled = 0;
-    LOGI("Virtual mouse SDL disabled");
+    g_vm_screen_width = screenWidth > 0 ? screenWidth : 1920;
+    g_vm_screen_height = screenHeight > 0 ? screenHeight : 1080;
+    g_vm_x = g_vm_screen_width / 2.0f;
+    g_vm_y = g_vm_screen_height / 2.0f;
+    g_vm_initialized = 1;
+    
+    LOGI("Virtual mouse initialized with real screen: %dx%d, pos=(%.0f,%.0f)", 
+        g_vm_screen_width, g_vm_screen_height, g_vm_x, g_vm_y);
 }
 
 /**
@@ -104,6 +103,9 @@ JNIEXPORT void JNICALL
 Java_com_app_ralaunch_controls_SDLInputBridge_nativeSetVirtualMouseRangeSDL(
     JNIEnv *env, jclass clazz, float left, float top, float right, float bottom) {
     
+    // 自动初始化虚拟鼠标（使用默认屏幕尺寸，后续会在updateVirtualMouseDelta中更新）
+    ensure_virtual_mouse_initialized(1920, 1080);
+    
     g_vm_range_left = left;
     g_vm_range_top = top;
     g_vm_range_right = right;
@@ -121,7 +123,8 @@ JNIEXPORT void JNICALL
 Java_com_app_ralaunch_controls_SDLInputBridge_nativeUpdateVirtualMouseDeltaSDL(
     JNIEnv *env, jclass clazz, float deltaX, float deltaY) {
     
-    if (!g_vm_enabled) return;
+    // 自动初始化虚拟鼠标（如果未初始化）
+    ensure_virtual_mouse_initialized(1920, 1080);
     
     // 更新位置
     g_vm_x += deltaX;
@@ -144,11 +147,8 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeUpdateVirtualMouseDeltaSDL(
     if (g_vm_y < minY) g_vm_y = minY;
     if (g_vm_y > maxY) g_vm_y = maxY;
     
-    // 直接移动 SDL 鼠标
-    SDL_Window* window = get_sdl_window();
-    if (window) {
-        SDL_WarpMouseInWindow(window, (int)g_vm_x, (int)g_vm_y);
-    }
+    // 不使用 SDL_WarpMouseInWindow，只更新内部位置追踪
+    // 实际的鼠标移动通过 sendMouseMove 发送相对移动事件
 }
 
 /**
@@ -158,69 +158,31 @@ JNIEXPORT void JNICALL
 Java_com_app_ralaunch_controls_SDLInputBridge_nativeSetVirtualMousePositionSDL(
     JNIEnv *env, jclass clazz, float x, float y) {
     
-    if (!g_vm_enabled) return;
+    // 自动初始化虚拟鼠标（如果未初始化）
+    ensure_virtual_mouse_initialized(1920, 1080);
     
     g_vm_x = x;
     g_vm_y = y;
     
-    // 限制在屏幕范围内
-    if (g_vm_x < 0) g_vm_x = 0;
-    if (g_vm_x > g_vm_screen_width) g_vm_x = g_vm_screen_width;
-    if (g_vm_y < 0) g_vm_y = 0;
-    if (g_vm_y > g_vm_screen_height) g_vm_y = g_vm_screen_height;
+    // 计算范围（从屏幕中心向四周扩展，百分比转像素）
+    // 阈值范围 0.0-1.0：0.0=中心点, 1.0=全屏
+    // 实际扩展距离 = 阈值 * 50%（因为从中心到边缘是屏幕的50%）
+    float centerX = g_vm_screen_width * 0.5f;
+    float centerY = g_vm_screen_height * 0.5f;
     
-    // 直接移动 SDL 鼠标
-    SDL_Window* window = get_sdl_window();
-    if (window) {
-        SDL_WarpMouseInWindow(window, (int)g_vm_x, (int)g_vm_y);
-    }
-}
-
-/**
- * 发送虚拟鼠标按钮事件
- */
-JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeSendVirtualMouseButtonSDL(
-    JNIEnv *env, jclass clazz, int button, jboolean pressed) {
+    float minX = centerX - (g_vm_range_left * centerX);   // 向左扩展：阈值 * 50%宽度
+    float maxX = centerX + (g_vm_range_right * centerX);  // 向右扩展：阈值 * 50%宽度
+    float minY = centerY - (g_vm_range_top * centerY);    // 向上扩展：阈值 * 50%高度
+    float maxY = centerY + (g_vm_range_bottom * centerY); // 向下扩展：阈值 * 50%高度
     
-    SDL_Window* window = get_sdl_window();
-    if (!window) {
-        LOGW("No SDL window for virtual mouse button");
-        return;
-    }
+    // 限制在范围内
+    if (g_vm_x < minX) g_vm_x = minX;
+    if (g_vm_x > maxX) g_vm_x = maxX;
+    if (g_vm_y < minY) g_vm_y = minY;
+    if (g_vm_y > maxY) g_vm_y = maxY;
     
-    Uint8 sdl_button;
-    switch (button) {
-        case 1: // 左键
-            sdl_button = SDL_BUTTON_LEFT;
-            g_vm_left_pressed = pressed ? 1 : 0;
-            break;
-        case 2: // 右键
-            sdl_button = SDL_BUTTON_RIGHT;
-            g_vm_right_pressed = pressed ? 1 : 0;
-            break;
-        case 3: // 中键
-            sdl_button = SDL_BUTTON_MIDDLE;
-            break;
-        default:
-            return;
-    }
-    
-    // 创建鼠标按钮事件
-    SDL_Event event;
-    event.type = pressed ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
-    event.button.windowID = SDL_GetWindowID(window);
-    event.button.which = 0;  // 虚拟鼠标 ID
-    event.button.button = sdl_button;
-    event.button.state = pressed ? SDL_PRESSED : SDL_RELEASED;
-    event.button.clicks = 1;
-    event.button.x = (int)g_vm_x;
-    event.button.y = (int)g_vm_y;
-    
-    SDL_PushEvent(&event);
-    
-    LOGD("Virtual mouse button: button=%d, pressed=%d, pos=(%.0f,%.0f)", 
-        button, pressed, g_vm_x, g_vm_y);
+    // 不使用 SDL_WarpMouseInWindow，只更新内部位置追踪
+    // 实际的鼠标移动通过 sendMouseMove 发送相对移动事件
 }
 
 /**
@@ -229,6 +191,8 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeSendVirtualMouseButtonSDL(
 JNIEXPORT float JNICALL
 Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseXSDL(
     JNIEnv *env, jclass clazz) {
+    // 自动初始化虚拟鼠标（如果未初始化）
+    ensure_virtual_mouse_initialized(1920, 1080);
     return g_vm_x;
 }
 
@@ -238,6 +202,8 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseXSDL(
 JNIEXPORT float JNICALL
 Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseYSDL(
     JNIEnv *env, jclass clazz) {
+    // 自动初始化虚拟鼠标（如果未初始化）
+    ensure_virtual_mouse_initialized(1920, 1080);
     return g_vm_y;
 }
 
@@ -247,7 +213,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseYSDL(
 JNIEXPORT jboolean JNICALL
 Java_com_app_ralaunch_controls_SDLInputBridge_nativeIsVirtualMouseActiveSDL(
     JNIEnv *env, jclass clazz) {
-    return g_vm_enabled ? JNI_TRUE : JNI_FALSE;
+    return g_vm_initialized ? JNI_TRUE : JNI_FALSE;
 }
 
 /**
@@ -272,5 +238,4 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeSendMouseWheelSDL(
     
     LOGD("Mouse wheel: scrollY=%d", (int)scrollY);
 }
-
 

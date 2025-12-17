@@ -461,15 +461,11 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
                 layoutName = (config.name != null ? config.name : defaultName) + " " + counter;
             }
 
-            // 获取屏幕尺寸用于坐标转换
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            int screenWidth = metrics.widthPixels;
-            int screenHeight = metrics.heightPixels;
-
-            // 创建新布局并添加控件
+            // 创建新布局并添加控件 - 统一使用新格式的相对坐标系统
             ControlLayout newLayout = new ControlLayout(layoutName);
             for (com.app.ralaunch.controls.ControlData data : config.controls) {
-                ControlElement element = com.app.ralaunch.controls.ControlDataConverter.dataToElement(data, screenWidth, screenHeight);
+                // 使用新格式处理：所有值都应该是相对值 (0-1)
+                ControlElement element = com.app.ralaunch.utils.ControlLayoutManager.createElementFromJsonData(data);
                 if (element != null) {
                     newLayout.addElement(element);
                 }
@@ -537,15 +533,11 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
                 layoutName = presetName + " " + counter;
             }
 
-            // 获取屏幕尺寸用于坐标转换
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            int screenWidth = metrics.widthPixels;
-            int screenHeight = metrics.heightPixels;
-
-            // 创建新布局并添加控件 - 统一使用 ControlDataConverter
+            // 创建新布局并添加控件 - 使用新格式的相对坐标系统
             ControlLayout newLayout = new ControlLayout(layoutName);
             for (com.app.ralaunch.controls.ControlData data : config.controls) {
-                ControlElement element = com.app.ralaunch.controls.ControlDataConverter.dataToElement(data, screenWidth, screenHeight);
+                // 使用 ControlLayoutManager 的方法，正确处理新格式的相对坐标 (0-1)
+                ControlElement element = com.app.ralaunch.utils.ControlLayoutManager.createElementFromJsonData(data);
                 if (element != null) {
                     newLayout.addElement(element);
                 }

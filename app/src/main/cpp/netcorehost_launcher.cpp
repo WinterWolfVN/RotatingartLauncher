@@ -153,14 +153,44 @@ static void str_free(char*& str) {
 
 static std::string get_package_name() {
     const char *package_name_cstr = getenv("PACKAGE_NAME"); // RaLaunchApplication.java 中设置了
-    assert(package_name_cstr != nullptr);
-    return {package_name_cstr};
+    if (package_name_cstr != nullptr) {
+        return {package_name_cstr};
+    }
+    
+    // 备用方案：如果环境变量未设置，返回默认包名
+    __android_log_print(ANDROID_LOG_WARN, LOG_TAG, 
+        "PACKAGE_NAME not set, using default: com.app.ralaunch");
+    return {"com.app.ralaunch"};
 }
 
 static std::string get_external_storage_directory() {
     const char *external_storage_directory_cstr = getenv("EXTERNAL_STORAGE_DIRECTORY"); // RaLaunchApplication.java 中设置了
-    assert(external_storage_directory_cstr != nullptr);
-    return {external_storage_directory_cstr};
+    if (external_storage_directory_cstr != nullptr) {
+        return {external_storage_directory_cstr};
+    }
+    
+    // 备用方案：如果环境变量未设置，尝试使用默认路径
+    // Android 10+ 使用 scoped storage，但我们可以尝试常见的路径
+    const char* default_paths[] = {
+        "/storage/emulated/0",
+        "/sdcard",
+        "/storage/sdcard0",
+        nullptr
+    };
+    
+    for (int i = 0; default_paths[i] != nullptr; i++) {
+        struct stat st;
+        if (stat(default_paths[i], &st) == 0 && S_ISDIR(st.st_mode)) {
+            __android_log_print(ANDROID_LOG_WARN, LOG_TAG, 
+                "EXTERNAL_STORAGE_DIRECTORY not set, using fallback: %s", default_paths[i]);
+            return {default_paths[i]};
+        }
+    }
+    
+    // 如果所有备用方案都失败，返回空字符串并记录错误
+    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, 
+        "EXTERNAL_STORAGE_DIRECTORY not set and no fallback path available");
+    return {""};
 }
 
 static bool is_set_thread_affinity_to_big_core() {

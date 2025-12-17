@@ -84,6 +84,9 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        com.app.ralaunch.utils.DensityAdapter.adapt(this, true);
+        
         // 初始化主题管理器并应用主题（必须在 super.onCreate 之前）
         themeManager = new ThemeManager(this);
         themeManager.applyThemeFromSettings();

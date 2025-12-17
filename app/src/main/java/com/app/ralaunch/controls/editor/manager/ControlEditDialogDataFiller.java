@@ -99,6 +99,10 @@ public class ControlEditDialogDataFiller {
     public static void fillPositionSizeData(@NonNull View view, @NonNull UIReferences refs) {
         if (refs.getCurrentData() == null) return;
         
+        // 摇杆大小
+        Slider sliderJoystickSize = view.findViewById(R.id.seekbar_joystick_size);
+        TextView tvJoystickSizeValue = view.findViewById(R.id.tv_joystick_size_value);
+        
         Slider sliderPosX = view.findViewById(R.id.seekbar_pos_x);
         TextView tvPosXValue = view.findViewById(R.id.tv_pos_x_value);
         Slider sliderPosY = view.findViewById(R.id.seekbar_pos_y);
@@ -109,26 +113,39 @@ public class ControlEditDialogDataFiller {
         TextView tvHeightValue = view.findViewById(R.id.tv_height_value);
         SwitchCompat switchAutoSize = view.findViewById(R.id.switch_auto_size);
         
+        // 填充摇杆大小数据（仅摇杆类型）
+        boolean isJoystick = refs.getCurrentData().type == ControlData.TYPE_JOYSTICK;
+        if (sliderJoystickSize != null && isJoystick) {
+            int sizePercent = (int) (refs.getCurrentData().width / refs.getScreenWidth() * 100);
+            sizePercent = Math.max(1, Math.min(100, sizePercent));
+            sliderJoystickSize.setValue(sizePercent);
+            if (tvJoystickSizeValue != null) tvJoystickSizeValue.setText(sizePercent + "%");
+        }
+        
         if (sliderPosX != null) {
             int xPercent = (int) (refs.getCurrentData().x / refs.getScreenWidth() * 100);
+            xPercent = Math.max(0, Math.min(100, xPercent)); // 确保在有效范围内
             sliderPosX.setValue(xPercent);
             if (tvPosXValue != null) tvPosXValue.setText(xPercent + "%");
         }
         
         if (sliderPosY != null) {
             int yPercent = (int) (refs.getCurrentData().y / refs.getScreenHeight() * 100);
+            yPercent = Math.max(0, Math.min(100, yPercent)); // 确保在有效范围内
             sliderPosY.setValue(yPercent);
             if (tvPosYValue != null) tvPosYValue.setText(yPercent + "%");
         }
         
         if (sliderWidth != null) {
             int widthPercent = (int) (refs.getCurrentData().width / refs.getScreenWidth() * 100);
+            widthPercent = Math.max(1, Math.min(100, widthPercent)); // 确保在有效范围内，最小1%
             sliderWidth.setValue(widthPercent);
             if (tvWidthValue != null) tvWidthValue.setText(widthPercent + "%");
         }
         
         if (sliderHeight != null) {
             int heightPercent = (int) (refs.getCurrentData().height / refs.getScreenHeight() * 100);
+            heightPercent = Math.max(1, Math.min(100, heightPercent)); // 确保在有效范围内，最小1%
             sliderHeight.setValue(heightPercent);
             if (tvHeightValue != null) tvHeightValue.setText(heightPercent + "%");
         }
@@ -251,6 +268,9 @@ public class ControlEditDialogDataFiller {
             TextView tvCornerRadiusValue = view.findViewById(R.id.tv_corner_radius_value);
             if (sliderCornerRadius != null && tvCornerRadiusValue != null) {
                 int cornerRadius = (int) data.cornerRadius;
+                // 确保在 Slider 的有效范围内
+                cornerRadius = (int) Math.max(sliderCornerRadius.getValueFrom(), 
+                    Math.min(sliderCornerRadius.getValueTo(), cornerRadius));
                 sliderCornerRadius.setValue(cornerRadius);
                 tvCornerRadiusValue.setText(cornerRadius + "dp");
             }

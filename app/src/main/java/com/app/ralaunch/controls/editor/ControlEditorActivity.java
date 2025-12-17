@@ -56,6 +56,9 @@ public class ControlEditorActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        com.app.ralaunch.utils.DensityAdapter.adapt(this, true);
+        
         // 应用主题设置（必须在 super.onCreate 之前）
         com.app.ralaunch.manager.ThemeManager themeManager = 
             new com.app.ralaunch.manager.ThemeManager(this);
@@ -232,19 +235,48 @@ public class ControlEditorActivity extends AppCompatActivity {
                     mCurrentConfig.controls.add(control);
                 }
             }
+            
+            // 如果转换后控件列表为空，回退到默认布局
+            if (mCurrentConfig.controls.isEmpty()) {
+                android.util.Log.w(TAG, "Layout conversion resulted in empty controls, falling back to default layout");
+                loadDefaultLayout();
+            }
         }
 
         displayLayout();
     }
     
     private void loadDefaultLayout() {
+        // 尝试从 ControlLayoutManager 加载键盘模式默认布局
+        try {
+            com.app.ralaunch.model.ControlLayout defaultLayout = mLayoutManager.getLayout("keyboard_mode");
+            if (defaultLayout != null && !defaultLayout.getElements().isEmpty()) {
+                mCurrentConfig = new ControlConfig();
+                mCurrentConfig.name = defaultLayout.getName();
+                mCurrentConfig.controls = new java.util.ArrayList<>();
+
+                for (com.app.ralaunch.model.ControlElement element : defaultLayout.getElements()) {
+                    ControlData control = ControlDataConverter.elementToData(element, mScreenWidth, mScreenHeight);
+                    if (control != null) {
+                        mCurrentConfig.controls.add(control);
+                    }
+                }
+                
+                // 如果成功加载了默认布局，直接返回
+                if (!mCurrentConfig.controls.isEmpty()) {
+                    android.util.Log.d(TAG, "Loaded default keyboard layout with " + mCurrentConfig.controls.size() + " controls");
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "Failed to load default layout from manager", e);
+        }
+        
+        // 如果加载失败，创建一个空的配置（至少保证不会崩溃）
         mCurrentConfig = new ControlConfig();
         mCurrentConfig.name = getString(R.string.control_layout_default_name);
         mCurrentConfig.controls = new java.util.ArrayList<>();
-        
-//        ControlData joystick = ControlData.createDefaultJoystick();
-//        joystick.y = mScreenHeight - joystick.height - 50;
-//        mCurrentConfig.controls.add(joystick);
+        android.util.Log.w(TAG, "Created empty default layout as fallback");
     }
     
     private void displayLayout() {
@@ -321,18 +353,24 @@ public class ControlEditorActivity extends AppCompatActivity {
             return;
         }
 
-        // 显示退出确认对话框
-        new AlertDialog.Builder(this)
-            .setTitle(getString(R.string.editor_exit_title))
-            .setMessage(getString(R.string.editor_exit_save_confirm))
-            .setPositiveButton(getString(R.string.editor_save_and_exit), (dialog, which) -> {
-                if (mEditorManager != null) {
-                    mEditorManager.saveLayout(mCurrentLayoutName);
-                }
-                finish();
-            })
-            .setNegativeButton(getString(R.string.editor_exit), (dialog, which) -> finish())
-            .setNeutralButton(getString(R.string.cancel), null)
-            .show();
+        // 检查是否有未保存的更改
+        if (mEditorManager != null && mEditorManager.hasUnsavedChanges()) {
+            // 有未保存的更改，显示退出确认对话框
+            new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.editor_exit_title))
+                .setMessage(getString(R.string.editor_exit_save_confirm))
+                .setPositiveButton(getString(R.string.editor_save_and_exit), (dialog, which) -> {
+                    if (mEditorManager != null) {
+                        mEditorManager.saveLayout(mCurrentLayoutName);
+                    }
+                    finish();
+                })
+                .setNegativeButton(getString(R.string.editor_exit), (dialog, which) -> finish())
+                .setNeutralButton(getString(R.string.cancel), null)
+                .show();
+        } else {
+            // 没有未保存的更改，直接退出
+            finish();
+        }
     }
 }

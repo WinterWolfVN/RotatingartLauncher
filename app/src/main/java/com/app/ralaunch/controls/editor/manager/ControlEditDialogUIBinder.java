@@ -214,7 +214,9 @@ public class ControlEditDialogUIBinder {
                 int progress = (int) value;
                 if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText(progress + "%");
                 if (fromUser) {
-                    rangeSettingsManager.setMouseRightStickRangeLeft(progress / 100f);
+                    float rangeValue = progress / 100f;
+                    rangeSettingsManager.setMouseRightStickRangeLeft(rangeValue);
+                    android.util.Log.i("ControlEditDialog", "Saved mouse range LEFT: " + progress + "% -> " + rangeValue);
                     refs.notifyUpdate();
                 }
             });
@@ -295,6 +297,16 @@ public class ControlEditDialogUIBinder {
      * 绑定位置大小视图
      */
     public static void bindPositionSizeViews(@NonNull View view, @NonNull UIReferences refs) {
+        // 卡片视图
+        View cardJoystickSize = view.findViewById(R.id.card_joystick_size);
+        View cardWidth = view.findViewById(R.id.card_width);
+        View cardHeight = view.findViewById(R.id.card_height);
+        
+        // 摇杆大小
+        Slider sliderJoystickSize = view.findViewById(R.id.seekbar_joystick_size);
+        TextView tvJoystickSizeValue = view.findViewById(R.id.tv_joystick_size_value);
+        
+        // 位置和尺寸
         Slider sliderPosX = view.findViewById(R.id.seekbar_pos_x);
         TextView tvPosXValue = view.findViewById(R.id.tv_pos_x_value);
         Slider sliderPosY = view.findViewById(R.id.seekbar_pos_y);
@@ -304,6 +316,34 @@ public class ControlEditDialogUIBinder {
         Slider sliderHeight = view.findViewById(R.id.seekbar_height);
         TextView tvHeightValue = view.findViewById(R.id.tv_height_value);
         SwitchCompat switchAutoSize = view.findViewById(R.id.switch_auto_size);
+        
+        // 根据控件类型显示/隐藏相应的卡片
+        boolean isJoystick = refs.getCurrentData() != null && 
+                           refs.getCurrentData().type == ControlData.TYPE_JOYSTICK;
+        
+        if (cardJoystickSize != null) {
+            cardJoystickSize.setVisibility(isJoystick ? View.VISIBLE : View.GONE);
+        }
+        if (cardWidth != null) {
+            cardWidth.setVisibility(isJoystick ? View.GONE : View.VISIBLE);
+        }
+        if (cardHeight != null) {
+            cardHeight.setVisibility(isJoystick ? View.GONE : View.VISIBLE);
+        }
+        
+        // 摇杆大小设置（仅摇杆显示，同时设置宽度和高度）
+        if (sliderJoystickSize != null && isJoystick) {
+            sliderJoystickSize.addOnChangeListener((slider, value, fromUser) -> {
+                int progress = (int) value;
+                if (tvJoystickSizeValue != null) tvJoystickSizeValue.setText(progress + "%");
+                if (refs.getCurrentData() != null && fromUser) {
+                    float size = refs.getScreenWidth() * progress / 100f;
+                    refs.getCurrentData().width = size;
+                    refs.getCurrentData().height = size;
+                    refs.notifyUpdate();
+                }
+            });
+        }
         
         if (sliderPosX != null) {
             sliderPosX.addOnChangeListener((slider, value, fromUser) -> {
@@ -400,8 +440,6 @@ public class ControlEditDialogUIBinder {
         TextView tvStickOpacityValue = view.findViewById(R.id.tv_stick_opacity_value);
         Slider sliderStickKnobSize = view.findViewById(R.id.seekbar_stick_knob_size);
         TextView tvStickKnobSizeValue = view.findViewById(R.id.tv_stick_knob_size_value);
-        Slider sliderRotation = view.findViewById(R.id.seekbar_rotation);
-        TextView tvRotationValue = view.findViewById(R.id.tv_rotation_value);
        
         
         // 透明度设置（使用统一管理器）
@@ -577,24 +615,6 @@ public class ControlEditDialogUIBinder {
                     refs::notifyUpdate
                 )
             );
-        }
-        
-        // 旋转角度设置（0-360度）
-        if (sliderRotation != null && tvRotationValue != null) {
-            if (refs.getCurrentData() != null) {
-                int rotation = (int) refs.getCurrentData().rotation;
-                sliderRotation.setValue(rotation);
-                tvRotationValue.setText(rotation + "°");
-            }
-            
-            sliderRotation.addOnChangeListener((slider, value, fromUser) -> {
-                int progress = (int) value;
-                if (fromUser && refs.getCurrentData() != null) {
-                    refs.getCurrentData().rotation = progress;
-                    tvRotationValue.setText(progress + "°");
-                    refs.notifyUpdate();
-                }
-            });
         }
         
     }

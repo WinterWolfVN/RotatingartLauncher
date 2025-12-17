@@ -726,6 +726,8 @@
     <string name="editor_position_x_desc">Set the X position of the control</string>
     <string name="editor_position_y">Y Position</string>
     <string name="editor_position_y_desc">Set the Y position of the control</string>
+    <string name="editor_joystick_size">Size</string>
+    <string name="editor_joystick_size_desc">Set the size of the joystick (width and height are equal)</string>
     <string name="editor_width">Width</string>
     <string name="editor_width_desc">Set the width of the control</string>
     <string name="editor_height">Height</string>

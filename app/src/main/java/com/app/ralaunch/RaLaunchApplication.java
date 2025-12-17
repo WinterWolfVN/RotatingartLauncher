@@ -3,7 +3,6 @@ package com.app.ralaunch;
 import android.app.Application;
 import android.content.Context;
 import android.content.res.Configuration;
-import android.os.Environment;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -32,6 +31,10 @@ public class RaLaunchApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        
+
+        // 必须在最开始初始化，确保所有Activity都能正确适配
+        com.app.ralaunch.utils.DensityAdapter.init(this);
         
         // 在应用启动时应用主题设置，确保所有Activity都使用正确的主题
         com.app.ralaunch.data.SettingsManager settingsManager = 
@@ -97,7 +100,28 @@ public class RaLaunchApplication extends Application {
         // 设置环境变量
         try {
             Os.setenv("PACKAGE_NAME", appContext.getPackageName(), true);
-            Os.setenv("EXTERNAL_STORAGE_DIRECTORY", Environment.getExternalStorageDirectory().getPath(), true);
+            
+            // 设置外部存储目录环境变量
+            File externalStorageDir = appContext.getExternalFilesDir(null);
+            if (externalStorageDir != null) {
+                // 获取外部存储的根目录（去掉 /Android/data/com.app.ralaunch/files 部分）
+                String externalStoragePath = externalStorageDir.getAbsolutePath();
+                // 移除 /Android/data/包名/files 部分，获取外部存储根目录
+                if (externalStoragePath.contains("/Android/data/")) {
+                    externalStoragePath = externalStoragePath.substring(0, externalStoragePath.indexOf("/Android/data/"));
+                }
+                Os.setenv("EXTERNAL_STORAGE_DIRECTORY", externalStoragePath, true);
+                Log.d(TAG, "EXTERNAL_STORAGE_DIRECTORY set to: " + externalStoragePath);
+            } else {
+                // 备用方案：使用 getExternalStorageDirectory()（已弃用但可用）
+                File externalStorage = android.os.Environment.getExternalStorageDirectory();
+                if (externalStorage != null) {
+                    Os.setenv("EXTERNAL_STORAGE_DIRECTORY", externalStorage.getAbsolutePath(), true);
+                    Log.d(TAG, "EXTERNAL_STORAGE_DIRECTORY set to (fallback): " + externalStorage.getAbsolutePath());
+                } else {
+                    Log.e(TAG, "Failed to get external storage directory");
+                }
+            }
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }
@@ -152,3 +176,4 @@ public class RaLaunchApplication extends Application {
         return vibrationManager;
     }
 }
+

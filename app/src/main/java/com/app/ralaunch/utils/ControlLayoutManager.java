@@ -8,7 +8,6 @@ import com.app.ralaunch.model.ControlLayout;
 import com.app.ralaunch.model.ControlElement;
 import com.app.ralaunch.controls.ControlConfig;
 import com.app.ralaunch.controls.ControlData;
-import com.app.ralaunch.controls.ControlDataConverter;
 import com.app.ralaunch.utils.AppLogger;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -47,8 +46,7 @@ public class ControlLayoutManager {
     public ControlLayoutManager(Context context) {
         this.context = context;
         preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        // 配置 Gson 序列化空值和空字符串，确保 displayText 等字段即使为空也能正确保存和加载
-        // 注册 ControlElement 的自定义 TypeAdapter
+
         gson = new com.google.gson.GsonBuilder()
                 .serializeNulls()
                 .registerTypeAdapter(com.app.ralaunch.model.ControlElement.class, new com.app.ralaunch.model.ControlElementTypeAdapter())
@@ -57,15 +55,25 @@ public class ControlLayoutManager {
     }
 
     private void loadLayouts() {
+
         String layoutsJson = preferences.getString(KEY_LAYOUTS, null);
-        if (layoutsJson != null) {
-            Type listType = new TypeToken<List<ControlLayout>>(){}.getType();
-            layouts = gson.fromJson(layoutsJson, listType);
+        if (layoutsJson != null && !layoutsJson.isEmpty()) {
+            try {
+                Type listType = new TypeToken<List<ControlLayout>>(){}.getType();
+                layouts = gson.fromJson(layoutsJson, listType);
+                if (layouts == null) {
+                    layouts = new ArrayList<>();
+                }
+            } catch (Exception e) {
+                AppLogger.error("ControlLayoutManager", "Failed to load layouts from preferences", e);
+                layouts = new ArrayList<>();
+            }
         } else {
+            // 首次启动或没有保存的布局，创建空列表
             layouts = new ArrayList<>();
         }
 
-        // 检查并添加默认布局（如果不存在）
+        // 确保默认布局存在（如果不存在则从 JSON 加载）
         ensureDefaultLayoutsExist();
 
         currentLayoutName = preferences.getString(KEY_CURRENT_LAYOUT, INTERNAL_KEYBOARD_MODE);
@@ -180,14 +188,11 @@ public class ControlLayoutManager {
             // 创建 ControlLayout
             ControlLayout layout = new ControlLayout(layoutName);
             
-            // 获取屏幕尺寸用于坐标转换
-            android.util.DisplayMetrics metrics = context.getResources().getDisplayMetrics();
-            int screenWidth = metrics.widthPixels;
-            int screenHeight = metrics.heightPixels;
-            
             // 将 ControlData 转换为 ControlElement
+            // JSON 格式：x/y 是相对值（0-1），width/height 是绝对像素
+            // 不需要转换，直接保存到 ControlElement
             for (ControlData data : config.controls) {
-                ControlElement element = ControlDataConverter.dataToElement(data, screenWidth, screenHeight);
+                ControlElement element = createElementFromJsonData(data);
                 if (element != null) {
                     layout.addElement(element);
                 }
@@ -302,5 +307,77 @@ public class ControlLayoutManager {
         } else {
             return layoutName;
         }
+    }
+    
+    /**
+     * 从 JSON 数据直接创建 ControlElement，不做坐标转换
+     * 
+     * 完全相对坐标系统：
+     * - x/y: 相对位置 (0-1)，表示控件在屏幕上的相对位置
+     * - width/height: 相对尺寸 (0-1)，表示控件相对于屏幕的大小
+     * 
+     * 这样设计确保在不同分辨率下控件位置和大小保持一致
+     * 
+     * @param data ControlData 对象（从 JSON 解析，所有值都是相对值 0-1）
+     * @return ControlElement 对象
+     */
+    public static ControlElement createElementFromJsonData(ControlData data) {
+        if (data == null) return null;
+        
+        // 确定类型
+        ControlElement.ElementType type;
+        if (data.type == ControlData.TYPE_JOYSTICK) {
+            type = ControlElement.ElementType.JOYSTICK;
+        } else if (data.type == ControlData.TYPE_TEXT) {
+            type = ControlElement.ElementType.TEXT;
+        } else {
+            type = ControlElement.ElementType.BUTTON;
+        }
+        
+        ControlElement element = new ControlElement(
+            data.name != null ? data.name : "控件",
+            type,
+            data.name != null ? data.name : "控件"
+        );
+        
+        // 直接保存 JSON 中的相对值 (0-1)，不做转换
+        element.setX(data.x);
+        element.setY(data.y);
+        element.setWidth(data.width);
+        element.setHeight(data.height);
+        element.setRotation(data.rotation);
+        element.setOpacity(data.opacity);
+        element.setBorderOpacity(data.borderOpacity != 0 ? data.borderOpacity : 1.0f);
+        element.setTextOpacity(data.textOpacity != 0 ? data.textOpacity : 1.0f);
+        element.setStickOpacity(data.stickOpacity != 0 ? data.stickOpacity : 1.0f);
+        element.setStickKnobSize(data.stickKnobSize != 0 ? data.stickKnobSize : 0.4f);
+        element.setVisibility(data.visible ? ControlElement.Visibility.ALWAYS : ControlElement.Visibility.HIDDEN);
+        element.setShape(data.shape);
+        element.setBackgroundColor(data.bgColor);
+        element.setBorderColor(data.strokeColor);
+        element.setBorderWidth(data.strokeWidth);
+        element.setCornerRadius(data.cornerRadius);
+        element.setPassthrough(data.passThrough);
+        
+        // 按钮特有属性
+        if (type == ControlElement.ElementType.BUTTON) {
+            element.setKeyCode(data.keycode);
+            element.setToggle(data.isToggle);
+            element.setButtonMode(data.buttonMode);
+        }
+        
+        // 摇杆特有属性
+        if (type == ControlElement.ElementType.JOYSTICK) {
+            element.setJoystickMode(data.joystickMode);
+            element.setXboxUseRightStick(data.xboxUseRightStick);
+            element.setRightStickContinuous(data.rightStickContinuous);
+            element.setMouseRangeLeft(data.mouseRangeLeft);
+            element.setMouseRangeTop(data.mouseRangeTop);
+            element.setMouseRangeRight(data.mouseRangeRight);
+            element.setMouseRangeBottom(data.mouseRangeBottom);
+            element.setMouseSpeed(data.mouseSpeed);
+        }
+        
+        return element;
     }
 }

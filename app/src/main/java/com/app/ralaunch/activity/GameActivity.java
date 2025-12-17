@@ -121,6 +121,9 @@ public class GameActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        com.app.ralaunch.utils.DensityAdapter.adapt(this, true);
+        
         // 应用主题设置（必须在 super.onCreate 之前）
         // GameActivity 继承自 SDLActivity，不是 AppCompatActivity，所以直接应用主题
         com.app.ralaunch.data.SettingsManager settingsManager = 

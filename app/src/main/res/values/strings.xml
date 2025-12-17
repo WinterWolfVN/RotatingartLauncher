@@ -232,7 +232,7 @@
     <string name="patch_list_title">补丁列表</string>
     <string name="no_game_selected">请先选择游戏</string>
     <string name="no_patches_for_game">此游戏没有可用的补丁</string>
-
+    
     <!-- 杂项 -->
     <string name="miscellaneous">杂项</string>
 
@@ -605,6 +605,14 @@
     <string name="editor_keycode_sdl">按键码 (SDL):</string>
     <string name="editor_opacity_label">透明度: %d%%</string>
     <string name="editor_joystick_keys">摇杆按键 [上,右,下,左]:</string>
+    <string name="editor_joystick_key_mapping">摇杆键值映射</string>
+    <string name="editor_joystick_key_mapping_desc">为摇杆的四个方向分别设置键值（默认：WASD）</string>
+    <string name="editor_joystick_key_mapping_value">%1$s, %2$s, %3$s, %4$s</string>
+    <string name="editor_joystick_key_up">上方向</string>
+    <string name="editor_joystick_key_right">右方向</string>
+    <string name="editor_joystick_key_down">下方向</string>
+    <string name="editor_joystick_key_left">左方向</string>
+    <string name="editor_joystick_key_reset_wasd">重置为 WASD</string>
     <string name="editor_save_button_label">保存</string>
 
     <!-- ControlShapeManager 消息 -->
@@ -727,6 +735,8 @@
     <string name="editor_position_x_desc">设置控件的X位置</string>
     <string name="editor_position_y">Y位置</string>
     <string name="editor_position_y_desc">设置控件的Y位置</string>
+    <string name="editor_joystick_size">大小</string>
+    <string name="editor_joystick_size_desc">设置摇杆的大小（宽度和高度相等）</string>
     <string name="editor_width">宽度</string>
     <string name="editor_width_desc">设置控件的宽度</string>
     <string name="editor_height">高度</string>

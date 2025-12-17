@@ -7,21 +7,28 @@ import com.app.ralaunch.model.ControlElement;
  * 控件数据转换器
  * 
  * 统一管理 ControlElement 和 ControlData 之间的转换逻辑
- * 消除代码重复，确保游戏内和编辑器使用一致的数据模型
+ * 
+ * 完全相对坐标系统：
+ * - ControlElement: 所有值都是相对于屏幕的百分比 (0-1)
+ *   - x/y: 位置相对值
+ *   - width/height: 尺寸相对值
+ * - ControlData: 所有值都是屏幕绝对像素
+ *   - x/y: 屏幕绝对像素位置
+ *   - width/height: 屏幕绝对像素尺寸
+ * 
+ * 转换公式：
+ * - elementToData: 相对值 × 屏幕尺寸 = 屏幕绝对像素
+ * - dataToElement: 屏幕绝对像素 / 屏幕尺寸 = 相对值
  */
 public class ControlDataConverter {
     
-    // 基准分辨率（用于DPI适配）- 选择一个常见的平板分辨率作为基准
-    private static final float BASE_WIDTH = 2560f;
-    private static final float BASE_HEIGHT = 1600f;
-    
     /**
-     * 将 ControlElement 转换为 ControlData
+     * 将 ControlElement 转换为 ControlData（用于运行时显示）
      * 
-     * @param element 控制元素（使用相对坐标 0-1）
+     * @param element 控制元素（所有值都是相对值 0-1）
      * @param screenWidth 屏幕宽度（像素）
      * @param screenHeight 屏幕高度（像素）
-     * @return ControlData 对象（使用绝对坐标）
+     * @return ControlData 对象（所有值都是屏幕绝对像素）
      */
     public static ControlData elementToData(ControlElement element, int screenWidth, int screenHeight) {
         if (element == null) {
@@ -30,16 +37,19 @@ public class ControlDataConverter {
         
         ControlData data = new ControlData();
         
-        // 计算DPI缩放因子（基于屏幕宽度）
-        float scaleFactor = screenWidth / BASE_WIDTH;
-        
         // 基本属性
         data.name = element.getName() != null ? element.getName() : "控件";
-        data.x = element.getX() * screenWidth;  // 相对坐标转绝对坐标
+        
+        // 完全相对坐标系统：所有值都是相对于屏幕的百分比 (0-1)
+        // 位置：相对值 × 屏幕尺寸 = 屏幕绝对像素
+        data.x = element.getX() * screenWidth;
         data.y = element.getY() * screenHeight;
-        // 尺寸根据DPI缩放因子进行适配
-        data.width = element.getWidth() * scaleFactor;
-        data.height = element.getHeight() * scaleFactor;
+        
+        // 尺寸：相对值 × 屏幕尺寸 = 屏幕绝对像素
+        data.width = element.getWidth() * screenWidth;
+        data.height = element.getHeight() * screenHeight;
+        
+      
         data.rotation = element.getRotation();
         data.opacity = element.getOpacity();
         data.borderOpacity = element.getBorderOpacity() > 0 ? element.getBorderOpacity() : 1.0f;
@@ -178,10 +188,16 @@ public class ControlDataConverter {
         if (data.name == null) {
             data.name = "控件";
         }
-        if (data.width <= 0) {
+        // 如果宽度或高度 <= 0 或过小（< 10像素），设置为默认值
+        // 这样可以避免控件因为尺寸过小而不可见
+        if (data.width <= 0 || data.width < 10) {
+            android.util.Log.w("ControlDataConverter", 
+                String.format("[%s] Invalid width %.1f, setting to default 80", data.name, data.width));
             data.width = 80;
         }
-        if (data.height <= 0) {
+        if (data.height <= 0 || data.height < 10) {
+            android.util.Log.w("ControlDataConverter", 
+                String.format("[%s] Invalid height %.1f, setting to default 80", data.name, data.height));
             data.height = 80;
         }
         // 透明度：允许透明度为0（完全透明），只有当透明度未初始化（小于0）时才设置默认值
@@ -206,12 +222,12 @@ public class ControlDataConverter {
     }
     
     /**
-     * 将 ControlData 转换为 ControlElement
+     * 将 ControlData 转换为 ControlElement（用于保存布局）
      * 
-     * @param data ControlData 对象（使用绝对坐标）
+     * @param data ControlData 对象（所有值都是屏幕绝对像素）
      * @param screenWidth 屏幕宽度（像素）
      * @param screenHeight 屏幕高度（像素）
-     * @return ControlElement 对象（使用相对坐标 0-1）
+     * @return ControlElement 对象（所有值都是相对值 0-1）
      */
     public static ControlElement dataToElement(ControlData data, int screenWidth, int screenHeight) {
         if (data == null || screenWidth <= 0 || screenHeight <= 0) {
@@ -236,15 +252,14 @@ public class ControlDataConverter {
             data.name != null ? data.name : "控件"
         );
         
-        // 计算DPI缩放因子（基于屏幕宽度）
-        float scaleFactor = screenWidth / BASE_WIDTH;
-        
-        // 位置和大小（绝对坐标转相对坐标，尺寸转换为基准分辨率）
+        // 完全相对坐标系统：所有值都转换为相对于屏幕的百分比 (0-1)
+        // 位置：屏幕绝对像素 / 屏幕尺寸 = 相对值
         element.setX(data.x / screenWidth);
         element.setY(data.y / screenHeight);
-        // 尺寸转换为基准分辨率的值，保存时统一使用基准分辨率
-        element.setWidth(data.width / scaleFactor);
-        element.setHeight(data.height / scaleFactor);
+        
+        // 尺寸：屏幕绝对像素 / 屏幕尺寸 = 相对值
+        element.setWidth(data.width / screenWidth);
+        element.setHeight(data.height / screenHeight);
         element.setRotation(data.rotation);
         element.setOpacity(data.opacity);
         element.setBorderOpacity(data.borderOpacity != 0 ? data.borderOpacity : 1.0f);

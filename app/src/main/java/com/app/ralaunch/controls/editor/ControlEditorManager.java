@@ -80,6 +80,7 @@ public class ControlEditorManager {
         void onLongPressRightClickChanged(boolean enabled);
     }
 
+
     /**
      * 隐藏控件监听器
      */
@@ -145,6 +146,10 @@ public class ControlEditorManager {
     public void setOnLongPressRightClickChangedListener(OnLongPressRightClickChangedListener listener) {
         mLongPressRightClickListener = listener;
     }
+
+    /**
+     * 设置虚拟鼠标变化监听器
+     */
 
     /**
      * 设置隐藏控件监听器

@@ -10,6 +10,8 @@ import android.widget.Toast;
 import com.app.ralaunch.R;
 import com.app.ralaunch.controls.ControlLayout;
 import com.app.ralaunch.controls.SDLInputBridge;
+import com.app.ralaunch.controls.rule.TouchDispatchManager;
+import com.app.ralaunch.data.SettingsManager;
 import com.app.ralaunch.ui.FPSDisplayView;
 import com.app.ralaunch.utils.AppLogger;
 
@@ -21,9 +23,11 @@ public class GameVirtualControlsManager {
     private ControlLayout controlLayout;
     private SDLInputBridge inputBridge;
     private FPSDisplayView fpsDisplayView;
+    private SettingsManager settingsManager;
 
     public void initialize(GameActivity activity, ViewGroup sdlLayout, SDLSurface sdlSurface, Runnable disableSDLTextInput) {
         try {
+            settingsManager = SettingsManager.getInstance(activity);
             inputBridge = new SDLInputBridge();
 
             android.util.DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
@@ -33,6 +37,7 @@ public class GameVirtualControlsManager {
             controlLayout.setInputBridge(inputBridge);
             controlLayout.loadLayoutFromManager();
             disableClippingRecursive(controlLayout);
+
 
             ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -44,8 +49,11 @@ public class GameVirtualControlsManager {
 
                 if (sdlSurface != null) {
                     controlLayout.setSDLSurface(sdlSurface);
+                    // 设置虚拟控件管理器到 SDLSurface
+                    sdlSurface.setVirtualControlsManager(this);
                 }
 
+                // 添加 FPS 显示视图
                 fpsDisplayView = new FPSDisplayView(activity);
                 fpsDisplayView.setInputBridge(inputBridge);
                 sdlLayout.addView(fpsDisplayView, params);

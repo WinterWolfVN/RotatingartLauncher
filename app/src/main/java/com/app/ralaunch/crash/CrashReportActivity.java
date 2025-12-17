@@ -28,6 +28,9 @@ public class CrashReportActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        com.app.ralaunch.utils.DensityAdapter.adapt(this, true);
+        
         super.onCreate(savedInstanceState);
         
         // 强制横屏
