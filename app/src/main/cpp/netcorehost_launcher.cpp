@@ -157,6 +157,12 @@ static std::string get_package_name() {
     return {package_name_cstr};
 }
 
+static std::string get_external_storage_directory() {
+    const char *external_storage_directory_cstr = getenv("EXTERNAL_STORAGE_DIRECTORY"); // RaLaunchApplication.java 中设置了
+    assert(external_storage_directory_cstr != nullptr);
+    return {external_storage_directory_cstr};
+}
+
 static bool is_set_thread_affinity_to_big_core() {
     const char *env_value = getenv("SET_THREAD_AFFINITY_TO_BIG_CORE");
     return (env_value != nullptr) && (strcmp(env_value, "1") == 0);
@@ -250,24 +256,24 @@ int netcorehost_set_params(
     }
     
     // 设置游戏数据目录到 SD 卡的 RALauncher 文件夹
-    const char* game_data_dir = "/storage/emulated/0/RALauncher";
+    std::string game_data_dir = get_external_storage_directory() + "/RALauncher";
     // 确保目录存在
     struct stat st;
-    if (stat(game_data_dir, &st) != 0) {
+    if (stat(game_data_dir.c_str(), &st) != 0) {
         // 目录不存在，尝试创建
         mode_t mode = S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH;
-        if (mkdir(game_data_dir, mode) != 0) {
-            LOGW(LOG_TAG, "Failed to create game data directory: %s, using app_dir as fallback", game_data_dir);
+        if (mkdir(game_data_dir.c_str(), mode) != 0) {
+            LOGW(LOG_TAG, "Failed to create game data directory: %s, using app_dir as fallback", game_data_dir.c_str());
             game_data_dir = app_dir;
         } else {
-            LOGI(LOG_TAG, "Created game data directory: %s", game_data_dir);
+            LOGI(LOG_TAG, "Created game data directory: %s", game_data_dir.c_str());
         }
     } else {
-        LOGI(LOG_TAG, "Using game data directory: %s", game_data_dir);
+        LOGI(LOG_TAG, "Using game data directory: %s", game_data_dir.c_str());
     }
-    
+
     // 创建 .nomedia 文件以防止 Android 媒体扫描器索引游戏文件
-    std::string nomedia_path = std::string(game_data_dir) + "/.nomedia";
+    std::string nomedia_path = game_data_dir + "/.nomedia";
     if (access(nomedia_path.c_str(), F_OK) != 0) {
         // .nomedia 文件不存在，创建它
         FILE* nomedia_file = fopen(nomedia_path.c_str(), "w");
@@ -281,10 +287,10 @@ int netcorehost_set_params(
         LOGI(LOG_TAG, ".nomedia file already exists: %s", nomedia_path.c_str());
     }
 
-    setenv("XDG_DATA_HOME", game_data_dir, 1);
-    setenv("XDG_CONFIG_HOME", game_data_dir, 1);
-    setenv("HOME", game_data_dir, 1);
-
+    // 设置存储路径环境变量
+    setenv("XDG_DATA_HOME", game_data_dir.c_str(), 1);
+    setenv("XDG_CONFIG_HOME", game_data_dir.c_str(), 1);
+    setenv("HOME", game_data_dir.c_str(), 1);
 
     return 0;
 }

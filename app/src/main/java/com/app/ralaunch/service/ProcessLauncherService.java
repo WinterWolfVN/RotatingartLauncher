@@ -7,6 +7,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
 import android.os.Process;
 import android.system.Os;
@@ -23,6 +24,7 @@ import com.app.ralib.patch.Patch;
 import com.app.ralib.patch.PatchManager;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -87,8 +89,9 @@ public class ProcessLauncherService extends Service {
         super.onCreate();
         try {
             Os.setenv("PACKAGE_NAME", getPackageName(), true);
+            Os.setenv("EXTERNAL_STORAGE_DIRECTORY", Environment.getExternalStorageDirectory().getPath(), true);
             
-            File gameDataDir = new File("/storage/emulated/0/RALauncher");
+            File gameDataDir = Paths.get(Environment.getExternalStorageDirectory().getPath(), "RALauncher").toFile();
             if (!gameDataDir.exists()) {
                 if (!gameDataDir.mkdirs()) {
                     gameDataDir = getFilesDir();

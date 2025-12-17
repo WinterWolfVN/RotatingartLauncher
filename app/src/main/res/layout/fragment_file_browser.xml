@@ -123,6 +123,7 @@
                     app:tint="?attr/colorPrimary"
                     android:layout_marginEnd="10dp" />
 
+                <!-- 示例路径，可动态更新 -->
                 <TextView
                     android:id="@+id/currentPathText"
                     android:layout_width="0dp"

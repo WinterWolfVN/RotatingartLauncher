@@ -3,6 +3,7 @@ package com.app.ralaunch;
 import android.app.Application;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.os.Environment;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -96,6 +97,7 @@ public class RaLaunchApplication extends Application {
         // 设置环境变量
         try {
             Os.setenv("PACKAGE_NAME", appContext.getPackageName(), true);
+            Os.setenv("EXTERNAL_STORAGE_DIRECTORY", Environment.getExternalStorageDirectory().getPath(), true);
         } catch (ErrnoException e) {
             throw new RuntimeException(e);
         }

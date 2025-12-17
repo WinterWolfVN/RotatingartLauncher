@@ -45,7 +45,7 @@ import java.util.List;
  * 游戏文件浏览器 Fragment
  * 
  * 提供游戏文件管理功能：
- * - 浏览 /storage/emulated/0/RALauncher 目录
+ * - 浏览 /storage/emulated/{user_id}/RALauncher 目录
  * - 移动/复制文件夹和文件
  * - 删除文件/文件夹
  * - 创建新文件夹
@@ -55,7 +55,6 @@ import java.util.List;
 public class ModManagerFragment extends BaseFragment implements FileBrowserAdapter.OnFileClickListener {
     
     private static final String TAG = "ModManagerFragment";
-    private static final String DEFAULT_PATH = "/storage/emulated/0/RALauncher";
     private static final int REQUEST_CODE_PICK_DIR = 1002;
     private static final String KEY_VIEW_MODE = "game_file_browser_view_mode"; // "grid" or "list"
     private static final String VIEW_MODE_GRID = "grid";
@@ -271,7 +270,8 @@ public class ModManagerFragment extends BaseFragment implements FileBrowserAdapt
     }
     
     private void loadInitialDirectory() {
-        File defaultDir = new File(DEFAULT_PATH);
+        var default_path = Environment.getExternalStorageDirectory().getPath();
+        File defaultDir = new File(default_path);
         if (!defaultDir.exists()) {
             if (!defaultDir.mkdirs()) {
                 defaultDir = Environment.getExternalStorageDirectory();
@@ -284,7 +284,8 @@ public class ModManagerFragment extends BaseFragment implements FileBrowserAdapt
      * 导航到主目录
      */
     private void navigateToHome() {
-        navigateToPath(DEFAULT_PATH);
+        var default_path = Environment.getExternalStorageDirectory().getPath();
+        navigateToPath(default_path);
     }
     
     private void navigateToPath(String path) {

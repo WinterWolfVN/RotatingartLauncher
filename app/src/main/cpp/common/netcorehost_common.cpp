@@ -34,6 +34,12 @@ const char* netcorehost_common_get_package_name(void) {
     return package_name_cstr;
 }
 
+static std::string get_external_storage_directory() {
+    const char *external_storage_directory_cstr = getenv("EXTERNAL_STORAGE_DIRECTORY"); // RaLaunchApplication.java 中设置了
+    assert(external_storage_directory_cstr != nullptr);
+    return {external_storage_directory_cstr};
+}
+
 /**
  * @brief 初始化 .NET 运行时环境变量
  */
@@ -86,7 +92,8 @@ int netcorehost_common_setup_env(const netcorehost_env_config_t* config) {
     }
 
     // 5. 设置保存目录（游戏数据目录，不是游戏安装目录）
-    const char* game_data_dir = "/storage/emulated/0/RALauncher";
+    std::string game_data_dir_str = get_external_storage_directory() + "/RALauncher";
+    const char* game_data_dir = game_data_dir_str.c_str();
     // 确保目录存在
     struct stat st;
     if (stat(game_data_dir, &st) != 0) {
