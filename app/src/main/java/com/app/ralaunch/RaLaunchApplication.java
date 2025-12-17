@@ -78,10 +78,10 @@ public class RaLaunchApplication extends Application {
         if (patchManager != null) {
             new Thread(() -> {
                 try {
-                    // 提取并安装内置补丁（如果需要）
+                    // 提取并安装内置MonoMod补丁（如果需要）
                     com.app.ralaunch.utils.PatchExtractor.extractPatchesIfNeeded(appContext);
                     // 安装内置补丁
-                    PatchManager.installBuiltInPatches(patchManager);
+                    PatchManager.installBuiltInPatches(patchManager, false);
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to install built-in patches in background", e);
                 }

@@ -1,10 +1,10 @@
 package com.app.ralaunch.settings;
 
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 import androidx.fragment.app.Fragment;
 import com.app.ralaunch.R;
+import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralaunch.data.SettingsManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
@@ -13,8 +13,6 @@ import com.google.android.material.materialswitch.MaterialSwitch;
  * 开发者设置模块
  */
 public class DeveloperSettingsModule implements SettingsModule {
-    
-    private static final String TAG = "DeveloperSettings";
     
     private Fragment fragment;
     private View rootView;
@@ -32,6 +30,7 @@ public class DeveloperSettingsModule implements SettingsModule {
         setupConcurrentGC();
         setupTieredCompilation();
         setupFnaMapBufferRangeOptimization();
+        setupForceReinstallPatches();
     }
     
     private void setupVerboseLogging() {
@@ -105,6 +104,45 @@ public class DeveloperSettingsModule implements SettingsModule {
                         fragment.getString(R.string.fna_map_buffer_range_opt_enabled) :
                         fragment.getString(R.string.fna_map_buffer_range_opt_disabled);
                 Toast.makeText(fragment.requireContext(), message, Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
+    private void setupForceReinstallPatches() {
+        MaterialButton btnForceReinstallPatches = rootView.findViewById(R.id.btnForceReinstallPatches);
+        if (btnForceReinstallPatches != null) {
+            btnForceReinstallPatches.setOnClickListener(v -> {
+                // 显示进度提示
+                Toast.makeText(fragment.requireContext(), R.string.reinstalling_patches, Toast.LENGTH_SHORT).show();
+
+                // 在后台线程执行补丁重装
+                new Thread(() -> {
+                    try {
+                        com.app.ralib.patch.PatchManager patchManager = RaLaunchApplication.getPatchManager();
+
+                        if (patchManager != null) {
+                            // 强制重新安装内置补丁
+                            com.app.ralib.patch.PatchManager.installBuiltInPatches(patchManager, true);
+
+                            // 在主线程显示成功消息
+                            fragment.requireActivity().runOnUiThread(() ->
+                                Toast.makeText(fragment.requireContext(),
+                                    R.string.patches_reinstalled,
+                                    Toast.LENGTH_LONG).show()
+                            );
+                        }
+                        else {
+                            throw new Exception("PatchManager is not initialized");
+                        }
+                    } catch (Exception e) {
+                        // 在主线程显示错误消息
+                        fragment.requireActivity().runOnUiThread(() ->
+                            Toast.makeText(fragment.requireContext(),
+                                fragment.getString(R.string.patches_reinstall_failed, e.getMessage()),
+                                Toast.LENGTH_LONG).show()
+                        );
+                    }
+                }, "ForceReinstallPatches").start();
             });
         }
     }

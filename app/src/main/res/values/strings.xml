@@ -233,6 +233,17 @@
     <string name="no_game_selected">请先选择游戏</string>
     <string name="no_patches_for_game">此游戏没有可用的补丁</string>
 
+    <!-- 杂项 -->
+    <string name="miscellaneous">杂项</string>
+
+    <!-- 补丁管理 -->
+    <string name="force_reinstall_patches">强制重新安装内置补丁</string>
+    <string name="force_reinstall_patches_desc">清除并重新安装所有内置补丁（如遇补丁问题时使用）</string>
+    <string name="reinstall">重新安装</string>
+    <string name="reinstalling_patches">正在重新安装补丁…</string>
+    <string name="patches_reinstalled">补丁已重新安装</string>
+    <string name="patches_reinstall_failed">补丁重新安装失败: %s</string>
+
     <!-- CoreCLR 运行时配置 -->
     <string name="coreclr_settings">CoreCLR 运行时配置</string>
     <string name="coreclr_gc_settings">垃圾回收 (GC) 设置</string>

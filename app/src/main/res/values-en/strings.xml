@@ -234,6 +234,17 @@
     <string name="no_game_selected">Please select a game first</string>
     <string name="no_patches_for_game">No patches available for this game</string>
 
+    <!-- Miscellaneous -->
+    <string name="miscellaneous">Miscellaneous</string>
+
+    <!-- Patch Management -->
+    <string name="force_reinstall_patches">Force Reinstall Built-in Patches</string>
+    <string name="force_reinstall_patches_desc">Clear and reinstall all built-in patches (use when encountering patch issues)</string>
+    <string name="reinstall">Reinstall</string>
+    <string name="reinstalling_patches">Reinstalling patches…</string>
+    <string name="patches_reinstalled">Patches reinstalled successfully</string>
+    <string name="patches_reinstall_failed">Failed to reinstall patches: %s</string>
+
     <!-- CoreCLR Runtime Configuration -->
     <string name="coreclr_settings">CoreCLR Runtime Configuration</string>
     <string name="coreclr_gc_settings">Garbage Collection (GC) Settings</string>

@@ -323,6 +323,10 @@ public class PatchManager {
     }
 
     public static void installBuiltInPatches(PatchManager patchManager) {
+        installBuiltInPatches(patchManager, false);
+    }
+
+    public static void installBuiltInPatches(PatchManager patchManager, boolean forceReinstall) {
         Path apkPath = Paths.get(Shared.getContext().getApplicationInfo().sourceDir);
         try (var tfa = new TemporaryFileAcquirer()) {
             Path extractedPatches = tfa.acquireTempFilePath("extracted_patches");
@@ -375,7 +379,10 @@ public class PatchManager {
                 for (var patchZip : patchZips) {
                     // 读取补丁 manifest 检查是否已安装
                     PatchManifest manifest = PatchManifest.fromZip(patchZip);
-                    if (manifest != null && !installedPatchIds.contains(manifest.id)) {
+                    if (manifest != null && forceReinstall) {
+                        Log.i(TAG, "正在强制重新安装内置补丁: " + patchZip.getFileName() + " (id: " + manifest.id + ")");
+                        patchManager.installPatch(patchZip);
+                    } else if (manifest != null && !installedPatchIds.contains(manifest.id)) {
                         Log.i(TAG, "正在安装内置补丁: " + patchZip.getFileName() + " (id: " + manifest.id + ")");
                         patchManager.installPatch(patchZip);
                     } else if (manifest != null) {

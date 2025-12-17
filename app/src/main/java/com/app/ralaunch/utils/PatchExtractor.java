@@ -34,36 +34,9 @@ public class PatchExtractor {
     public static void extractPatchesIfNeeded(Context context) {
         // 检查是否已经提取过
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        boolean patchesExtracted = prefs.getBoolean(KEY_PATCHES_EXTRACTED, false);
         boolean monomodExtracted = prefs.getBoolean(KEY_MONOMOD_EXTRACTED, false);
-        
-        boolean needExtractPatches = !patchesExtracted;
+
         boolean needExtractMonoMod = !monomodExtracted;
-        
-        // 双重检查：验证目录是否真的存在且有文件
-        if (patchesExtracted) {
-            File patchesDir = new File(context.getExternalFilesDir(null), "patches");
-            if (!patchesDir.exists() || !patchesDir.isDirectory()) {
-                needExtractPatches = true;
-            } else {
-                File[] existingFiles = patchesDir.listFiles((dir, name) -> 
-                    !name.equals("patch_metadata.json") && !name.equals(".nomedia"));
-                if (existingFiles == null || existingFiles.length == 0) {
-                    needExtractPatches = true;
-                } else {
-                    boolean hasPatchFolder = false;
-                    for (File file : existingFiles) {
-                        if (file.isDirectory()) {
-                            hasPatchFolder = true;
-                            break;
-                        }
-                    }
-                    if (!hasPatchFolder) {
-                        needExtractPatches = true;
-                    }
-                }
-            }
-        }
         
         if (monomodExtracted) {
             File monoModDir = new File(context.getFilesDir(), "MonoMod");
@@ -72,22 +45,16 @@ public class PatchExtractor {
                 needExtractMonoMod = true;
             }
         }
-        
-        if (!needExtractPatches && !needExtractMonoMod) {
+
+        if (!needExtractMonoMod) {
             return;
         }
         
         // 在后台线程执行提取
-        final boolean finalNeedExtractPatches = needExtractPatches;
         final boolean finalNeedExtractMonoMod = needExtractMonoMod;
         
         new Thread(() -> {
             try {
-                if (finalNeedExtractPatches) {
-                    extractPatches(context);
-                    prefs.edit().putBoolean(KEY_PATCHES_EXTRACTED, true).apply();
-                }
-                
                 if (finalNeedExtractMonoMod) {
                     extractAndApplyMonoMod(context);
                     prefs.edit().putBoolean(KEY_MONOMOD_EXTRACTED, true).apply();
