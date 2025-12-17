@@ -266,6 +266,21 @@ int netcorehost_set_params(
         LOGI(LOG_TAG, "Using game data directory: %s", game_data_dir);
     }
     
+    // 创建 .nomedia 文件以防止 Android 媒体扫描器索引游戏文件
+    std::string nomedia_path = std::string(game_data_dir) + "/.nomedia";
+    if (access(nomedia_path.c_str(), F_OK) != 0) {
+        // .nomedia 文件不存在，创建它
+        FILE* nomedia_file = fopen(nomedia_path.c_str(), "w");
+        if (nomedia_file) {
+            fclose(nomedia_file);
+            LOGI(LOG_TAG, "Created .nomedia file: %s", nomedia_path.c_str());
+        } else {
+            LOGW(LOG_TAG, "Failed to create .nomedia file: %s", nomedia_path.c_str());
+        }
+    } else {
+        LOGI(LOG_TAG, ".nomedia file already exists: %s", nomedia_path.c_str());
+    }
+
     setenv("XDG_DATA_HOME", game_data_dir, 1);
     setenv("XDG_CONFIG_HOME", game_data_dir, 1);
     setenv("HOME", game_data_dir, 1);
