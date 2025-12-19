@@ -316,23 +316,188 @@ public class ControlDataConverter {
         element.setBorderColor(data.strokeColor);
         element.setBorderWidth(data.strokeWidth);
         element.setCornerRadius(data.cornerRadius);
-        // shape 已经在基本属性中设置，这里不需要重复设置
-        
+      
         return element;
     }
     
     /**
-     * 使用 DisplayMetrics 进行转换（便捷方法）
+     * 使用 DisplayMetrics 进行转换
      */
     public static ControlData elementToData(ControlElement element, DisplayMetrics metrics) {
         return elementToData(element, metrics.widthPixels, metrics.heightPixels);
     }
     
     /**
-     * 使用 DisplayMetrics 进行转换（便捷方法）
+     * 使用 DisplayMetrics 进行转换
      */
     public static ControlElement dataToElement(ControlData data, DisplayMetrics metrics) {
         return dataToElement(data, metrics.widthPixels, metrics.heightPixels);
+    }
+    
+    /**
+     * 将 ControlElement 转换为 ControlData（用于导出布局文件）
+     * 直接保存相对坐标（0-1），不转换为绝对像素
+     * 
+     * @param element 控制元素（所有值都是相对值 0-1）
+     * @return ControlData 对象（所有值都是相对值 0-1，用于导出）
+     */
+    public static ControlData elementToDataForExport(ControlElement element) {
+        if (element == null) {
+            return null;
+        }
+        
+        ControlData data = new ControlData();
+        
+        // 基本属性
+        data.name = element.getName() != null ? element.getName() : "控件";
+        
+        // 直接保存相对坐标（0-1），不进行转换
+        data.x = element.getX();
+        data.y = element.getY();
+        data.width = element.getWidth();
+        data.height = element.getHeight();
+        
+        data.rotation = element.getRotation();
+        data.opacity = element.getOpacity();
+        data.borderOpacity = element.getBorderOpacity() > 0 ? element.getBorderOpacity() : 1.0f;
+        data.textOpacity = element.getTextOpacity() > 0 ? element.getTextOpacity() : 1.0f;
+        data.stickOpacity = element.getStickOpacity() > 0 ? element.getStickOpacity() : 1.0f;
+        data.stickKnobSize = element.getStickKnobSize() > 0 ? element.getStickKnobSize() : 0.4f;
+        data.visible = element.getVisibility() != ControlElement.Visibility.HIDDEN;
+        data.shape = element.getShape();
+        
+        // 根据类型设置
+        ControlElement.ElementType elementType = element.getType();
+        if (elementType == null) {
+            elementType = ControlElement.ElementType.BUTTON;
+        }
+        
+        switch (elementType) {
+            case BUTTON:
+                data.type = ControlData.TYPE_BUTTON;
+                data.keycode = element.getKeyCode();
+                data.isToggle = element.isToggle();
+                int buttonMode = element.getButtonMode();
+                if (buttonMode == 0 || buttonMode == 1) {
+                    data.buttonMode = buttonMode;
+                } else {
+                    if (data.keycode <= -200 && data.keycode >= -221) {
+                        data.buttonMode = ControlData.BUTTON_MODE_GAMEPAD;
+                    } else {
+                        data.buttonMode = ControlData.BUTTON_MODE_KEYBOARD;
+                    }
+                }
+                break;
+                
+            case JOYSTICK:
+                data.type = ControlData.TYPE_JOYSTICK;
+                if (element.getJoystickMode() >= 0 && element.getJoystickMode() <= 2) {
+                    data.joystickMode = element.getJoystickMode();
+                    data.xboxUseRightStick = element.isXboxUseRightStick();
+                    data.rightStickContinuous = element.isRightStickContinuous();
+                    data.mouseRangeLeft = element.getMouseRangeLeft();
+                    data.mouseRangeTop = element.getMouseRangeTop();
+                    data.mouseRangeRight = element.getMouseRangeRight();
+                    data.mouseRangeBottom = element.getMouseRangeBottom();
+                    data.mouseSpeed = element.getMouseSpeed();
+                } else {
+                    int keyCode = element.getKeyCode();
+                    if (keyCode == -300) {
+                        data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
+                        data.xboxUseRightStick = false;
+                    } else if (keyCode == -301) {
+                        data.joystickMode = ControlData.JOYSTICK_MODE_SDL_CONTROLLER;
+                        data.xboxUseRightStick = true;
+                    } else {
+                        data.joystickMode = ControlData.JOYSTICK_MODE_KEYBOARD;
+                        data.xboxUseRightStick = false;
+                    }
+                }
+                
+                if (data.joystickMode == ControlData.JOYSTICK_MODE_SDL_CONTROLLER) {
+                    data.joystickKeys = null;
+                } else {
+                    int keyCode = element.getKeyCode();
+                    int upKey = ControlData.SDL_SCANCODE_W;
+                    if (keyCode == ControlData.SDL_SCANCODE_W || 
+                        keyCode == ControlData.SDL_SCANCODE_A ||
+                        keyCode == ControlData.SDL_SCANCODE_S ||
+                        keyCode == ControlData.SDL_SCANCODE_D) {
+                        upKey = keyCode;
+                    }
+                    int rightKey = ControlData.SDL_SCANCODE_D;
+                    int downKey = ControlData.SDL_SCANCODE_S;
+                    int leftKey = ControlData.SDL_SCANCODE_A;
+                    if (upKey == ControlData.SDL_SCANCODE_W) {
+                        rightKey = ControlData.SDL_SCANCODE_D;
+                        downKey = ControlData.SDL_SCANCODE_S;
+                        leftKey = ControlData.SDL_SCANCODE_A;
+                    } else if (upKey == ControlData.SDL_SCANCODE_D) {
+                        rightKey = ControlData.SDL_SCANCODE_S;
+                        downKey = ControlData.SDL_SCANCODE_A;
+                        leftKey = ControlData.SDL_SCANCODE_W;
+                    } else if (upKey == ControlData.SDL_SCANCODE_S) {
+                        rightKey = ControlData.SDL_SCANCODE_A;
+                        downKey = ControlData.SDL_SCANCODE_W;
+                        leftKey = ControlData.SDL_SCANCODE_D;
+                    } else if (upKey == ControlData.SDL_SCANCODE_A) {
+                        rightKey = ControlData.SDL_SCANCODE_W;
+                        downKey = ControlData.SDL_SCANCODE_D;
+                        leftKey = ControlData.SDL_SCANCODE_S;
+                    }
+                    data.joystickKeys = new int[]{upKey, rightKey, downKey, leftKey};
+                }
+                break;
+                
+            case TEXT:
+                data.type = ControlData.TYPE_TEXT;
+                String displayText = element.getDisplayText();
+                data.displayText = displayText != null ? displayText : "";
+                data.keycode = ControlData.SDL_SCANCODE_UNKNOWN;
+                break;
+                
+            case CROSS_KEY:
+            case TRIGGER_BUTTON:
+            case TOUCHPAD:
+                data.type = ControlData.TYPE_TOUCHPAD;
+                break;
+            case MOUSE_AREA:
+            case MACRO_BUTTON:
+            default:
+                return null;
+        }
+        
+        // 外观属性
+        data.bgColor = element.getBackgroundColor();
+        data.strokeColor = element.getBorderColor();
+        data.strokeWidth = element.getBorderWidth();
+        data.cornerRadius = element.getCornerRadius();
+        
+        // 确保所有字段都有合理的默认值
+        if (data.name == null) {
+            data.name = "控件";
+        }
+        // 对于相对坐标，检查是否在有效范围内（0-1）
+        if (data.width <= 0 || data.width > 1) {
+            data.width = 0.1f; // 默认相对宽度 10%
+        }
+        if (data.height <= 0 || data.height > 1) {
+            data.height = 0.1f; // 默认相对高度 10%
+        }
+        if (data.opacity < 0) {
+            data.opacity = 0.7f;
+        }
+        
+        // 根据控件类型清理不需要的字段
+        if (data.type == ControlData.TYPE_BUTTON || data.type == ControlData.TYPE_TEXT) {
+            data.stickOpacity = 0;
+            data.stickKnobSize = 0;
+            data.joystickKeys = null;
+            data.joystickMode = 0;
+            data.xboxUseRightStick = false;
+        }
+        
+        return data;
     }
 }
 

@@ -232,21 +232,16 @@ public class ControlLayoutFragment extends Fragment implements ControlLayoutAdap
      */
     private void exportLayoutToFile(Uri uri, ControlLayout layout) {
         try {
-            // 获取屏幕尺寸用于坐标转换
-            android.util.DisplayMetrics metrics = getResources().getDisplayMetrics();
-            int screenWidth = metrics.widthPixels;
-            int screenHeight = metrics.heightPixels;
-            
             // 将 ControlLayout 转换为 ControlConfig
             com.app.ralaunch.controls.ControlConfig config = new com.app.ralaunch.controls.ControlConfig();
             config.name = layout.getName();
             config.version = 1;
             config.controls = new java.util.ArrayList<>();
             
-            // 将 ControlElement 转换为 ControlData
+            // 将 ControlElement 转换为 ControlData（用于导出，直接保存相对坐标）
             for (ControlElement element : layout.getElements()) {
                 com.app.ralaunch.controls.ControlData data = 
-                    com.app.ralaunch.controls.ControlDataConverter.elementToData(element, screenWidth, screenHeight);
+                    com.app.ralaunch.controls.ControlDataConverter.elementToDataForExport(element);
                 if (data != null) {
                     config.controls.add(data);
                 }

@@ -332,14 +332,10 @@ public class UnifiedEditorSettingsDialog {
         
         android.util.Log.i(TAG, "configureUIForMode: mode=" + mMode + ", isEditor=" + (mMode == DialogMode.EDITOR));
         
-        // 在编辑器模式（游戏外）下，隐藏除"进入编辑模式"和"添加控件区域"以外的其他设置
+        
         if (mMode == DialogMode.EDITOR) {
             android.util.Log.i(TAG, "Hiding settings for EDITOR mode");
-            // 隐藏保存布局
-            if (mItemSaveLayout != null) {
-                mItemSaveLayout.setVisibility(View.GONE);
-                android.util.Log.i(TAG, "Hidden: SaveLayout");
-            }
+           
             // 隐藏 FPS 显示
             if (mItemFPSDisplay != null) {
                 mItemFPSDisplay.setVisibility(View.GONE);
