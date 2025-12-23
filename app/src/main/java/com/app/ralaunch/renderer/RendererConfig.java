@@ -33,6 +33,7 @@ public class RendererConfig {
     public static final String RENDERER_ZINK_25 = "zink25";                 // Zink (Mesa 25)
     public static final String RENDERER_VIRGL = "virgl";                    // VirGL
     public static final String RENDERER_FREEDRENO = "freedreno";            // Freedreno
+    public static final String RENDERER_DXVK = "dxvk";                      // DXVK (D3D11 -> Vulkan)
 
     // 默认渲染器
     public static final String DEFAULT_RENDERER = RENDERER_NATIVE_GLES;
@@ -161,6 +162,17 @@ public class RendererConfig {
             "libOSMesa.so",
             true,
             Build.VERSION_CODES.N
+        ),
+
+        // DXVK 渲染器 (D3D11 over Vulkan)
+        new RendererInfo(
+            RENDERER_DXVK,
+            "DXVK (D3D11)",
+            "Direct3D 11 over Vulkan - FNA3D 使用 D3D11 后端，通过 DXVK 翻译到 Vulkan",
+            "libdxvk_dxgi.so",  // DXVK DXGI 库
+            "libdxvk_d3d11.so", // DXVK D3D11 库
+            true,
+            Build.VERSION_CODES.N  // Vulkan 需要 Android 7.0+
         )
     };
 
@@ -350,6 +362,18 @@ public class RendererConfig {
                 envMap.put("MESA_GL_VERSION_OVERRIDE", "4.6");
                 envMap.put("MESA_GLSL_VERSION_OVERRIDE", "460");
                 envMap.put("MESA_GLSL_CACHE_DIR", context.getCacheDir().getAbsolutePath());
+                break;
+
+            case RENDERER_DXVK:
+                envMap.put("RALCORE_RENDERER", "dxvk");
+                // 强制 FNA3D 使用 D3D11 驱动
+                envMap.put("FNA3D_FORCE_DRIVER", "D3D11");
+                // DXVK WSI 设置 - 使用 SDL2 进行窗口系统集成
+                envMap.put("DXVK_WSI_DRIVER", "SDL2");
+                // 可选：DXVK 日志级别 (none, error, warn, info, debug)
+                envMap.put("DXVK_LOG_LEVEL", "info");
+                // 可选：DXVK HUD 显示 (fps, devinfo, frametimes, submissions, drawcalls, pipelines, memory, gpuload, version, api, compiler)
+                // envMap.put("DXVK_HUD", "fps,devinfo");
                 break;
 
             case RENDERER_NATIVE_GLES:

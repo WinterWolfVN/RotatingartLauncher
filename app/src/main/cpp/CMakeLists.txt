@@ -51,20 +51,28 @@ set(SDL2_LIBRARIES SDL2)
 
 add_subdirectory(${FAUDIO_SOURCE_DIR})
 
-# 添加 ByteHook 库
-find_package(bytehook REQUIRED CONFIG)
-
-
-
 # 添加 netcorehost 子项目（.NET Core Hosting）
 set(NETCOREHOST_SOURCE_DIR ${CMAKE_SOURCE_DIR}/netcorehost)
 add_subdirectory(${NETCOREHOST_SOURCE_DIR})
+
+# 添加 liblinkernsbypass 子项目（用于绕过 Android 命名空间限制）
+add_subdirectory(${CMAKE_SOURCE_DIR}/liblinkernsbypass)
+add_subdirectory(${CMAKE_SOURCE_DIR}/linkerhook)
 
 # 添加 FNA3D 子项目
 # 配置 FNA3D 使用 SDL2 而不是 SDL3
 set(BUILD_SDL3 OFF CACHE BOOL "Build against SDL 2.0" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library" FORCE)
 set(TRACING_SUPPORT OFF CACHE BOOL "Disable tracing" FORCE)
+# 启用 DXVK Native 支持 - 允许 FNA3D 使用 D3D11 -> DXVK -> Vulkan 渲染路径
+set(BUILD_DXVK_NATIVE ON CACHE BOOL "Enable DXVK Native for D3D11 support" FORCE)
+# 设置 DXVK Native 头文件路径 (需要包含 directx/ 和 windows/ 子目录)
+set(DXVK_NATIVE_INCLUDE_DIRS
+    ${CMAKE_SOURCE_DIR}/dxvk-native/include/directx
+    ${CMAKE_SOURCE_DIR}/dxvk-native/include/windows
+    ${CMAKE_SOURCE_DIR}/dxvk-native/include/wsi
+    ${CMAKE_SOURCE_DIR}/dxvk-native/include
+)
 # 设置 SDL2 变量供 FNA3D 使用
 set(SDL2_INCLUDE_DIRS ${SDL_SOURCE_DIR}/include)
 set(SDL2_LIBRARIES SDL2)
@@ -94,6 +102,8 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         osmesa/osm_renderer_jni.c
         osmesa/vulkan_loader.c
         vulkan_turnip_loader.c
+        dxvk_loader.c
+        turnip_loader_nsbypass.cpp
         touch_bridge.c
         virtual_mouse_sdl.c
         And64InlineHook/And64InlineHook.cpp
@@ -111,6 +121,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         FNA3D           # FNA3D图形库
         mojoshader      # MojoShader着色器库（FNA3D需要）
         netcorehost     # .NET Core Hosting库
+        linkernsbypass  # Android命名空间绕过库
         c++_shared
         ${CXX_SHARED_LIB}
         # lgogdownloader
@@ -122,6 +133,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${FNA3D_SOURCE_DIR}/include
         ${NETCOREHOST_SOURCE_DIR}/include
         ${LGOG_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/liblinkernsbypass
         ${CMAKE_SOURCE_DIR}  # For GL/osmesa.h and other local headers
 )
 

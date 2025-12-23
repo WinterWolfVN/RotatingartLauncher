@@ -65,7 +65,10 @@ public class JoystickKeyMappingDialog extends LocalizedAlertDialog {
         TextView titleDesc = new TextView(getContext());
         titleDesc.setText(localizedContext.getString(R.string.editor_joystick_key_mapping_desc));
         titleDesc.setTextSize(14);
-        titleDesc.setTextColor(android.graphics.Color.parseColor("#666666"));
+        // 使用主题颜色，支持暗色模式
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        getContext().getTheme().resolveAttribute(android.R.attr.textColorSecondary, typedValue, true);
+        titleDesc.setTextColor(typedValue.data);
         titleDesc.setPadding(0, 0, 0, 20);
         layout.addView(titleDesc);
         

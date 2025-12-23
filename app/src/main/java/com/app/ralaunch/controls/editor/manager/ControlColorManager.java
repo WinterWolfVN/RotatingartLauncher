@@ -41,7 +41,10 @@ public class ControlColorManager {
         GradientDrawable drawable = new GradientDrawable();
         drawable.setColor(color);
         drawable.setCornerRadius(dpToPx(context, cornerRadiusDp));
-        drawable.setStroke((int) dpToPx(context, strokeWidthDp), 0xFFD0D0D0);
+        // 使用主题颜色作为边框，支持暗色模式
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOutline, typedValue, true);
+        drawable.setStroke((int) dpToPx(context, strokeWidthDp), typedValue.data);
         colorView.setBackground(drawable);
     }
 

@@ -19,6 +19,7 @@
 
 #include "SDL_androidrenderer.h"
 #include "SDL_androidgl.h"
+#include "SDL_hints.h"
 
 #include "../SDL_egl_c.h"
 
@@ -62,6 +63,14 @@ static const SDL_RendererBackend RENDERER_BACKENDS[] = {
         .egl_library = "libOSMesa.so",
         .gles_library = "libOSMesa.so",
         .need_preload = SDL_TRUE
+    },
+
+    /* DXVK (D3D11 over Vulkan) - FNA3D 使用 D3D11 驱动 + DXVK */
+    {
+        .name = "dxvk",
+        .egl_library = NULL,  /* DXVK 不需要 EGL，但需要设置 SDL hint */
+        .gles_library = NULL, /* DXVK 不需要 GLES */
+        .need_preload = SDL_TRUE  /* 需要设置 SDL hint */
     },
 
     /* 结束标记 */
@@ -109,6 +118,8 @@ static const char* GetRendererFromEnv(void)
             return "virgl";
         } else if (SDL_strcmp(ralcore_renderer, "gallium_freedreno") == 0) {
             return "freedreno";
+        } else if (SDL_strcmp(ralcore_renderer, "dxvk") == 0) {
+            return "dxvk";
         }
     }
 
@@ -152,6 +163,19 @@ SDL_bool Android_LoadRenderer(const char *renderer_name)
     /* 如果是系统原生渲染器，无需加载 */
     if (!backend->need_preload) {
         LOGI("  Using system libEGL.so and libGLESv2.so");
+        current_renderer = backend;
+        return SDL_TRUE;
+    }
+
+    /* DXVK 渲染器特殊处理：设置 SDL hint 让 FNA3D 使用 D3D11 驱动 */
+    if (SDL_strcasecmp(backend->name, "dxvk") == 0) {
+        LOGI("  DXVK renderer: Setting FNA3D_FORCE_DRIVER=D3D11");
+        SDL_SetHint("FNA3D_FORCE_DRIVER", "D3D11");
+        /* DXVK WSI 使用 SDL2 */
+        setenv("DXVK_WSI_DRIVER", "SDL2", 1);
+        LOGI("  ✓ DXVK_WSI_DRIVER = SDL2");
+        /* 使用系统原生 EGL/GLES 因为 DXVK 不通过 OpenGL 工作 */
+        LOGI("  Using system libEGL.so (DXVK uses Vulkan directly via FNA3D D3D11 driver)");
         current_renderer = backend;
         return SDL_TRUE;
     }

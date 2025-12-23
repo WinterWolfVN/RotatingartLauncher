@@ -565,6 +565,12 @@ public class ControlEditDialogMD extends DialogFragment {
         
         if (data == null) return;
         
+        // 如果对话框已经在显示，直接刷新UI而不是重新show
+        if (isAdded() && getView() != null) {
+            refreshUIForCurrentData();
+            return;
+        }
+        
         // 显示对话框
         show(fragmentManager, tag);
     }
@@ -573,24 +579,30 @@ public class ControlEditDialogMD extends DialogFragment {
     public void onResume() {
         super.onResume();
         
-        // 对话框显示后，更新UI
-        if (mCurrentData != null) {
-            // 根据控件类型决定是否显示键值设置分类
-            updateKeymapCategoryVisibility();
+        refreshUIForCurrentData();
+    }
 
-            // 重新绑定视图，确保使用最新的数据
-            bindCategoryViews();
-            
-            // 更新所有选项的可见性（必须在绑定视图之后）
-            if (mContentBasic != null && mContentAppearance != null && mContentKeymap != null) {
-                ControlEditDialogVisibilityManager.updateAllOptionsVisibility(mContentBasic, mContentAppearance, mContentKeymap, mCurrentData);
-            } else if (mContentAppearance != null && mContentKeymap != null) {
-                ControlEditDialogVisibilityManager.updateAllOptionsVisibility(mContentAppearance, mContentKeymap, mCurrentData);
-            }
-            
-            // 填充当前分类的数据
-            fillCategoryData();
+    /**
+     * 使用当前数据刷新对话框UI（不重新显示对话框）
+     */
+    private void refreshUIForCurrentData() {
+        if (mCurrentData == null) return;
+
+        // 根据控件类型决定是否显示键值设置分类
+        updateKeymapCategoryVisibility();
+
+        // 重新绑定视图，确保使用最新的数据
+        bindCategoryViews();
+        
+        // 更新所有选项的可见性（必须在绑定视图之后）
+        if (mContentBasic != null && mContentAppearance != null && mContentKeymap != null) {
+            ControlEditDialogVisibilityManager.updateAllOptionsVisibility(mContentBasic, mContentAppearance, mContentKeymap, mCurrentData);
+        } else if (mContentAppearance != null && mContentKeymap != null) {
+            ControlEditDialogVisibilityManager.updateAllOptionsVisibility(mContentAppearance, mContentKeymap, mCurrentData);
         }
+        
+        // 填充当前分类的数据
+        fillCategoryData();
     }
 
     /**

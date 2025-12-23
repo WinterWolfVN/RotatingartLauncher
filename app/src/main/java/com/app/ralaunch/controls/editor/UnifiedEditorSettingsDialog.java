@@ -291,8 +291,13 @@ public class UnifiedEditorSettingsDialog {
         // 加载对话框布局
         mDialogLayout = (ViewGroup) inflater.inflate(R.layout.dialog_unified_editor_settings, mParent, false);
         
-        // 设置背景和阴影
-        mDialogLayout.setBackgroundColor(Color.parseColor("#E6FFFFFF"));
+        // 设置背景和阴影 - 使用主题颜色，支持暗色模式
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        mContext.getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true);
+        int surfaceColor = typedValue.data;
+        // 添加 90% 不透明度 (0xE6 = 230 = 90%)
+        int backgroundColorWithAlpha = (surfaceColor & 0x00FFFFFF) | 0xE6000000;
+        mDialogLayout.setBackgroundColor(backgroundColorWithAlpha);
         mDialogLayout.setElevation(16f);
 
         // 应用背景透明度（使用统一工具类）

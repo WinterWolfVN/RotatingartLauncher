@@ -76,7 +76,14 @@ public final class RendererPreference {
         setEnv("FNA3D_OPENGL_DRIVER", rendererId);
         android.util.Log.i(TAG, "FNA3D_OPENGL_DRIVER = " + rendererId);
 
-        setEnv("FNA3D_FORCE_DRIVER", "OpenGL");
+        // DXVK 渲染器使用 D3D11 驱动，其他渲染器使用 OpenGL
+        if (RendererConfig.RENDERER_DXVK.equals(rendererId)) {
+            setEnv("FNA3D_FORCE_DRIVER", "D3D11");
+            android.util.Log.i(TAG, "FNA3D_FORCE_DRIVER = D3D11 (DXVK renderer)");
+        } else {
+            setEnv("FNA3D_FORCE_DRIVER", "OpenGL");
+            android.util.Log.i(TAG, "FNA3D_FORCE_DRIVER = OpenGL");
+        }
 
         if (RendererConfig.RENDERER_GL4ES.equals(rendererId) ||
             RendererConfig.RENDERER_ZINK.equals(rendererId)) {
