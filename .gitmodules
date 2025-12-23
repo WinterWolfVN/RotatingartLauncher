@@ -16,3 +16,6 @@
 [submodule "app/src/main/cpp/gl4es"]
 	path = app/src/main/cpp/gl4es
 	url = https://github.com/RotatingArtDev/gl4es.git
+[submodule "app/src/main/cpp/dxvk"]
+	path = app/src/main/cpp/dxvk
+	url = https://github.com/RotatingArtDev/dxvk.git
