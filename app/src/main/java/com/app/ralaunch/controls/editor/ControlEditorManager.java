@@ -48,6 +48,7 @@ public class ControlEditorManager {
     private OnLayoutChangedListener mLayoutChangedListener;
     private OnFPSDisplayChangedListener mFPSDisplayListener;
     private OnHideControlsListener mOnHideControlsListener;
+    private OnToggleTouchEventChangedListener mToggleTouchEventListener;
     private OnExitGameListener mOnExitGameListener;
     
     /**
@@ -77,6 +78,13 @@ public class ControlEditorManager {
      */
     public interface OnHideControlsListener {
         void onHideControls();
+    }
+
+    /**
+     * 触摸传递事件设置变化监听器
+     */
+    public interface OnToggleTouchEventChangedListener {
+        void onToggleTouchEventChanged(boolean enabled);
     }
 
     /**
@@ -136,6 +144,13 @@ public class ControlEditorManager {
      */
     public void setOnHideControlsListener(OnHideControlsListener listener) {
         mOnHideControlsListener = listener;
+    }
+
+    /**
+     * 设置触摸事件传递变化监听器
+     */
+    public void setOnToggleTouchEventChangedListener(OnToggleTouchEventChangedListener listener) {
+        mToggleTouchEventListener = listener;
     }
 
     /**
@@ -400,6 +415,14 @@ public class ControlEditorManager {
                 // 隐藏控件
                 if (mOnHideControlsListener != null) {
                     mOnHideControlsListener.onHideControls();
+                }
+            }
+
+            @Override
+            public void onToggleTouchEventChanged(boolean enabled) {
+                // 触摸事件传递切换
+                if (mToggleTouchEventListener != null) {
+                    mToggleTouchEventListener.onToggleTouchEventChanged(enabled);
                 }
             }
 

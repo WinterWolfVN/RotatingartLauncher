@@ -268,6 +268,14 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
         } else {
             // 简化的触摸事件处理 - SDL 层会处理虚拟控件的过滤
             // 所有触摸事件都发送给 SDL，SDL 层会根据 consumed fingers 列表决定是否转换为鼠标事件
+
+            var settingsManager = com.app.ralaunch.data.SettingsManager.getInstance(null);
+            // if touch events are disabled in settings, do not report any touches
+            if (!settingsManager.isTouchEventEnabled()) {
+                // handle touches
+                return true;
+            }
+
             switch(action) {
                 case MotionEvent.ACTION_MOVE:
                     for (i = 0; i < pointerCount; i++) {
@@ -344,6 +352,13 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                 // All fingers released
                 nativeClearTouchData();
 //                Log.d(TAG, "Touch bridge: cleared");
+                return;
+            }
+
+            var settingsManager = com.app.ralaunch.data.SettingsManager.getInstance(null);
+            // if touch events are disabled in settings, do not report any touches
+            if (!settingsManager.isTouchEventEnabled()) {
+                nativeClearTouchData();
                 return;
             }
             

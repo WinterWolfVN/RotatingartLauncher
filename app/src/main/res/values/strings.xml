@@ -1085,4 +1085,5 @@
     <string name="mod_manager_view_mode_list">已切换到列表视图</string>
     <string name="mod_manager_home">主目录</string>
     <string name="settings_about">关于</string>
+    <string name="editor_toggle_touch">开启触摸事件</string>
 </resources>

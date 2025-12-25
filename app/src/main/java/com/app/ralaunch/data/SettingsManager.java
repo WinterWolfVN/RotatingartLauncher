@@ -58,6 +58,7 @@ public class SettingsManager {
         public static final String FPS_DISPLAY_X = "fps_display_x"; // FPS 显示位置 X
         public static final String FPS_DISPLAY_Y = "fps_display_y"; // FPS 显示位置 Y
         public static final String KEYBOARD_TYPE = "keyboard_type"; // 键盘类型: "system" 或 "virtual"
+        public static final String TOUCH_EVENT_ENABLED = "touch_event_enabled"; // 触摸事件开关
         
         // 触屏设置
         public static final String MOUSE_RIGHT_STICK_ENABLED = "mouse_right_stick_enabled"; // 鼠标模式右摇杆
@@ -125,6 +126,7 @@ public class SettingsManager {
         public static final float FPS_DISPLAY_X = -1f; // 默认自动位置（跟随鼠标）
         public static final float FPS_DISPLAY_Y = -1f; // 默认自动位置（跟随鼠标）
         public static final String KEYBOARD_TYPE = "virtual"; // 默认使用虚拟键盘
+        public static final boolean TOUCH_EVENT_ENABLED = true; // 默认开启触摸事件
         
         // 触屏设置
         public static final boolean MOUSE_RIGHT_STICK_ENABLED = true; // 默认开启鼠标模式右摇杆（不可更改）
@@ -676,6 +678,20 @@ public class SettingsManager {
     
     public boolean isVirtualKeyboard() {
         return "virtual".equals(getKeyboardType());
+    }
+
+    /**
+     * 是否传递触摸事件
+     */
+    public boolean isTouchEventEnabled() {
+        return getBoolean(Keys.TOUCH_EVENT_ENABLED, Defaults.TOUCH_EVENT_ENABLED);
+    }
+
+    /**
+     * 设置是否传递触摸事件
+     */
+    public void setTouchEventEnabled(boolean enabled) {
+        putBoolean(Keys.TOUCH_EVENT_ENABLED, enabled);
     }
 
     // 内存优化设置

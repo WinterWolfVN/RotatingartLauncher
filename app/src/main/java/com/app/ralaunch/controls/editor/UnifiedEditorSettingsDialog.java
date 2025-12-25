@@ -50,6 +50,8 @@ public class UnifiedEditorSettingsDialog {
     private View mItemFPSDisplay;
     private androidx.appcompat.widget.SwitchCompat mSwitchFPSDisplay;
     private View mItemHideControls; // 隐藏控件
+    private View mItemToggleTouch; // 切换触摸模式
+    private androidx.appcompat.widget.SwitchCompat mSwitchToggleTouch;
     private View mItemExitGame; // 退出游戏
     
     // 编辑模式状态
@@ -85,6 +87,7 @@ public class UnifiedEditorSettingsDialog {
         void onSaveLayout(); // 保存布局
         void onFPSDisplayChanged(boolean enabled); // FPS 显示选项变化
         void onHideControls(); // 隐藏控件
+        void onToggleTouchEventChanged(boolean enabled); // 切换触摸模式选项变化
         void onExitGame(); // 退出游戏
     }
 
@@ -320,6 +323,8 @@ public class UnifiedEditorSettingsDialog {
         mItemFPSDisplay = mDialogLayout.findViewById(R.id.item_fps_display);
         mSwitchFPSDisplay = mDialogLayout.findViewById(R.id.switch_fps_display);
         mItemHideControls = mDialogLayout.findViewById(R.id.item_hide_controls);
+        mItemToggleTouch = mDialogLayout.findViewById(R.id.item_toggle_touch);
+        mSwitchToggleTouch = mDialogLayout.findViewById(R.id.switch_toggle_touch);
         mItemExitGame = mDialogLayout.findViewById(R.id.item_exit_game);
 
         // 初始状态：编辑模式关闭，添加控件区域隐藏
@@ -356,6 +361,11 @@ public class UnifiedEditorSettingsDialog {
             if (mItemHideControls != null) {
                 mItemHideControls.setVisibility(View.GONE);
                 android.util.Log.i(TAG, "Hidden: HideControls");
+            }
+            // 隐藏切换触摸模式
+            if (mItemToggleTouch != null) {
+                mItemToggleTouch.setVisibility(View.GONE);
+                android.util.Log.i(TAG, "Hidden: ToggleTouch");
             }
             // 隐藏退出游戏
             if (mItemExitGame != null) {
@@ -443,6 +453,22 @@ public class UnifiedEditorSettingsDialog {
                 });
             }
 
+            // 触摸控制开关
+            if (mSwitchToggleTouch != null) {
+                // 加载当前设置
+                com.app.ralaunch.data.SettingsManager settingsManager =
+                        com.app.ralaunch.data.SettingsManager.getInstance(mContext);
+                boolean isTouchEventEnabled = settingsManager.isTouchEventEnabled();
+                mSwitchToggleTouch.setChecked(isTouchEventEnabled);
+
+                mSwitchToggleTouch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    settingsManager.setTouchEventEnabled(isChecked);
+                    if (mListener != null) {
+                        mListener.onToggleTouchEventChanged(isChecked);
+                    }
+                });
+            }
+
             // 退出游戏
             if (mItemExitGame != null) {
                 mItemExitGame.setOnClickListener(v -> {
@@ -472,6 +498,11 @@ public class UnifiedEditorSettingsDialog {
         // 更新"隐藏控件"选项的可见性：编辑模式下隐藏，非编辑模式下显示
         if (mItemHideControls != null) {
             mItemHideControls.setVisibility(mIsEditModeEnabled ? View.GONE : View.VISIBLE);
+        }
+
+        // 更新"切换触摸模式"选项的可见性：编辑模式下隐藏，非编辑模式下显示
+        if (mItemToggleTouch != null) {
+            mItemToggleTouch.setVisibility(mIsEditModeEnabled ? View.GONE : View.VISIBLE);
         }
 
         // 更新"退出游戏"选项的可见性：编辑模式下隐藏，非编辑模式下显示
