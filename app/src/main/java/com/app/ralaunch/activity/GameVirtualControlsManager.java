@@ -1,16 +1,13 @@
 package com.app.ralaunch.activity;
 
-import android.content.Context;
-import android.view.MotionEvent;
 import org.libsdl.app.SDLSurface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.app.ralaunch.R;
-import com.app.ralaunch.controls.ControlLayout;
-import com.app.ralaunch.controls.SDLInputBridge;
-import com.app.ralaunch.controls.rule.TouchDispatchManager;
+import com.app.ralaunch.controls.views.ControlLayout;
+import com.app.ralaunch.controls.bridges.SDLInputBridge;
 import com.app.ralaunch.data.SettingsManager;
 import com.app.ralaunch.ui.FPSDisplayView;
 import com.app.ralaunch.utils.AppLogger;

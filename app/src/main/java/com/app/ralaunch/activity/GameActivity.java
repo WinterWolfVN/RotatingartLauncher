@@ -49,7 +49,7 @@ public class GameActivity extends SDLActivity {
     // 统一管理器
     private GameFullscreenManager mFullscreenManager;
     private GameVirtualControlsManager virtualControlsManager = new GameVirtualControlsManager();
-    private GameMenuController gameMenuController = new GameMenuController();
+
     private final GameLaunchDelegate launchDelegate = new GameLaunchDelegate();
     private final GameTouchBridge touchBridge = new GameTouchBridge();
 
@@ -171,9 +171,6 @@ public class GameActivity extends SDLActivity {
             () -> disableSDLTextInput()
         );
 
-        // 设置游戏内菜单（需要在虚拟控制初始化后）
-        gameMenuController.setup(this, (ViewGroup) mLayout, virtualControlsManager);
-
         String runtimePref = getIntent().getStringExtra("DOTNET_FRAMEWORK");
 
         if (runtimePref != null && !runtimePref.isEmpty()) {
@@ -239,16 +236,6 @@ public class GameActivity extends SDLActivity {
         virtualControlsManager.setVisible(visible);
     }
 
-    /**
-     * 设置游戏内菜单
-     */
-    private void setupGameMenu() {
-        gameMenuController.setup(this, (ViewGroup) mLayout, virtualControlsManager);
-    }
-
-    
-
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -257,15 +244,6 @@ public class GameActivity extends SDLActivity {
         }
     }
 
-    /**
-     * 处理返回键按下事件
-     * 注意: SDLActivity 的 onBackPressed() 会调用 super.onBackPressed() 导致直接退出
-     * 我们在这里完全覆盖这个行为,不调用 super,而是显示确认对话框
-     */
-    @Override
-    public void onBackPressed() {
-        gameMenuController.handleBack(virtualControlsManager);
-    }
     @Override
     protected void onDestroy() {
         android.util.Log.d(TAG, "GameActivity.onDestroy() called");

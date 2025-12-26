@@ -67,7 +67,7 @@
 
         <!-- 控制布局编辑器 -->
         <activity
-            android:name=".controls.editor.ControlEditorActivity"
+            android:name=".controls.editors.ControlEditorActivity"
             android:exported="false"
             android:label="控制布局编辑器"
             android:screenOrientation="landscape"

@@ -7,6 +7,7 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
 
+import com.app.ralaunch.controls.configs.ControlConfigManager;
 import com.app.ralaunch.data.GameDataManager;
 import com.app.ralaunch.manager.VibrationManager;
 import com.app.ralaunch.utils.GamePathResolver;
@@ -27,6 +28,7 @@ public class RaLaunchApplication extends Application {
     private static GameDataManager gameDataManager;
     private static PatchManager patchManager;
     private static VibrationManager vibrationManager;
+    private static ControlConfigManager controlConfigManager;
 
     @Override
     public void onCreate() {
@@ -93,6 +95,8 @@ public class RaLaunchApplication extends Application {
         }
 
         vibrationManager = new VibrationManager(appContext);
+
+        controlConfigManager = new ControlConfigManager();
 
         // 初始化 GamePathResolver
         GamePathResolver.initialize(appContext);
@@ -174,6 +178,15 @@ public class RaLaunchApplication extends Application {
      */
     public static VibrationManager getVibrationManager() {
         return vibrationManager;
+    }
+
+    /**
+     * 获取全局 ControlConfigManager 实例
+     *
+     * @return ControlConfigManager 实例
+     */
+    public static ControlConfigManager getControlConfigManager() {
+        return controlConfigManager;
     }
 }
 

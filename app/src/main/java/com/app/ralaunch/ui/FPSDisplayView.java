@@ -11,10 +11,9 @@ import android.system.Os;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import com.app.ralaunch.controls.SDLInputBridge;
+
+import com.app.ralaunch.controls.bridges.SDLInputBridge;
 import com.app.ralaunch.data.SettingsManager;
-import com.app.ralaunch.utils.AppLogger;
 
 /**
  * FPS 显示视图
