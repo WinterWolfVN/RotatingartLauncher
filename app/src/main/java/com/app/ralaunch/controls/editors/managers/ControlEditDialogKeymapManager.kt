@@ -30,37 +30,31 @@ object ControlEditDialogKeymapManager {
         val switchToggleMode = view.findViewById<SwitchCompat?>(R.id.switch_toggle_mode)
 
         // 普通按钮的键值映射
-        if (itemKeyMapping != null) {
-            itemKeyMapping.setOnClickListener {
-                showKeySelectDialog(
-                    dialog,
-                    refs,
-                    tvKeyName
-                )
-            }
+        itemKeyMapping?.setOnClickListener {
+            showKeySelectDialog(
+                dialog,
+                refs,
+                tvKeyName
+            )
         }
 
         // 摇杆的键值映射
         val itemJoystickKeyMapping = view.findViewById<View?>(R.id.item_joystick_key_mapping)
         val tvJoystickKeyMappingValue =
             view.findViewById<TextView?>(R.id.tv_joystick_key_mapping_value)
-        if (itemJoystickKeyMapping != null) {
-            itemJoystickKeyMapping.setOnClickListener {
-                showJoystickKeyMappingDialog(
-                    dialog,
-                    refs,
-                    tvJoystickKeyMappingValue
-                )
-            }
+        itemJoystickKeyMapping?.setOnClickListener {
+            showJoystickKeyMappingDialog(
+                dialog,
+                refs,
+                tvJoystickKeyMappingValue
+            )
         }
 
-        if (switchToggleMode != null) {
-            switchToggleMode.setOnCheckedChangeListener { _, isChecked ->
-                val data = refs.currentData
-                if (data is ControlData.Button) {
-                    data.isToggle = isChecked
-                    refs.notifyUpdate()
-                }
+        switchToggleMode?.setOnCheckedChangeListener { _, isChecked ->
+            val data = refs.currentData
+            if (data is ControlData.Button) {
+                data.isToggle = isChecked
+                refs.notifyUpdate()
             }
         }
     }
@@ -152,16 +146,13 @@ object ControlEditDialogKeymapManager {
         val keyDialog = KeySelectorDialog(dialog.requireContext(), isGamepadMode)
 
         keyDialog.setOnKeySelectedListener(object : KeySelectorDialog.OnKeySelectedListener {
-            override fun onKeySelected(keycode: Int, keyName: String?) {
+            override fun onKeySelected(keyCode: KeyCode, keyName: String?) {
                 if (data is ControlData.Button) {
                     val buttonData = data
-
-                    // Convert int keycode to KeyCode enum
-                    val keycodeEnum = findKeyCodeByValue(keycode)
-                    buttonData.keycode = keycodeEnum
+                    buttonData.keycode = keyCode
 
                     val keyMapper = KeyMapper
-                    val fullKeyName = keyMapper.getKeyName(keycodeEnum)
+                    val fullKeyName = keyMapper.getKeyName(keyCode)
                     if (tvKeyName != null) {
                         tvKeyName.text = fullKeyName
                     }
@@ -172,17 +163,6 @@ object ControlEditDialogKeymapManager {
         keyDialog.show()
     }
 
-    /**
-     * 根据int值查找KeyCode枚举
-     */
-    private fun findKeyCodeByValue(value: Int): KeyCode {
-        for (keyCode in KeyCode.entries) {
-            if (keyCode.code == value) {
-                return keyCode
-            }
-        }
-        return KeyCode.UNKNOWN
-    }
 
     /**
      * 更新键值设置选项的可见性（根据控件类型）
@@ -198,9 +178,7 @@ object ControlEditDialogKeymapManager {
         val isJoystick = data is Joystick
 
         // 普通键值设置（仅按钮和文本控件显示）
-        if (itemKeyMapping != null) {
-            itemKeyMapping.setVisibility(if (isButton || isText) View.VISIBLE else View.GONE)
-        }
+        itemKeyMapping?.visibility = if (isButton || isText) View.VISIBLE else View.GONE
 
         // 摇杆键值设置（仅摇杆显示，且为键盘模式）
         var showJoystickKeyMapping = false
@@ -209,14 +187,10 @@ object ControlEditDialogKeymapManager {
             showJoystickKeyMapping = joystickData.mode == Joystick.Mode.KEYBOARD
         }
 
-        if (itemJoystickKeyMapping != null) {
-            itemJoystickKeyMapping.setVisibility(if (showJoystickKeyMapping) View.VISIBLE else View.GONE)
-        }
+        itemJoystickKeyMapping?.visibility = if (showJoystickKeyMapping) View.VISIBLE else View.GONE
 
         // 切换模式（仅按钮显示）
-        if (itemToggleMode != null) {
-            itemToggleMode.setVisibility(if (isButton) View.VISIBLE else View.GONE)
-        }
+        itemToggleMode?.visibility = if (isButton) View.VISIBLE else View.GONE
     }
 
     /**
