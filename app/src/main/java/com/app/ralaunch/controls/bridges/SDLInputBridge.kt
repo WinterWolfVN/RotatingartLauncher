@@ -542,6 +542,7 @@ class SDLInputBridge : ControlInputBridge {
         private var screenHeight = 1080
 
         // 虚拟触屏 Native 方法（在 touch_bridge.c 中实现，用于虚拟摇杆发送触屏事件）
+        @JvmStatic
         private external fun nativeSetVirtualTouch(
             index: Int,
             x: Float,
@@ -550,15 +551,23 @@ class SDLInputBridge : ControlInputBridge {
             screenHeight: Int
         )
 
+        @JvmStatic
         private external fun nativeClearVirtualTouch(index: Int)
 
         // SDL 原生虚拟鼠标方法（在 virtual_mouse_sdl.c 中实现）
+        @JvmStatic
         private external fun nativeInitVirtualMouseSDL(screenWidth: Int, screenHeight: Int)
+        @JvmStatic
         private external fun nativeUpdateVirtualMouseDeltaSDL(deltaX: Float, deltaY: Float)
+        @JvmStatic
         private external fun nativeSetVirtualMousePositionSDL(x: Float, y: Float)
+        @JvmStatic
         private external fun nativeGetVirtualMouseXSDL(): Float
+        @JvmStatic
         private external fun nativeGetVirtualMouseYSDL(): Float
+        @JvmStatic
         private external fun nativeGetVirtualMousePositionSDL(): FloatArray? // 获取虚拟鼠标位置 {x, y}
+        @JvmStatic
         private external fun nativeSetVirtualMouseRangeSDL(
             left: Float,
             top: Float,
@@ -566,8 +575,11 @@ class SDLInputBridge : ControlInputBridge {
             bottom: Float
         )
 
+        @JvmStatic
         private external fun nativeIsVirtualMouseActiveSDL(): Boolean
+        @JvmStatic
         private external fun nativeSendMouseWheelSDL(scrollY: Float)
+
 
         // 静态初始化
         init {
