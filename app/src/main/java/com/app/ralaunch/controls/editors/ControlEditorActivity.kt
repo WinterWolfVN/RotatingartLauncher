@@ -1,5 +1,6 @@
 package com.app.ralaunch.controls.editors
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.os.Build
@@ -291,6 +292,7 @@ class ControlEditorActivity : AppCompatActivity() {
         view.clipBounds = null
     }
 
+    @SuppressLint("MissingSuperCall")
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         // 先检查设置弹窗
@@ -323,7 +325,7 @@ class ControlEditorActivity : AppCompatActivity() {
                 .show()
         } else {
             // 没有未保存的更改，直接退出
-            super.onBackPressed()
+            finish()
         }
     }
 

@@ -9,7 +9,6 @@ import com.app.ralaunch.R
 import com.app.ralaunch.controls.KeyMapper
 import com.app.ralaunch.controls.configs.ControlData
 import com.google.android.material.slider.Slider
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -127,9 +126,7 @@ object ControlEditDialogDataFiller {
         }
 
         switchAutoSize?.let {
-            // 检查当前宽高是否相等，如果相等则默认启用自适应
-            val isAutoSize = abs(data.width - data.height) < 1.0f
-            it.isChecked = isAutoSize
+            it.isChecked = data.isSizeRatioLocked
         }
     }
 
@@ -343,7 +340,6 @@ object ControlEditDialogDataFiller {
         val currentData: ControlData?
         val screenWidth: Int
         val screenHeight: Int
-        val isAutoSize: Boolean
         val context: Context
     }
 }

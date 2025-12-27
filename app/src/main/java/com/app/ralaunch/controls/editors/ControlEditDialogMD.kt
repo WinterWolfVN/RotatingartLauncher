@@ -72,11 +72,7 @@ class ControlEditDialogMD : DialogFragment() {
     private var mContentAppearance: View? = null
     private var mContentKeymap: View? = null
 
-    // UI元素引用已移至管理器类，不再在此处声明
-    // 这些字段保留用于向后兼容，但实际使用已由管理器类处理
-    var isAutoSize: Boolean = false
-
-    // 回调接口
+    // Callback interfaces
     private var mUpdateListener: OnControlUpdatedListener? = null
     private var mDeleteListener: OnControlDeletedListener? = null
     private var mCopyListener: OnControlCopiedListener? = null
@@ -458,11 +454,6 @@ class ControlEditDialogMD : DialogFragment() {
             override val screenHeight: Int
                 get() = this@ControlEditDialogMD.screenHeight
 
-            override var isAutoSize: Boolean
-                get() = this@ControlEditDialogMD.isAutoSize
-                set(value) {
-                    this@ControlEditDialogMD.isAutoSize = value
-                }
 
             override val isUpdating: Boolean
                 get() = this@ControlEditDialogMD.isUpdating
@@ -489,9 +480,6 @@ class ControlEditDialogMD : DialogFragment() {
 
             override val screenHeight: Int
                 get() = this@ControlEditDialogMD.screenHeight
-
-            override val isAutoSize: Boolean
-                get() = this@ControlEditDialogMD.isAutoSize
 
             override val context: Context
                 get() = this@ControlEditDialogMD.localizedContext

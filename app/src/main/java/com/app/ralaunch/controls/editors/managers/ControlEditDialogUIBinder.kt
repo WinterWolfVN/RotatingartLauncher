@@ -424,7 +424,7 @@ object ControlEditDialogUIBinder {
                 if (refs.currentData != null && fromUser) {
                     val width = progress / 100f
                     refs.currentData!!.width = width
-                    if (refs.isAutoSize) {
+                    if (refs.currentData!!.isSizeRatioLocked) {
                         refs.currentData!!.height = width
                         // Since width and height are both relative to screen height,
                         // when autoSize is enabled, they should have the same percentage value
@@ -444,7 +444,7 @@ object ControlEditDialogUIBinder {
                 if (refs.currentData != null && fromUser) {
                     val height = progress / 100f
                     refs.currentData!!.height = height
-                    if (refs.isAutoSize) {
+                    if (refs.currentData!!.isSizeRatioLocked) {
                         refs.currentData!!.width = height
                         // Since width and height are both relative to screen height,
                         // when autoSize is enabled, they should have the same percentage value
@@ -459,15 +459,16 @@ object ControlEditDialogUIBinder {
 
         if (switchAutoSize != null) {
             switchAutoSize.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
-                refs.isAutoSize =
-                    isChecked
-                if (refs.currentData != null && isChecked) {
-                    refs.currentData!!.height = refs.currentData!!.width
-                    if (sliderHeight != null) {
-                        val heightPercent =
-                            (refs.currentData!!.height * 100).toInt()
-                        sliderHeight.setValue(heightPercent.toFloat())
-                        if (tvHeightValue != null) tvHeightValue.setText(heightPercent.toString() + "%")
+                if (refs.currentData != null) {
+                    refs.currentData!!.isSizeRatioLocked = isChecked
+                    if (isChecked) {
+                        refs.currentData!!.height = refs.currentData!!.width
+                        if (sliderHeight != null) {
+                            val heightPercent =
+                                (refs.currentData!!.height * 100).toInt()
+                            sliderHeight.setValue(heightPercent.toFloat())
+                            if (tvHeightValue != null) tvHeightValue.setText(heightPercent.toString() + "%")
+                        }
                     }
                     refs.notifyUpdate()
                 }
@@ -731,7 +732,6 @@ object ControlEditDialogUIBinder {
         val currentData: ControlData?
         val screenWidth: Int
         val screenHeight: Int
-        var isAutoSize: Boolean
         fun notifyUpdate()
         val context: Context
 

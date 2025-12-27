@@ -441,6 +441,7 @@ sealed class ControlData {
     var cornerRadius: Float = 2f // dp单位 // 矩形只有一点点圆角
     var isVisible: Boolean = true
     var isPassThrough: Boolean = false // 触摸穿透：是否将触摸传递给游戏（默认 false）
+    var isSizeRatioLocked: Boolean = true // 锁定1:1宽高比（默认 true）
 
     /**
      * 创建当前控件的深拷贝

@@ -11,6 +11,9 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         const val CONTROL_CONFIG_DIRECTORY_NAME = "configs"
         const val MANAGER_STATE_FILE_NAME = "control-manager.json"
 
+        // Enable/disable caching for ControlConfig and ManagerState
+        const val ENABLE_CACHE = false
+
         private val json = Json {
             prettyPrint = true
             ignoreUnknownKeys = true
@@ -68,8 +71,8 @@ class ControlConfigManager(val storageDirectory: String? = null) {
      * Load ManagerState with permanent caching
      */
     private fun loadManagerState(): ManagerState? {
-        // Return cached state if available
-        if (cachedManagerState != null) {
+        // Return cached state if available and caching is enabled
+        if (ENABLE_CACHE && cachedManagerState != null) {
             return cachedManagerState
         }
 
@@ -83,7 +86,9 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         return try {
             val content = statePath.readText()
             val state = json.decodeFromString<ManagerState>(content)
-            cachedManagerState = state
+            if (ENABLE_CACHE) {
+                cachedManagerState = state
+            }
             state
         } catch (_: Exception) {
             null
@@ -99,8 +104,10 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         val content = json.encodeToString(state)
         statePath.writeText(content)
 
-        // Update cache
-        cachedManagerState = state
+        // Update cache if enabled
+        if (ENABLE_CACHE) {
+            cachedManagerState = state
+        }
     }
 
     /**
@@ -143,8 +150,10 @@ class ControlConfigManager(val storageDirectory: String? = null) {
     }
 
     fun loadAllConfigs(): List<ControlConfig> {
-        // Return cached list if available
-        cachedAllConfigs?.let { return it }
+        // Return cached list if available and caching is enabled
+        if (ENABLE_CACHE && cachedAllConfigs != null) {
+            return cachedAllConfigs!!
+        }
 
         // Load from disk
         checkAndCreateDirectory()
@@ -158,12 +167,14 @@ class ControlConfigManager(val storageDirectory: String? = null) {
                 it.second!!
             }
 
-        // Cache the list
-        cachedAllConfigs = configs
+        // Cache the list if enabled
+        if (ENABLE_CACHE) {
+            cachedAllConfigs = configs
 
-        // Also cache individual configs
-        configs.forEach { config ->
-            configCache[config.id] = config
+            // Also cache individual configs
+            configs.forEach { config ->
+                configCache[config.id] = config
+            }
         }
 
         return configs
@@ -181,16 +192,19 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         val path = "$configsDirectory/${config.id}.json"
         config.saveTo(path)
 
-        // Invalidate cache for this config
-        configCache.remove(config.id)
-
-        // Invalidate all configs list cache
-        cachedAllConfigs = null
+        // Invalidate cache for this config if caching is enabled
+        if (ENABLE_CACHE) {
+            configCache.remove(config.id)
+            // Invalidate all configs list cache
+            cachedAllConfigs = null
+        }
     }
 
     fun loadConfig(id: String): ControlConfig? {
-        // Check cache first
-        configCache[id]?.let { return it }
+        // Check cache first if enabled
+        if (ENABLE_CACHE) {
+            configCache[id]?.let { return it }
+        }
 
         // Load from disk
         checkAndCreateDirectory()
@@ -198,8 +212,8 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         val config = ControlConfig.loadFrom(path)
         config?.id = id
 
-        // Cache the loaded config
-        if (config != null) {
+        // Cache the loaded config if enabled
+        if (ENABLE_CACHE && config != null) {
             configCache[id] = config
         }
 
@@ -219,11 +233,12 @@ class ControlConfigManager(val storageDirectory: String? = null) {
             if (path.exists()) {
                 path.deleteExisting()
 
-                // Invalidate cache for deleted config
-                configCache.remove(id)
-
-                // Invalidate all configs list cache
-                cachedAllConfigs = null
+                // Invalidate cache for deleted config if enabled
+                if (ENABLE_CACHE) {
+                    configCache.remove(id)
+                    // Invalidate all configs list cache
+                    cachedAllConfigs = null
+                }
 
                 // If this was the currently selected config, set to the first config, or else clear the selection
                 if (getSelectedConfigId() == id) {
