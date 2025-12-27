@@ -6,14 +6,15 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.os.Handler
 import android.text.TextPaint
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import com.app.ralaunch.RaLaunchApplication
-import com.app.ralaunch.controls.configs.ControlData
-import com.app.ralaunch.controls.bridges.ControlInputBridge
-import com.app.ralaunch.controls.views.ControlView
-import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.TouchPointerTracker
+import com.app.ralaunch.controls.bridges.ControlInputBridge
+import com.app.ralaunch.controls.bridges.SDLInputBridge
+import com.app.ralaunch.controls.configs.ControlData
+import com.app.ralaunch.controls.views.ControlView
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -66,23 +67,26 @@ class VirtualTouchPad(
     private val screenWidth: Float = context.resources.displayMetrics.widthPixels.toFloat()
     private val screenHeight: Float = context.resources.displayMetrics.heightPixels.toFloat()
 
-    private val idleDelayHandler = Handler()
-    private val clickDelayHandler = Handler()
+    private val idleDelayHandler = Handler(context.mainLooper)
+    private val clickDelayHandler = Handler(context.mainLooper)
     private var currentState = TouchPadState.IDLE
 
     // 绘制相关
-    private var backgroundPaint: Paint = null!!    // init in initPaints()
-    private var strokePaint: Paint = null!!        // init in initPaints()
-    private var textPaint: TextPaint = null!!      // init in initPaints()
+    private lateinit var backgroundPaint: Paint
+    private lateinit var strokePaint: Paint
+    private lateinit var textPaint: TextPaint
     private val paintRect: RectF = RectF()
 
     // 按钮状态
     private var mIsPressed = false
     private var activePointerId = -1 // 跟踪的触摸点 ID
+
+    // Center position of the touchpad (in local view coordinates)
+    // Note: width and height are fractions (0-1) relative to screen height
     private val centerX: Float
-        get() = dpToPx(castedData.width) / 2
+        get() = (castedData.width * screenHeight) / 2
     private val centerY: Float
-        get() = dpToPx(castedData.height) / 2
+        get() = (castedData.height * screenHeight) / 2
 
     private var initialTouchX = 0f
     private var initialTouchY = 0f
@@ -181,11 +185,13 @@ class VirtualTouchPad(
 
                 currentX = event.x
                 currentY = event.y
-                lastX = currentX
-                lastY = currentY
 
                 // Trigger Move!
                 handleMove()
+
+                // Update last position AFTER handleMove() so delta calculation works
+                lastX = currentX
+                lastY = currentY
 
                 return true
             }
@@ -215,6 +221,7 @@ class VirtualTouchPad(
 
     private fun handleMove() {
         // 处理触摸移动逻辑
+        Log.d(TAG, "handleMove: currentState=$currentState, currentX=$currentX, currentY=$currentY, deltaX=$deltaX, deltaY=$deltaY")
 
         when (currentState) {
             TouchPadState.IDLE -> {

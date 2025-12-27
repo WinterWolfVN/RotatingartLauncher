@@ -2,7 +2,6 @@ package com.app.ralaunch.controls.editors
 
 import android.app.AlertDialog
 import android.content.Context
-import android.content.DialogInterface
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -43,9 +42,10 @@ class ControlEditorActivity : AppCompatActivity() {
     private var mGridOverlay: GridOverlayView? = null
 
     // 统一的控件编辑管理器
-//    private var mEditorManager: ControlEditorManager? = null
+    private var mEditorManager: ControlEditorManager? = null
 
     private var mCurrentConfig: ControlConfig? = null
+    private var mCurrentLayoutName: String? = null
 
     private val mDummyBridge = DummyInputBridge()
 
@@ -99,6 +99,7 @@ class ControlEditorActivity : AppCompatActivity() {
             finish()
             return
         }
+        mCurrentLayoutName = layoutId
         mCurrentConfig = controlConfigManager.loadConfig(layoutId)
         if (mCurrentConfig == null) {
             Log.e(TAG, "Failed to load layout config for ID: $layoutId, finishing activity")
@@ -117,11 +118,9 @@ class ControlEditorActivity : AppCompatActivity() {
 
         // 设置按钮点击显示设置弹窗，并支持拖动
         val drawerButton = findViewById<View?>(R.id.drawer_button)
-//        setupDraggableButton(drawerButton, Runnable? {
-//            if (mEditorManager != null) {
-//                mEditorManager.showSettingsDialog()
-//            }
-//        })
+        setupDraggableButton(drawerButton) {
+            mEditorManager?.showSettingsDialog()
+        }
     }
 
     /**
@@ -254,20 +253,24 @@ class ControlEditorActivity : AppCompatActivity() {
             )
         )
 
-//        // 创建或更新编辑管理器（使用独立模式，自动进入编辑状态）
-//        if (mEditorManager == null) {
-//            mEditorManager = ControlEditorManager(
-//                this, mPreviewLayout, mEditorContainer,
-//                ControlEditorManager.MODE_STANDALONE
-//            )
-//            mEditorManager.setOnLayoutChangedListener({})
-//        } else {
-//            // 布局重新创建后更新引用
-//            mEditorManager.setControlLayout(mPreviewLayout)
-//        }
-//
-//        // 初始化设置对话框
-//        mEditorManager.initEditorSettingsDialog()
+        // 创建或更新编辑管理器（使用独立模式，自动进入编辑状态）
+        if (mEditorManager == null) {
+            mEditorManager = ControlEditorManager(
+                this, mPreviewLayout, mEditorContainer,
+                ControlEditorManager.Mode.STANDALONE
+            )
+            mEditorManager?.setOnLayoutChangedListener(object : ControlEditorManager.OnLayoutChangedListener {
+                override fun onLayoutChanged() {
+                    // Layout changed callback
+                }
+            })
+        } else {
+            // 布局重新创建后更新引用
+            mEditorManager?.setControlLayout(mPreviewLayout)
+        }
+
+        // 初始化设置对话框
+        mEditorManager?.initEditorSettingsDialog()
     }
 
     /**
@@ -288,43 +291,40 @@ class ControlEditorActivity : AppCompatActivity() {
         view.clipBounds = null
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        super.onBackPressed()
-//        // 先检查设置弹窗
-//        if (mEditorManager != null && mEditorManager.isSettingsDialogShowing()) {
-//            mEditorManager.hideSettingsDialog()
-//            return
-//        }
-//
-//        // 再检查控件编辑弹窗
-//        if (mEditorManager != null && mEditorManager.isEditDialogShowing()) {
-//            mEditorManager.dismissEditDialog()
-//            return
-//        }
-//
-//        // 检查是否有未保存的更改
-//        if (mEditorManager != null && mEditorManager.hasUnsavedChanges()) {
-//            // 有未保存的更改，显示退出确认对话框
-//            AlertDialog.Builder(this)
-//                .setTitle(getString(R.string.editor_exit_title))
-//                .setMessage(getString(R.string.editor_exit_save_confirm))
-//                .setPositiveButton(
-//                    getString(R.string.editor_save_and_exit)
-//                ) { dialog: DialogInterface?, which: Int ->
-//                    if (mEditorManager != null) {
-//                        mEditorManager.saveLayout(mCurrentLayoutName)
-//                    }
-//                    finish()
-//                }
-//                .setNegativeButton(
-//                    getString(R.string.editor_exit)
-//                ) { dialog: DialogInterface?, which: Int -> finish() }
-//                .setNeutralButton(getString(R.string.cancel), null)
-//                .show()
-//        } else {
-//            // 没有未保存的更改，直接退出
-//            finish()
-//        }
+        // 先检查设置弹窗
+        val editorManager = mEditorManager
+        if (editorManager != null && editorManager.isSettingsDialogShowing) {
+            editorManager.hideSettingsDialog()
+            return
+        }
+
+        // 再检查控件编辑弹窗
+        if (editorManager != null && editorManager.isEditDialogShowing) {
+            editorManager.dismissEditDialog()
+            return
+        }
+
+        // 检查是否有未保存的更改
+        if (editorManager != null && editorManager.hasUnsavedChanges()) {
+            // 有未保存的更改，显示退出确认对话框
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.editor_exit_title))
+                .setMessage(getString(R.string.editor_exit_save_confirm))
+                .setPositiveButton(getString(R.string.editor_save_and_exit)) { _, _ ->
+                    editorManager.saveLayout(mCurrentLayoutName)
+                    finish()
+                }
+                .setNegativeButton(getString(R.string.editor_exit)) { _, _ ->
+                    finish()
+                }
+                .setNeutralButton(getString(R.string.cancel), null)
+                .show()
+        } else {
+            // 没有未保存的更改，直接退出
+            super.onBackPressed()
+        }
     }
 
     companion object {

@@ -188,17 +188,18 @@ class ControlLayout : FrameLayout {
     /**
      * 添加控制View到布局
      *
-     * - data.x, data.y, data.width, data.height 都是设计图的像素值（基于2560x1080）
-     * - 由于 density 已在 Activity 中调整，这些值会自动缩放到当前屏幕
-     * - 例如：1920px宽的屏幕，density=1920/2560=0.75，设计图上的100px会渲染为75px
+     * - data.x: 0-1相对值，相对于屏幕宽度
+     * - data.y: 0-1相对值，相对于屏幕高度
+     * - data.width: 0-1相对值，相对于屏幕高度
+     * - data.height: 0-1相对值，相对于屏幕高度
      */
     private fun addControlView(controlView: ControlView?, data: ControlData) {
         val view = controlView as View
 
-        // 设置布局参数（使用设计图的像素值，系统会根据 density 自动缩放）
+        // 设置布局参数（使用相对值转换为像素）
         val params = LayoutParams(
-            data.width.toInt(),
-            data.height.toInt()
+            widthToPx(data.width),
+            heightToPx(data.height)
         )
         params.leftMargin = xToPx(data.x)
         params.topMargin = yToPx(data.y)
@@ -417,11 +418,27 @@ class ControlLayout : FrameLayout {
         return (value * resources.displayMetrics.heightPixels).toInt()
     }
 
+    private fun widthToPx(value: Float): Int {
+        return (value * resources.displayMetrics.heightPixels).toInt()
+    }
+
+    private fun heightToPx(value: Float): Int {
+        return (value * resources.displayMetrics.heightPixels).toInt()
+    }
+
     private fun xFromPx(px: Int): Float {
         return px.toFloat() / resources.displayMetrics.widthPixels
     }
 
     private fun yFromPx(px: Int): Float {
+        return px.toFloat() / resources.displayMetrics.heightPixels
+    }
+
+    private fun widthFromPx(px: Int): Float {
+        return px.toFloat() / resources.displayMetrics.heightPixels
+    }
+
+    private fun heightFromPx(px: Int): Float {
         return px.toFloat() / resources.displayMetrics.heightPixels
     }
 

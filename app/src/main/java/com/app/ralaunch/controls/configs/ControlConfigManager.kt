@@ -42,6 +42,15 @@ class ControlConfigManager(val storageDirectory: String? = null) {
     private val managerStateFilePath: String
         get() = Path(fullStorageDirectory).resolve(MANAGER_STATE_FILE_NAME).pathString
 
+    // Permanent cache for ManagerState (no time limit)
+    private var cachedManagerState: ManagerState? = null
+
+    // Permanent cache for ControlConfig objects (no size limit)
+    private val configCache = mutableMapOf<String, ControlConfig>()
+
+    // Permanent cache for all configs list
+    private var cachedAllConfigs: List<ControlConfig>? = null
+
     private fun checkAndCreateDirectory() {
         val controlsDir = Path(fullStorageDirectory)
         if (!controlsDir.exists()) {
@@ -56,9 +65,15 @@ class ControlConfigManager(val storageDirectory: String? = null) {
     }
 
     /**
-     * Get the currently selected control config ID
+     * Load ManagerState with permanent caching
      */
-    fun getSelectedConfigId(): String? {
+    private fun loadManagerState(): ManagerState? {
+        // Return cached state if available
+        if (cachedManagerState != null) {
+            return cachedManagerState
+        }
+
+        // Load from disk
         checkAndCreateDirectory()
         val statePath = Path(managerStateFilePath)
         if (!statePath.exists()) {
@@ -68,25 +83,55 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         return try {
             val content = statePath.readText()
             val state = json.decodeFromString<ManagerState>(content)
-            state.selectedConfigId
+            cachedManagerState = state
+            state
         } catch (_: Exception) {
             null
         }
     }
 
     /**
+     * Save ManagerState and update cache
+     */
+    private fun saveManagerState(state: ManagerState) {
+        checkAndCreateDirectory()
+        val statePath = Path(managerStateFilePath)
+        val content = json.encodeToString(state)
+        statePath.writeText(content)
+
+        // Update cache
+        cachedManagerState = state
+    }
+
+    /**
+     * Get the currently selected control config ID
+     * Automatically sets to first available config if the selected ID no longer exists
+     */
+    fun getSelectedConfigId(): String? {
+        val selectedId = loadManagerState()?.selectedConfigId
+
+        // Get list of available config IDs
+        val configIds = listConfigIds()
+
+        // If no selected ID or selected ID doesn't exist, set to first available
+        if (selectedId == null || selectedId !in configIds) {
+            val firstConfigId = configIds.firstOrNull()
+            setSelectedConfigId(firstConfigId)
+            return firstConfigId
+        }
+
+        return selectedId
+    }
+
+    /**
      * Set the currently selected control config ID
      */
     fun setSelectedConfigId(configId: String?) {
-        checkAndCreateDirectory()
         val state = ManagerState(
             selectedConfigId = configId,
             lastModified = System.currentTimeMillis()
         )
-
-        val statePath = Path(managerStateFilePath)
-        val content = json.encodeToString(state)
-        statePath.writeText(content)
+        saveManagerState(state)
     }
 
     /**
@@ -98,16 +143,30 @@ class ControlConfigManager(val storageDirectory: String? = null) {
     }
 
     fun loadAllConfigs(): List<ControlConfig> {
+        // Return cached list if available
+        cachedAllConfigs?.let { return it }
+
+        // Load from disk
         checkAndCreateDirectory()
         val dir = Path(configsDirectory)
         val files = dir.listDirectoryEntries("*.json")
-        return files
+        val configs = files
             .map { Pair(it.nameWithoutExtension, ControlConfig.loadFrom(it.toString())) }
             .filter { it.second != null }
             .map {
                 it.second!!.id = it.first
                 it.second!!
             }
+
+        // Cache the list
+        cachedAllConfigs = configs
+
+        // Also cache individual configs
+        configs.forEach { config ->
+            configCache[config.id] = config
+        }
+
+        return configs
     }
 
     fun listConfigIds(): List<String> {
@@ -121,13 +180,29 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         checkAndCreateDirectory()
         val path = "$configsDirectory/${config.id}.json"
         config.saveTo(path)
+
+        // Invalidate cache for this config
+        configCache.remove(config.id)
+
+        // Invalidate all configs list cache
+        cachedAllConfigs = null
     }
 
     fun loadConfig(id: String): ControlConfig? {
+        // Check cache first
+        configCache[id]?.let { return it }
+
+        // Load from disk
         checkAndCreateDirectory()
         val path = "$configsDirectory/$id.json"
         val config = ControlConfig.loadFrom(path)
         config?.id = id
+
+        // Cache the loaded config
+        if (config != null) {
+            configCache[id] = config
+        }
+
         return config
     }
 
@@ -143,6 +218,12 @@ class ControlConfigManager(val storageDirectory: String? = null) {
         return try {
             if (path.exists()) {
                 path.deleteExisting()
+
+                // Invalidate cache for deleted config
+                configCache.remove(id)
+
+                // Invalidate all configs list cache
+                cachedAllConfigs = null
 
                 // If this was the currently selected config, set to the first config, or else clear the selection
                 if (getSelectedConfigId() == id) {

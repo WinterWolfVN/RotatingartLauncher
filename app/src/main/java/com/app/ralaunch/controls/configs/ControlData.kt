@@ -427,10 +427,10 @@ sealed class ControlData {
     }
 
     var name: String = ""
-    var x: Float = 0.0f // 屏幕位置 (0-1相对值或绝对像素值)
-    var y: Float = 0.0f
-    var width: Float = 120.0f // dp单位
-    var height: Float = 120.0f // dp单位
+    var x: Float = 0.0f // 屏幕位置 X (0-1相对值，相对于屏幕宽度)
+    var y: Float = 0.0f // 屏幕位置 Y (0-1相对值，相对于屏幕高度)
+    var width: Float = 0.2f // 控件宽度 (0-1相对值，相对于屏幕高度) **高度!!!!!!**
+    var height: Float = 0.2f // 控件高度 (0-1相对值，相对于屏幕高度)
     var rotation: Float = 0.0f // 旋转角度（度）
     var opacity: Float = 0.5f // 0.0 - 1.0 (背景透明度)
     var borderOpacity: Float = 1.0f // 0.0 - 1.0 (边框透明度，默认1.0)
@@ -495,7 +495,7 @@ sealed class ControlData {
             KeyCode.KEYBOARD_S,
             KeyCode.KEYBOARD_A
         ) // [up, right, down, left] 的键码
-        var joystickMode: Mode = Mode.KEYBOARD
+        var mode: Mode = Mode.KEYBOARD
         var isRightStick: Boolean = false // 手柄模式：true=右摇杆, false=左摇杆
     }
 

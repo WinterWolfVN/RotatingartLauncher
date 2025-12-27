@@ -39,9 +39,9 @@ class VirtualText(
         get() = controlData as ControlData.Text
 
     // 绘制相关
-    private var mBackgroundPaint: Paint? = null
-    private var mStrokePaint: Paint? = null
-    private var mTextPaint: TextPaint? = null
+    private lateinit var mBackgroundPaint: Paint
+    private lateinit var mStrokePaint: Paint
+    private lateinit var mTextPaint: TextPaint
     private val mRectF: RectF
 
     init {
@@ -51,26 +51,26 @@ class VirtualText(
 
     private fun initPaints() {
         mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mBackgroundPaint!!.setColor(controlData.bgColor)
-        mBackgroundPaint!!.setStyle(Paint.Style.FILL)
+        mBackgroundPaint.setColor(controlData.bgColor)
+        mBackgroundPaint.setStyle(Paint.Style.FILL)
         // 背景透明度完全独立
-        mBackgroundPaint!!.setAlpha((controlData.opacity * 255).toInt())
+        mBackgroundPaint.setAlpha((controlData.opacity * 255).toInt())
 
         mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mStrokePaint!!.setColor(controlData.strokeColor)
-        mStrokePaint!!.setStyle(Paint.Style.STROKE)
-        mStrokePaint!!.setStrokeWidth(dpToPx(controlData.strokeWidth))
+        mStrokePaint.setColor(controlData.strokeColor)
+        mStrokePaint.setStyle(Paint.Style.STROKE)
+        mStrokePaint.setStrokeWidth(dpToPx(controlData.strokeWidth))
         // 边框透明度完全独立，默认1.0（完全不透明）
         val borderOpacity = if (controlData.borderOpacity != 0f) controlData.borderOpacity else 1.0f
-        mStrokePaint!!.setAlpha((borderOpacity * 255).toInt())
+        mStrokePaint.setAlpha((borderOpacity * 255).toInt())
 
         mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-        mTextPaint!!.setColor(-0x1)
-        mTextPaint!!.setTextSize(dpToPx(16f))
-        mTextPaint!!.setTextAlign(Paint.Align.CENTER)
+        mTextPaint.setColor(-0x1)
+        mTextPaint.setTextSize(dpToPx(16f))
+        mTextPaint.setTextAlign(Paint.Align.CENTER)
         // 文本透明度完全独立，默认1.0（完全不透明）
         val textOpacity = if (controlData.textOpacity != 0f) controlData.textOpacity else 1.0f
-        mTextPaint!!.setAlpha((textOpacity * 255).toInt())
+        mTextPaint.setAlpha((textOpacity * 255).toInt())
     }
 
     private fun dpToPx(dp: Float): Float {
@@ -106,8 +106,8 @@ class VirtualText(
         if (castedData.displayText.isNotEmpty()) {
             // 绘制矩形（圆角矩形）- 文本控件默认方形
             val cornerRadius = dpToPx(controlData.cornerRadius)
-            canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint!!)
-            canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint!!)
+            canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
+            canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
         }
 
 
@@ -116,9 +116,9 @@ class VirtualText(
 
 
         // 自动计算文字大小以适应区域
-        mTextPaint!!.setTextSize(20f) // 临时设置用于测量
+        mTextPaint.setTextSize(20f) // 临时设置用于测量
         val textBounds = Rect()
-        mTextPaint!!.getTextBounds(displayText, 0, displayText.length, textBounds)
+        mTextPaint.getTextBounds(displayText, 0, displayText.length, textBounds)
         val textAspectRatio = textBounds.width() / max(textBounds.height(), 1).toFloat()
 
 
@@ -127,12 +127,12 @@ class VirtualText(
             getHeight() / 2f,
             getWidth() / max(textAspectRatio, 1f)
         )
-        mTextPaint!!.setTextSize(textSize)
+        mTextPaint.setTextSize(textSize)
 
 
         // 居中显示文本
-        val textY = getHeight() / 2f - ((mTextPaint!!.descent() + mTextPaint!!.ascent()) / 2)
-        canvas.drawText(displayText, getWidth() / 2f, textY, mTextPaint!!)
+        val textY = getHeight() / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2)
+        canvas.drawText(displayText, getWidth() / 2f, textY, mTextPaint)
 
 
         // 恢复旋转

@@ -473,6 +473,12 @@ class ControlLayoutFragment : Fragment(), OnLayoutClickListener {
 
             // 保存布局
             configManager.saveConfig(config)
+
+            // 如果当前没有默认布局，将导入的布局设为默认
+            if (configManager.getSelectedConfigId() == null) {
+                configManager.setSelectedConfigId(config.id)
+            }
+
             layouts = configManager.loadAllConfigs()
             adapter!!.updateLayouts(layouts)
             adapter!!.setDefaultLayoutId(configManager.getSelectedConfigId())
@@ -564,6 +570,12 @@ class ControlLayoutFragment : Fragment(), OnLayoutClickListener {
 
             // 保存布局
             configManager.saveConfig(config)
+
+            // 如果当前没有默认布局，将导入的布局设为默认
+            if (configManager.getSelectedConfigId() == null) {
+                configManager.setSelectedConfigId(config.id)
+            }
+
             layouts = configManager.loadAllConfigs()
             adapter!!.updateLayouts(layouts)
             adapter!!.setDefaultLayoutId(configManager.getSelectedConfigId())

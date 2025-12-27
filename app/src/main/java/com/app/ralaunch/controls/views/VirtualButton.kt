@@ -71,9 +71,9 @@ class VirtualButton(
         get() = controlData as ControlData.Button
 
     // 绘制相关
-    private var mBackgroundPaint: Paint = null!!    // initialized in initPaints
-    private var mStrokePaint: Paint = null!!        // initialized in initPaints
-    private var mTextPaint: TextPaint = null!!      // initialized in initPaints
+    private var mBackgroundPaint: Paint? = null    // initialized in initPaints
+    private var mStrokePaint: Paint? = null        // initialized in initPaints
+    private var mTextPaint: TextPaint? = null      // initialized in initPaints
     private val mRectF: RectF = RectF()
 
     // 按钮状态
@@ -108,45 +108,45 @@ class VirtualButton(
             val backgroundColor = 0x327D7D7D // 很淡的灰色（背景）
 
             mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mBackgroundPaint.color = normalColor
-            mBackgroundPaint.style = Paint.Style.FILL
-            mBackgroundPaint.alpha = (castedData.opacity * 255).toInt()
+            mBackgroundPaint?.color = normalColor
+            mBackgroundPaint?.style = Paint.Style.FILL
+            mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
 
 
             mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mStrokePaint.color = 0x00000000 // 透明
-            mStrokePaint.style = Paint.Style.STROKE
-            mStrokePaint.strokeWidth = 0f
+            mStrokePaint?.color = 0x00000000 // 透明
+            mStrokePaint?.style = Paint.Style.STROKE
+            mStrokePaint?.strokeWidth = 0f
 
             mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-            mTextPaint.color = textColor
-            mTextPaint.typeface = Typeface.DEFAULT_BOLD // 粗体
-            mTextPaint.textAlign = Paint.Align.CENTER
+            mTextPaint?.color = textColor
+            mTextPaint?.typeface = Typeface.DEFAULT_BOLD // 粗体
+            mTextPaint?.textAlign = Paint.Align.CENTER
             // 使用文本透明度（如果为0则默认不透明，确保文本可见）
             val textOpacity = if (castedData.textOpacity != 0f) castedData.textOpacity else 1.0f
-            mTextPaint.alpha = (textOpacity * 255).toInt()
+            mTextPaint?.alpha = (textOpacity * 255).toInt()
         } else {
             // 键盘模式保持原有逻辑
             mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mBackgroundPaint.color = castedData.bgColor
-            mBackgroundPaint.style = Paint.Style.FILL
-            mBackgroundPaint.alpha = (castedData.opacity * 255).toInt()
+            mBackgroundPaint?.color = castedData.bgColor
+            mBackgroundPaint?.style = Paint.Style.FILL
+            mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
 
             mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mStrokePaint.color = castedData.strokeColor
-            mStrokePaint.style = Paint.Style.STROKE
-            mStrokePaint.strokeWidth = dpToPx(castedData.strokeWidth)
+            mStrokePaint?.color = castedData.strokeColor
+            mStrokePaint?.style = Paint.Style.STROKE
+            mStrokePaint?.strokeWidth = dpToPx(castedData.strokeWidth)
             // 边框透明度完全独立，默认1.0（完全不透明）
             val borderOpacity = if (castedData.borderOpacity != 0f) castedData.borderOpacity else 1.0f
-            mStrokePaint.alpha = (borderOpacity * 255).toInt()
+            mStrokePaint?.alpha = (borderOpacity * 255).toInt()
 
             mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-            mTextPaint.color = -0x1
-            mTextPaint.textSize = dpToPx(16f)
-            mTextPaint.textAlign = Paint.Align.CENTER
+            mTextPaint?.color = -0x1
+            mTextPaint?.textSize = dpToPx(16f)
+            mTextPaint?.textAlign = Paint.Align.CENTER
             // 文本透明度完全独立，默认1.0（完全不透明）
             val textOpacity = if (castedData.textOpacity != 0f) castedData.textOpacity else 1.0f
-            mTextPaint.alpha = (textOpacity * 255).toInt()
+            mTextPaint?.alpha = (textOpacity * 255).toInt()
         }
     }
 
@@ -169,22 +169,22 @@ class VirtualButton(
             ControlData.Button.Shape.RECTANGLE -> {
                 // 绘制矩形（圆角矩形）
                 val cornerRadius = dpToPx(castedData.cornerRadius)
-                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
-                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
+                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint!!)
+                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint!!)
             }
             ControlData.Button.Shape.CIRCLE -> {
                 when (castedData.mode) {
                     ControlData.Button.Mode.KEYBOARD -> {
                         // 普通圆形（键盘模式）
                         // 根据状态调整颜色
-                        val alpha = mBackgroundPaint.alpha
+                        val alpha = mBackgroundPaint?.alpha
                         if (mIsPressed || mIsToggled) {
-                            mBackgroundPaint.alpha = min(255, (alpha * 1.5f).toInt())
+                            mBackgroundPaint?.alpha = min(255, (alpha!! * 1.5f).toInt())
                         } else {
-                            mBackgroundPaint.alpha = (castedData.opacity * 255).toInt()
+                            mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
                         }
-                        canvas.drawCircle(centerXDraw, centerYDraw, radius, mBackgroundPaint)
-                        canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint)
+                        canvas.drawCircle(centerXDraw, centerYDraw, radius, mBackgroundPaint!!)
+                        canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint!!)
                     }
                     ControlData.Button.Mode.GAMEPAD -> {
                         val margin = 0.15f // DEFAULT_MARGIN
@@ -238,9 +238,9 @@ class VirtualButton(
             // RadialGamePad 风格：自动计算文字大小以适应区域
             if (castedData.mode == ControlData.Button.Mode.GAMEPAD) {
                 // 计算文字宽高比
-                mTextPaint.textSize = 20f // 临时设置用于测量
+                mTextPaint?.textSize = 20f // 临时设置用于测量
                 val textBounds = Rect()
-                mTextPaint.getTextBounds(displayText, 0, displayText.length, textBounds)
+                mTextPaint?.getTextBounds(displayText, 0, displayText.length, textBounds)
                 val textAspectRatio = textBounds.width() / max(textBounds.height(), 1).toFloat()
 
 
@@ -249,26 +249,26 @@ class VirtualButton(
                     height / 2f,
                     width / max(textAspectRatio, 1f)
                 )
-                mTextPaint.textSize = textSize
+                mTextPaint?.textSize = textSize
             } else {
                 // 键盘模式：检查文本宽度，如果超出则缩小字体
-                mTextPaint.textSize = dpToPx(16f)
-                val textWidth = mTextPaint.measureText(displayText)
+                mTextPaint?.textSize = dpToPx(16f)
+                val textWidth = mTextPaint?.measureText(displayText)
                 val availableWidth = width - dpToPx(4f) // 留出边距
 
-                if (textWidth > availableWidth) {
+                if (textWidth!! > availableWidth) {
                     // 文本超出，按比例缩小字体
-                    val scale = availableWidth / textWidth
-                    val newTextSize = mTextPaint.textSize * scale
-                    mTextPaint.textSize = newTextSize
+                    val scale = availableWidth / textWidth!!
+                    val newTextSize = mTextPaint?.textSize!! * scale
+                    mTextPaint?.textSize = newTextSize
                 }
             }
 
 
             // 只显示名称（居中）
             // 显示真实按键会挡视野
-            val textY = height / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2)
-            canvas.drawText(displayText, width / 2f, textY, mTextPaint)
+            val textY = height / 2f - ((mTextPaint!!.descent() + mTextPaint!!.ascent()) / 2)
+            canvas.drawText(displayText, width / 2f, textY, mTextPaint!!)
         }
     }
 

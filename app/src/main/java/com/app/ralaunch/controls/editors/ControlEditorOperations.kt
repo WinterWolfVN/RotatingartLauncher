@@ -39,8 +39,8 @@ object ControlEditorOperations {
         button.name = context.getString(R.string.editor_default_button_name)
         button.x = 0.5f
         button.y = 0.5f
-        button.width = 150f
-        button.height = 150f
+        button.width = 0.15f
+        button.height = 0.15f
         button.opacity = 0.5f
         button.isVisible = true
         button.keycode = KeyCode.KEYBOARD_SPACE
@@ -62,20 +62,20 @@ object ControlEditorOperations {
     ): Joystick {
         val joystick = Joystick()
         joystick.name = if (isRightStick) "右摇杆" else "左摇杆"
-        joystick.joystickMode = joystickMode
+        joystick.mode = joystickMode
         joystick.isRightStick = isRightStick
 
         // 设置位置
         if (isRightStick) {
-            joystick.x = 0.75f
+            joystick.x = 0.65f
         } else {
-            joystick.x = 0.25f
+            joystick.x = 0.15f
         }
-        joystick.y = 0.75f
+        joystick.y = 0.5f
 
         // 设置尺寸和样式
-        joystick.width = 450f
-        joystick.height = 450f
+        joystick.width = 0.45f
+        joystick.height = 0.45f
         joystick.opacity = 0.5f
         joystick.bgColor = -0xb5b5b6
         joystick.strokeColor = 0x66FFFFFF
@@ -109,8 +109,8 @@ object ControlEditorOperations {
         touchpad.name = context.getString(R.string.editor_default_touchpad_name)
         touchpad.x = 0.5f
         touchpad.y = 0.5f
-        touchpad.width = 450f
-        touchpad.height = 450f
+        touchpad.width = 0.45f
+        touchpad.height = 0.45f
         touchpad.opacity = 0.5f
         touchpad.cornerRadius = 22.0f
         touchpad.isVisible = true
@@ -134,8 +134,8 @@ object ControlEditorOperations {
         text.name = defaultTextName
         text.x = 0.5f
         text.y = 0.5f
-        text.width = 150f
-        text.height = 150f
+        text.width = 0.15f
+        text.height = 0.15f
         text.opacity = 0.5f
         text.bgColor = -0x7f7f80 // 灰色背景（更清晰可见）
         text.isVisible = true
@@ -232,7 +232,7 @@ object ControlEditorOperations {
         var updatedCount = 0
 
         config.controls.mapNotNull { it as? Joystick }.forEach { joystick ->
-            joystick.joystickMode = newMode
+            joystick.mode = newMode
             updatedCount++
         }
 

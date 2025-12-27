@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ActivityInfo;
@@ -45,11 +46,11 @@ public class GameActivity extends SDLActivity {
     private static final String TAG = "GameActivity";
     private static final int CONTROL_EDITOR_REQUEST_CODE = 2001;
     public static GameActivity mainActivity;
-    
+
     // 统一管理器
     private GameFullscreenManager mFullscreenManager;
     private GameVirtualControlsManager virtualControlsManager = new GameVirtualControlsManager();
-
+    private GameMenuController gameMenuController = new GameMenuController();
     private final GameLaunchDelegate launchDelegate = new GameLaunchDelegate();
     private final GameTouchBridge touchBridge = new GameTouchBridge();
 
@@ -65,35 +66,35 @@ public class GameActivity extends SDLActivity {
             RendererPreference.applyRendererEnvironment(this);
 
             com.app.ralaunch.data.SettingsManager settingsManager =
-                com.app.ralaunch.data.SettingsManager.getInstance(this);
-            
+                    com.app.ralaunch.data.SettingsManager.getInstance(this);
+
             // 设置 FNA 触屏相关环境变量
             setupTouchEnvironment(settingsManager);
-            
+
         } catch (Exception e) {
         }
         super.loadLibraries();
     }
-    
+
 
     private void setupTouchEnvironment(com.app.ralaunch.data.SettingsManager settingsManager) {
         try {
             android.system.Os.setenv("SDL_TOUCH_MOUSE_EVENTS", "1", true);
-            
+
             boolean multitouch = settingsManager.isTouchMultitouchEnabled();
             if (multitouch) {
                 android.system.Os.setenv("SDL_TOUCH_MOUSE_MULTITOUCH", "1", true);
             } else {
                 android.system.Os.setenv("SDL_TOUCH_MOUSE_MULTITOUCH", "0", true);
             }
-            
+
             boolean mouseRightStick = settingsManager.isMouseRightStickEnabled();
             if (mouseRightStick) {
                 android.system.Os.setenv("RALCORE_MOUSE_RIGHT_STICK", "1", true);
             } else {
                 android.system.Os.unsetenv("RALCORE_MOUSE_RIGHT_STICK");
             }
-            
+
         } catch (Exception e) {
         }
     }
@@ -106,7 +107,7 @@ public class GameActivity extends SDLActivity {
         try {
             String currentRenderer = RendererLoader.getCurrentRenderer();
             boolean isZink = RendererConfig.RENDERER_ZINK.equals(currentRenderer) ||
-                            "vulkan_zink".equals(currentRenderer);
+                    "vulkan_zink".equals(currentRenderer);
 
             if (isZink) {
                 return new OSMSurface(context);
@@ -122,28 +123,28 @@ public class GameActivity extends SDLActivity {
     protected void onCreate(Bundle savedInstanceState) {
 
         com.app.ralaunch.utils.DensityAdapter.adapt(this, true);
-        
+
         // 应用主题设置（必须在 super.onCreate 之前）
         // GameActivity 继承自 SDLActivity，不是 AppCompatActivity，所以直接应用主题
-        com.app.ralaunch.data.SettingsManager settingsManager = 
-            com.app.ralaunch.data.SettingsManager.getInstance(this);
+        com.app.ralaunch.data.SettingsManager settingsManager =
+                com.app.ralaunch.data.SettingsManager.getInstance(this);
         int themeMode = settingsManager.getThemeMode();
-        
+
         switch (themeMode) {
             case 0: // 跟随系统
                 androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                        androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
                 break;
             case 1: // 深色模式
                 androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
+                        androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES);
                 break;
             case 2: // 浅色模式
                 androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
-                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
+                        androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO);
                 break;
         }
-        
+
         super.onCreate(savedInstanceState);
 
         mainActivity = this;
@@ -165,11 +166,14 @@ public class GameActivity extends SDLActivity {
 
         // 初始化虚拟控制系统
         virtualControlsManager.initialize(
-            this,
-            (ViewGroup) mLayout,
-            mSurface,
-            () -> disableSDLTextInput()
+                this,
+                (ViewGroup) mLayout,
+                mSurface,
+                () -> disableSDLTextInput()
         );
+
+        // 设置游戏内菜单（需要在虚拟控制初始化后）
+        gameMenuController.setup(this, (ViewGroup) mLayout, virtualControlsManager);
 
         String runtimePref = getIntent().getStringExtra("DOTNET_FRAMEWORK");
 
@@ -184,7 +188,7 @@ public class GameActivity extends SDLActivity {
         setLaunchParams();
 
     }
-    
+
 
 
 
@@ -236,6 +240,16 @@ public class GameActivity extends SDLActivity {
         virtualControlsManager.setVisible(visible);
     }
 
+    /**
+     * 设置游戏内菜单
+     */
+    private void setupGameMenu() {
+        gameMenuController.setup(this, (ViewGroup) mLayout, virtualControlsManager);
+    }
+
+
+
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -244,13 +258,23 @@ public class GameActivity extends SDLActivity {
         }
     }
 
+    /**
+     * 处理返回键按下事件
+     * 注意: SDLActivity 的 onBackPressed() 会调用 super.onBackPressed() 导致直接退出
+     * 我们在这里完全覆盖这个行为,不调用 super,而是显示确认对话框
+     */
+    @SuppressLint("MissingSuperCall")
+    @Override
+    public void onBackPressed() {
+        gameMenuController.handleBack(virtualControlsManager);
+    }
     @Override
     protected void onDestroy() {
         android.util.Log.d(TAG, "GameActivity.onDestroy() called");
-        
+
         // 清理虚拟控件
         virtualControlsManager.stop();
-        
+
         // 清理 .NET runtime 资源
         try {
             com.app.ralaunch.core.GameLauncher.netcorehostCleanup();
@@ -258,9 +282,9 @@ public class GameActivity extends SDLActivity {
         } catch (Exception e) {
             android.util.Log.w(TAG, "Failed to cleanup netcorehost", e);
         }
-        
+
         super.onDestroy();
-        
+
         // [重要] .NET runtime (hostfxr) 不支持在同一进程中多次初始化
         // GameActivity 运行在独立进程 (:game)，终止此进程不会影响主应用
         // 延迟终止，确保所有清理工作完成
@@ -315,7 +339,7 @@ public class GameActivity extends SDLActivity {
             }
         });
     }
-    
+
     /**
      * 显示游戏崩溃报告界面
      */
@@ -328,10 +352,10 @@ public class GameActivity extends SDLActivity {
             } catch (Exception e) {
                 android.util.Log.w(TAG, "Failed to get native error", e);
             }
-            
+
             // 获取 logcat 日志（最近的错误日志）
             String logcatLogs = getRecentLogcatLogs();
-            
+
             String title = mainActivity.getString(R.string.game_run_failed);
             String message;
             if (errorMessage != null && !errorMessage.isEmpty()) {
@@ -339,12 +363,12 @@ public class GameActivity extends SDLActivity {
             } else {
                 message = mainActivity.getString(R.string.game_exit_code, exitCode);
             }
-            
+
             // 构建错误详情
             StringBuilder errorDetails = new StringBuilder();
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
             errorDetails.append("发生时间: ").append(sdf.format(new java.util.Date())).append("\n\n");
-            
+
             try {
                 String versionName = mainActivity.getPackageManager()
                         .getPackageInfo(mainActivity.getPackageName(), 0).versionName;
@@ -352,43 +376,43 @@ public class GameActivity extends SDLActivity {
             } catch (Exception e) {
                 errorDetails.append("应用版本: 未知\n");
             }
-            
+
             errorDetails.append("设备型号: ").append(android.os.Build.MANUFACTURER).append(" ")
-                .append(android.os.Build.MODEL).append("\n");
+                    .append(android.os.Build.MODEL).append("\n");
             errorDetails.append("Android 版本: ").append(android.os.Build.VERSION.RELEASE)
-                .append(" (SDK ").append(android.os.Build.VERSION.SDK_INT).append(")\n\n");
-            
+                    .append(" (SDK ").append(android.os.Build.VERSION.SDK_INT).append(")\n\n");
+
             errorDetails.append("错误类型: 游戏异常退出\n");
             errorDetails.append("退出代码: ").append(exitCode).append("\n");
-            
+
             if (nativeError != null && !nativeError.isEmpty()) {
                 errorDetails.append("C层错误: ").append(nativeError).append("\n");
             }
-            
+
             if (errorMessage != null && !errorMessage.isEmpty()) {
                 errorDetails.append("错误信息: ").append(errorMessage).append("\n");
             }
-            
+
             // 构建堆栈跟踪（包含 C 层错误和 logcat 日志）
             StringBuilder stackTrace = new StringBuilder();
             stackTrace.append("游戏进程异常退出\n");
             stackTrace.append("退出代码: ").append(exitCode).append("\n\n");
-            
+
             if (nativeError != null && !nativeError.isEmpty()) {
                 stackTrace.append("=== C层错误信息 ===\n");
                 stackTrace.append(nativeError).append("\n\n");
             }
-            
+
             if (logcatLogs != null && !logcatLogs.isEmpty()) {
                 stackTrace.append("=== Logcat 日志（最近错误） ===\n");
                 stackTrace.append(logcatLogs).append("\n\n");
             }
-            
+
             if (errorMessage != null && !errorMessage.isEmpty()) {
                 stackTrace.append("=== 错误详情 ===\n");
                 stackTrace.append(errorMessage);
             }
-            
+
             // 启动崩溃报告界面
             Intent intent = new Intent(mainActivity, com.app.ralaunch.crash.CrashReportActivity.class);
             intent.putExtra("stack_trace", stackTrace.toString());
@@ -396,7 +420,7 @@ public class GameActivity extends SDLActivity {
             intent.putExtra("exception_class", "GameExitException");
             intent.putExtra("exception_message", message);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            
+
             mainActivity.startActivity(intent);
             mainActivity.finish();
         } catch (Exception e) {
@@ -412,46 +436,46 @@ public class GameActivity extends SDLActivity {
             mainActivity.finish();
         }
     }
-    
+
     /**
      * 获取最近的 logcat 日志（错误和警告级别）
      */
     private static String getRecentLogcatLogs() {
         try {
             java.lang.Process process = Runtime.getRuntime().exec(
-                new String[]{"logcat", "-d", "-v", "time", "*:E", "*:W", "NetCoreHost:E", "GameLauncher:E", "SDL:E", "FNA3D:E"}
+                    new String[]{"logcat", "-d", "-v", "time", "*:E", "*:W", "NetCoreHost:E", "GameLauncher:E", "SDL:E", "FNA3D:E"}
             );
-            
+
             java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream())
+                    new java.io.InputStreamReader(process.getInputStream())
             );
-            
+
             StringBuilder logs = new StringBuilder();
             String line;
             int lineCount = 0;
             int maxLines = 200; // 限制最多200行
-            
+
             while ((line = reader.readLine()) != null && lineCount < maxLines) {
                 // 只保留包含错误关键词的行
-                if (line.contains("ERROR") || line.contains("FATAL") || 
-                    line.contains("Exception") || line.contains("Error") ||
-                    line.contains("NetCoreHost") || line.contains("GameLauncher") ||
-                    line.contains("SDL") || line.contains("FNA3D")) {
+                if (line.contains("ERROR") || line.contains("FATAL") ||
+                        line.contains("Exception") || line.contains("Error") ||
+                        line.contains("NetCoreHost") || line.contains("GameLauncher") ||
+                        line.contains("SDL") || line.contains("FNA3D")) {
                     logs.append(line).append("\n");
                     lineCount++;
                 }
             }
-            
+
             reader.close();
             process.destroy();
-            
+
             // 如果日志太长，只保留最后的部分
             String result = logs.toString();
             if (result.length() > 50000) {
-                result = "...[日志已截断，仅显示最后部分]...\n" + 
-                         result.substring(result.length() - 50000);
+                result = "...[日志已截断，仅显示最后部分]...\n" +
+                        result.substring(result.length() - 50000);
             }
-            
+
             return result.isEmpty() ? null : result;
         } catch (Exception e) {
             android.util.Log.w(TAG, "Failed to get logcat logs", e);
@@ -491,7 +515,7 @@ public class GameActivity extends SDLActivity {
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         boolean result = super.dispatchTouchEvent(event);
-        
+
         touchBridge.handleMotionEvent(event, getResources());
         return result;
     }

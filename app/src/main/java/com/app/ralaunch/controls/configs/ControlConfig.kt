@@ -20,7 +20,7 @@ class ControlConfig {
     var id: String = System.currentTimeMillis().toString()
 
     var name: String = "Custom Layout"
-    var version: Int = 1
+    var version: Int = 2
     var controls: MutableList<ControlData> = ArrayList()
 
     //region 序列化与反序列化

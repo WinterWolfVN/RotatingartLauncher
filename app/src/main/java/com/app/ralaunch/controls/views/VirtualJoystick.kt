@@ -12,7 +12,6 @@ import android.view.View
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.controls.configs.ControlData
 import com.app.ralaunch.controls.bridges.ControlInputBridge
-import com.app.ralaunch.controls.views.ControlView
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.data.SettingsManager
@@ -96,9 +95,9 @@ class VirtualJoystick(
     }
 
     // 绘制相关
-    private var mBackgroundPaint: Paint? = null
-    private var mStickPaint: Paint? = null
-    private var mStrokePaint: Paint? = null
+    private lateinit var mBackgroundPaint: Paint
+    private lateinit var mStickPaint: Paint
+    private lateinit var mStrokePaint: Paint
 
     // 摇杆状态
     private var mCenterX = 0f
@@ -405,7 +404,7 @@ class VirtualJoystick(
                 }
 
                 // 如果是右摇杆鼠标模式，初始化并设置虚拟鼠标范围
-                if (castedData.joystickMode == ControlData.Joystick.Mode.MOUSE && castedData.isRightStick) {
+                if (castedData.mode == ControlData.Joystick.Mode.MOUSE && castedData.isRightStick) {
                     // 初始化虚拟鼠标（使用实际屏幕尺寸）
                     if (mInputBridge is SDLInputBridge) {
                         (mInputBridge as SDLInputBridge).initVirtualMouse(
@@ -485,7 +484,7 @@ class VirtualJoystick(
 
 
         // 根据模式发送不同的输入事件
-        if (castedData.joystickMode == ControlData.Joystick.Mode.MOUSE) {
+        if (castedData.mode == ControlData.Joystick.Mode.MOUSE) {
             // 鼠标模式：根据xboxUseRightStick区分左右摇杆
             if (castedData.isRightStick) {
                 // 右摇杆：鼠标移动模式 + 持续点击攻击
@@ -516,7 +515,7 @@ class VirtualJoystick(
                 // 左摇杆：将摇杆偏移量转换为鼠标移动
                 sendMouseMove(dx, dy, distance)
             }
-        } else if (castedData.joystickMode == ControlData.Joystick.Mode.GAMEPAD) {
+        } else if (castedData.mode == ControlData.Joystick.Mode.GAMEPAD) {
             // SDL控制器模式：发送模拟摇杆输入
             sendSDLStick(dx, dy, distance, maxDistance)
         } else {
@@ -544,7 +543,7 @@ class VirtualJoystick(
 
 
         // 根据模式执行不同的释放操作
-        if (castedData.joystickMode == ControlData.Joystick.Mode.MOUSE) {
+        if (castedData.mode == ControlData.Joystick.Mode.MOUSE) {
             // 鼠标模式
             if (castedData.isRightStick) {
                 // 右摇杆：停止持续点击
@@ -574,11 +573,11 @@ class VirtualJoystick(
                 }
             }
             mCurrentDirection = DIR_NONE
-        } else if (castedData.joystickMode == ControlData.Joystick.Mode.KEYBOARD) {
+        } else if (castedData.mode == ControlData.Joystick.Mode.KEYBOARD) {
             // 键盘模式：释放按键和组合键
             releaseDirection(mCurrentDirection)
             mCurrentDirection = DIR_NONE
-        } else if (castedData.joystickMode == ControlData.Joystick.Mode.GAMEPAD) {
+        } else if (castedData.mode == ControlData.Joystick.Mode.GAMEPAD) {
             // SDL控制器模式：摇杆回中
             if (castedData.isRightStick) {
                 mInputBridge.sendXboxRightStick(0.0f, 0.0f)
