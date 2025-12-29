@@ -9,7 +9,7 @@ import android.widget.ListView;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.app.ralaunch.R;
-import com.app.ralaunch.controls.editor.ControlEditorManager;
+import com.app.ralaunch.controls.editors.ControlEditorManager;
 import com.app.ralaunch.manager.GameMenuManager;
 import com.app.ralaunch.utils.AppLogger;
 
@@ -108,14 +108,14 @@ public class GameMenuController {
                 activity,
                 controlsManager.getControlLayout(),
                 contentFrame,
-                ControlEditorManager.MODE_IN_GAME
+                ControlEditorManager.Mode.IN_GAME
         );
-        
+
         // 设置隐藏控件监听器
         controlEditorManager.setOnHideControlsListener(() -> {
             controlsManager.toggle(activity);
         });
-        
+
         // 设置退出游戏监听器
         controlEditorManager.setOnExitGameListener(() -> {
             if (menuManager != null) {

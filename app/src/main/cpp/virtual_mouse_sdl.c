@@ -87,7 +87,7 @@ static void ensure_virtual_mouse_initialized(int screenWidth, int screenHeight) 
  * 注意：不会清除已保存的位置，保持右摇杆的位置记忆
  */
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeInitVirtualMouseSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeInitVirtualMouseSDL(
     JNIEnv *env, jclass clazz, int screenWidth, int screenHeight) {
     
     g_vm_screen_width = screenWidth > 0 ? screenWidth : 1920;
@@ -114,7 +114,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeInitVirtualMouseSDL(
  * @return float数组，[0]=x, [1]=y
  */
 JNIEXPORT jfloatArray JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMousePositionSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeGetVirtualMousePositionSDL(
     JNIEnv *env, jclass clazz) {
     
     // 如果未初始化，使用默认值（屏幕中心）
@@ -149,7 +149,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMousePositionSDL(
  *      (0.0, 0.0, 0.0, 0.0) = 固定在中心点
  */
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeSetVirtualMouseRangeSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeSetVirtualMouseRangeSDL(
     JNIEnv *env, jclass clazz, float left, float top, float right, float bottom) {
     
     // 自动初始化虚拟鼠标（使用默认屏幕尺寸，后续会在updateVirtualMouseDelta中更新）
@@ -174,7 +174,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeSetVirtualMouseRangeSDL(
  * 松开后再次使用时，从上次停止的位置继续
  */
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeUpdateVirtualMouseDeltaSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeUpdateVirtualMouseDeltaSDL(
     JNIEnv *env, jclass clazz, float deltaX, float deltaY) {
     
     // 自动初始化虚拟鼠标（如果未初始化）
@@ -239,7 +239,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeUpdateVirtualMouseDeltaSDL(
  * 设置虚拟鼠标绝对位置
  */
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeSetVirtualMousePositionSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeSetVirtualMousePositionSDL(
     JNIEnv *env, jclass clazz, float x, float y) {
     
     // 自动初始化虚拟鼠标（如果未初始化）
@@ -273,7 +273,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeSetVirtualMousePositionSDL(
  * 获取虚拟鼠标 X 位置
  */
 JNIEXPORT float JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseXSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeGetVirtualMouseXSDL(
     JNIEnv *env, jclass clazz) {
     // 自动初始化虚拟鼠标（如果未初始化）
     ensure_virtual_mouse_initialized(1920, 1080);
@@ -284,7 +284,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseXSDL(
  * 获取虚拟鼠标 Y 位置
  */
 JNIEXPORT float JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseYSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeGetVirtualMouseYSDL(
     JNIEnv *env, jclass clazz) {
     // 自动初始化虚拟鼠标（如果未初始化）
     ensure_virtual_mouse_initialized(1920, 1080);
@@ -295,7 +295,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeGetVirtualMouseYSDL(
  * 虚拟鼠标是否启用
  */
 JNIEXPORT jboolean JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeIsVirtualMouseActiveSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeIsVirtualMouseActiveSDL(
     JNIEnv *env, jclass clazz) {
     return g_vm_initialized ? JNI_TRUE : JNI_FALSE;
 }
@@ -305,7 +305,7 @@ Java_com_app_ralaunch_controls_SDLInputBridge_nativeIsVirtualMouseActiveSDL(
  * @param scrollY 滚轮滚动量（正数=向上，负数=向下）
  */
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_SDLInputBridge_nativeSendMouseWheelSDL(
+Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeSendMouseWheelSDL(
     JNIEnv *env, jclass clazz, jfloat scrollY) {
     
     // 创建 SDL 鼠标滚轮事件
