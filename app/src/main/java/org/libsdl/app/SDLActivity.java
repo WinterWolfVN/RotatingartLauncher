@@ -1915,9 +1915,18 @@ class DummyEdit extends View implements View.OnKeyListener {
     @Override
     public boolean onKey(View v, int keyCode, KeyEvent event) {
         var deviceId = event.getDeviceId();
+        int source = event.getSource();
+        var device = InputDevice.getDevice(deviceId);
+
+        if (source == InputDevice.SOURCE_UNKNOWN && device != null) {
+            source = device.getSources();
+        }
 
         if (
-            (deviceId == -1 || deviceId == 0) && // Virtual keyboard
+            (
+                deviceId == -1 || deviceId == 0 ||
+                (device != null && device.isVirtual() && (source & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD) // Virtual keyboard
+            ) &&
             (
                 keyCode == KeyEvent.KEYCODE_DEL ||
                 keyCode == KeyEvent.KEYCODE_ENTER ||
