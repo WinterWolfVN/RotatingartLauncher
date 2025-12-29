@@ -94,8 +94,7 @@ object ControlEditDialogDataFiller {
         val switchAutoSize = view.findViewById<SwitchCompat?>(R.id.switch_auto_size)
 
         // 填充摇杆大小数据（仅摇杆类型）
-        val isJoystick = data is ControlData.Joystick
-        if (sliderJoystickSize != null && isJoystick) {
+        if (sliderJoystickSize != null && data is ControlData.Joystick) {
             val sizePercent = max(1, min(100, (data.width * 100).toInt()))
             sliderJoystickSize.value = sizePercent.toFloat()
             tvJoystickSizeValue?.text = "$sizePercent%"

@@ -163,16 +163,15 @@
     <!-- 文本透明度卡片（仅按钮和文本控件显示） -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_text_opacity"
+        style="@style/Widget.App.CardView.Standard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="12dp"
-        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:cardCornerRadius="15dp"
         app:cardElevation="2dp"
-        app:strokeWidth="0.5dp"
-        app:cardBackgroundColor="?attr/colorSurfaceContainer"
-        style="@style/Widget.App.CardView.Standard">
+        app:strokeWidth="0.5dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -183,9 +182,9 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_marginBottom="12dp"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:orientation="horizontal">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -204,10 +203,10 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
                         android:text="@string/editor_text_opacity_desc"
                         android:textColor="?attr/textSecondary"
-                        android:textSize="12sp"
-                        android:layout_marginTop="2dp" />
+                        android:textSize="12sp" />
 
                 </LinearLayout>
 
@@ -227,10 +226,10 @@
                 android:id="@+id/seekbar_text_opacity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:stepSize="1"
+                android:value="100"
                 android:valueFrom="0"
                 android:valueTo="100"
-                android:value="100"
-                android:stepSize="1"
                 app:labelBehavior="gone" />
 
         </LinearLayout>
@@ -240,16 +239,15 @@
     <!-- 摇杆头透明度卡片（仅摇杆类型显示） -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_stick_opacity"
+        style="@style/Widget.App.CardView.Standard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="12dp"
-        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:cardCornerRadius="15dp"
         app:cardElevation="2dp"
-        app:strokeWidth="0.5dp"
-        app:cardBackgroundColor="?attr/colorSurfaceContainer"
-        style="@style/Widget.App.CardView.Standard">
+        app:strokeWidth="0.5dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -260,9 +258,9 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_marginBottom="12dp"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:orientation="horizontal">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -281,10 +279,10 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
                         android:text="@string/editor_stick_opacity_desc"
                         android:textColor="?attr/textSecondary"
-                        android:textSize="12sp"
-                        android:layout_marginTop="2dp" />
+                        android:textSize="12sp" />
 
                 </LinearLayout>
 
@@ -304,10 +302,10 @@
                 android:id="@+id/seekbar_stick_opacity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:stepSize="1"
+                android:value="70"
                 android:valueFrom="0"
                 android:valueTo="100"
-                android:value="70"
-                android:stepSize="1"
                 app:labelBehavior="gone" />
 
         </LinearLayout>
@@ -317,16 +315,15 @@
     <!-- 摇杆圆心大小卡片（仅摇杆类型显示） -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_stick_knob_size"
+        style="@style/Widget.App.CardView.Standard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="12dp"
-        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:cardCornerRadius="15dp"
         app:cardElevation="2dp"
-        app:strokeWidth="0.5dp"
-        app:cardBackgroundColor="?attr/colorSurfaceContainer"
-        style="@style/Widget.App.CardView.Standard">
+        app:strokeWidth="0.5dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -337,9 +334,9 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_marginBottom="12dp"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:orientation="horizontal">
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -358,10 +355,10 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
                         android:text="@string/editor_stick_knob_size_desc"
                         android:textColor="?attr/textSecondary"
-                        android:textSize="12sp"
-                        android:layout_marginTop="2dp" />
+                        android:textSize="12sp" />
 
                 </LinearLayout>
 
@@ -381,10 +378,10 @@
                 android:id="@+id/seekbar_stick_knob_size"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:stepSize="1"
+                android:value="40"
                 android:valueFrom="0"
                 android:valueTo="100"
-                android:value="40"
-                android:stepSize="1"
                 app:labelBehavior="gone" />
 
         </LinearLayout>

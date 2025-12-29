@@ -82,7 +82,7 @@ object ControlEditDialogVisibilityManager {
 
         // 摇杆键值设置（仅摇杆显示，且为键盘模式）
         val showJoystickKeyMapping = if (isJoystick) {
-            (data as ControlData.Joystick).mode == ControlData.Joystick.Mode.KEYBOARD
+            data.mode == ControlData.Joystick.Mode.KEYBOARD
         } else false
 
         itemJoystickKeyMapping?.visibility =
@@ -99,24 +99,23 @@ object ControlEditDialogVisibilityManager {
         val cardTextOpacity = view.findViewById<View?>(com.app.ralaunch.R.id.card_text_opacity)
 
         // 文本透明度（仅文本控件显示，按钮也可显示）
-        val isText = data is ControlData.Text
+        val isText = data is ControlData.Button || data is ControlData.Text
         cardTextOpacity?.visibility = if (isText) View.VISIBLE else View.GONE
     }
 
     /**
-     * 更新鼠标模式选项的可见性（仅摇杆 + 鼠标模式时显示）
+     * 更新摇杆鼠标模式与触摸板选项的可见性（仅摇杆 + 鼠标模式 或 触摸板 时显示）
      */
     fun updateMouseModeOptionsVisibility(view: View, data: ControlData) {
         // 如果有鼠标相关的资源ID，可以在这里处理
-        // val cardMouseRange = view.findViewById<View?>(com.app.ralaunch.R.id.card_mouse_range)
-        // val cardMouseSpeed = view.findViewById<View?>(com.app.ralaunch.R.id.card_mouse_speed)
+        val carAttackMode = view.findViewById<View?>(com.app.ralaunch.R.id.item_right_stick_attack_mode)
+         val cardMouseRangeAndSpeed = view.findViewById<View?>(com.app.ralaunch.R.id.item_mouse_range)
 
-        val isMouseMode = if (data is ControlData.Joystick) {
-            data.mode == ControlData.Joystick.Mode.MOUSE
-        } else false
+        val isJoyStickMouseMode = data is ControlData.Joystick && data.mode == ControlData.Joystick.Mode.MOUSE
+        val isTouchPad = data is ControlData.TouchPad
 
-        // cardMouseRange?.visibility = if (isMouseMode) View.VISIBLE else View.GONE
-        // cardMouseSpeed?.visibility = if (isMouseMode) View.VISIBLE else View.GONE
+        carAttackMode?.visibility = if (isJoyStickMouseMode) View.VISIBLE else View.GONE
+         cardMouseRangeAndSpeed?.visibility = if (isJoyStickMouseMode || isTouchPad) View.VISIBLE else View.GONE
     }
 
     /**

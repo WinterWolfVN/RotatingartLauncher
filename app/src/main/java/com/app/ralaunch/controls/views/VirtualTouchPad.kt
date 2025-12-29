@@ -13,6 +13,7 @@ import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.configs.ControlData
+import com.app.ralaunch.data.SettingsManager
 import kotlin.math.pow
 import kotlin.math.sqrt
 
@@ -101,6 +102,8 @@ class VirtualTouchPad(
         get() = currentX - centerX
     private val centeredDeltaY
         get() = currentY - centerY
+
+    private val settingsManager = SettingsManager.getInstance(null)
 
     init {
         initPaints()
@@ -246,6 +249,21 @@ class VirtualTouchPad(
                 // Calculate on-screen centered position
                 var onScreenMouseX: Float = (screenWidth / 2) + (centeredDeltaX * TOUCHPAD_MOVE_RATIO)
                 var onScreenMouseY: Float = (screenHeight / 2) + (centeredDeltaY * TOUCHPAD_MOVE_RATIO)
+                // Sanity check
+                var minRangeX = settingsManager.mouseRightStickRangeLeft * screenWidth
+                var maxRangeX = settingsManager.mouseRightStickRangeRight * screenWidth
+                var minRangeY = settingsManager.mouseRightStickRangeTop * screenHeight
+                var maxRangeY = settingsManager.mouseRightStickRangeBottom * screenHeight
+                if (minRangeX >= maxRangeX || minRangeY >= maxRangeY) {
+                    minRangeX = screenWidth * 0.5f
+                    maxRangeX = screenWidth * 0.5f
+                    minRangeY = screenHeight * 0.5f
+                    maxRangeY = screenHeight * 0.5f
+                }
+                // Clamp to user settings bounds
+                onScreenMouseX = Math.clamp(onScreenMouseX, minRangeX, maxRangeX)
+                onScreenMouseY = Math.clamp(onScreenMouseY, minRangeY, maxRangeY)
+                // Clamp to screen bounds
                 onScreenMouseX = Math.clamp(onScreenMouseX, 0f, screenWidth - 1)
                 onScreenMouseY = Math.clamp(onScreenMouseY, 0f, screenHeight - 1)
                 sdlOnNativeMouseDirect(0, MotionEvent.ACTION_MOVE, onScreenMouseX, onScreenMouseY, false) // in ACTION_MOVE, button value doesn't matter
@@ -305,8 +323,25 @@ class VirtualTouchPad(
                 idleDelayHandler.removeCallbacksAndMessages(null)
                 // Double Click! Trigger centered movement and click!
                 // Calculate on-screen centered position
-                val onScreenMouseX: Float = (screenWidth / 2) + (centeredDeltaX * TOUCHPAD_MOVE_RATIO)
-                val onScreenMouseY: Float = (screenHeight / 2) + (centeredDeltaY * TOUCHPAD_MOVE_RATIO)
+                var onScreenMouseX: Float = (screenWidth / 2) + (centeredDeltaX * TOUCHPAD_MOVE_RATIO)
+                var onScreenMouseY: Float = (screenHeight / 2) + (centeredDeltaY * TOUCHPAD_MOVE_RATIO)
+                // Sanity check
+                var minRangeX = settingsManager.mouseRightStickRangeLeft * screenWidth
+                var maxRangeX = settingsManager.mouseRightStickRangeRight * screenWidth
+                var minRangeY = settingsManager.mouseRightStickRangeTop * screenHeight
+                var maxRangeY = settingsManager.mouseRightStickRangeBottom * screenHeight
+                if (minRangeX >= maxRangeX || minRangeY >= maxRangeY) {
+                    minRangeX = screenWidth * 0.5f
+                    maxRangeX = screenWidth * 0.5f
+                    minRangeY = screenHeight * 0.5f
+                    maxRangeY = screenHeight * 0.5f
+                }
+                // Clamp to user settings bounds
+                onScreenMouseX = Math.clamp(onScreenMouseX, minRangeX, maxRangeX)
+                onScreenMouseY = Math.clamp(onScreenMouseY, minRangeY, maxRangeY)
+                // Clamp to screen bounds
+                onScreenMouseX = Math.clamp(onScreenMouseX, 0f, screenWidth - 1)
+                onScreenMouseY = Math.clamp(onScreenMouseY, 0f, screenHeight - 1)
                 // click left mouse button and send centered movement
                 sdlOnNativeMouseDirect(MotionEvent.BUTTON_PRIMARY, MotionEvent.ACTION_DOWN, onScreenMouseX, onScreenMouseY, false)
                 // The rest of the movements would be handled by handleMove()

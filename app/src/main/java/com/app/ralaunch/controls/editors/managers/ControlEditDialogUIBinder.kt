@@ -24,6 +24,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.slider.Slider
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * 控件编辑对话框UI绑定管理器
@@ -44,144 +45,130 @@ object ControlEditDialogUIBinder {
         val tvControlShape = view.findViewById<TextView?>(R.id.tv_control_shape)
         val etName = view.findViewById<EditText?>(R.id.et_control_name)
 
-        if (itemControlType != null) {
-            itemControlType.setOnClickListener {
-                ControlTypeManager.showTypeSelectDialog(
-                    dialog.requireContext(),
-                    refs.currentData,
-                    object : OnTypeSelectedListener {
-                        override fun onTypeSelected(data: ControlData?) {
-                            ControlTypeManager.updateTypeDisplay(
-                                dialog.requireContext(),
-                                data,
-                                tvControlType
-                            )
-                            refs.notifyUpdate()
-                        }
-                    })
-            }
+        itemControlType?.setOnClickListener {
+            ControlTypeManager.showTypeSelectDialog(
+                dialog.requireContext(),
+                refs.currentData,
+                object : OnTypeSelectedListener {
+                    override fun onTypeSelected(data: ControlData?) {
+                        ControlTypeManager.updateTypeDisplay(
+                            dialog.requireContext(),
+                            data,
+                            tvControlType
+                        )
+                        refs.notifyUpdate()
+                    }
+                })
         }
 
-        if (itemControlShape != null) {
-            itemControlShape.setOnClickListener {
-                ControlShapeManager.showShapeSelectDialog(
-                    dialog.requireContext(),
-                    refs.currentData,
-                    object : OnShapeSelectedListener {
-                        override fun onShapeSelected(data: ControlData?) {
-                            ControlShapeManager.updateShapeDisplay(
-                                dialog.requireContext(),
-                                data,
-                                tvControlShape,
-                                itemControlShape
-                            )
-                            refs.notifyUpdate()
-                        }
-                    })
-            }
+        itemControlShape?.setOnClickListener {
+            ControlShapeManager.showShapeSelectDialog(
+                dialog.requireContext(),
+                refs.currentData,
+                object : OnShapeSelectedListener {
+                    override fun onShapeSelected(data: ControlData?) {
+                        ControlShapeManager.updateShapeDisplay(
+                            dialog.requireContext(),
+                            data,
+                            tvControlShape,
+                            itemControlShape
+                        )
+                        refs.notifyUpdate()
+                    }
+                })
         }
 
 
         // 摇杆模式选择（仅摇杆类型显示）
         val itemJoystickMode = view.findViewById<MaterialCardView?>(R.id.item_joystick_mode)
         val tvJoystickMode = view.findViewById<TextView?>(R.id.tv_joystick_mode)
-        if (itemJoystickMode != null) {
-            itemJoystickMode.setOnClickListener {
-                ControlJoystickModeManager.showModeSelectDialog(
-                    dialog.requireContext(),
-                    refs.currentData,
-                    object : OnModeSelectedListener {
-                        override fun onModeSelected(data: ControlData?) {
-                            ControlJoystickModeManager.updateModeDisplay(
-                                dialog.requireContext(),
-                                data,
-                                tvJoystickMode
-                            )
-                            // 模式改变时，更新摇杆左右选择的可见性
-                            ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(
-                                view,
-                                data!!
-                            )
-                            refs.notifyUpdate()
-                        }
-                    })
-            }
-        }
-
-        if (etName != null) {
-            etName.addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) {
-                }
-
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                    // 切换控件时不修改数据，避免把旧文本写入新控件
-                    if (refs.currentData != null && !refs.isUpdating) {
-                        refs.currentData!!.name = s.toString()
+        itemJoystickMode?.setOnClickListener {
+            ControlJoystickModeManager.showModeSelectDialog(
+                dialog.requireContext(),
+                refs.currentData,
+                object : OnModeSelectedListener {
+                    override fun onModeSelected(data: ControlData?) {
+                        ControlJoystickModeManager.updateModeDisplay(
+                            dialog.requireContext(),
+                            data,
+                            tvJoystickMode
+                        )
+                        // 模式改变时，更新摇杆左右选择的可见性
+                        ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(
+                            view,
+                            data!!
+                        )
                         refs.notifyUpdate()
                     }
-                }
-
-                override fun afterTextChanged(s: Editable?) {}
-            })
+                })
         }
+
+        etName?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {
+            }
+
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                // 切换控件时不修改数据，避免把旧文本写入新控件
+                if (refs.currentData != null && !refs.isUpdating) {
+                    refs.currentData!!.name = s.toString()
+                    refs.notifyUpdate()
+                }
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
 
         // 文本内容编辑（仅文本控件显示）
         val etTextContent = view.findViewById<EditText?>(R.id.et_text_content)
-        if (etTextContent != null) {
-            etTextContent.addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) {
-                }
+        etTextContent?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {
+            }
 
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                    // 切换控件时不修改数据，避免把旧文本写入新控件
-                    val data = refs.currentData
-                    if (data is ControlData.Text && !refs.isUpdating) {
-                        data.displayText = s.toString()
-                        refs.notifyUpdate()
-                    }
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                // 切换控件时不修改数据，避免把旧文本写入新控件
+                val data = refs.currentData
+                if (data is ControlData.Text && !refs.isUpdating) {
+                    data.displayText = s.toString()
+                    refs.notifyUpdate()
                 }
+            }
 
-                override fun afterTextChanged(s: Editable?) {}
-            })
-        }
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
 
         // 摇杆左右选择开关（仅摇杆类型且为手柄模式或鼠标模式时显示）
         val switchJoystickStickSelect =
             view.findViewById<SwitchCompat?>(R.id.switch_joystick_stick_select)
         val tvJoystickStickSelect = view.findViewById<TextView?>(R.id.tv_joystick_stick_select)
-        if (switchJoystickStickSelect != null) {
-            switchJoystickStickSelect.setOnCheckedChangeListener { _, isChecked ->
-                val data = refs.currentData
-                if (data is ControlData.Joystick) {
-                    data.isRightStick = isChecked
-                    // 更新显示文本
-                    if (tvJoystickStickSelect != null) {
-                        val context = refs.context
-                        tvJoystickStickSelect.setText(
-                            if (isChecked) context.getString(R.string.editor_right_stick) else context.getString(
-                                R.string.editor_left_stick
-                            )
-                        )
-                    }
-                    // 更新攻击模式选项的可见性
-                    ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(
-                        view,
-                        refs.currentData!!
+        switchJoystickStickSelect?.setOnCheckedChangeListener { _, isChecked ->
+            val data = refs.currentData
+            if (data is ControlData.Joystick) {
+                data.isRightStick = isChecked
+                // 更新显示文本
+                if (tvJoystickStickSelect != null) {
+                    val context = refs.context
+                    tvJoystickStickSelect.text = if (isChecked) context.getString(R.string.editor_right_stick) else context.getString(
+                        R.string.editor_left_stick
                     )
-                    refs.notifyUpdate()
                 }
+                // 更新攻击模式选项的可见性
+                ControlEditDialogVisibilityManager.updateBasicInfoOptionsVisibility(
+                    view,
+                    refs.currentData!!
+                )
+                refs.notifyUpdate()
             }
         }
 
@@ -190,8 +177,8 @@ object ControlEditDialogUIBinder {
         val rgAttackMode = view.findViewById<RadioGroup?>(R.id.rg_attack_mode)
         if (rgAttackMode != null) {
             // 从全局设置读取攻击模式
-            val settingsManager = SettingsManager.getInstance(dialog.getContext())
-            val attackMode = settingsManager.getMouseRightStickAttackMode()
+            val settingsManager = SettingsManager.getInstance(dialog.context)
+            val attackMode = settingsManager.mouseRightStickAttackMode
 
 
             // 初始化选中状态
@@ -212,7 +199,7 @@ object ControlEditDialogUIBinder {
                 } else if (checkedId == R.id.rb_attack_mode_continuous) {
                     mode = SettingsManager.ATTACK_MODE_CONTINUOUS
                 }
-                settingsManager.setMouseRightStickAttackMode(mode)
+                settingsManager.mouseRightStickAttackMode = mode
                 refs.notifyUpdate()
             }
         }
@@ -220,20 +207,15 @@ object ControlEditDialogUIBinder {
 
         // 触摸穿透开关
         val switchPassThrough = view.findViewById<SwitchCompat?>(R.id.switch_pass_through)
-        if (switchPassThrough != null) {
-            switchPassThrough.setOnCheckedChangeListener { _, isChecked ->
-                // TODO: Add passThrough field to TouchPad class if needed
-                // val data = refs.currentData
-                // if (data is ControlData.TouchPad) {
-                //     data.passThrough = isChecked
-                //     refs.notifyUpdate()
-                // }
-            }
+        switchPassThrough?.setOnCheckedChangeListener { _, isChecked ->
+             val data = refs.currentData
+            data?.isPassThrough = isChecked
+            refs.notifyUpdate()
         }
 
 
         // 鼠标移动范围设置（使用全局设置）
-        val rangeSettingsManager = SettingsManager.getInstance(dialog.getContext())
+        val rangeSettingsManager = SettingsManager.getInstance(dialog.context)
 
         val sliderMouseRangeLeft = view.findViewById<Slider?>(R.id.seekbar_mouse_range_left)
         val tvMouseRangeLeft = view.findViewById<TextView?>(R.id.tv_mouse_range_left)
@@ -247,19 +229,19 @@ object ControlEditDialogUIBinder {
 
         // 初始化鼠标范围值（从全局设置读取）
         if (sliderMouseRangeLeft != null) {
-            val leftProgress = (rangeSettingsManager.getMouseRightStickRangeLeft() * 100).toInt()
-            sliderMouseRangeLeft.setValue(leftProgress.toFloat())
-            if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText(leftProgress.toString() + "%")
+            val leftProgress = (rangeSettingsManager.mouseRightStickRangeLeft * 100).toInt()
+            sliderMouseRangeLeft.value = leftProgress.toFloat()
+            tvMouseRangeLeft?.text = "$leftProgress%"
 
             sliderMouseRangeLeft.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
                 val progress = value.toInt()
-                if (tvMouseRangeLeft != null) tvMouseRangeLeft.setText(progress.toString() + "%")
+                tvMouseRangeLeft?.text = "$progress%"
                 if (fromUser) {
                     val rangeValue = progress / 100f
-                    rangeSettingsManager.setMouseRightStickRangeLeft(rangeValue)
+                    rangeSettingsManager.mouseRightStickRangeLeft = rangeValue
                     Log.i(
                         "ControlEditDialog",
-                        "Saved mouse range LEFT: " + progress + "% -> " + rangeValue
+                        "Saved mouse range LEFT: $progress% -> $rangeValue"
                     )
                     refs.notifyUpdate()
                 }
@@ -267,30 +249,30 @@ object ControlEditDialogUIBinder {
         }
 
         if (sliderMouseRangeTop != null) {
-            val topProgress = (rangeSettingsManager.getMouseRightStickRangeTop() * 100).toInt()
-            sliderMouseRangeTop.setValue(topProgress.toFloat())
-            if (tvMouseRangeTop != null) tvMouseRangeTop.setText(topProgress.toString() + "%")
+            val topProgress = (rangeSettingsManager.mouseRightStickRangeTop * 100).toInt()
+            sliderMouseRangeTop.value = topProgress.toFloat()
+            tvMouseRangeTop?.text = "$topProgress%"
 
             sliderMouseRangeTop.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
                 val progress = value.toInt()
-                if (tvMouseRangeTop != null) tvMouseRangeTop.setText(progress.toString() + "%")
+                tvMouseRangeTop?.text = "$progress%"
                 if (fromUser) {
-                    rangeSettingsManager.setMouseRightStickRangeTop(progress / 100f)
+                    rangeSettingsManager.mouseRightStickRangeTop = progress / 100f
                     refs.notifyUpdate()
                 }
             }
         }
 
         if (sliderMouseRangeRight != null) {
-            val rightProgress = (rangeSettingsManager.getMouseRightStickRangeRight() * 100).toInt()
-            sliderMouseRangeRight.setValue(rightProgress.toFloat())
-            if (tvMouseRangeRight != null) tvMouseRangeRight.setText(rightProgress.toString() + "%")
+            val rightProgress = (rangeSettingsManager.mouseRightStickRangeRight * 100).toInt()
+            sliderMouseRangeRight.value = rightProgress.toFloat()
+            tvMouseRangeRight?.text = "$rightProgress%"
 
             sliderMouseRangeRight.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
                 val progress = value.toInt()
-                if (tvMouseRangeRight != null) tvMouseRangeRight.setText(progress.toString() + "%")
+                tvMouseRangeRight?.text = "$progress%"
                 if (fromUser) {
-                    rangeSettingsManager.setMouseRightStickRangeRight(progress / 100f)
+                    rangeSettingsManager.mouseRightStickRangeRight = progress / 100f
                     refs.notifyUpdate()
                 }
             }
@@ -298,15 +280,15 @@ object ControlEditDialogUIBinder {
 
         if (sliderMouseRangeBottom != null) {
             val bottomProgress =
-                (rangeSettingsManager.getMouseRightStickRangeBottom() * 100).toInt()
-            sliderMouseRangeBottom.setValue(bottomProgress.toFloat())
-            if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText(bottomProgress.toString() + "%")
+                (rangeSettingsManager.mouseRightStickRangeBottom * 100).toInt()
+            sliderMouseRangeBottom.value = bottomProgress.toFloat()
+            tvMouseRangeBottom?.text = "$bottomProgress%"
 
             sliderMouseRangeBottom.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
                 val progress = value.toInt()
-                if (tvMouseRangeBottom != null) tvMouseRangeBottom.setText(progress.toString() + "%")
+                tvMouseRangeBottom?.text = "$progress%"
                 if (fromUser) {
-                    rangeSettingsManager.setMouseRightStickRangeBottom(progress / 100f)
+                    rangeSettingsManager.mouseRightStickRangeBottom = progress / 100f
                     refs.notifyUpdate()
                 }
             }
@@ -317,23 +299,23 @@ object ControlEditDialogUIBinder {
         val sliderMouseSpeed = view.findViewById<Slider?>(R.id.seekbar_mouse_speed)
         val tvMouseSpeed = view.findViewById<TextView?>(R.id.tv_mouse_speed)
         if (sliderMouseSpeed != null) {
-            val speedProgress = rangeSettingsManager.getMouseRightStickSpeed()
+            val speedProgress = rangeSettingsManager.mouseRightStickSpeed
             // 对齐到步进值（stepSize=10, valueFrom=60）
             val stepSize = 10.0f
             val valueFrom = 60.0f
             var alignedValue =
-                valueFrom + Math.round((speedProgress - valueFrom) / stepSize) * stepSize
+                valueFrom + ((speedProgress - valueFrom) / stepSize).roundToInt() * stepSize
             // 确保在范围内
             alignedValue = max(valueFrom, min(200.0f, alignedValue))
-            sliderMouseSpeed.setValue(alignedValue)
+            sliderMouseSpeed.value = alignedValue
             val displayValue = alignedValue.toInt()
-            if (tvMouseSpeed != null) tvMouseSpeed.setText(displayValue.toString())
+            tvMouseSpeed?.text = displayValue.toString()
 
             sliderMouseSpeed.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
                 val progress = value.toInt()
-                if (tvMouseSpeed != null) tvMouseSpeed.setText(progress.toString())
+                tvMouseSpeed?.text = progress.toString()
                 if (fromUser) {
-                    rangeSettingsManager.setMouseRightStickSpeed(progress)
+                    rangeSettingsManager.mouseRightStickSpeed = progress
                     refs.notifyUpdate()
                 }
             }
@@ -370,22 +352,16 @@ object ControlEditDialogUIBinder {
         // 根据控件类型显示/隐藏相应的卡片
         val isJoystick = refs.currentData is ControlData.Joystick
 
-        if (cardJoystickSize != null) {
-            cardJoystickSize.setVisibility(if (isJoystick) View.VISIBLE else View.GONE)
-        }
-        if (cardWidth != null) {
-            cardWidth.setVisibility(if (isJoystick) View.GONE else View.VISIBLE)
-        }
-        if (cardHeight != null) {
-            cardHeight.setVisibility(if (isJoystick) View.GONE else View.VISIBLE)
-        }
+        cardJoystickSize?.visibility = if (isJoystick) View.VISIBLE else View.GONE
+        cardWidth?.visibility = if (isJoystick) View.GONE else View.VISIBLE
+        cardHeight?.visibility = if (isJoystick) View.GONE else View.VISIBLE
 
 
         // 摇杆大小设置（仅摇杆显示，同时设置宽度和高度）
         if (sliderJoystickSize != null && isJoystick) {
             sliderJoystickSize.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
                 val progress = value.toInt()
-                if (tvJoystickSizeValue != null) tvJoystickSizeValue.setText(progress.toString() + "%")
+                tvJoystickSizeValue?.text = "$progress%"
                 if (refs.currentData != null && fromUser) {
                     val size = progress / 100f
                     refs.currentData!!.width = size
@@ -395,83 +371,69 @@ object ControlEditDialogUIBinder {
             }
         }
 
-        if (sliderPosX != null) {
-            sliderPosX.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
-                val progress = value.toInt()
-                if (tvPosXValue != null) tvPosXValue.setText(progress.toString() + "%")
-                if (refs.currentData != null && fromUser) {
-                    refs.currentData!!.x = progress / 100f
-                    refs.notifyUpdate()
-                }
+        sliderPosX?.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
+            val progress = value.toInt()
+            tvPosXValue?.text = "$progress%"
+            if (refs.currentData != null && fromUser) {
+                refs.currentData!!.x = progress / 100f
+                refs.notifyUpdate()
             }
         }
 
-        if (sliderPosY != null) {
-            sliderPosY.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
-                val progress = value.toInt()
-                if (tvPosYValue != null) tvPosYValue.setText(progress.toString() + "%")
-                if (refs.currentData != null && fromUser) {
-                    refs.currentData!!.y = progress / 100f
-                    refs.notifyUpdate()
-                }
+        sliderPosY?.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
+            val progress = value.toInt()
+            tvPosYValue?.text = "$progress%"
+            if (refs.currentData != null && fromUser) {
+                refs.currentData!!.y = progress / 100f
+                refs.notifyUpdate()
             }
         }
 
-        if (sliderWidth != null) {
-            sliderWidth.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
-                val progress = value.toInt()
-                if (tvWidthValue != null) tvWidthValue.setText(progress.toString() + "%")
-                if (refs.currentData != null && fromUser) {
-                    val width = progress / 100f
-                    refs.currentData!!.width = width
-                    if (refs.currentData!!.isSizeRatioLocked) {
-                        refs.currentData!!.height = width
-                        // Since width and height are both relative to screen height,
-                        // when autoSize is enabled, they should have the same percentage value
-                        if (sliderHeight != null) {
-                            sliderHeight.setValue(progress.toFloat())
-                        }
+        sliderWidth?.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
+            val progress = value.toInt()
+            tvWidthValue?.text = "$progress%"
+            if (refs.currentData != null && fromUser) {
+                val width = progress / 100f
+                refs.currentData!!.width = width
+                if (refs.currentData!!.isSizeRatioLocked) {
+                    refs.currentData!!.height = width
+                    // Since width and height are both relative to screen height,
+                    // when autoSize is enabled, they should have the same percentage value
+                    sliderHeight?.value = progress.toFloat()
+                }
+                refs.notifyUpdate()
+            }
+        }
+
+        sliderHeight?.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
+            val progress = value.toInt()
+            tvHeightValue?.text = "$progress%"
+            if (refs.currentData != null && fromUser) {
+                val height = progress / 100f
+                refs.currentData!!.height = height
+                if (refs.currentData!!.isSizeRatioLocked) {
+                    refs.currentData!!.width = height
+                    // Since width and height are both relative to screen height,
+                    // when autoSize is enabled, they should have the same percentage value
+                    sliderWidth?.value = progress.toFloat()
+                }
+                refs.notifyUpdate()
+            }
+        }
+
+        switchAutoSize?.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
+            if (refs.currentData != null) {
+                refs.currentData!!.isSizeRatioLocked = isChecked
+                if (isChecked) {
+                    refs.currentData!!.height = refs.currentData!!.width
+                    if (sliderHeight != null) {
+                        val heightPercent =
+                            (refs.currentData!!.height * 100).toInt()
+                        sliderHeight.value = heightPercent.toFloat()
+                        tvHeightValue?.text = "$heightPercent%"
                     }
-                    refs.notifyUpdate()
                 }
-            }
-        }
-
-        if (sliderHeight != null) {
-            sliderHeight.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
-                val progress = value.toInt()
-                if (tvHeightValue != null) tvHeightValue.setText(progress.toString() + "%")
-                if (refs.currentData != null && fromUser) {
-                    val height = progress / 100f
-                    refs.currentData!!.height = height
-                    if (refs.currentData!!.isSizeRatioLocked) {
-                        refs.currentData!!.width = height
-                        // Since width and height are both relative to screen height,
-                        // when autoSize is enabled, they should have the same percentage value
-                        if (sliderWidth != null) {
-                            sliderWidth.setValue(progress.toFloat())
-                        }
-                    }
-                    refs.notifyUpdate()
-                }
-            }
-        }
-
-        if (switchAutoSize != null) {
-            switchAutoSize.setOnCheckedChangeListener { buttonView: CompoundButton?, isChecked: Boolean ->
-                if (refs.currentData != null) {
-                    refs.currentData!!.isSizeRatioLocked = isChecked
-                    if (isChecked) {
-                        refs.currentData!!.height = refs.currentData!!.width
-                        if (sliderHeight != null) {
-                            val heightPercent =
-                                (refs.currentData!!.height * 100).toInt()
-                            sliderHeight.setValue(heightPercent.toFloat())
-                            if (tvHeightValue != null) tvHeightValue.setText(heightPercent.toString() + "%")
-                        }
-                    }
-                    refs.notifyUpdate()
-                }
+                refs.notifyUpdate()
             }
         }
     }
@@ -576,54 +538,48 @@ object ControlEditDialogUIBinder {
             )
         }
 
-        if (switchVisible != null) {
-            switchVisible.setOnCheckedChangeListener { _, isChecked ->
-                refs.currentData?.let { it.isVisible = isChecked }
-                refs.notifyUpdate()
-            }
+        switchVisible?.setOnCheckedChangeListener { _, isChecked ->
+            refs.currentData?.let { it.isVisible = isChecked }
+            refs.notifyUpdate()
         }
 
         val itemBgColor = view.findViewById<View?>(R.id.item_bg_color)
-        if (itemBgColor != null) {
-            itemBgColor.setOnClickListener {
-                ControlColorManager.showColorPickerDialog(
-                    dialog.requireContext(),
-                    refs.currentData, true,
-                    object : ControlColorManager.OnColorSelectedListener {
-                        override fun onColorSelected(data: ControlData?, color: Int, isBg: Boolean) {
-                            val dp8 = (8 * dialog.requireContext().resources
-                                .displayMetrics.density).toInt()
-                            val dp2 = (2 * dialog.requireContext().resources
-                                .displayMetrics.density).toInt()
-                            updateColorView(viewBgColor, data!!.bgColor, dp8.toFloat(), dp2.toFloat())
-                            refs.notifyUpdate()
-                        }
-                    })
-            }
+        itemBgColor?.setOnClickListener {
+            ControlColorManager.showColorPickerDialog(
+                dialog.requireContext(),
+                refs.currentData, true,
+                object : ControlColorManager.OnColorSelectedListener {
+                    override fun onColorSelected(data: ControlData?, color: Int, isBg: Boolean) {
+                        val dp8 = (8 * dialog.requireContext().resources
+                            .displayMetrics.density).toInt()
+                        val dp2 = (2 * dialog.requireContext().resources
+                            .displayMetrics.density).toInt()
+                        updateColorView(viewBgColor, data!!.bgColor, dp8.toFloat(), dp2.toFloat())
+                        refs.notifyUpdate()
+                    }
+                })
         }
 
         val itemStrokeColor = view.findViewById<View?>(R.id.item_stroke_color)
-        if (itemStrokeColor != null) {
-            itemStrokeColor.setOnClickListener {
-                ControlColorManager.showColorPickerDialog(
-                    dialog.requireContext(),
-                    refs.currentData, false,
-                    object : ControlColorManager.OnColorSelectedListener {
-                        override fun onColorSelected(data: ControlData?, color: Int, isBg: Boolean) {
-                            val dp8 = (8 * dialog.requireContext().resources
-                                .displayMetrics.density).toInt()
-                            val dp2 = (2 * dialog.requireContext().resources
-                                .displayMetrics.density).toInt()
-                            updateColorView(
-                                viewStrokeColor,
-                                data!!.strokeColor,
-                                dp8.toFloat(),
-                                dp2.toFloat()
-                            )
-                            refs.notifyUpdate()
-                        }
-                    })
-            }
+        itemStrokeColor?.setOnClickListener {
+            ControlColorManager.showColorPickerDialog(
+                dialog.requireContext(),
+                refs.currentData, false,
+                object : ControlColorManager.OnColorSelectedListener {
+                    override fun onColorSelected(data: ControlData?, color: Int, isBg: Boolean) {
+                        val dp8 = (8 * dialog.requireContext().resources
+                            .displayMetrics.density).toInt()
+                        val dp2 = (2 * dialog.requireContext().resources
+                            .displayMetrics.density).toInt()
+                        updateColorView(
+                            viewStrokeColor,
+                            data!!.strokeColor,
+                            dp8.toFloat(),
+                            dp2.toFloat()
+                        )
+                        refs.notifyUpdate()
+                    }
+                })
         }
 
 
@@ -636,19 +592,19 @@ object ControlEditDialogUIBinder {
 
         // 圆角半径设置（仅在矩形形状时显示）
         val cardCornerRadius = view.findViewById<View?>(R.id.card_corner_radius)
-        if (cardCornerRadius != null && cardCornerRadius.getVisibility() == View.VISIBLE) {
+        if (cardCornerRadius != null && cardCornerRadius.visibility == View.VISIBLE) {
             if (sliderCornerRadius != null && tvCornerRadiusValue != null) {
                 if (refs.currentData != null) {
                     val cornerRadius = refs.currentData!!.cornerRadius.toInt()
-                    sliderCornerRadius.setValue(cornerRadius.toFloat())
-                    tvCornerRadiusValue.setText(cornerRadius.toString() + "dp")
+                    sliderCornerRadius.value = cornerRadius.toFloat()
+                    tvCornerRadiusValue.text = cornerRadius.toString() + "dp"
                 }
 
                 sliderCornerRadius.addOnChangeListener { slider: Slider?, value: Float, fromUser: Boolean ->
                     val progress = value.toInt()
                     if (fromUser && refs.currentData != null) {
                         refs.currentData!!.cornerRadius = progress.toFloat()
-                        tvCornerRadiusValue.setText(progress.toString() + "dp")
+                        tvCornerRadiusValue.text = progress.toString() + "dp"
                         refs.notifyUpdate()
                     }
                 }
