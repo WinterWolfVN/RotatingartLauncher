@@ -25,7 +25,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.text.Editable;
 import android.text.InputType;
-import android.text.Selection;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.SparseArray;
@@ -1318,11 +1317,11 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
             }
         }
 
-//        if (event.getAction() == KeyEvent.ACTION_DOWN) {
-//            Log.v("SDL", "key down: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
-//        } else if (event.getAction() == KeyEvent.ACTION_UP) {
-//            Log.v("SDL", "key up: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
-//        }
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            Log.v("SDL", "key down: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
+        } else if (event.getAction() == KeyEvent.ACTION_UP) {
+            Log.v("SDL", "key up: " + keyCode + ", deviceId = " + deviceId + ", source = " + source);
+        }
 
         // Dispatch the different events depending on where they come from
         // Some SOURCE_JOYSTICK, SOURCE_DPAD or SOURCE_GAMEPAD are also SOURCE_KEYBOARD
@@ -1896,7 +1895,10 @@ class SDLMain implements Runnable {
  * pan&scan region
  */
 class DummyEdit extends View implements View.OnKeyListener {
+    private static final long KEY_DELAY = 40; // milliseconds
+
     InputConnection ic;
+    Handler keyDelayHandler = new Handler();
 
     public DummyEdit(Context context) {
         super(context);
@@ -1912,6 +1914,28 @@ class DummyEdit extends View implements View.OnKeyListener {
 
     @Override
     public boolean onKey(View v, int keyCode, KeyEvent event) {
+        var deviceId = event.getDeviceId();
+
+        if (
+            (deviceId == -1 || deviceId == 0) && // Virtual keyboard
+            (
+                keyCode == KeyEvent.KEYCODE_DEL ||
+                keyCode == KeyEvent.KEYCODE_ENTER ||
+                keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+                keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+                keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+            )
+        ) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                Log.v("SDL", "handled key down: " + keyCode);
+                SDLActivity.onNativeKeyDown(keyCode);
+                keyDelayHandler.postDelayed(() -> {
+                    SDLActivity.onNativeKeyUp(keyCode);
+                }, KEY_DELAY);
+            }
+            return true;
+        }
         return SDLActivity.handleKeyEvent(v, keyCode, event, ic);
     }
 

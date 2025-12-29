@@ -33,6 +33,7 @@ import com.app.ralaunch.controls.configs.ControlData
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.views.ControlView
 import com.app.ralaunch.controls.TouchPointerTracker
+import com.app.ralaunch.controls.bridges.SDLInputBridge
 import java.lang.ref.WeakReference
 import kotlin.math.max
 import kotlin.math.min
@@ -369,24 +370,17 @@ class VirtualButton(
 
             val activity = context as Activity
 
-            activity.runOnUiThread(Runnable {
+            activity.runOnUiThread {
                 try {
-                    // 第一步：启用SDL文本输入模式（通过GameActivity）
+                    if (mInputBridge is SDLInputBridge) {
+                        // 启用SDL文本输入模式
+                        mInputBridge.startTextInput()
+                    }
                     GameActivity.enableSDLTextInputForIME()
-
-
-                    // 等待100ms让SDL准备好（使用静态Handler避免内存泄漏）
-                    val handler = Handler(Looper.getMainLooper())
-                    handler.postDelayed(
-                        KeyboardShowRunnable(
-                            activity,
-                            WeakReference<Context?>(context)
-                        ), 100
-                    )
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to enable SDL text input", e)
                 }
-            })
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show keyboard", e)
         }
@@ -443,271 +437,5 @@ class VirtualButton(
 
     private fun dpToPx(dp: Float): Float {
         return dp * resources.displayMetrics.density
-    }
-
-    /**
-     * 静态内部类，避免隐式持有外部类引用，防止内存泄漏
-     */
-    private class KeyboardShowRunnable(
-        activity: Activity?,
-        private val contextRef: WeakReference<Context?>
-    ) : Runnable {
-        private val activityRef: WeakReference<Activity?>
-
-        init {
-            this.activityRef = WeakReference<Activity?>(activity)
-        }
-
-        @SuppressLint("ClickableViewAccessibility")
-        override fun run() {
-            val activity = activityRef.get()
-            val context = contextRef.get()
-            if (activity == null || activity.isFinishing || context == null) {
-                Log.w(TAG, "Activity已销毁，取消键盘显示")
-                return
-            }
-
-            try {
-                // 标志位防止重复清理（需要在创建EditText之前声明，因为会在监听器中使用）
-                val isCleanedUp = booleanArrayOf(false)
-
-
-                // 第二步：创建透明EditText激活IME
-                val dummyInput = EditText(activity)
-                dummyInput.alpha = 0f
-                dummyInput.width = 1
-                dummyInput.height = 1
-
-
-                // 设置输入法选项，防止全屏模式，让键盘以浮动模式显示
-                dummyInput.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN or
-                        EditorInfo.IME_FLAG_NO_EXTRACT_UI
-
-
-                // 关键修复：确保EditText在触摸模式下也能保持焦点
-                // 这样即使其他视图消费了触摸事件，键盘也不会关闭
-                dummyInput.setFocusable(true)
-                dummyInput.isFocusableInTouchMode = true
-                dummyInput.isClickable = true
-                dummyInput.isLongClickable = false
-
-
-                // 防止触摸事件导致焦点丢失
-                // 当触摸事件发生时，重新请求焦点以保持键盘显示
-                dummyInput.setOnTouchListener { v: View?, event: MotionEvent? ->
-                    // 如果失去焦点，立即重新获取焦点
-                    if (!v!!.hasFocus()) {
-                        v.post {
-                            if (v != null && v.parent != null) {
-                                v.requestFocus()
-                            }
-                        }
-                    }
-                    false // 不消费事件，让系统正常处理
-                }
-
-
-                // 监听焦点变化，如果意外失去焦点则重新获取
-                dummyInput.onFocusChangeListener = OnFocusChangeListener { v: View?, hasFocus: Boolean ->
-                    if (!hasFocus && !isCleanedUp[0]) {
-                        Log.d(TAG, "EditText失去焦点，准备重新获取焦点以保持键盘显示")
-                        // 延迟重新获取焦点，避免与其他事件冲突
-                        v!!.postDelayed(Runnable {
-                            if (v != null && v.parent != null && !isCleanedUp[0]) {
-                                Log.d(TAG, "重新获取EditText焦点")
-                                v.requestFocus()
-                                // 确保键盘仍然显示
-                                val imm =
-                                    context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
-                                imm?.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT)
-                            }
-                        }, 50)
-                    }
-                }
-
-
-                val rootView = activity.findViewById<View?>(R.id.content) as ViewGroup?
-                if (rootView == null) {
-                    Log.e(TAG, "Root view not found")
-                    return
-                }
-
-
-                // 创建LayoutParams，将EditText放置在屏幕中央
-                val layoutParams =
-                    FrameLayout.LayoutParams(1, 1)
-                layoutParams.gravity = Gravity.CENTER
-
-                rootView.addView(dummyInput, layoutParams)
-
-
-                // 创建Handler用于30秒超时
-                val timeoutHandler = Handler(Looper.getMainLooper())
-                val timeoutRunnable = arrayOfNulls<Runnable>(1) // 数组是为了能在lambda中修改
-
-
-                // 创建清理函数
-                val focusKeeper = arrayOfNulls<Runnable>(1) // 提前声明，供清理函数使用
-                val cleanup = Runnable {
-                    if (isCleanedUp[0]) {
-                        return@Runnable  // 已经清理过了，不要重复执行
-                    }
-                    isCleanedUp[0] = true
-                    try {
-                        // 移除30秒超时
-                        if (timeoutRunnable[0] != null) {
-                            timeoutHandler.removeCallbacks(timeoutRunnable[0]!!)
-                        }
-
-
-                        // 停止焦点保持检查
-                        if (focusKeeper[0] != null) {
-                            timeoutHandler.removeCallbacks(focusKeeper[0]!!)
-                        }
-
-
-                        // 先禁用SDL文本输入（最重要！）
-                        GameActivity.disableSDLTextInput()
-
-
-                        // 隐藏键盘
-                        val imm =
-                            context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
-                        imm?.hideSoftInputFromWindow(dummyInput.windowToken, 0)
-
-
-                        // 移除EditText
-                        rootView.removeView(dummyInput)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to cleanup input", e)
-                    }
-                }
-
-
-                // 监听键盘隐藏事件
-                val layoutListener: ViewTreeObserver.OnGlobalLayoutListener =
-                    object : ViewTreeObserver.OnGlobalLayoutListener {
-                        private var wasKeyboardVisible = false
-
-                        override fun onGlobalLayout() {
-                            val r = Rect()
-                            rootView.getWindowVisibleDisplayFrame(r)
-                            val screenHeight = rootView.rootView.height
-                            val keypadHeight = screenHeight - r.bottom
-
-                            val isKeyboardVisible = keypadHeight > screenHeight * 0.15
-
-                            if (wasKeyboardVisible && !isKeyboardVisible) {
-                                // 键盘从显示变为隐藏
-                                rootView.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                                cleanup.run()
-                            }
-
-                            wasKeyboardVisible = isKeyboardVisible
-                        }
-                    }
-
-                rootView.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
-
-
-                // 显示键盘
-                dummyInput.requestFocus()
-                val imm =
-                    context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
-                imm?.showSoftInput(dummyInput, InputMethodManager.SHOW_FORCED)
-
-
-                // 定期检查并保持焦点（针对不同设备的键盘行为差异）
-                // 有些设备的系统键盘在点击其他区域时会自动关闭，需要定期重新获取焦点
-                focusKeeper[0] = object : Runnable {
-                    override fun run() {
-                        if (isCleanedUp[0] || dummyInput.parent == null) {
-                            return  // 已经清理或已移除，停止检查
-                        }
-
-
-                        // 如果失去焦点，重新获取
-                        if (!dummyInput.hasFocus()) {
-                            Log.d(TAG, "定期检查发现EditText失去焦点，重新获取焦点")
-                            dummyInput.requestFocus()
-                            // 确保键盘仍然显示
-                            val imm =
-                                context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
-                            imm?.showSoftInput(dummyInput, InputMethodManager.SHOW_IMPLICIT)
-                        }
-
-
-                        // 每500ms检查一次（不要太频繁，避免影响性能）
-                        if (!isCleanedUp[0] && dummyInput.parent != null) {
-                            timeoutHandler.postDelayed(this, 500)
-                        }
-                    }
-                }
-                // 延迟启动，给键盘一些时间显示
-                timeoutHandler.postDelayed(focusKeeper[0]!!, 300)
-
-
-                // 实时发送每个字符和删除操作
-                dummyInput.addTextChangedListener(object : TextWatcher {
-                    private var lastText = ""
-
-                    override fun beforeTextChanged(
-                        s: CharSequence?,
-                        start: Int,
-                        count: Int,
-                        after: Int
-                    ) {
-                    }
-
-                    override fun onTextChanged(
-                        s: CharSequence,
-                        start: Int,
-                        before: Int,
-                        count: Int
-                    ) {
-                        val currentText = s.toString()
-
-                        if (currentText.length > lastText.length) {
-                            // 文本增加：发送新字符
-                            val newChars = currentText.substring(lastText.length)
-                            GameActivity.sendTextToGame(newChars)
-                        } else if (currentText.length < lastText.length) {
-                            // 文本减少：发送退格符
-                            val deleteCount = lastText.length - currentText.length
-                            for (i in 0..<deleteCount) {
-                                GameActivity.sendBackspace()
-                            }
-                        }
-
-                        lastText = currentText
-                    }
-
-                    override fun afterTextChanged(s: Editable?) {}
-                })
-
-
-                // 回车键关闭键盘
-                dummyInput.setOnEditorActionListener { v: TextView?, actionId: Int, event: KeyEvent? ->
-                    if (actionId == EditorInfo.IME_ACTION_DONE ||
-                        (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER)
-                    ) {
-                        rootView.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
-                        cleanup.run()
-                        return@setOnEditorActionListener true
-                    }
-                    false
-                }
-
-
-                // 30秒自动关闭
-                timeoutRunnable[0] = Runnable {
-                    rootView.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
-                    cleanup.run()
-                }
-                timeoutHandler.postDelayed(timeoutRunnable[0]!!, 30000)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to show IME", e)
-            }
-        }
     }
 }

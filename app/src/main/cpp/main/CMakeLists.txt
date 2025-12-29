@@ -20,6 +20,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         turnip_loader_nsbypass.cpp
         touch_bridge.c
         virtual_mouse_sdl.c
+        sdl_text_bridge.c
         And64InlineHook/And64InlineHook.cpp
 )
 

@@ -497,6 +497,22 @@ class SDLInputBridge : ControlInputBridge {
         }
     }
 
+    fun startTextInput() {
+        try {
+            nativeStartTextInput()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting text input", e)
+        }
+    }
+
+    fun stopTextInput() {
+        try {
+            nativeStopTextInput()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error stopping text input", e)
+        }
+    }
+
     /**
      * Map ControlData Xbox button codes to VirtualXboxController button indices
      */
@@ -579,6 +595,12 @@ class SDLInputBridge : ControlInputBridge {
         private external fun nativeIsVirtualMouseActiveSDL(): Boolean
         @JvmStatic
         private external fun nativeSendMouseWheelSDL(scrollY: Float)
+
+        @JvmStatic
+        private external fun nativeStartTextInput()
+
+        @JvmStatic
+        private external fun nativeStopTextInput()
 
 
         // 静态初始化
