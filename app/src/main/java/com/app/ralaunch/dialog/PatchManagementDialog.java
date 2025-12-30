@@ -2,7 +2,10 @@ package com.app.ralaunch.dialog;
 
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -19,13 +23,17 @@ import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralaunch.model.GameItem;
 import com.app.ralaunch.data.GameDataManager;
 import com.app.ralib.patch.Patch;
+import com.app.ralib.utils.StreamUtils;
+import com.app.ralib.utils.TemporaryFileAcquirer;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -45,9 +53,14 @@ public class PatchManagementDialog {
     private GameAdapter gameAdapter;
     private PatchAdapter patchAdapter;
 
-    public PatchManagementDialog(Context context) {
+    private ActivityResultLauncher<String[]> patchFilePickerLauncher;
+
+    public Dialog dialog;
+
+    public PatchManagementDialog(Context context, ActivityResultLauncher<String[]> patchFilePickerLauncher) {
         this.context = context;
         this.gameDataManager = new GameDataManager(context);
+        this.patchFilePickerLauncher = patchFilePickerLauncher;
     }
 
     public void show() {
@@ -58,6 +71,7 @@ public class PatchManagementDialog {
         tvNoGames = dialogView.findViewById(R.id.tvNoGames);
         tvNoGameSelected = dialogView.findViewById(R.id.tvNoGameSelected);
         MaterialButton btnClose = dialogView.findViewById(R.id.btnClose);
+        MaterialButton btnImportPatch = dialogView.findViewById(R.id.btnImportPatch);
 
         List<GameItem> games = gameDataManager.loadGameList();
 
@@ -77,10 +91,20 @@ public class PatchManagementDialog {
         patchAdapter = new PatchAdapter();
         recyclerViewPatches.setAdapter(patchAdapter);
 
-        Dialog dialog = new MaterialAlertDialogBuilder(context)
+        dialog = new MaterialAlertDialogBuilder(context)
                 .setView(dialogView)
                 .create();
 
+        btnImportPatch.setOnClickListener(v -> {
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.patch_dialog_import_title)
+                    .setMessage(R.string.patch_dialog_import_message)
+                    .setPositiveButton(R.string.ok, (di, which) -> {
+                        launchPatchFilePicker();
+                    })
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+        });
         btnClose.setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
@@ -92,6 +116,35 @@ public class PatchManagementDialog {
             params.width = (int) (displayMetrics.widthPixels * 0.95);
             params.height = (int) (displayMetrics.heightPixels * 0.95);
             dialog.getWindow().setAttributes(params);
+        }
+    }
+
+    private void launchPatchFilePicker() {
+        patchFilePickerLauncher.launch(new String[] { "application/zip" });
+    }
+
+    public void importPatchFileFromUri(Uri uri) {
+        try (var tfa = new TemporaryFileAcquirer()) {
+            Path tempPatchPath = tfa.acquireTempFilePath("imported_patch.zip");
+            try (var is = context.getContentResolver().openInputStream(uri);
+                 var os = java.nio.file.Files.newOutputStream(tempPatchPath)) {
+                StreamUtils.transferTo(is, os);
+            }
+            var result = RaLaunchApplication.getPatchManager().installPatch(tempPatchPath);
+            if (result) {
+                Log.e("PatchManagementDialog", "patch imported successfully");
+                Toast.makeText(context, R.string.patch_dialog_import_successful, Toast.LENGTH_SHORT).show();
+                // 如果有游戏被选中,刷新补丁列表
+                if (selectedGame != null) {
+                    onGameSelected(selectedGame);
+                }
+            } else {
+                Log.e("PatchManagementDialog", "Failed to import patch");
+                Toast.makeText(context, R.string.patch_dialog_import_failed, Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.e("PatchManagementDialog", "Failed to import patch", e);
+            Toast.makeText(context, R.string.patch_dialog_import_failed, Toast.LENGTH_SHORT).show();
         }
     }
 

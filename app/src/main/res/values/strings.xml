@@ -1086,4 +1086,9 @@
     <string name="mod_manager_home">主目录</string>
     <string name="settings_about">关于</string>
     <string name="editor_toggle_touch">开启触摸事件</string>
+    <string name="patch_dialog_import">导入补丁</string>
+    <string name="patch_dialog_import_successful">补丁包导入成功</string>
+    <string name="patch_dialog_import_failed">补丁包导入失败，检查日志获取更多信息</string>
+    <string name="patch_dialog_import_title">⚠️警告</string>
+    <string name="patch_dialog_import_message">补丁包有装载可执行文件的能力。\n安装含有恶意代码的补丁包可能导致：\n- 个人数据和隐私信息泄露\n- 设备损坏\n安装前请确认：\n- 您信任此补丁包的来源\n- 您了解补丁包的具体功能\n- 您已备份重要数据\n继续安装表示您已了解并接受相关风险。</string>
 </resources>

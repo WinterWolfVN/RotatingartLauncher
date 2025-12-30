@@ -3,6 +3,9 @@ package com.app.ralaunch.settings;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.fragment.app.Fragment;
 import com.app.ralaunch.R;
 import com.app.ralaunch.data.SettingsManager;
@@ -25,12 +28,24 @@ public class GameSettingsModule implements SettingsModule {
     private Fragment fragment;
     private View rootView;
     private SettingsManager settingsManager;
+
+    private PatchManagementDialog patchManagementDialog;
+    private ActivityResultLauncher<String[]> patchFilePickerLauncher;
     
     @Override
     public void setup(Fragment fragment, View rootView) {
         this.fragment = fragment;
         this.rootView = rootView;
         this.settingsManager = SettingsManager.getInstance(fragment.requireContext());
+
+        this.patchFilePickerLauncher = fragment.registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri != null && patchManagementDialog != null) {
+                        patchManagementDialog.importPatchFileFromUri(uri);
+                    }
+                }
+        );
         
         setupRendererSettings();
         setupVulkanDriverSettings();
@@ -122,7 +137,15 @@ public class GameSettingsModule implements SettingsModule {
         MaterialCardView patchManagementCard = rootView.findViewById(R.id.patchManagementCard);
         if (patchManagementCard != null) {
             patchManagementCard.setOnClickListener(v -> {
-                new PatchManagementDialog(fragment.requireContext()).show();
+                if (patchManagementDialog != null) {
+                    if (patchManagementDialog.dialog.isShowing())
+                        patchManagementDialog.dialog.dismiss();
+                    patchManagementDialog = null;
+                }
+
+                patchManagementDialog = new PatchManagementDialog(fragment.requireContext(), patchFilePickerLauncher);
+                patchManagementDialog.show();
+                patchManagementDialog.dialog.setOnDismissListener(di -> patchManagementDialog = null);
             });
         }
     }
