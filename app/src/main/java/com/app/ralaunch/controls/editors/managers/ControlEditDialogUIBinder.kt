@@ -457,6 +457,23 @@ object ControlEditDialogUIBinder {
         val tvStickOpacityValue = view.findViewById<TextView?>(R.id.tv_stick_opacity_value)
         val sliderStickKnobSize = view.findViewById<Slider?>(R.id.seekbar_stick_knob_size)
         val tvStickKnobSizeValue = view.findViewById<TextView?>(R.id.tv_stick_knob_size_value)
+        
+        // 纹理设置
+        val itemTexture = view.findViewById<View?>(R.id.item_texture)
+        val tvTextureStatus = view.findViewById<TextView?>(R.id.tv_texture_status)
+        
+        // 更新纹理状态显示
+        ControlTextureManager.updateTextureDisplay(
+            refs.context,
+            refs.currentData,
+            tvTextureStatus,
+            itemTexture
+        )
+        
+        // 纹理设置点击事件
+        itemTexture?.setOnClickListener {
+            dialog.openTextureSelector()
+        }
 
 
         // 透明度设置（使用统一管理器）

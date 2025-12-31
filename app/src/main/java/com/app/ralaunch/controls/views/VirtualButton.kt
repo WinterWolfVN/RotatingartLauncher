@@ -35,6 +35,9 @@ import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.views.ControlView
 import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.controls.bridges.SDLInputBridge
+import com.app.ralaunch.controls.textures.TextureLoader
+import com.app.ralaunch.controls.textures.TextureRenderer
+import java.io.File
 import java.lang.ref.WeakReference
 import kotlin.math.max
 import kotlin.math.min
@@ -72,11 +75,25 @@ class VirtualButton(
     private val castedData: ControlData.Button
         get() = controlData as ControlData.Button
 
+    // 纹理相关
+    private var textureLoader: TextureLoader? = null
+    private var assetsDir: File? = null
+    
+    /** 设置控件包资源目录（用于加载纹理） */
+    override fun setPackAssetsDir(dir: File?) {
+        assetsDir = dir
+        if (dir != null && textureLoader == null) {
+            textureLoader = TextureLoader.getInstance(context)
+        }
+        invalidate()
+    }
+
     // 绘制相关
     private var mBackgroundPaint: Paint? = null    // initialized in initPaints
     private var mStrokePaint: Paint? = null        // initialized in initPaints
     private var mTextPaint: TextPaint? = null      // initialized in initPaints
     private val mRectF: RectF = RectF()
+    private val mClipPath: Path = Path()
 
     // 按钮状态
     private var mIsPressed = false
@@ -160,56 +177,98 @@ class VirtualButton(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-
         // 根据形状类型绘制背景
         val shape = castedData.shape
         val centerXDraw = mRectF.centerX()
         val centerYDraw = mRectF.centerY()
         val radius = min(mRectF.width(), mRectF.height()) / 2f
+        
+        // 检查是否有纹理
+        val hasTexture = castedData.texture.hasAnyTexture && assetsDir != null && textureLoader != null
+        
+        // 更新裁剪路径
+        mClipPath.reset()
+        when (shape) {
+            ControlData.Button.Shape.CIRCLE -> {
+                mClipPath.addCircle(centerXDraw, centerYDraw, radius, Path.Direction.CW)
+            }
+            ControlData.Button.Shape.RECTANGLE -> {
+                val cornerRadius = dpToPx(castedData.cornerRadius)
+                mClipPath.addRoundRect(mRectF, cornerRadius, cornerRadius, Path.Direction.CW)
+            }
+        }
 
         when (shape) {
             ControlData.Button.Shape.RECTANGLE -> {
-                // 绘制矩形（圆角矩形）
                 val cornerRadius = dpToPx(castedData.cornerRadius)
-                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint!!)
+                
+                if (hasTexture) {
+                    // 使用纹理渲染
+                    TextureRenderer.renderButton(
+                        canvas = canvas,
+                        textureLoader = textureLoader!!,
+                        assetsDir = assetsDir,
+                        textureConfig = castedData.texture,
+                        bounds = mRectF,
+                        isPressed = mIsPressed,
+                        isToggled = mIsToggled,
+                        clipPath = mClipPath
+                    )
+                } else {
+                    // 绘制矩形（圆角矩形）
+                    canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint!!)
+                }
                 canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint!!)
             }
             ControlData.Button.Shape.CIRCLE -> {
-                when (castedData.mode) {
-                    ControlData.Button.Mode.KEYBOARD -> {
-                        // 普通圆形（键盘模式）
-                        // 根据状态调整颜色
-                        val alpha = mBackgroundPaint?.alpha
-                        if (mIsPressed || mIsToggled) {
-                            mBackgroundPaint?.alpha = min(255, (alpha!! * 1.5f).toInt())
-                        } else {
-                            mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
+                if (hasTexture) {
+                    // 使用纹理渲染
+                    TextureRenderer.renderButton(
+                        canvas = canvas,
+                        textureLoader = textureLoader!!,
+                        assetsDir = assetsDir,
+                        textureConfig = castedData.texture,
+                        bounds = mRectF,
+                        isPressed = mIsPressed,
+                        isToggled = mIsToggled,
+                        clipPath = mClipPath
+                    )
+                    canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint!!)
+                } else {
+                    when (castedData.mode) {
+                        ControlData.Button.Mode.KEYBOARD -> {
+                            // 普通圆形（键盘模式）
+                            // 根据状态调整颜色
+                            val alpha = mBackgroundPaint?.alpha
+                            if (mIsPressed || mIsToggled) {
+                                mBackgroundPaint?.alpha = min(255, (alpha!! * 1.5f).toInt())
+                            } else {
+                                mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
+                            }
+                            canvas.drawCircle(centerXDraw, centerYDraw, radius, mBackgroundPaint!!)
+                            canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint!!)
                         }
-                        canvas.drawCircle(centerXDraw, centerYDraw, radius, mBackgroundPaint!!)
-                        canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint!!)
-                    }
-                    ControlData.Button.Mode.GAMEPAD -> {
-                        val margin = 0.15f // DEFAULT_MARGIN
-                        val outerRadius = radius * (1.0f - margin) // 85% 半径（外圈）
-                        val innerRadius = radius * (1.0f - 2 * margin) // 70% 半径（内圈）
+                        ControlData.Button.Mode.GAMEPAD -> {
+                            val margin = 0.15f // DEFAULT_MARGIN
+                            val outerRadius = radius * (1.0f - margin) // 85% 半径（外圈）
+                            val innerRadius = radius * (1.0f - 2 * margin) // 70% 半径（内圈）
 
+                            // 绘制外圈（背景）
+                            val backgroundPaint = Paint(mBackgroundPaint)
+                            backgroundPaint.color = 0x327D7D7D // backgroundColor
+                            backgroundPaint.alpha = (castedData.opacity * 255).toInt()
+                            canvas.drawCircle(centerXDraw, centerYDraw, outerRadius, backgroundPaint)
 
-                        // 绘制外圈（背景）
-                        val backgroundPaint = Paint(mBackgroundPaint)
-                        backgroundPaint.color = 0x327D7D7D // backgroundColor
-                        backgroundPaint.alpha = (castedData.opacity * 255).toInt()
-                        canvas.drawCircle(centerXDraw, centerYDraw, outerRadius, backgroundPaint)
-
-
-                        // 绘制内圈（前景，按下时使用 pressedColor）
-                        val foregroundPaint = Paint(mBackgroundPaint)
-                        if (mIsPressed || mIsToggled) {
-                            foregroundPaint.color = -0x828283 // pressedColor
-                        } else {
-                            foregroundPaint.color = 0x7D7D7D7D // normalColor
+                            // 绘制内圈（前景，按下时使用 pressedColor）
+                            val foregroundPaint = Paint(mBackgroundPaint)
+                            if (mIsPressed || mIsToggled) {
+                                foregroundPaint.color = -0x828283 // pressedColor
+                            } else {
+                                foregroundPaint.color = 0x7D7D7D7D // normalColor
+                            }
+                            foregroundPaint.alpha = (castedData.opacity * 255).toInt()
+                            canvas.drawCircle(centerXDraw, centerYDraw, innerRadius, foregroundPaint)
                         }
-                        foregroundPaint.alpha = (castedData.opacity * 255).toInt()
-                        canvas.drawCircle(centerXDraw, centerYDraw, innerRadius, foregroundPaint)
                     }
                 }
             }

@@ -786,6 +786,48 @@ class ControlEditDialogMD : DialogFragment() {
         }
         dismiss()
     }
+    
+    /**
+     * 打开纹理选择器
+     */
+    fun openTextureSelector() {
+        if (this.currentData == null) return
+        
+        val packManager = com.app.ralaunch.RaLaunchApplication.getControlPackManager()
+        val packId = packManager.getSelectedPackId()
+        if (packId == null) {
+            android.widget.Toast.makeText(
+                requireContext(),
+                R.string.pack_apply_failed,
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        
+        val dialog = TextureSelectorDialog.newInstance(packId)
+        dialog.setControlData(this.currentData)
+        dialog.setOnTextureConfiguredListener(object : TextureSelectorDialog.OnTextureConfiguredListener {
+            override fun onTextureConfigured(data: ControlData?) {
+                // 更新纹理状态显示
+                refreshTextureStatus()
+                notifyUpdate()
+            }
+        })
+        dialog.show(parentFragmentManager, "texture_selector")
+    }
+    
+    /**
+     * 刷新纹理状态显示
+     */
+    private fun refreshTextureStatus() {
+        val tvTextureStatus = mContentAppearance?.findViewById<android.widget.TextView>(R.id.tv_texture_status)
+        com.app.ralaunch.controls.editors.managers.ControlTextureManager.updateTextureDisplay(
+            localizedContext,
+            currentData,
+            tvTextureStatus,
+            mContentAppearance?.findViewById(R.id.item_texture)
+        )
+    }
 
     /**
      * 通知数据更新

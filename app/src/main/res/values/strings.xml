@@ -1141,4 +1141,44 @@
     <string name="pack_export_version">版本号</string>
     <string name="pack_export_success">控件包已导出</string>
     <string name="pack_export_failed">导出失败: %s</string>
+    
+    <!-- 控件纹理 -->
+    <string name="control_texture_selector_title">纹理选择</string>
+    <string name="control_texture_select_hint">选择纹理文件应用到控件</string>
+    <string name="control_texture_clear">清除纹理</string>
+    <string name="control_texture_empty">暂无纹理文件</string>
+    <string name="control_texture_empty_hint">点击下方按钮导入纹理文件</string>
+    <string name="control_texture_applied">纹理已应用</string>
+    <string name="control_texture_cleared">纹理已清除</string>
+    <string name="control_texture_import">导入纹理</string>
+    <string name="control_texture_imported">已导入: %s</string>
+    <string name="control_texture_import_failed">导入失败</string>
+    <string name="control_texture_unsupported_format">不支持的格式，支持 PNG、JPG、WebP、SVG</string>
+    <string name="control_texture_normal">普通状态</string>
+    <string name="control_texture_pressed">按下状态</string>
+    <string name="control_texture_toggled">切换状态</string>
+    <string name="control_texture_background">背景</string>
+    <string name="control_texture_knob">摇杆头</string>
+    <string name="control_texture_not_supported">不支持纹理</string>
+    <string name="control_texture_enabled">已配置纹理</string>
+    <string name="control_texture_disabled">未配置纹理</string>
+    <string name="editor_texture">纹理设置</string>
+    <string name="editor_texture_desc">为控件设置自定义纹理图像</string>
+
+    <!-- 赞助商相关 -->
+    <string name="sponsors_title">赞助商墙</string>
+    <string name="sponsors_wall_title">赞助商墙</string>
+    <string name="sponsors_wall_desc">查看支持本项目的赞助者名单</string>
+    <string name="sponsors_loading">正在加载赞助者列表...</string>
+    <string name="sponsors_error">加载失败</string>
+    <string name="sponsors_empty">暂无赞助者</string>
+    <string name="sponsors_count_format">%d 人</string>
+    <string name="sponsors_count_total">%d 位赞助者</string>
+    <string name="sponsors_join_date_format">加入于 %s</string>
+    <string name="become_sponsor">成为赞助者</string>
+    <string name="error_open_browser">无法打开浏览器</string>
+    <string name="back">返回</string>
+    <string name="retry">重试</string>
+    <string name="view">查看</string>
+    <string name="sponsors_tip_gesture">双击重置视图 · 捏合缩放 · 拖动探索</string>
 </resources>

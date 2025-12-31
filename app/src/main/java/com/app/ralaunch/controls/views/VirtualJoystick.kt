@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -14,7 +16,10 @@ import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.TouchPointerTracker
+import com.app.ralaunch.controls.textures.TextureLoader
+import com.app.ralaunch.controls.textures.TextureRenderer
 import com.app.ralaunch.data.SettingsManager
+import java.io.File
 import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
@@ -44,6 +49,23 @@ class VirtualJoystick(
 
     private val castedData: ControlData.Joystick
         get() = controlData as ControlData.Joystick
+    
+    // 纹理相关
+    private var textureLoader: TextureLoader? = null
+    private var assetsDir: File? = null
+    private val bgBoundsRectF = RectF()
+    private val knobBoundsRectF = RectF()
+    private val bgClipPath = Path()
+    private val knobClipPath = Path()
+    
+    /** 设置控件包资源目录（用于加载纹理） */
+    override fun setPackAssetsDir(dir: File?) {
+        assetsDir = dir
+        if (dir != null && textureLoader == null) {
+            textureLoader = TextureLoader.getInstance(context)
+        }
+        invalidate()
+    }
 
     companion object {
         private const val TAG = "VirtualJoystick"
@@ -318,34 +340,79 @@ class VirtualJoystick(
         val centerX = getWidth() / 2f
         val centerY = getHeight() / 2f
 
-
         // 应用旋转
         if (castedData.rotation != 0f) {
             canvas.save()
             canvas.rotate(castedData.rotation, centerX, centerY)
         }
 
-
         // RadialGamePad 风格：背景圆使用 75% 半径（STICK_BACKGROUND_SIZE = 0.75f）
         val backgroundRadius = mRadius * 0.75f
-        // 背景透明度只使用 opacity，不受 stickOpacity 影响
-        // 直接使用用户设置的 opacity，让变化更明显
-        mBackgroundPaint!!.setAlpha((castedData.opacity * 255).toInt())
-        canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint!!)
+        
+        // 检查是否有纹理
+        val hasTexture = castedData.texture.hasAnyTexture && assetsDir != null && textureLoader != null
+        
+        if (hasTexture) {
+            // 更新背景边界和裁剪路径
+            bgBoundsRectF.set(
+                mCenterX - backgroundRadius,
+                mCenterY - backgroundRadius,
+                mCenterX + backgroundRadius,
+                mCenterY + backgroundRadius
+            )
+            bgClipPath.reset()
+            bgClipPath.addCircle(mCenterX, mCenterY, backgroundRadius, Path.Direction.CW)
+            
+            // 更新摇杆头边界和裁剪路径
+            knobBoundsRectF.set(
+                mStickX - mStickRadius,
+                mStickY - mStickRadius,
+                mStickX + mStickRadius,
+                mStickY + mStickRadius
+            )
+            knobClipPath.reset()
+            knobClipPath.addCircle(mStickX, mStickY, mStickRadius, Path.Direction.CW)
+            
+            // 使用纹理渲染
+            TextureRenderer.renderJoystick(
+                canvas = canvas,
+                textureLoader = textureLoader!!,
+                assetsDir = assetsDir,
+                textureConfig = castedData.texture,
+                backgroundBounds = bgBoundsRectF,
+                knobBounds = knobBoundsRectF,
+                isPressed = mIsTouching,
+                backgroundClipPath = bgClipPath,
+                knobClipPath = knobClipPath
+            )
+            
+            // 如果纹理没有完全覆盖，仍然绘制默认形状作为fallback
+            if (!castedData.texture.background.enabled) {
+                mBackgroundPaint!!.setAlpha((castedData.opacity * 255).toInt())
+                canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint!!)
+            }
+            if (!castedData.texture.knob.enabled) {
+                val stickKnobAlpha = if (castedData.stickOpacity != 0f) castedData.stickOpacity else 1.0f
+                mStickPaint!!.setAlpha((stickKnobAlpha * 255).toInt())
+                canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint!!)
+            }
+        } else {
+            // 背景透明度只使用 opacity，不受 stickOpacity 影响
+            // 直接使用用户设置的 opacity，让变化更明显
+            mBackgroundPaint!!.setAlpha((castedData.opacity * 255).toInt())
+            canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint!!)
 
+            // 更新摇杆圆心透明度（如果数据已更新）
+            // 摇杆圆心透明度只使用 stickOpacity，如果没有设置则使用默认值 1.0（完全不透明），不受 opacity 影响
+            // 直接使用用户设置的 stickOpacity，让变化更明显（0.0-1.0 全范围）
+            val stickKnobAlpha = if (castedData.stickOpacity != 0f) castedData.stickOpacity else 1.0f
+            mStickPaint!!.setAlpha((stickKnobAlpha * 255).toInt())
 
-        // 更新摇杆圆心透明度（如果数据已更新）
-        // 摇杆圆心透明度只使用 stickOpacity，如果没有设置则使用默认值 1.0（完全不透明），不受 opacity 影响
-        // 直接使用用户设置的 stickOpacity，让变化更明显（0.0-1.0 全范围）
-        val stickKnobAlpha = if (castedData.stickOpacity != 0f) castedData.stickOpacity else 1.0f
-        mStickPaint!!.setAlpha((stickKnobAlpha * 255).toInt())
-
-
-        // 绘制摇杆圆心（前景圆，根据触摸位置移动）
-        // RadialGamePad 风格：摇杆圆心是背景半径的 50%（0.5f * radius）
-        // 但我们已经根据 mStickRadius 计算了，这里直接使用
-        canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint!!)
-
+            // 绘制摇杆圆心（前景圆，根据触摸位置移动）
+            // RadialGamePad 风格：摇杆圆心是背景半径的 50%（0.5f * radius）
+            // 但我们已经根据 mStickRadius 计算了，这里直接使用
+            canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint!!)
+        }
 
         // 恢复旋转
         if (castedData.rotation != 0f) {

@@ -89,6 +89,14 @@
             android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode" />
 
+        <!-- 赞助商展示页面 -->
+        <activity
+            android:name=".sponsor.SponsorsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.raLaunch"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode" />
+
         <!-- 通用进程启动服务 -->
         <service
             android:name=".service.ProcessLauncherService"

@@ -108,6 +108,12 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <!-- ShapeAppearance 圆形图片样式 -->
+    <style name="ShapeAppearance.App.CircleImage" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
     <!-- ShapeableImageView 圆角样式 12dp -->
     <style name="RoundedImageView12" parent="">
         <item name="cornerFamily">rounded</item>

@@ -1,5 +1,9 @@
 package com.app.ralaunch.controls.data
 
+import com.app.ralaunch.controls.textures.ButtonTextureConfig
+import com.app.ralaunch.controls.textures.JoystickTextureConfig
+import com.app.ralaunch.controls.textures.TextControlTextureConfig
+import com.app.ralaunch.controls.textures.TouchPadTextureConfig
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -477,6 +481,9 @@ sealed class ControlData {
         var keycode: KeyCode = KeyCode.UNKNOWN // SDL按键码或鼠标按键或手柄按键
         var isToggle: Boolean = false // 是否是切换按钮（按下保持状态）
         var shape: Shape = Shape.RECTANGLE
+        
+        /** 按钮纹理配置 */
+        var texture: ButtonTextureConfig = ButtonTextureConfig()
     }
 
     @Serializable
@@ -499,12 +506,16 @@ sealed class ControlData {
         ) // [up, right, down, left] 的键码
         var mode: Mode = Mode.KEYBOARD
         var isRightStick: Boolean = false // 手柄模式：true=右摇杆, false=左摇杆
+        
+        /** 摇杆纹理配置 */
+        var texture: JoystickTextureConfig = JoystickTextureConfig()
     }
 
     @Serializable
     @SerialName("touchpad")
     class TouchPad : ControlData() {
-
+        /** 触控板纹理配置 */
+        var texture: TouchPadTextureConfig = TouchPadTextureConfig()
     }
 
     @Serializable
@@ -517,5 +528,8 @@ sealed class ControlData {
 
         var displayText: String = "" // 显示的文本内容
         var shape: Shape = Shape.RECTANGLE
+        
+        /** 文本控件纹理配置 */
+        var texture: TextControlTextureConfig = TextControlTextureConfig()
     }
 }

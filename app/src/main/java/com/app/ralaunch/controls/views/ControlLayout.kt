@@ -11,6 +11,7 @@ import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.packs.ControlLayout as PackControlLayout
 import com.app.ralaunch.utils.AppLogger
+import java.io.File
 import kotlin.math.sqrt
 
 /**
@@ -36,6 +37,12 @@ class ControlLayout : FrameLayout {
      */
     var currentLayout: PackControlLayout? = null
         private set
+    
+    /**
+     * 当前控件包的资源目录（用于加载纹理）
+     */
+    private var currentAssetsDir: File? = null
+    
     private var mVisible = true
     private var mModifiable = false // 是否可编辑模式
     private var mSelectedControl: ControlView? = null // 当前选中的控件
@@ -128,14 +135,29 @@ class ControlLayout : FrameLayout {
      */
     fun loadLayoutFromPackManager(): Boolean {
         val packManager = RaLaunchApplication.getControlPackManager()
+        val packId = packManager.getSelectedPackId()
         val layout = packManager.getCurrentLayout()
         
-        if (layout == null) {
+        if (layout == null || packId == null) {
             AppLogger.warn(TAG, "No current layout selected in pack manager")
             return false
         }
         
+        // 获取控件包的资源目录
+        currentAssetsDir = packManager.getPackAssetsDir(packId)
+        
         return loadLayout(layout)
+    }
+    
+    /**
+     * 设置控件包资源目录（用于加载纹理）
+     */
+    fun setPackAssetsDir(dir: File?) {
+        currentAssetsDir = dir
+        // 更新所有现有控件的资源目录
+        mControls.forEach { controlView ->
+            controlView.setPackAssetsDir(dir)
+        }
     }
 
     /**
@@ -167,6 +189,9 @@ class ControlLayout : FrameLayout {
      */
     private fun addControlView(controlView: ControlView?, data: ControlData) {
         val view = controlView as View
+        
+        // 设置控件包资源目录（用于加载纹理）
+        controlView.setPackAssetsDir(currentAssetsDir)
 
         val params = LayoutParams(
             widthToPx(data.width),

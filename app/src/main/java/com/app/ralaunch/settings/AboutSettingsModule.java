@@ -1,9 +1,11 @@
 package com.app.ralaunch.settings;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.view.View;
 import android.widget.Toast;
 import androidx.fragment.app.Fragment;
+import com.app.ralaunch.sponsor.SponsorsActivity;
 
 /**
  * 关于设置模块
@@ -22,6 +24,22 @@ public class AboutSettingsModule implements SettingsModule {
     }
     
     private void setupButtons() {
+        // 设置赞助商墙按钮
+        com.google.android.material.button.MaterialButton btnSponsors = 
+            rootView.findViewById(com.app.ralaunch.R.id.btnSponsors);
+        if (btnSponsors != null) {
+            btnSponsors.setOnClickListener(v -> {
+                openSponsorsPage();
+            });
+        }
+        
+        // 设置赞助商墙卡片点击
+        View cardSponsors = rootView.findViewById(com.app.ralaunch.R.id.cardSponsors);
+        if (cardSponsors != null) {
+            cardSponsors.setOnClickListener(v -> {
+                openSponsorsPage();
+            });
+        }
         // 设置爱发电按钮
         com.google.android.material.button.MaterialButton btnAfdian = 
             rootView.findViewById(com.app.ralaunch.R.id.btnAfdian);
@@ -93,6 +111,19 @@ public class AboutSettingsModule implements SettingsModule {
             Toast.makeText(
                 fragment.requireContext(), 
                 "无法打开浏览器", 
+                Toast.LENGTH_SHORT
+            ).show();
+        }
+    }
+    
+    private void openSponsorsPage() {
+        try {
+            Intent intent = new Intent(fragment.requireContext(), SponsorsActivity.class);
+            fragment.startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(
+                fragment.requireContext(), 
+                "无法打开赞助商页面", 
                 Toast.LENGTH_SHORT
             ).show();
         }
