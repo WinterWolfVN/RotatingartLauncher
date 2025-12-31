@@ -146,71 +146,30 @@ class SponsorsActivity : AppCompatActivity() {
 
     /**
      * 使用 Konfetti 实现星空背景效果
-     * 持续发射大量白色小粒子，模拟满天繁星
+     * 持续发射缓慢下落的白色小粒子，模拟星空
      */
     private fun startStarfieldEffect() {
-        // 立即发射初始星星填充背景
-        emitInitialStars()
-        
-        // 星空背景 - 持续补充星星
+        // 星空背景 - 缓慢飘落的小星星
         starfieldRunnable = object : Runnable {
             override fun run() {
                 emitStars()
-                handler.postDelayed(this, 800) // 每0.8秒补充一波星星
+                handler.postDelayed(this, 3000) // 每3秒补充一波星星
             }
         }
-        handler.postDelayed(starfieldRunnable!!, 500)
-        
-        // 闪烁效果 - 让星星闪烁
-        twinkleRunnable = object : Runnable {
-            override fun run() {
-                emitTwinkle()
-                handler.postDelayed(this, 300) // 每0.3秒闪烁
-            }
-        }
-        handler.post(twinkleRunnable!!)
+        handler.post(starfieldRunnable!!)
         
         // 偶尔的流星效果
         meteorRunnable = object : Runnable {
             override fun run() {
                 emitMeteor()
-                handler.postDelayed(this, 6000 + Random.nextLong(5000)) // 6-11秒一颗流星
+                handler.postDelayed(this, 8000 + Random.nextLong(7000)) // 8-15秒一颗流星
             }
         }
-        handler.postDelayed(meteorRunnable!!, 3000)
-    }
-    
-    private var twinkleRunnable: Runnable? = null
-    
-    /**
-     * 初始星空 - 一次性填充大量星星
-     */
-    private fun emitInitialStars() {
-        val starColors = listOf(
-            0xFFFFFFFF.toInt(),  // 白色
-            0xFFE8E8FF.toInt(),  // 淡蓝白
-            0xFFFFF8E8.toInt(),  // 淡黄白
-        )
-        
-        // 全屏撒满星星
-        konfettiView.start(
-            Party(
-                speed = 0f,
-                maxSpeed = 0.3f,
-                damping = 1f,
-                colors = starColors,
-                shapes = listOf(Shape.Circle),
-                size = listOf(Size(1), Size(2), Size(3)),
-                timeToLive = 20000L,
-                fadeOutEnabled = false,
-                position = Position.Relative(0.0, 0.0).between(Position.Relative(1.0, 1.0)),
-                emitter = Emitter(duration = 1, TimeUnit.SECONDS).max(150)
-            )
-        )
+        handler.postDelayed(meteorRunnable!!, 5000)
     }
     
     /**
-     * 发射星星粒子 - 持续补充星空
+     * 发射星星粒子 - 模拟静态星空
      */
     private fun emitStars() {
         val starColors = listOf(
@@ -225,68 +184,39 @@ class SponsorsActivity : AppCompatActivity() {
             Party(
                 angle = Angle.BOTTOM,
                 spread = 180,
-                speed = 0.2f,
-                maxSpeed = 1f,
+                speed = 0.5f,
+                maxSpeed = 2f,
                 damping = 1f,
                 colors = starColors,
                 shapes = listOf(Shape.Circle),
-                size = listOf(Size(1), Size(2), Size(3)),
-                timeToLive = 25000L,  // 25秒存活
+                size = listOf(Size(2), Size(3), Size(4)),
+                timeToLive = 15000L,  // 15秒存活
                 fadeOutEnabled = true,
                 position = Position.Relative(0.0, 0.0).between(Position.Relative(1.0, 0.0)),
-                emitter = Emitter(duration = 500, TimeUnit.MILLISECONDS).perSecond(20)
+                emitter = Emitter(duration = 2, TimeUnit.SECONDS).perSecond(8)
             )
         )
         
-        // 随机位置补充静态星星
-        repeat(5) {
+        // 随机位置闪烁的星星
+        repeat(3) {
             val xPos = Random.nextDouble()
-            val yPos = Random.nextDouble() * 0.9
+            val yPos = Random.nextDouble() * 0.7
             
             konfettiView.start(
                 Party(
                     speed = 0f,
-                    maxSpeed = 0.1f,
+                    maxSpeed = 0.5f,
                     damping = 1f,
                     colors = starColors,
                     shapes = listOf(Shape.Circle),
-                    size = listOf(Size(1), Size(2)),
-                    timeToLive = 8000L,
+                    size = listOf(Size(2), Size(3)),
+                    timeToLive = 4000L,
                     fadeOutEnabled = true,
                     position = Position.Relative(xPos, yPos),
-                    emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(2)
+                    emitter = Emitter(duration = 500, TimeUnit.MILLISECONDS).max(3)
                 )
             )
         }
-    }
-    
-    /**
-     * 星星闪烁效果
-     */
-    private fun emitTwinkle() {
-        val twinkleColors = listOf(
-            0xFFFFFFFF.toInt(),
-            0xFFFFFF88.toInt(),  // 亮黄
-        )
-        
-        // 随机位置闪烁
-        val xPos = Random.nextDouble()
-        val yPos = Random.nextDouble() * 0.85
-        
-        konfettiView.start(
-            Party(
-                speed = 0f,
-                maxSpeed = 0f,
-                damping = 1f,
-                colors = twinkleColors,
-                shapes = listOf(Shape.Circle),
-                size = listOf(Size(3), Size(4), Size(5)),
-                timeToLive = 600L,
-                fadeOutEnabled = true,
-                position = Position.Relative(xPos, yPos),
-                emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(1)
-            )
-        )
     }
     
     /**
@@ -565,6 +495,5 @@ class SponsorsActivity : AppCompatActivity() {
         super.onDestroy()
         starfieldRunnable?.let { handler.removeCallbacks(it) }
         meteorRunnable?.let { handler.removeCallbacks(it) }
-        twinkleRunnable?.let { handler.removeCallbacks(it) }
     }
 }
