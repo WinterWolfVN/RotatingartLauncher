@@ -463,13 +463,34 @@ class ControlPackManager(private val context: Context) {
     
     /**
      * 从 .ralpack 文件安装控件包
+     * 支持两种包结构:
+     * 1. manifest.json 在根目录
+     * 2. manifest.json 在子目录中 (如 pack_id/manifest.json)
      */
     fun installFromFile(packFile: File): Result<ControlPackInfo> {
         return try {
             ZipFile(packFile).use { zip ->
-                // 读取 manifest
-                val manifestEntry = zip.getEntry(ControlPackInfo.MANIFEST_FILE_NAME)
-                    ?: return Result.failure(Exception("Invalid pack: missing manifest.json"))
+                // 查找 manifest.json（支持子目录）
+                var manifestEntry = zip.getEntry(ControlPackInfo.MANIFEST_FILE_NAME)
+                var prefixToRemove = ""
+                
+                // 如果根目录没有 manifest.json，在子目录中查找
+                if (manifestEntry == null) {
+                    manifestEntry = zip.entries().asSequence().find { entry ->
+                        entry.name.endsWith("/${ControlPackInfo.MANIFEST_FILE_NAME}") ||
+                        entry.name.endsWith("\\${ControlPackInfo.MANIFEST_FILE_NAME}")
+                    }
+                    
+                    if (manifestEntry != null) {
+                        // 提取前缀目录 (如 "pack_123/")
+                        prefixToRemove = manifestEntry.name.substringBeforeLast(ControlPackInfo.MANIFEST_FILE_NAME)
+                        AppLogger.info(TAG, "Found manifest in subdirectory: $prefixToRemove")
+                    }
+                }
+                
+                if (manifestEntry == null) {
+                    return Result.failure(Exception("Invalid pack: missing manifest.json"))
+                }
                 
                 val manifestContent = zip.getInputStream(manifestEntry).bufferedReader().readText()
                 val info = ControlPackInfo.fromJson(manifestContent)
@@ -482,9 +503,19 @@ class ControlPackManager(private val context: Context) {
                 }
                 packDir.mkdirs()
                 
-                // 解压所有文件
+                // 解压所有文件（去掉前缀目录）
                 zip.entries().asSequence().forEach { entry ->
-                    val targetFile = File(packDir, entry.name)
+                    var entryName = entry.name
+                    
+                    // 去掉前缀目录
+                    if (prefixToRemove.isNotEmpty() && entryName.startsWith(prefixToRemove)) {
+                        entryName = entryName.removePrefix(prefixToRemove)
+                    }
+                    
+                    // 跳过空名称（即前缀目录本身）
+                    if (entryName.isEmpty()) return@forEach
+                    
+                    val targetFile = File(packDir, entryName)
                     if (entry.isDirectory) {
                         targetFile.mkdirs()
                     } else {

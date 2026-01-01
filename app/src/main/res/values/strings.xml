@@ -1133,6 +1133,8 @@
     <string name="pack_apply_failed">应用控件包失败</string>
     <string name="pack_deleted_success">控件包 \"%s\" 已删除</string>
     <string name="pack_delete_failed">删除控件包失败</string>
+    <string name="pack_no_preview">暂无预览图</string>
+    <string name="pack_preview_title">控件包预览</string>
     
     <!-- 控件包导出 -->
     <string name="pack_export_title">导出控件包</string>

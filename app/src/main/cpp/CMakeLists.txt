@@ -64,6 +64,8 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/linkerhook)
 set(BUILD_SDL3 OFF CACHE BOOL "Build against SDL 2.0" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library" FORCE)
 set(TRACING_SUPPORT OFF CACHE BOOL "Disable tracing" FORCE)
+# 启用原生 Vulkan 驱动
+set(BUILD_NATIVE_VULKAN ON CACHE BOOL "Enable native Vulkan driver" FORCE)
 # 启用 DXVK Native 支持 - 允许 FNA3D 使用 D3D11 -> DXVK -> Vulkan 渲染路径
 set(BUILD_DXVK_NATIVE ON CACHE BOOL "Enable DXVK Native for D3D11 support" FORCE)
 # 设置 DXVK Native 头文件路径 (需要包含 directx/ 和 windows/ 子目录)

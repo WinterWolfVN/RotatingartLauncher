@@ -114,26 +114,34 @@ class ControlPackViewModel(
         updatePackStatus(item.info.id, ControlPackStatus.DOWNLOADING)
 
         viewModelScope.launch {
-            val result = repoService.downloadAndInstall(
-                packInfo = item.info,
-                packManager = packManager,
-                listener = object : ControlPackRepositoryService.DownloadProgressListener {
-                    override fun onProgress(downloaded: Long, total: Long, percent: Int) {
-                        updatePackProgress(item.info.id, percent)
-                    }
+            try {
+                val result = repoService.downloadAndInstall(
+                    packInfo = item.info,
+                    packManager = packManager,
+                    listener = object : ControlPackRepositoryService.DownloadProgressListener {
+                        override fun onProgress(downloaded: Long, total: Long, percent: Int) {
+                            updatePackProgress(item.info.id, percent)
+                        }
 
-                    override fun onComplete(file: File) {
-                        updatePackStatus(item.info.id, ControlPackStatus.INSTALLING)
-                    }
+                        override fun onComplete(file: File) {
+                            updatePackStatus(item.info.id, ControlPackStatus.INSTALLING)
+                        }
 
-                    override fun onError(error: String) {
-                        updatePackStatus(item.info.id, ControlPackStatus.NOT_INSTALLED)
+                        override fun onError(error: String) {
+                            updatePackStatus(item.info.id, ControlPackStatus.NOT_INSTALLED)
+                        }
                     }
+                )
+
+                if (result.isSuccess) {
+                    loadPacks() // 刷新列表
+                } else {
+                    // 下载或安装失败，重置状态
+                    updatePackStatus(item.info.id, ControlPackStatus.NOT_INSTALLED)
                 }
-            )
-
-            if (result.isSuccess) {
-                loadPacks() // 刷新列表
+            } catch (e: Exception) {
+                // 异常时重置状态
+                updatePackStatus(item.info.id, ControlPackStatus.NOT_INSTALLED)
             }
         }
     }

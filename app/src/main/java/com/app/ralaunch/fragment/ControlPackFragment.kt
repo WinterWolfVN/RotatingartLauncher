@@ -7,8 +7,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -16,9 +15,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.app.ralaunch.R
 import com.app.ralaunch.controls.packs.ControlPackItem
+import com.app.ralaunch.controls.packs.ControlPackRepositoryService
 import com.app.ralaunch.controls.packs.ui.ControlPackScreen
 import com.app.ralaunch.controls.packs.ui.ControlPackTheme
 import com.app.ralaunch.controls.packs.ui.ControlPackViewModel
+import com.app.ralaunch.controls.packs.ui.PackPreviewDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
@@ -65,22 +66,42 @@ class ControlPackFragment : Fragment() {
         
         val composeView = view.findViewById<ComposeView>(R.id.composeView)
         composeView.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        
+        // 获取仓库 URL
+        val repoUrl = ControlPackRepositoryService.getDefaultRepoUrl(requireContext())
+        
         composeView.setContent {
             ControlPackTheme {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val uiState by viewModel.uiState.collectAsState()
+                    
+                    // 预览对话框状态
+                    var selectedPack by remember { mutableStateOf<ControlPackItem?>(null) }
 
                     ControlPackScreen(
                         uiState = uiState,
                         onBackClick = { backListener?.onControlPackBack() },
                         onRefresh = { viewModel.loadPacks(forceRefresh = true) },
                         onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                        onPackClick = { showPackDetailDialog(it) },
+                        onPackClick = { selectedPack = it },
                         onDownloadClick = { viewModel.downloadPack(it) },
                         onUpdateClick = { viewModel.downloadPack(it) },
                         onApplyClick = { applyPack(it) },
                         onDeleteClick = { confirmDeletePack(it) }
                     )
+                    
+                    // 预览对话框
+                    selectedPack?.let { pack ->
+                        PackPreviewDialog(
+                            pack = pack,
+                            repoUrl = repoUrl,
+                            onDismiss = { selectedPack = null },
+                            onDownloadClick = { viewModel.downloadPack(pack) },
+                            onUpdateClick = { viewModel.downloadPack(pack) },
+                            onApplyClick = { applyPack(pack) },
+                            onDeleteClick = { confirmDeletePack(pack) }
+                        )
+                    }
                 }
             }
         }
