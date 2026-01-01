@@ -25,6 +25,9 @@ import androidx.fragment.app.FragmentManager
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.controls.editors.managers.ControlTextureManager.TextureFileInfo
 import com.app.ralaunch.controls.textures.TextureConfig
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import java.io.File
 import java.io.FileOutputStream
 import com.app.ralaunch.R
@@ -92,6 +95,10 @@ class ControlEditDialogMD : DialogFragment() {
     
     // 纹理文件选择器
     private lateinit var texturePickerLauncher: ActivityResultLauncher<Intent>
+    
+    // 用于在配置更改时保存 currentData
+    private var savedControlDataJson: String? = null
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     interface OnControlUpdatedListener {
         fun onControlUpdated(data: ControlData?)
@@ -129,14 +136,45 @@ class ControlEditDialogMD : DialogFragment() {
             screenHeight = it.getInt(ARG_SCREEN_HEIGHT, 0)
         }
         
+        // 恢复保存的 currentData（如果有）
+        savedInstanceState?.getString("saved_control_data")?.let { jsonData ->
+            try {
+                currentData = json.decodeFromString<ControlData>(jsonData)
+                Log.d(TAG, "Restored currentData from savedInstanceState")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to restore currentData", e)
+            }
+        }
+        
         // 注册纹理文件选择器
         texturePickerLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
+            Log.d(TAG, "Texture picker result: resultCode=${result.resultCode}, data=${result.data}")
             if (result.resultCode == Activity.RESULT_OK) {
-                result.data?.data?.let { uri ->
+                // 尝试从 data 或 clipData 获取 Uri
+                val uri = result.data?.data ?: result.data?.clipData?.getItemAt(0)?.uri
+                if (uri != null) {
+                    Log.d(TAG, "Selected texture URI: $uri")
                     importAndApplyTexture(uri)
+                } else {
+                    Log.e(TAG, "No URI found in result")
+                    Toast.makeText(context, R.string.control_texture_import_failed, Toast.LENGTH_SHORT).show()
                 }
+            }
+        }
+    }
+    
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // 保存 currentData 以便在配置更改后恢复
+        currentData?.let {
+            try {
+                val jsonData = json.encodeToString(it)
+                outState.putString("saved_control_data", jsonData)
+                Log.d(TAG, "Saved currentData to savedInstanceState")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save currentData", e)
             }
         }
     }
@@ -828,39 +866,59 @@ class ControlEditDialogMD : DialogFragment() {
             return
         }
         
-        // 直接打开系统文件选择器
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        // 使用 ACTION_OPEN_DOCUMENT 获取完整文件访问权限（避免照片选择器返回缩略图）
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "image/*"
             putExtra(Intent.EXTRA_MIME_TYPES, SUPPORTED_TEXTURE_TYPES)
             addCategory(Intent.CATEGORY_OPENABLE)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        texturePickerLauncher.launch(Intent.createChooser(intent, getString(R.string.control_texture_import)))
+        texturePickerLauncher.launch(intent)
     }
     
     /**
      * 导入并直接应用纹理到当前控件
      */
     private fun importAndApplyTexture(uri: Uri) {
-        val context = context ?: return
+        Log.d(TAG, "importAndApplyTexture called with URI: $uri")
+        
+        val context = context ?: run {
+            Log.e(TAG, "Context is null")
+            return
+        }
         val packManager = RaLaunchApplication.getControlPackManager()
-        val packId = packManager.getSelectedPackId() ?: return
-        val data = currentData ?: return
+        val packId = packManager.getSelectedPackId() ?: run {
+            Log.e(TAG, "PackId is null")
+            return
+        }
+        val data = currentData ?: run {
+            Log.e(TAG, "currentData is null")
+            return
+        }
+        
+        Log.d(TAG, "PackId: $packId, ControlData type: ${data::class.simpleName}")
         
         try {
             // 获取文件名
             val fileName = getFileNameFromUri(context, uri) ?: "texture_${System.currentTimeMillis()}.png"
             val extension = fileName.substringAfterLast('.', "png").lowercase()
             
+            Log.d(TAG, "Importing texture: $fileName (extension: $extension)")
+            
             if (extension !in listOf("png", "jpg", "jpeg", "webp", "bmp")) {
+                Log.e(TAG, "Unsupported format: $extension")
                 Toast.makeText(context, R.string.control_texture_unsupported_format, Toast.LENGTH_SHORT).show()
                 return
             }
             
             // 获取 assets 目录
             val assetsDir = packManager.getPackAssetsDir(packId) ?: run {
+                Log.e(TAG, "AssetsDir is null")
                 Toast.makeText(context, R.string.control_texture_import_failed, Toast.LENGTH_SHORT).show()
                 return
             }
+            
+            Log.d(TAG, "Assets directory: ${assetsDir.absolutePath}")
             
             if (!assetsDir.exists()) assetsDir.mkdirs()
             
@@ -873,11 +931,18 @@ class ControlEditDialogMD : DialogFragment() {
                 counter++
             }
             
+            Log.d(TAG, "Target file: ${targetFile.absolutePath}")
+            
             // 复制文件
             context.contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(targetFile).use { output ->
-                    input.copyTo(output)
+                    val bytes = input.copyTo(output)
+                    Log.d(TAG, "Copied $bytes bytes to ${targetFile.name}")
                 }
+            } ?: run {
+                Log.e(TAG, "Failed to open input stream for URI: $uri")
+                Toast.makeText(context, R.string.control_texture_import_failed, Toast.LENGTH_SHORT).show()
+                return
             }
             
             val relativePath = targetFile.relativeTo(assetsDir).path.replace('\\', '/')
@@ -911,7 +976,20 @@ class ControlEditDialogMD : DialogFragment() {
             Toast.makeText(context, R.string.control_texture_applied, Toast.LENGTH_SHORT).show()
             
             refreshTextureStatus()
-            notifyUpdate()
+            
+            // 纹理导入后必须立即保存到文件（因为 Activity 可能被重建，mHasUnsavedChanges 会丢失）
+            Log.d(TAG, "Saving texture immediately to file...")
+            (activity as? com.app.ralaunch.controls.editors.ControlEditorActivity)?.let { editorActivity ->
+                editorActivity.updateControlData(data)
+                Log.i(TAG, "Texture saved successfully")
+            } ?: run {
+                Log.e(TAG, "Cannot save: activity is not ControlEditorActivity")
+            }
+            
+            // 同时通知监听器更新视图
+            if (mUpdateListener != null) {
+                notifyUpdate()
+            }
             
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import texture", e)

@@ -3,6 +3,7 @@ package com.app.ralaunch.controls.editors
 import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -528,12 +529,29 @@ class ControlEditorManager(
     }
 
     fun saveLayout(packId: String?) {
-        if (mControlLayout == null || packId == null) return
+        Log.d(TAG, "saveLayout called: packId=$packId, mControlLayout=$mControlLayout")
+        if (mControlLayout == null || packId == null) {
+            Log.w(TAG, "saveLayout: ABORTED - mControlLayout=$mControlLayout, packId=$packId")
+            return
+        }
 
         val layout = mControlLayout!!.currentLayout
+        Log.d(TAG, "saveLayout: layout=$layout, controls=${layout?.controls?.size}")
+        
         if (layout != null) {
+            // 打印纹理配置用于调试
+            layout.controls.filterIsInstance<com.app.ralaunch.controls.data.ControlData.Button>()
+                .forEach { btn ->
+                    if (btn.texture.hasAnyTexture) {
+                        Log.i(TAG, "saveLayout: Button '${btn.name}' has texture: ${btn.texture.normal.path}")
+                    }
+                }
+            
             packManager.savePackLayout(packId, layout)
             mHasUnsavedChanges = false
+            Log.i(TAG, "saveLayout: SUCCESS - saved ${layout.controls.size} controls")
+        } else {
+            Log.w(TAG, "saveLayout: FAILED - layout is null")
         }
     }
 

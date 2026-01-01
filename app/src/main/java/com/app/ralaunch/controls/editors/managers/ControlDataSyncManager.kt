@@ -1,5 +1,6 @@
 package com.app.ralaunch.controls.editors.managers
 
+import android.util.Log
 import android.view.View
 import android.widget.FrameLayout
 import com.app.ralaunch.controls.data.ControlData
@@ -11,6 +12,8 @@ import com.app.ralaunch.controls.views.ControlView
  * 统一管理 ControlData 到 ControlView 的同步逻辑
  */
 object ControlDataSyncManager {
+    private const val TAG = "ControlDataSyncManager"
+    
     /**
      * 同步控件数据到视图
      * @param layout 控件布局
@@ -20,16 +23,24 @@ object ControlDataSyncManager {
     @JvmStatic
     fun syncControlDataToView(layout: ControlLayout?, controlData: ControlData?): Boolean {
         if (layout == null || controlData == null) {
+            Log.w(TAG, "syncControlDataToView: layout=$layout, controlData=$controlData")
             return false
         }
+        
+        Log.d(TAG, "syncControlDataToView: looking for '${controlData.name}', childCount=${layout.childCount}")
 
         for (i in 0 until layout.childCount) {
             val child = layout.getChildAt(i)
             if (child is ControlView) {
                 val viewData: ControlData? = child.controlData
 
-                // 优先使用引用比较，确保匹配到正确的控件
-                val isMatch = viewData === controlData
+                // 使用名称匹配，支持 Activity 重建后的反序列化对象
+                val isMatch = viewData != null && (
+                    viewData === controlData ||  // 引用相同（优先）
+                    viewData.name == controlData.name  // 名称相同（备用）
+                )
+                
+                Log.d(TAG, "  child[$i]: '${viewData?.name}', isMatch=$isMatch")
 
                 if (isMatch) {
                     // Get screen dimensions from the layout
@@ -61,15 +72,26 @@ object ControlDataSyncManager {
 
                     // 同步所有字段到原始数据对象，确保数据一致性
                     syncDataFields(viewData, controlData)
+                    
+                    // 验证纹理是否同步成功
+                    if (viewData is ControlData.Button && controlData is ControlData.Button) {
+                        Log.i(TAG, "Button texture synced: path='${viewData.texture.normal.path}', enabled=${viewData.texture.normal.enabled}")
+                    }
 
+                    // 重新设置 controlData 以触发 initPaints() 更新颜色/透明度
+                    // 这是必须的，因为直接修改字段不会触发 Paint 重新初始化
+                    child.controlData = viewData
+                    
                     // 刷新控件绘制
                     child.invalidate()
-
+                    
+                    Log.i(TAG, "syncControlDataToView: SUCCESS for '${controlData.name}'")
                     return true
                 }
             }
         }
-
+        
+        Log.w(TAG, "syncControlDataToView: FAILED - no matching control found for '${controlData.name}'")
         return false
     }
 
@@ -108,6 +130,8 @@ object ControlDataSyncManager {
                 target.keycode = source.keycode
                 target.isToggle = source.isToggle
                 target.shape = source.shape
+                // 同步纹理配置
+                target.texture = source.texture.copy()
             }
             source is ControlData.Joystick && target is ControlData.Joystick -> {
                 target.stickKnobSize = source.stickKnobSize
@@ -115,10 +139,18 @@ object ControlDataSyncManager {
                 target.joystickKeys = source.joystickKeys.clone()
                 target.mode = source.mode
                 target.isRightStick = source.isRightStick
+                // 同步纹理配置
+                target.texture = source.texture.copy()
             }
             source is ControlData.Text && target is ControlData.Text -> {
                 target.displayText = source.displayText
                 target.shape = source.shape
+                // 同步纹理配置
+                target.texture = source.texture.copy()
+            }
+            source is ControlData.TouchPad && target is ControlData.TouchPad -> {
+                // 同步纹理配置
+                target.texture = source.texture.copy()
             }
         }
     }

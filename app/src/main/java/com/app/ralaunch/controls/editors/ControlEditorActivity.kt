@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.app.ralaunch.R
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.controls.bridges.DummyInputBridge
+import com.app.ralaunch.controls.editors.managers.ControlDataSyncManager
 import com.app.ralaunch.controls.packs.ControlLayout
 import com.app.ralaunch.controls.packs.ControlPackManager
 import com.app.ralaunch.controls.views.ControlLayout as ControlLayoutView
@@ -242,6 +243,14 @@ class ControlEditorActivity : AppCompatActivity() {
         mPreviewLayout!!.inputBridge = mDummyBridge
         mPreviewLayout!!.loadLayout(mCurrentLayout)
         mPreviewLayout!!.isControlsVisible = true
+        
+        // 设置控件包资源目录（用于纹理加载）
+        val packId = mCurrentPackId
+        if (packId != null) {
+            val assetsDir = packManager.getPackAssetsDir(packId)
+            mPreviewLayout!!.setPackAssetsDir(assetsDir)
+            Log.d(TAG, "Set pack assets dir: ${assetsDir?.absolutePath}")
+        }
 
         // 禁用裁剪
         disableClippingRecursive(mPreviewLayout!!)
@@ -289,6 +298,119 @@ class ControlEditorActivity : AppCompatActivity() {
 
         view.clipToOutline = false
         view.clipBounds = null
+    }
+
+    /**
+     * 更新控件数据并同步到布局视图，然后保存
+     * 用于在 DialogFragment 重建后直接保存数据
+     */
+    fun updateControlData(data: com.app.ralaunch.controls.data.ControlData) {
+        Log.d(TAG, "updateControlData called: name=${data.name}, packId=$mCurrentPackId")
+        
+        // 打印纹理信息
+        if (data is com.app.ralaunch.controls.data.ControlData.Button) {
+            Log.i(TAG, "updateControlData: Button texture path='${data.texture.normal.path}', enabled=${data.texture.normal.enabled}")
+        }
+        
+        val packId = mCurrentPackId
+        if (packId == null) {
+            Log.e(TAG, "updateControlData: packId is null!")
+            return
+        }
+        
+        // 如果 EditorManager 已初始化，使用常规流程
+        val editorManager = mEditorManager
+        val controlLayout = mPreviewLayout
+        
+        if (editorManager != null && controlLayout != null) {
+            // 同步数据到视图
+            val syncResult = ControlDataSyncManager.syncControlDataToView(controlLayout, data)
+            Log.d(TAG, "updateControlData: syncResult=$syncResult")
+            
+            // 保存到文件
+            editorManager.saveLayout(packId)
+            Log.i(TAG, "updateControlData: completed via EditorManager for '${data.name}'")
+        } else {
+            // EditorManager 还未初始化（Activity 重建中），直接保存到文件
+            Log.w(TAG, "updateControlData: EditorManager not ready, saving directly to file")
+            
+            // 从文件加载当前布局
+            val layout = packManager.getPackLayout(packId)
+            if (layout != null) {
+                // 找到并更新对应的控件
+                val index = layout.controls.indexOfFirst { it.name == data.name }
+                if (index >= 0) {
+                    // 复制所有字段到布局中的控件
+                    val target = layout.controls[index]
+                    copyControlData(target, data)
+                    
+                    // 保存布局
+                    packManager.savePackLayout(packId, layout)
+                    Log.i(TAG, "updateControlData: saved directly to file for '${data.name}'")
+                    
+                    // 更新 mCurrentLayout 以便后续使用
+                    mCurrentLayout = layout
+                } else {
+                    Log.e(TAG, "updateControlData: control '${data.name}' not found in layout")
+                }
+            } else {
+                Log.e(TAG, "updateControlData: failed to load layout for packId=$packId")
+            }
+        }
+    }
+    
+    /**
+     * 复制控件数据
+     */
+    private fun copyControlData(target: com.app.ralaunch.controls.data.ControlData, source: com.app.ralaunch.controls.data.ControlData) {
+        // 复制基础字段
+        target.name = source.name
+        target.x = source.x
+        target.y = source.y
+        target.width = source.width
+        target.height = source.height
+        target.rotation = source.rotation
+        target.opacity = source.opacity
+        target.borderOpacity = source.borderOpacity
+        target.textOpacity = source.textOpacity
+        target.bgColor = source.bgColor
+        target.strokeColor = source.strokeColor
+        target.strokeWidth = source.strokeWidth
+        target.cornerRadius = source.cornerRadius
+        target.isVisible = source.isVisible
+        target.isPassThrough = source.isPassThrough
+        
+        // 复制类型特定字段
+        when {
+            source is com.app.ralaunch.controls.data.ControlData.Button && 
+            target is com.app.ralaunch.controls.data.ControlData.Button -> {
+                target.mode = source.mode
+                target.keycode = source.keycode
+                target.isToggle = source.isToggle
+                target.shape = source.shape
+                target.texture = source.texture.copy()
+                Log.d(TAG, "copyControlData: Button texture copied, path=${target.texture.normal.path}")
+            }
+            source is com.app.ralaunch.controls.data.ControlData.Joystick && 
+            target is com.app.ralaunch.controls.data.ControlData.Joystick -> {
+                target.stickKnobSize = source.stickKnobSize
+                target.stickOpacity = source.stickOpacity
+                target.joystickKeys = source.joystickKeys.clone()
+                target.mode = source.mode
+                target.isRightStick = source.isRightStick
+                target.texture = source.texture.copy()
+            }
+            source is com.app.ralaunch.controls.data.ControlData.TouchPad && 
+            target is com.app.ralaunch.controls.data.ControlData.TouchPad -> {
+                target.texture = source.texture.copy()
+            }
+            source is com.app.ralaunch.controls.data.ControlData.Text && 
+            target is com.app.ralaunch.controls.data.ControlData.Text -> {
+                target.displayText = source.displayText
+                target.shape = source.shape
+                target.texture = source.texture.copy()
+            }
+        }
     }
 
     @SuppressLint("MissingSuperCall")
