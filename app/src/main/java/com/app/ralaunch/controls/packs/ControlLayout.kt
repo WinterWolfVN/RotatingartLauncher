@@ -27,7 +27,7 @@ data class ControlLayout(
 ) {
     /** 布局 ID（运行时使用，不序列化） */
     @Transient
-    var id: String = System.currentTimeMillis().toString()
+    var id: String = "pack_${System.currentTimeMillis()}"
 
     fun toJson(): String = json.encodeToString(this)
 

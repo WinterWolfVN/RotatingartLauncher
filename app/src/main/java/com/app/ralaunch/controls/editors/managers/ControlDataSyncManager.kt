@@ -27,20 +27,18 @@ object ControlDataSyncManager {
             return false
         }
         
-        Log.d(TAG, "syncControlDataToView: looking for '${controlData.name}', childCount=${layout.childCount}")
+        Log.d(TAG, "syncControlDataToView: looking for controlData@${System.identityHashCode(controlData)} (name='${controlData.name}'), childCount=${layout.childCount}")
 
         for (i in 0 until layout.childCount) {
             val child = layout.getChildAt(i)
             if (child is ControlView) {
                 val viewData: ControlData? = child.controlData
 
-                // 使用名称匹配，支持 Activity 重建后的反序列化对象
-                val isMatch = viewData != null && (
-                    viewData === controlData ||  // 引用相同（优先）
-                    viewData.name == controlData.name  // 名称相同（备用）
-                )
-                
-                Log.d(TAG, "  child[$i]: '${viewData?.name}', isMatch=$isMatch")
+                // 使用严格的对象引用匹配（只匹配完全相同的对象实例）
+                // 这确保即使多个控件有相同名称，也只更新正确的那个控件
+                val isMatch = viewData === controlData
+
+                Log.d(TAG, "  child[$i]: viewData@${System.identityHashCode(viewData)} (name='${viewData?.name}'), isMatch=$isMatch")
 
                 if (isMatch) {
                     // Get screen dimensions from the layout
