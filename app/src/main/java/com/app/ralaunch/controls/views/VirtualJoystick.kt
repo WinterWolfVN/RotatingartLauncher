@@ -92,6 +92,7 @@ class VirtualJoystick(
 
         // 死区（防止漂移）- 改为较小值以提高触摸灵敏度
         private const val DEADZONE_PERCENT = 0.05f
+        private const val DEADZONE_KEYBOARD_PERCENT = 0.3f
 
         // 8方向角度映射表（从角度计算结果映射到实际方向）
         // 角度计算：0度=正右, 90度=正上, 180度=正左, 270度=正下
@@ -663,7 +664,7 @@ class VirtualJoystick(
      */
     private fun calculateDirection(dx: Float, dy: Float, distance: Float): Int {
         // 死区检测 - 小范围内不触发方向
-        if (distance < mRadius * DEADZONE_PERCENT) {
+        if (distance < mRadius * DEADZONE_KEYBOARD_PERCENT) {
             return DIR_NONE
         }
 
