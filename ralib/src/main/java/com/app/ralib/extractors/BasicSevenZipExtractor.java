@@ -172,7 +172,8 @@ public class BasicSevenZipExtractor implements ExtractorCollection.IExtractor {
                 }
 
                 // 返回输出流
-                return new SequentialFileOutputStream(targetFilePath);
+                outputStream = new SequentialFileOutputStream(targetFilePath);
+                return outputStream;
             } catch (Exception e) {
                 throw new SevenZipException("Error getting stream for index " + index, e);
             }
