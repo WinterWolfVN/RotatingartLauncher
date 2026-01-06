@@ -13,7 +13,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.app.ralaunch.R;
+import com.app.ralaunch.RaLaunchApplication;
 import com.app.ralaunch.activity.MainActivity;
+import com.app.ralaunch.game.AssemblyPatcher;
 import com.app.ralaunch.model.GameItem;
 import com.app.ralaunch.utils.AppLogger;
 import com.app.ralaunch.utils.AssemblyChecker;
@@ -451,6 +453,8 @@ public class LocalImportFragment extends BaseFragment {
                                         displayName = gameName;
                                     }
 
+                                    AssemblyPatcher.applyMonoModPatches(RaLaunchApplication.getAppContext(), new File(finalGamePath).getParent());
+
                                     // 创建 GameItem
                                     var newGame = new GameItem();
                                     newGame.setGameName(displayName);
@@ -516,11 +520,13 @@ public class LocalImportFragment extends BaseFragment {
                                     String gameBodyPath = null;
 
 
-                                        finalGamePath = findGameBodyPath(gamePath);
+                                    finalGamePath = findGameBodyPath(gamePath);
 
-                                        if (finalGamePath == null) {
-                                            finalGamePath = gamePath;
-                                        }
+                                    if (finalGamePath == null) {
+                                        finalGamePath = gamePath;
+                                    }
+
+                                    AssemblyPatcher.applyMonoModPatches(RaLaunchApplication.getAppContext(), new File(finalGamePath).getParent());
 
                                     var newGame = new GameItem();
                                     String iconSourcePath;
