@@ -308,18 +308,18 @@
                             android:fontFamily="sans-serif-medium" />
 
                         <!-- 可选标签 -->
-                        <com.google.android.material.chip.Chip
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:text="@string/import_optional"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textColor="?attr/colorOnTertiaryContainer"
-                            app:chipBackgroundColor="?attr/colorTertiaryContainer"
-                            app:chipStrokeWidth="0dp"
-                            app:chipCornerRadius="8dp"
-                            app:ensureMinTouchTargetSize="false" />
+<!--                        <com.google.android.material.chip.Chip-->
+<!--                            android:layout_width="wrap_content"-->
+<!--                            android:layout_height="wrap_content"-->
+<!--                            android:layout_marginStart="8dp"-->
+<!--                            android:text="@string/import_optional"-->
+<!--                            android:textSize="11sp"-->
+<!--                            android:textStyle="bold"-->
+<!--                            android:textColor="?attr/colorOnTertiaryContainer"-->
+<!--                            app:chipBackgroundColor="?attr/colorTertiaryContainer"-->
+<!--                            app:chipStrokeWidth="0dp"-->
+<!--                            app:chipCornerRadius="8dp"-->
+<!--                            app:ensureMinTouchTargetSize="false" />-->
 
                     </LinearLayout>
 

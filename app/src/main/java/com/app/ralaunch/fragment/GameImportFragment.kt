@@ -197,11 +197,16 @@ class GameImportFragment : BaseFragment() {
         val hasGameFile = !gameFilePath.isNullOrEmpty()
         val hasModLoader = !modLoaderFilePath.isNullOrEmpty()
         
-        // 至少需要选择模组加载器文件
-        startImportButton?.isEnabled = hasModLoader
+        // 需要同时选择游戏本体和模组加载器文件
+        startImportButton?.isEnabled = hasGameFile && hasModLoader
     }
 
     private fun startImport() {
+        if (gameFilePath.isNullOrEmpty()) {
+            showToast(getString(R.string.import_select_game_first))
+            return
+        }
+
         if (modLoaderFilePath.isNullOrEmpty()) {
             showToast(getString(R.string.import_select_mod_loader_first))
             return
@@ -215,8 +220,8 @@ class GameImportFragment : BaseFragment() {
         installer = GameInstaller(ctx)
 
         installer?.install(
-            gameFilePath = gameFilePath ?: modLoaderFilePath!!,
-            modLoaderFilePath = if (gameFilePath != null) modLoaderFilePath else null,
+            gameFilePath = gameFilePath!!,
+            modLoaderFilePath = modLoaderFilePath,
             gameName = modLoaderName ?: gameName,
             callback = object : InstallCallback {
                 override fun onProgress(message: String, progress: Int) {
