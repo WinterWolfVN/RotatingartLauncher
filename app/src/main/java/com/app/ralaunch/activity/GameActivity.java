@@ -160,6 +160,8 @@ public class GameActivity extends SDLActivity {
             // 获取程序集路径
             String assemblyPath = intent.getStringExtra("ASSEMBLY_PATH");
             String gameName = intent.getStringExtra("GAME_NAME");
+            String runtime = intent.getStringExtra("RUNTIME"); // "dotnet" or "box64"
+            
             if (assemblyPath == null || assemblyPath.isEmpty()) {
                 AppLogger.error(TAG, "Assembly path is null or empty");
                 runOnUiThread(() ->
@@ -178,22 +180,32 @@ public class GameActivity extends SDLActivity {
                 return -2;
             }
 
-            ArrayList<String> enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS");
+            int exitCode;
+            
+            // 根据运行时类型选择启动方式
+            if ("box64".equals(runtime)) {
+                // Box64 启动 x86_64 Linux 游戏 (如 Starbound)
+                AppLogger.info(TAG, "Launching with Box64: " + assemblyPath);
+                exitCode = GameLauncher.INSTANCE.launchBox64Game(this, assemblyPath);
+                onGameExitWithMessage(exitCode, exitCode != 0 ? "Box64 启动失败" : null);
+            } else {
+                // .NET 启动
+                ArrayList<String> enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS");
 
-            @Nullable ArrayList<Patch> enabledPatches = null;
-            if (enabledPatchIds != null && !enabledPatchIds.isEmpty()) {
-                PatchManager patchManager = RaLaunchApplication.getPatchManager();
-                enabledPatches = patchManager.getPatchesByIds(enabledPatchIds);
+                @Nullable ArrayList<Patch> enabledPatches = null;
+                if (enabledPatchIds != null && !enabledPatchIds.isEmpty()) {
+                    PatchManager patchManager = RaLaunchApplication.getPatchManager();
+                    enabledPatches = patchManager.getPatchesByIds(enabledPatchIds);
+                }
+
+                exitCode = GameLauncher.INSTANCE.launchDotNetAssembly(assemblyPath, new String[] {}, enabledPatches);
+                onGameExitWithMessage(exitCode, GameLauncher.INSTANCE.getLastErrorMessage());
             }
 
-            int exitCode = GameLauncher.INSTANCE.launchDotNetAssembly(assemblyPath, new String[] {}, enabledPatches);
-
-            onGameExitWithMessage(exitCode, GameLauncher.INSTANCE.getLastErrorMessage());
-
             if (exitCode == 0) {
-                AppLogger.info(TAG, "Dotnet game exited successfully.");
+                AppLogger.info(TAG, "Game exited successfully.");
             } else {
-                AppLogger.error(TAG, "Failed to launch dotnet game: " + exitCode);
+                AppLogger.error(TAG, "Failed to launch game: " + exitCode);
                 return exitCode;
             }
             return 0;

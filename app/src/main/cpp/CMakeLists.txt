@@ -12,6 +12,7 @@ set(ANDROID ON CACHE BOOL "Targeting an Android device" FORCE)
 set(USE_ANDROID_LOG ON CACHE BOOL "Use Android log instead of stdio" FORCE)
 set(EGL_WRAPPER ON CACHE BOOL "Build EGL wrapper" FORCE)
 set(NOX11 ON CACHE BOOL "Not using X11" FORCE)
+set(GLX_STUBS ON CACHE BOOL "Enable GLX function stubs for GLEW compatibility" FORCE)
 set(STATICLIB OFF CACHE BOOL "Build shared library" FORCE)
 set(GL4ES_SOURCE_DIR ${CMAKE_SOURCE_DIR}/gl4es)
 
@@ -90,8 +91,29 @@ set(CMAKE_INSTALL_PREFIX ${_OLD_CMAKE_INSTALL_PREFIX})
 # 设置 C++ 版本
 set(CMAKE_CXX_STANDARD 20)
 
+# ===== Box64 配置 =====
+# Box64 位于项目根目录的 box64 文件夹
+# CMAKE_SOURCE_DIR = D:\RotatingartLauncher\app\src\main\cpp
+# box64 位置 = D:\RotatingartLauncher\box64
+set(BOX64_ROOT ${CMAKE_SOURCE_DIR}/../../../../box64)
+get_filename_component(BOX64_ROOT ${BOX64_ROOT} ABSOLUTE)
+message(STATUS "Box64 root: ${BOX64_ROOT}")
+
+# 配置 Box64 选项 - 必须在 add_subdirectory 之前设置
+set(ARM64 ON CACHE BOOL "Target ARM64" FORCE)
+set(ANDROID ON CACHE BOOL "Build for Android" FORCE)
+set(BOX64_AS_LIBRARY ON CACHE BOOL "Build Box64 as a shared library" FORCE)
+set(NO_LIB_INSTALL ON CACHE BOOL "Don't install x86_64 libs" FORCE)
+set(NO_CONF_INSTALL ON CACHE BOOL "Don't install config files" FORCE)
+
+# 添加 Box64 子项目
+add_subdirectory(${BOX64_ROOT} ${CMAKE_BINARY_DIR}/box64)
+
 # 添加主程序子目录
 add_subdirectory(main)
 
-install(TARGETS main SDL2 FAudio-shared FNA3D netcorehost DESTINATION ${CMAKE_INSTALL_LIBDIR})
+# 添加 glibc_bridge 子目录 (用于Box64运行x86_64 Linux游戏)
+add_subdirectory(glibc_bridge)
+
+install(TARGETS main SDL2 FAudio-shared FNA3D netcorehost glibc_bridge DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(TARGETS GL_gl4es EGL_gl4es DESTINATION ${CMAKE_INSTALL_LIBDIR})

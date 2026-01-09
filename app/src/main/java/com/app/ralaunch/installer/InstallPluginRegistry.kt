@@ -14,6 +14,7 @@ object InstallPluginRegistry {
         // 注册内置插件
         registerPlugin(TerrariaInstallPlugin())
         registerPlugin(SmapiInstallPlugin())
+        registerPlugin(StarboundInstallPlugin()) // Box64 x86_64 Linux游戏
     }
     
     /**

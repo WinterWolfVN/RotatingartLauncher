@@ -47,8 +47,17 @@ class GameInstaller(private val context: Context) {
         
         currentPlugin = plugin
         
+        // 检测游戏类型
+        val detectResult = plugin.detectGame(gameFile)
+        val isBox64Game = detectResult?.gameType == "starbound" || plugin.pluginId == "starbound"
+        
         // 创建游戏目录
-        val gamesDir = File(context.getExternalFilesDir(null), GAMES_DIR)
+        // Box64 游戏需要安装到内部存储以获得执行权限
+        val gamesDir = if (isBox64Game) {
+            File(context.filesDir, GAMES_DIR)
+        } else {
+            File(context.getExternalFilesDir(null), GAMES_DIR)
+        }
         if (!gamesDir.exists()) {
             gamesDir.mkdirs()
         }
@@ -56,7 +65,7 @@ class GameInstaller(private val context: Context) {
         // 确定游戏名称
         val finalGameName = gameName 
             ?: modLoaderFile?.let { plugin.detectModLoader(it)?.name }
-            ?: plugin.detectGame(gameFile)?.gameName
+            ?: detectResult?.gameName
             ?: extractGameNameFromPath(gameFilePath)
         
         val gameDir = createGameDirectory(gamesDir, finalGameName)

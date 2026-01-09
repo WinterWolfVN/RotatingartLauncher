@@ -621,12 +621,8 @@ class SmapiInstallPlugin : GameInstallPlugin {
     private fun findInstallDat(tempDir: File): File? {
         // 优先级: linux > macOS > windows
         val searchPaths = listOf(
-            "internal/linux/install.dat",
-            "linux/install.dat",
-            "internal/macOS/install.dat",
-            "macOS/install.dat",
-            "internal/windows/install.dat",
-            "windows/install.dat"
+            "internal/linux/install.dat"
+          
         )
         
         for (path in searchPaths) {

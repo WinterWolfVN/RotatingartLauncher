@@ -1,5 +1,6 @@
 package com.app.ralaunch.core
 
+import android.content.Context
 import android.os.Environment
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.data.SettingsManager
@@ -10,6 +11,10 @@ import com.app.ralaunch.renderer.RendererConfig
 import com.app.ralib.patch.Patch
 import com.app.ralib.patch.PatchManager
 import com.app.ralaunch.game.AssemblyPatcher
+import com.app.ralaunch.box64.Box64Helper
+import com.app.ralaunch.box64.NativeBridge
+import org.libsdl.app.SDL
+import java.io.File
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
@@ -19,6 +24,9 @@ object GameLauncher {
     private const val TAG = "GameLauncher"
 
     private const val DEFAULT_DATA_DIR_NAME = "RALauncher"
+    
+    private var isBox64Initialized = false
+    private var isSDLJNIInitialized = false
 
     // 静态加载 native 库
     init {
@@ -28,10 +36,9 @@ object GameLauncher {
             System.loadLibrary("theorafile")
             System.loadLibrary("SDL2")
             System.loadLibrary("main")
+            System.loadLibrary("glibc_bridge")  // Box64 需要
             System.loadLibrary("openal32")
             System.loadLibrary("SkiaSharp")
-
-
         } catch (e: UnsatisfiedLinkError) {
             AppLogger.error(TAG, "Failed to load native libraries: " + e.message)
         }
@@ -40,6 +47,96 @@ object GameLauncher {
     fun getLastErrorMessage(): String {
         // 未来可能扩展以包含更多错误来源
         return DotNetLauncher.hostfxrLastErrorMsg
+    }
+    
+    /**
+     * 启动 Box64 游戏 (x86_64 Linux 游戏，如 Starbound)
+     * @param context Android Context
+     * @param gamePath 游戏可执行文件路径
+     * @return 退出代码
+     */
+    fun launchBox64Game(context: Context, gamePath: String): Int {
+        try {
+            AppLogger.info(TAG, "=== Starting Box64 Game Launch ===")
+            AppLogger.info(TAG, "Game path: $gamePath")
+            
+            // 初始化 Box64 环境
+            if (!initializeBox64(context)) {
+                return -1
+            }
+            
+            // 初始化 SDL JNI 环境（传入 Context 给 SDL 音频系统使用）
+            initializeSDLJNI(context)
+            
+            val filesDir = context.filesDir.absolutePath
+            val rootfsPath = "$filesDir/rootfs"
+            val gameDir = File(gamePath).parent ?: return -2
+            
+            // 设置 rootfs 路径
+            System.setProperty("BOX64_ROOTFS", rootfsPath)
+            
+            AppLogger.info(TAG, "Launching via Box64...")
+            AppLogger.info(TAG, "  Rootfs: $rootfsPath")
+            AppLogger.info(TAG, "  Work dir: $gameDir")
+            
+            val result = Box64Helper.runBox64InProcess(arrayOf(gamePath), gameDir)
+            
+            AppLogger.info(TAG, "=== Box64 Game Launch Completed ===")
+            AppLogger.info(TAG, "Exit code: $result")
+            
+            return result
+        } catch (e: Exception) {
+            AppLogger.error(TAG, "Failed to launch Box64 game: $gamePath", e)
+            return -3
+        }
+    }
+    
+    /**
+     * 初始化 Box64 环境（提取 rootfs 等）
+     * 可在安装时预先调用，以避免首次启动时的延迟
+     */
+    fun initializeBox64(context: Context): Boolean {
+        if (isBox64Initialized) return true
+        
+        try {
+            AppLogger.info(TAG, "Initializing Box64 environment...")
+            
+            val filesDir = context.filesDir.absolutePath
+            val result = NativeBridge.init(context, filesDir)
+            
+            if (result == 0) {
+                isBox64Initialized = true
+                AppLogger.info(TAG, "Box64 initialized successfully")
+                return true
+            } else {
+                AppLogger.error(TAG, "Box64 initialization failed with code: $result")
+                return false
+            }
+        } catch (e: Exception) {
+            AppLogger.error(TAG, "Failed to initialize Box64", e)
+            return false
+        }
+    }
+    
+    private fun initializeSDLJNI(context: Context) {
+        if (isSDLJNIInitialized) return
+        
+        try {
+            AppLogger.info(TAG, "Initializing SDL JNI environment...")
+            SDL.setupJNI()
+            // 注意：不要调用 SDL.initialize()！
+            // 当从 GameActivity（继承自 SDLActivity）启动时，SDLActivity.onCreate() 已经初始化了 SDL
+            // 再次调用 SDL.initialize() 会把 mSingleton 和 mSurface 重置为 null，
+            // 导致 Box64 的 SDL_CreateWindow() 无法获取 native window
+            // SDL.initialize() // <-- 禁用！会重置 SDLActivity 的静态变量！
+            
+            // 只设置 Context，确保 SDL 音频等功能可以正常工作
+            SDL.setContext(context)
+            isSDLJNIInitialized = true
+            AppLogger.info(TAG, "SDL JNI initialized successfully (without re-initializing SDLActivity)")
+        } catch (e: Exception) {
+            AppLogger.warn(TAG, "Failed to initialize SDL JNI: ${e.message}")
+        }
     }
 
     /**

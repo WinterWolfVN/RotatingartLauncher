@@ -89,6 +89,10 @@ public class SettingsManager {
 
         // 内存优化设置
         public static final String KILL_LAUNCHER_UI_AFTER_LAUNCH = "kill_launcher_ui_after_launch";
+        
+        // Box64设置 (用于运行x86_64 Linux游戏如Starbound)
+        public static final String BOX64_ENABLED = "box64_enabled"; // 是否启用Box64模式
+        public static final String BOX64_GAME_PATH = "box64_game_path"; // 游戏可执行文件路径
     }
     
     // 默认值
@@ -142,6 +146,10 @@ public class SettingsManager {
 
         // 内存优化默认值
         public static final boolean KILL_LAUNCHER_UI_AFTER_LAUNCH = false; // 默认不杀死启动器UI进程
+        
+        // Box64默认值
+        public static final boolean BOX64_ENABLED = false; // 默认关闭Box64模式
+        public static final String BOX64_GAME_PATH = ""; // 默认无游戏路径
     }
     
     private SettingsManager(Context context) {
@@ -628,6 +636,30 @@ public class SettingsManager {
 
     public void setKillLauncherUIAfterLaunch(boolean enabled) {
         putBoolean(Keys.KILL_LAUNCHER_UI_AFTER_LAUNCH, enabled);
+    }
+
+    // ==================== Box64设置 ====================
+    
+    /**
+     * 是否启用Box64模式 (用于运行x86_64 Linux游戏)
+     */
+    public boolean isBox64Enabled() {
+        return getBoolean(Keys.BOX64_ENABLED, Defaults.BOX64_ENABLED);
+    }
+    
+    public void setBox64Enabled(boolean enabled) {
+        putBoolean(Keys.BOX64_ENABLED, enabled);
+    }
+    
+    /**
+     * 获取Box64游戏路径
+     */
+    public String getBox64GamePath() {
+        return getString(Keys.BOX64_GAME_PATH, Defaults.BOX64_GAME_PATH);
+    }
+    
+    public void setBox64GamePath(String path) {
+        putString(Keys.BOX64_GAME_PATH, path);
     }
 
     /**

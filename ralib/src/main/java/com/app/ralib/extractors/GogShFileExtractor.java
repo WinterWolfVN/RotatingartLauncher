@@ -472,6 +472,16 @@ public class GogShFileExtractor implements ExtractorCollection.IExtractor {
                     throw new IOException("解压 game_data.zip 失败");
                 }
 
+                // 提取图标 (data/noarch/support/icon.png -> gamePath/support/icon.png)
+                try {
+                    var iconExtractor = new BasicSevenZipExtractor(
+                            gameDataPath,
+                            Paths.get("data/noarch/support"),
+                            gamePath.resolve("support"),
+                            null);
+                    iconExtractor.extract();
+                } catch (Exception ignored) {}
+
                 extractionListener.onProgress("游戏数据提取完成", 1.0f, state);
                 state.put(STATE_KEY_GAME_PATH, gamePath);
                 state.put(STATE_KEY_GAME_DATA_ZIP_FILE, gdzf);

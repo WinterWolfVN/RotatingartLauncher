@@ -214,10 +214,16 @@ class LocalImportFragment : BaseFragment() {
                         updateProgress(getString(R.string.import_applying_patches), 98)
                     }
                     
-                    // 在后台线程应用 MonoMod 补丁
+                    // 在后台线程应用 MonoMod 补丁（仅对 .NET 游戏）
                     Thread {
                         val ctx = context
-                        if (ctx != null) {
+                        // 只对 .NET 游戏（.dll/.exe）应用 MonoMod 补丁
+                        // Box64 原生 Linux 游戏不需要 MonoMod
+                        val needsMonoMod = launchTarget?.lowercase()?.let {
+                            it.endsWith(".dll") || it.endsWith(".exe")
+                        } ?: false
+                        
+                        if (ctx != null && needsMonoMod) {
                             // 应用 MonoMod 补丁到新安装的游戏
                             AssemblyPatcher.applyMonoModPatches(ctx, gamePath, true)
                         }
@@ -226,12 +232,18 @@ class LocalImportFragment : BaseFragment() {
                             isImporting = false
                             updateProgress(getString(R.string.import_complete_exclamation), 100)
 
+                            // 根据启动目标判断运行时类型
+                            val runtimeType = if (launchTarget?.lowercase()?.let { 
+                                it.endsWith(".dll") || it.endsWith(".exe") 
+                            } == true) "dotnet" else "box64"
+
                             val newGame = GameItem()
                             newGame.gameBasePath = gameBasePath
                             newGame.gameName = installedGameName
                             newGame.gamePath = gamePath
                             newGame.gameBodyPath = launchTarget ?: findGameBodyPath(gamePath)
                             newGame.engineType = engineType
+                            newGame.runtime = runtimeType
 
                             val extractedIconPath = iconPath ?: extractIconFromExecutable(gamePath, gameIconPath)
                             newGame.iconPath = extractedIconPath

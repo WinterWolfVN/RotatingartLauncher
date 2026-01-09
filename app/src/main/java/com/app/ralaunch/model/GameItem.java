@@ -19,6 +19,7 @@ public class GameItem {
     private String gameBodyPath; // 游戏本体路径(对于 modloader 就是 Terraria.exe)
     private String iconPath; // 图标路径(从exe提取)
     private String engineType; // 引擎类型
+    private String runtime; // 运行时类型: "dotnet" 或 "box64"
     private int iconResId; // 图标资源ID
     private boolean modLoaderEnabled = true; // ModLoader 是否启用(默认启用)
     private boolean isShortcut = false; // 是否为快捷方式（从文件浏览器添加的 DLL/EXE，不删除实际文件）
@@ -87,6 +88,14 @@ public class GameItem {
 
     public void setEngineType(String engineType) {
         this.engineType = engineType;
+    }
+
+    public String getRuntime() {
+        return runtime;
+    }
+
+    public void setRuntime(String runtime) {
+        this.runtime = runtime;
     }
 
     public int getIconResId() {

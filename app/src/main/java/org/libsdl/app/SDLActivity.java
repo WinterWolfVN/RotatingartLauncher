@@ -694,14 +694,16 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
 
         // Try a transition to resumed state
         if (mNextNativeState == NativeState.RESUMED) {
-            if (mSurface.mIsSurfaceReady && mHasFocus && mIsResumedCalled) {
+            // Box64 fix: 添加 mSurface null 检查防止 NullPointerException
+            // 当 SDL_Init 从 Box64 线程调用时，mSurface 可能还未初始化
+            if (mSurface != null && mSurface.mIsSurfaceReady && mHasFocus && mIsResumedCalled) {
                 if (mSDLThread == null) {
                     // This is the entry point to the C app.
                     // Start up the C app thread and enable sensor input for the first time
 
-                    // [WARN] 关键：为 SDL 主线程设置 4MB 栈大小（防止栈溢出）
-                    // tModLoader + 大型模组需要更大的栈空间
-                    mSDLThread = new Thread(null, new SDLMain(), "SDLThread", 4 * 1024 * 1024); // 4MB stack
+                    // [WARN] 关键：为 SDL 主线程设置 16MB 栈大小（防止栈溢出）
+                    // Box64 dynarec + SDL JNI回调 需要更大的栈空间
+                    mSDLThread = new Thread(null, new SDLMain(), "SDLThread", 8 * 1024 * 1024); // 16MB stack
                     mSDLThread.setPriority(Thread.MAX_PRIORITY);
                     
                     mSurface.enableSensor(Sensor.TYPE_ACCELEROMETER, true);
@@ -809,7 +811,9 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
 
                     mScreenKeyboardShown = false;
 
-                    mSurface.requestFocus();
+                    if (mSurface != null) {
+                        mSurface.requestFocus();
+                    }
                 }
                 break;
             case COMMAND_SET_KEEP_SCREEN_ON:
@@ -857,7 +861,9 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
                     DisplayMetrics realMetrics = new DisplayMetrics();
                     display.getRealMetrics(realMetrics);
 
-                    boolean bFullscreenLayout = ((realMetrics.widthPixels == mSurface.getWidth()) &&
+                    // Box64 fix: 添加 mSurface null 检查
+                    boolean bFullscreenLayout = (mSurface != null) &&
+                            ((realMetrics.widthPixels == mSurface.getWidth()) &&
                             (realMetrics.heightPixels == mSurface.getHeight()));
 
                     if ((Integer) data == 1) {
@@ -1387,10 +1393,23 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
      * This method is called by SDL using JNI.
      */
     public static Surface getNativeSurface() {
+        Log.i(TAG, "getNativeSurface() called from JNI");
+        Log.i(TAG, "  mSingleton=" + mSingleton + ", mSurface=" + mSurface);
+        
         if (SDLActivity.mSurface == null) {
+            Log.e(TAG, "  ERROR: mSurface is NULL! SDLActivity not properly initialized?");
             return null;
         }
-        return SDLActivity.mSurface.getNativeSurface();
+        
+        Surface surface = SDLActivity.mSurface.getNativeSurface();
+        Log.i(TAG, "  mSurface.getNativeSurface() returned: " + surface);
+        Log.i(TAG, "  mSurface.mIsSurfaceReady=" + mSurface.mIsSurfaceReady);
+        
+        if (surface == null) {
+            Log.e(TAG, "  ERROR: Surface is NULL! SurfaceHolder not ready?");
+        }
+        
+        return surface;
     }
 
     // Input
@@ -1709,6 +1728,10 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
 
         if (Build.VERSION.SDK_INT >= 24 /* Android 7.0 (N) */) {
             try {
+                // Box64 fix: 添加 mSurface null 检查
+                if (mSurface == null) {
+                    return false;
+                }
                 mSurface.setPointerIcon(mCursors.get(cursorID));
             } catch (Exception e) {
                 return false;

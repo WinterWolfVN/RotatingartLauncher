@@ -48,6 +48,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>  /* for getenv() */
 #include <dlfcn.h>
 
 #define SDL_JAVA_PREFIX                               org_libsdl_app
@@ -492,6 +493,8 @@ JNIEnv *Android_JNI_GetEnv(void)
 }
 
 /* Set up an external thread for using JNI with Android_JNI_GetEnv() */
+/* EXPORTED: Used by glibc_bridge to setup JNI before Box64 execution */
+__attribute__((visibility("default")))
 int Android_JNI_SetupThread(void)
 {
     JNIEnv *env;
@@ -1536,10 +1539,35 @@ ANativeWindow *Android_JNI_GetNativeWindow(void)
     jobject s;
     JNIEnv *env = Android_JNI_GetEnv();
 
+    __android_log_print(ANDROID_LOG_INFO, "SDL_JNI", "Android_JNI_GetNativeWindow called");
+    __android_log_print(ANDROID_LOG_INFO, "SDL_JNI", "  env=%p, mActivityClass=%p, midGetNativeSurface=%p", 
+                        env, mActivityClass, midGetNativeSurface);
+
+    if (!env) {
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_JNI", "  ERROR: JNIEnv is NULL!");
+        return NULL;
+    }
+    
+    if (!mActivityClass) {
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_JNI", "  ERROR: mActivityClass is NULL! nativeSetupJNI not called?");
+        return NULL;
+    }
+    
+    if (!midGetNativeSurface) {
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_JNI", "  ERROR: midGetNativeSurface is NULL!");
+        return NULL;
+    }
+
     s = (*env)->CallStaticObjectMethod(env, mActivityClass, midGetNativeSurface);
+    __android_log_print(ANDROID_LOG_INFO, "SDL_JNI", "  getNativeSurface() returned: %p", s);
+    
     if (s) {
         anw = ANativeWindow_fromSurface(env, s);
+        __android_log_print(ANDROID_LOG_INFO, "SDL_JNI", "  ANativeWindow_fromSurface returned: %p", anw);
         (*env)->DeleteLocalRef(env, s);
+    } else {
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_JNI", "  ERROR: getNativeSurface() returned NULL!");
+        __android_log_print(ANDROID_LOG_ERROR, "SDL_JNI", "  This means SDLActivity.mSurface is null or Surface not ready");
     }
 
     return anw;
@@ -2285,6 +2313,7 @@ int Android_JNI_GetPowerInfo(int *plugged, int *charged, int *battery, int *seco
 /* Add all touch devices */
 void Android_JNI_InitTouch()
 {
+   
     JNIEnv *env = Android_JNI_GetEnv();
     (*env)->CallStaticVoidMethod(env, mActivityClass, midInitTouch);
 }
@@ -2680,6 +2709,14 @@ void Android_JNI_GetManifestEnvironmentVariables(void)
 
     if (!bHasEnvironmentVariables) {
         JNIEnv *env = Android_JNI_GetEnv();
+        /* Box64 fix: Check if JNIEnv is valid before using it
+         * When running from Box64 emulated threads, the JNI environment may not be
+         * properly attached, which would cause CallStaticBooleanMethod to crash. */
+        if (!env) {
+            __android_log_print(ANDROID_LOG_WARN, "SDL", 
+                "Android_JNI_GetManifestEnvironmentVariables: JNIEnv is NULL, skipping (Box64 thread?)");
+            return;
+        }
         SDL_bool ret = (*env)->CallStaticBooleanMethod(env, mActivityClass, midGetManifestEnvironmentVariables);
         if (ret) {
             bHasEnvironmentVariables = SDL_TRUE;

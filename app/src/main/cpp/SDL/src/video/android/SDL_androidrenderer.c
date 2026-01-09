@@ -236,12 +236,20 @@ SDL_bool Android_LoadRenderer(const char *renderer_name)
     }
 
     /* 对于 gl4es，设置额外的环境变量 */
+    /* 注意：使用 setenv(..., 0) 表示不覆盖已有的环境变量 */
+    /* 这样 Box64Launcher 或 RendererConfig 设置的值优先 */
     if (SDL_strcasecmp(backend->name, "gl4es") == 0) {
-        setenv("LIBGL_ES", "2", 1);         /* 使用 GLES 2.0 */
-        setenv("LIBGL_MIPMAP", "3", 1);     /* 启用 mipmap */
-        setenv("LIBGL_NPOT", "1", 1);       /* 支持非 2 的幂次纹理 */
-        setenv("LIBGL_SHRINKPOP", "0", 1);  /* 禁用纹理缩小 */
-        LOGI("  ✓ gl4es environment configured");
+        const char *existing_libgl_es = SDL_getenv("LIBGL_ES");
+        if (existing_libgl_es) {
+            LOGI("  LIBGL_ES already set to '%s', not overriding", existing_libgl_es);
+        } else {
+            setenv("LIBGL_ES", "3", 1);         /* 默认使用 GLES 3.0 (和 dotnet 一致) */
+        }
+        setenv("LIBGL_MIPMAP", "3", 0);     /* 启用 mipmap (不覆盖) */
+        setenv("LIBGL_NPOT", "1", 0);       /* 支持非 2 的幂次纹理 (不覆盖) */
+        setenv("LIBGL_SHRINKPOP", "0", 0);  /* 禁用纹理缩小 (不覆盖) */
+        LOGI("  ✓ gl4es environment configured (LIBGL_ES=%s)", 
+             SDL_getenv("LIBGL_ES") ? SDL_getenv("LIBGL_ES") : "not set");
     }
 
     current_renderer = backend;

@@ -11,9 +11,11 @@ import com.app.ralib.patch.Patch;
 import com.app.ralib.patch.PatchManager;
 
 import java.io.File;
+import java.io.FileReader;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
+import org.json.JSONObject;
 
 /**
  * 游戏启动管理器
@@ -41,6 +43,10 @@ public class GameLaunchManager {
             return false;
         }
         
+        // 检测运行时类型 (从game_info.json读取)
+        String runtime = detectRuntime(assemblyFile);
+        AppLogger.info(TAG, "Game runtime: " + runtime);
+        
         PatchManager patchManager = RaLaunchApplication.getPatchManager();
         // 使用 getApplicableAndEnabledPatches 来正确过滤只适用于该游戏的补丁
         // gameId 使用游戏名称，补丁的 targetGames 字段会匹配
@@ -54,9 +60,10 @@ public class GameLaunchManager {
         intent.putExtra("ASSEMBLY_PATH", assemblyPath);
         intent.putExtra("GAME_ID", game.getGamePath());
         intent.putExtra("GAME_PATH", game.getGamePath());
+        intent.putExtra("RUNTIME", runtime); // 运行时类型: "dotnet" 或 "box64"
         
-        // 传递启用的补丁ID列表
-        if (!enabledPatches.isEmpty()) {
+        // 传递启用的补丁ID列表 (仅dotnet游戏)
+        if (!"box64".equals(runtime) && !enabledPatches.isEmpty()) {
             intent.putStringArrayListExtra(
                     "ENABLED_PATCH_IDS",
                     enabledPatches.stream()
@@ -71,6 +78,63 @@ public class GameLaunchManager {
         }
         
         return true;
+    }
+    
+    /**
+     * 检测游戏运行时类型
+     * @return "box64" 或 "dotnet"
+     */
+    private String detectRuntime(File assemblyFile) {
+        try {
+            // 查找 game_info.json
+            File gameDir = assemblyFile.getParentFile();
+            File gameInfoFile = new File(gameDir, "game_info.json");
+            
+            // 如果启动目标在子目录,向上查找
+            if (!gameInfoFile.exists() && gameDir != null) {
+                gameInfoFile = new File(gameDir.getParentFile(), "game_info.json");
+            }
+            
+            if (gameInfoFile.exists()) {
+                StringBuilder content = new StringBuilder();
+                try (FileReader reader = new FileReader(gameInfoFile)) {
+                    char[] buffer = new char[1024];
+                    int read;
+                    while ((read = reader.read(buffer)) != -1) {
+                        content.append(buffer, 0, read);
+                    }
+                }
+                
+                JSONObject json = new JSONObject(content.toString());
+                if (json.has("runtime")) {
+                    return json.getString("runtime");
+                }
+                
+                // 根据游戏类型推断
+                if (json.has("game_type")) {
+                    String gameType = json.getString("game_type");
+                    if ("starbound".equals(gameType)) {
+                        return "box64";
+                    }
+                }
+            }
+            
+            // 根据文件后缀判断
+            String fileName = assemblyFile.getName().toLowerCase();
+            if (fileName.endsWith(".dll") || fileName.endsWith(".exe")) {
+                return "dotnet";
+            }
+            
+            // 无后缀的Linux可执行文件
+            if (!fileName.contains(".")) {
+                return "box64";
+            }
+            
+        } catch (Exception e) {
+            AppLogger.warn(TAG, "Failed to detect runtime: " + e.getMessage());
+        }
+        
+        return "dotnet"; // 默认使用dotnet
     }
     
     /**

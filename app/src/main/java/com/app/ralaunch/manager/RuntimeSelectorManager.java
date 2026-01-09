@@ -178,5 +178,33 @@ public class RuntimeSelectorManager {
     public void setOnVersionChangedListener(OnVersionChangedListener listener) {
         this.onVersionChangedListener = listener;
     }
+    
+    /**
+     * 根据游戏的运行时类型更新显示
+     * @param runtime 运行时类型: "dotnet"、"box64" 或 null（默认 dotnet）
+     */
+    public void updateForGameRuntime(String runtime) {
+        if (runtimeSelectContainer == null || tvCurrentRuntime == null || btnRuntimeSelector == null) {
+            return;
+        }
+        
+        // null 或空字符串默认为 dotnet
+        String effectiveRuntime = (runtime == null || runtime.isEmpty()) ? "dotnet" : runtime;
+        
+        if ("box64".equals(effectiveRuntime)) {
+            // Box64 游戏 - 显示 Box64 信息，禁用选择
+            tvCurrentRuntime.setText("Box64");
+            btnRuntimeSelector.setEnabled(false);
+            btnRuntimeSelector.setAlpha(0.7f);
+        } else {
+            // .NET 游戏 - 显示 .NET 版本，启用选择
+            String selectedVersion = RuntimeManager.getSelectedVersion(context);
+            if (selectedVersion != null) {
+                tvCurrentRuntime.setText(".NET " + selectedVersion);
+            }
+            btnRuntimeSelector.setEnabled(true);
+            btnRuntimeSelector.setAlpha(1.0f);
+        }
+    }
 }
 

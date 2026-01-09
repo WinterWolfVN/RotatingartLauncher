@@ -248,6 +248,10 @@ public class MainActivity extends AppCompatActivity implements
         gameListManager.setOnGameSelectedListener(game -> {
             // 游戏选择处理 - 显示启动按钮
             uiManager.showLaunchGameButton();
+            // 根据游戏的运行时类型更新显示
+            if (runtimeSelectorManager != null) {
+                runtimeSelectorManager.updateForGameRuntime(game.getRuntime());
+            }
         });
         gameListManager.setOnGameDeleteListener(this);
 

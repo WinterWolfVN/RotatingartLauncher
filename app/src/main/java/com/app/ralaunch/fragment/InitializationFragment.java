@@ -181,6 +181,22 @@ public class InitializationFragment extends Fragment {
     private List<ComponentItem> createComponentList() {
         List<ComponentItem> componentList = new ArrayList<>();
 
+        // Rootfs - 根文件系统（包含 box64 和 glibc）
+        componentList.add(new ComponentItem(
+            "rootfs",
+            getString(R.string.init_component_rootfs_desc),
+            "rootfs.tar.xz",
+            true  // 需要解压
+        ));
+
+        // x64lib - Box64 所需的 x86_64 库（libstdc++, libssl 等）
+        componentList.add(new ComponentItem(
+            "x64lib",
+            getString(R.string.init_component_x64lib_desc),
+            "x64lib.tar.xz",
+            true  // 需要解压
+        ));
+
         // GL4ES - OpenGL ES 兼容层（预编译库，不需要解压）
         componentList.add(new ComponentItem(
             "GL4ES",
@@ -761,11 +777,14 @@ public class InitializationFragment extends Fragment {
                 
                 String entryName = entry.getName();
                 
-                // 跳过顶层 dotnet 目录
+                // 跳过顶层目录（如 dotnet/, x64lib/, rootfs/ 等）
+                // 如果组件名称与顶层目录名称匹配，则移除顶层目录前缀
+                String componentName = component.getName().toLowerCase();
                 if (entryName.contains("/") || entryName.contains("\\")) {
                     int slashIndex = Math.max(entryName.indexOf('/'), entryName.indexOf('\\'));
-                    String topLevel = entryName.substring(0, slashIndex);
-                    if (topLevel.startsWith("dotnet")) {
+                    String topLevel = entryName.substring(0, slashIndex).toLowerCase();
+                    // 如果顶层目录以组件名称开头，则跳过该目录
+                    if (topLevel.startsWith(componentName) || componentName.startsWith(topLevel)) {
                         entryName = entryName.substring(slashIndex + 1);
                     }
                 }

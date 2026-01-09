@@ -197,18 +197,13 @@ class GameImportFragment : BaseFragment() {
         val hasGameFile = !gameFilePath.isNullOrEmpty()
         val hasModLoader = !modLoaderFilePath.isNullOrEmpty()
         
-        // 需要同时选择游戏本体和模组加载器文件
-        startImportButton?.isEnabled = hasGameFile && hasModLoader
+        // 只要有游戏文件或模组加载器文件就可以导入
+        startImportButton?.isEnabled = hasGameFile || hasModLoader
     }
 
     private fun startImport() {
-        if (gameFilePath.isNullOrEmpty()) {
+        if (gameFilePath.isNullOrEmpty() && modLoaderFilePath.isNullOrEmpty()) {
             showToast(getString(R.string.import_select_game_first))
-            return
-        }
-
-        if (modLoaderFilePath.isNullOrEmpty()) {
-            showToast(getString(R.string.import_select_mod_loader_first))
             return
         }
 
@@ -244,10 +239,16 @@ class GameImportFragment : BaseFragment() {
                         importProgress?.progress = 98
                     }
                     
-                    // 在后台线程应用 MonoMod 补丁
+                    // 在后台线程应用 MonoMod 补丁（仅对 .NET 游戏）
                     lifecycleScope.launch(Dispatchers.IO) {
                         val ctx = context
-                        if (ctx != null) {
+                        // 只对 .NET 游戏（.dll/.exe）应用 MonoMod 补丁
+                        // Box64 原生 Linux 游戏不需要 MonoMod
+                        val needsMonoMod = launchTarget?.lowercase()?.let {
+                            it.endsWith(".dll") || it.endsWith(".exe")
+                        } ?: false
+                        
+                        if (ctx != null && needsMonoMod) {
                             // 应用 MonoMod 补丁到新安装的游戏
                             AssemblyPatcher.applyMonoModPatches(ctx, gamePath, true)
                         }
@@ -264,12 +265,18 @@ class GameImportFragment : BaseFragment() {
                                 gamePath
                             }
 
+                        // 根据启动目标判断运行时类型
+                        val runtimeType = if (launchTarget?.lowercase()?.let { 
+                            it.endsWith(".dll") || it.endsWith(".exe") 
+                        } == true) "dotnet" else "box64"
+                        
                         val gameItem = GameItem().apply {
                             setGameName(installedGameName)
                                 setGameBasePath(gameBasePath)  // 使用根安装目录，用于删除
                                 setGamePath(assemblyPath)
                                 setGameBodyPath(if (!launchTarget.isNullOrEmpty()) File(gamePath, launchTarget).absolutePath else null)
                             setIconPath(iconPath)
+                            setRuntime(runtimeType)
                         }
 
                         importCompleteListener?.onImportComplete("game", gameItem)

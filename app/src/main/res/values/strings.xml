@@ -1300,4 +1300,6 @@
     <string name="import_online_download_hint">从网络下载模组加载器</string>
     <string name="import_summary">导入摘要</string>
     <string name="import_progress_title">导入进度</string>
+    <string name="init_component_rootfs_desc">Box64以及Debian rootfs</string>
+    <string name="init_component_x64lib_desc">Box64 x86_64 库 (libstdc++, libssl 等)</string>
 </resources>
