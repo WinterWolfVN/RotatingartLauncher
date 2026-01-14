@@ -46,29 +46,20 @@ public class ProcessLauncherService extends Service {
     // Intent Extras - 通用参数
     public static final String EXTRA_ASSEMBLY_PATH = "assembly_path";
     public static final String EXTRA_ARGS = "args";
-    public static final String EXTRA_STARTUP_HOOKS = "startup_hooks";
     public static final String EXTRA_TITLE = "title";
+    public static final String EXTRA_GAME_ID = "game_id";
     
     // 进程状态
     private boolean mRunning = false;
     private Thread mLauncherThread;
-    
-    /**
-     * 从 native 层调用：启动进程服务
-     * 
-     * @param context 应用上下文
-     * @param assemblyPath 程序集完整路径
-     * @param args 命令行参数数组
-     * @param startupHooks 启动钩子（DOTNET_STARTUP_HOOKS 值，可为 null）
-     * @param title 通知标题
-     */
-    public static void launch(Context context, String assemblyPath, String[] args, 
-                             String startupHooks, String title) {
+
+    public static void launch(String assemblyPath, String[] args, String title, String gameId) {
+        var context = RaLaunchApplication.getAppContext();
         Intent intent = new Intent(context, ProcessLauncherService.class);
         intent.putExtra(EXTRA_ASSEMBLY_PATH, assemblyPath);
         intent.putExtra(EXTRA_ARGS, args);
-        intent.putExtra(EXTRA_STARTUP_HOOKS, startupHooks);
-        intent.putExtra(EXTRA_TITLE, title != null ? title : "Process");
+        intent.putExtra(EXTRA_TITLE, title);
+        intent.putExtra(EXTRA_GAME_ID, gameId);
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent);
@@ -87,26 +78,6 @@ public class ProcessLauncherService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        try {
-            Os.setenv("PACKAGE_NAME", getPackageName(), true);
-            Os.setenv("EXTERNAL_STORAGE_DIRECTORY", Environment.getExternalStorageDirectory().getPath(), true);
-            
-            File gameDataDir = Paths.get(Environment.getExternalStorageDirectory().getPath(), "RALauncher").toFile();
-            if (!gameDataDir.exists()) {
-                if (!gameDataDir.mkdirs()) {
-                    gameDataDir = getFilesDir();
-                }
-            }
-            
-            String gameDataPath = gameDataDir.getAbsolutePath();
-            Os.setenv("HOME", gameDataPath, true);
-            Os.setenv("XDG_DATA_HOME", gameDataPath, true);
-            Os.setenv("XDG_CONFIG_HOME", gameDataPath, true);
-            Os.setenv("XDG_CACHE_HOME", getCacheDir().getAbsolutePath(), true);
-        } catch (Exception e) {
-            AppLogger.error(TAG, "Failed to set environment", e);
-        }
-        
         createNotificationChannel();
     }
     
@@ -124,7 +95,7 @@ public class ProcessLauncherService extends Service {
         // 获取参数
         String assemblyPath = intent.getStringExtra(EXTRA_ASSEMBLY_PATH);
         String[] args = intent.getStringArrayExtra(EXTRA_ARGS);
-//        String startupHooks = intent.getStringExtra(EXTRA_STARTUP_HOOKS); // ignored, use auto setup
+        String gameId = intent.getStringExtra(EXTRA_GAME_ID);
         
         if (assemblyPath == null) {
             AppLogger.error(TAG, "Assembly path is null");
@@ -133,12 +104,12 @@ public class ProcessLauncherService extends Service {
         }
         
         // 启动
-        launchAsync(assemblyPath, args, title);
+        launchAsync(assemblyPath, args, title, gameId);
         
         return START_STICKY;
     }
     
-    private void launchAsync(String assemblyPath, String[] args, String title) {
+    private void launchAsync(String assemblyPath, String[] args, String title, String gameId) {
         if (mRunning) {
             return;
         }
@@ -148,7 +119,7 @@ public class ProcessLauncherService extends Service {
                 mRunning = true;
                 updateNotification(title + " 正在运行");
                 
-                doLaunch(assemblyPath, args, title);
+                doLaunch(assemblyPath, args, title, gameId);
             } catch (Exception e) {
                 AppLogger.error(TAG, "Launch error: " + e.getMessage(), e);
             } finally {
@@ -160,7 +131,7 @@ public class ProcessLauncherService extends Service {
         mLauncherThread.start();
     }
     
-    private int doLaunch(String assemblyPath, String[] args, String gameId) {
+    private int doLaunch(String assemblyPath, String[] args, String title, String gameId) {
         try {
             // 使用 getApplicableAndEnabledPatches 来正确过滤只适用于该游戏的补丁
             // gameId 使用游戏名称/title，补丁的 targetGames 字段会匹配

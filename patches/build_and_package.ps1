@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 # 编译并打包所有补丁到 assets/patches 文件夹
 # 使用方法: 在 PowerShell 中运行 .\build_and_package.ps1
 
@@ -69,7 +70,7 @@ foreach ($patch in $patches) {
     Write-Host "编译输出目录: $buildOutput" -ForegroundColor Gray
     
     # 创建临时打包目录
-    $tempPackageDir = Join-Path $env:TEMP "patch_package_$outputName"
+    $tempPackageDir = Join-Path ($env:TEMP ?? "/tmp") "patch_package_$outputName"
     if (Test-Path $tempPackageDir) {
         Remove-Item -Recurse -Force $tempPackageDir
     }

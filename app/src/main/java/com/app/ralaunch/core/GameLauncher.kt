@@ -12,6 +12,7 @@ import com.app.ralib.patch.Patch
 import com.app.ralib.patch.PatchManager
 import com.app.ralaunch.box64.Box64Helper
 import com.app.ralaunch.box64.NativeBridge
+import com.app.ralaunch.service.ProcessLauncherService
 import org.libsdl.app.SDL
 import java.io.File
 import kotlin.io.path.Path
@@ -257,6 +258,32 @@ object GameLauncher {
         } catch (e: Exception) {
             AppLogger.error(TAG, "Failed to launch assembly: $assemblyPath", e)
             e.printStackTrace()
+            return -1
+        }
+    }
+
+    /**
+     * 启动新的 .NET 进程（从 native 层调用）
+     * @param assemblyPath 程序集路径
+     * @param args 传递给程序集的参数
+     * @param title 进程标题（用于日志）
+     * @param gameId 游戏ID（用于匹配补丁）
+     * @return 程序集退出代码
+     */
+    @JvmStatic
+    fun launchNewDotNetProcess(assemblyPath: String, args: Array<String>, title: String, gameId: String): Int {
+        try {
+            AppLogger.info(TAG, "=== launchNewDotNetProcess called ===")
+            AppLogger.info(TAG, "Assembly: $assemblyPath")
+            AppLogger.info(TAG, "Title: $title")
+            AppLogger.info(TAG, "Game ID: $gameId")
+            AppLogger.info(TAG, "Arguments: ${args.joinToString(", ")}")
+
+            ProcessLauncherService.launch(assemblyPath, args, title, gameId)
+
+            return 0
+        } catch (e: Exception) {
+            AppLogger.error(TAG, "Failed to launch new .NET process", e)
             return -1
         }
     }

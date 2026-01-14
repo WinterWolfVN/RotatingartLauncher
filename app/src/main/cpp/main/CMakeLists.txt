@@ -22,10 +22,10 @@ set(MAIN_SOURCES
         And64InlineHook/And64InlineHook.cpp
         shared_envvars.cpp
         dotnet/dotnet_launcher.cpp
-        dotnet/netcorehost_launcher.cpp
         dotnet/corehost_trace_redirect.cpp
         utils/native_methods.cpp
         box64_launcher.cpp
+        core/game_launcher.cpp
 )
 
 add_library(${CMAKE_PROJECT_NAME} SHARED ${MAIN_SOURCES})

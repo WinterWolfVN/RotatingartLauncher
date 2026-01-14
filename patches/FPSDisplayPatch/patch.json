@@ -1,5 +1,5 @@
 {
-  "id": "fps_display",
+  "id": "com.app.ralaunch.tmodloader.fpsdisplaypatch",
   "name": "FPS 显示补丁",
   "description": "读取游戏 FPS 并通过环境变量回调 Java UI，在隐藏鼠标光标时显示",
   "version": "1.0.0",

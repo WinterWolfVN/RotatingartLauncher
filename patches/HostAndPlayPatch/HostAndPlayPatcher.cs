@@ -1,27 +1,78 @@
-using System;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
+using System.Text;
 using HarmonyLib;
 using Terraria;
 using Terraria.Localization;
 
 namespace HostAndPlayPatch;
 
+/// <summary>
+/// Wrapper for UTF-8 string array marshaling with proper memory management
+/// </summary>
+public sealed class Utf8StringArrayMarshaler : IDisposable
+{
+    private readonly IntPtr[] _stringPointers;
+    private readonly IntPtr _arrayPointer;
+
+    public Utf8StringArrayMarshaler(string[] strings)
+    {
+        if (strings == null || strings.Length == 0)
+        {
+            _stringPointers = [];
+            _arrayPointer = IntPtr.Zero;
+            return;
+        }
+
+        _stringPointers = new IntPtr[strings.Length];
+        
+        // Convert each string to UTF-8 and allocate native memory
+        for (int i = 0; i < strings.Length; i++)
+        {
+            byte[] utf8Bytes = Encoding.UTF8.GetBytes(strings[i] + '\0'); // Null-terminated
+            _stringPointers[i] = Marshal.AllocHGlobal(utf8Bytes.Length);
+            Marshal.Copy(utf8Bytes, 0, _stringPointers[i], utf8Bytes.Length);
+        }
+
+        // Allocate array of pointers (char**)
+        _arrayPointer = Marshal.AllocHGlobal(IntPtr.Size * _stringPointers.Length);
+        Marshal.Copy(_stringPointers, 0, _arrayPointer, _stringPointers.Length);
+    }
+
+    public IntPtr ArrayPointer => _arrayPointer;
+
+    public void Dispose()
+    {
+        // Free each individual string
+        foreach (var ptr in _stringPointers)
+        {
+            if (ptr != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+        }
+
+        // Free the pointer array
+        if (_arrayPointer != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(_arrayPointer);
+        }
+    }
+}
 
 public static class HostAndPlayPatcher
 {
     private static Harmony? _harmony;
     
     // P/Invoke 声明 - 启动进程
-    // 参数: assemblyPath, argsJson (JSON数组字符串), startupHooks, title
-    [DllImport("main", EntryPoint = "process_launcher_start", CallingConvention = CallingConvention.Cdecl)]
+    // 参数: assemblyPath, argc, argv (char**), title, gameId
+    [DllImport("main", EntryPoint = "game_launcher_launch_new_dotnet_process", CallingConvention = CallingConvention.Cdecl)]
     private static extern int NativeProcessLauncherStart(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string assemblyPath,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string argsJson,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string? startupHooks,
-        [MarshalAs(UnmanagedType.LPUTF8Str)] string title);
+        int argc,
+        IntPtr argv, // char** - manually marshaled UTF-8 string array
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string title,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string gameId);
     
     public static int Initialize()
     {
@@ -107,7 +158,7 @@ public static class HostAndPlayPatcher
             Console.WriteLine("[HostAndPlayPatch] Building server arguments...");
             
             // 构建完整的服务器命令行参数
-            var args = new System.Collections.Generic.List<string>
+            var args = new List<string>
             {
                 "-server",
                 "-world", worldPath,
@@ -122,25 +173,28 @@ public static class HostAndPlayPatcher
                 args.Add(password);
             }
             
-            // 转换为 JSON 数组
-            string argsJson = "[" + string.Join(",", args.Select(a => "\"" + EscapeJson(a) + "\"")) + "]";
-            
             Console.WriteLine($"[HostAndPlayPatch] Assembly: {gamePath}");
             Console.WriteLine($"[HostAndPlayPatch] Args: {string.Join(" ", args)}");
             
-            // 调用 native 进程启动器
-            int result = NativeProcessLauncherStart(gamePath, argsJson, null, "tModLoader Server");
-            
-            if (result == 0)
+            // 使用 UTF-8 字符串数组包装器调用 native 进程启动器，确保内存被正确释放
+            using (var marshaler = new Utf8StringArrayMarshaler(args.ToArray()))
             {
-                Console.WriteLine("[HostAndPlayPatch] Server process started successfully");
-                return true;
-            }
-            else
-            {
-                Console.WriteLine($"[HostAndPlayPatch] Failed to start server: {result}");
-                return false;
-            }
+                var result = NativeProcessLauncherStart(
+                    gamePath, 
+                    args.Count, 
+                    marshaler.ArrayPointer, 
+                    "tModLoader Server", 
+                    "tModLoader");
+
+                if (result != 0)
+                {
+                    Console.WriteLine($"[HostAndPlayPatch] Failed to start server: {result}");
+                    return false;
+                }
+            } // marshaler.Dispose() 自动调用，释放所有分配的内存
+
+            Console.WriteLine("[HostAndPlayPatch] Server process started successfully");
+            return true;
         }
         catch (Exception ex)
         {
@@ -148,11 +202,6 @@ public static class HostAndPlayPatcher
             Console.WriteLine($"[HostAndPlayPatch] Stack: {ex.StackTrace}");
             return false;
         }
-    }
-    
-    private static string EscapeJson(string s)
-    {
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 }
 
@@ -189,15 +238,15 @@ public static class OnSubmitServerPasswordPatch
             }
             
             // 获取游戏程序集路径
-            string gamePath = System.IO.Path.Combine(
-                System.IO.Path.GetDirectoryName(typeof(Main).Assembly.Location) ?? "",
+            string gamePath = Path.Combine(
+                Path.GetDirectoryName(typeof(Main).Assembly.Location) ?? "",
                 "tModLoader.dll");
             
             Console.WriteLine($"[HostAndPlayPatch] Game: {gamePath}");
             Console.WriteLine($"[HostAndPlayPatch] World: {worldPath}");
             
             // 验证文件存在
-            if (!System.IO.File.Exists(worldPath))
+            if (!File.Exists(worldPath))
             {
                 Console.WriteLine($"[HostAndPlayPatch] ERROR: World file not found!");
                 Main.menuMode = 0;
@@ -205,9 +254,10 @@ public static class OnSubmitServerPasswordPatch
             }
             
             // 启动服务器进程
-            bool success = HostAndPlayPatcher.StartServerProcess(
-                gamePath, worldPath, 
-                string.IsNullOrEmpty(Netplay.ServerPassword) ? null : Netplay.ServerPassword, 
+            var success = HostAndPlayPatcher.StartServerProcess(
+                gamePath,
+                worldPath,
+                Netplay.ServerPassword, 
                 Main.maxNetPlayers);
             
             if (!success)
@@ -216,10 +266,6 @@ public static class OnSubmitServerPasswordPatch
                 Main.menuMode = 0;
                 return false;
             }
-            
-            // 等待服务器启动
-            Console.WriteLine("[HostAndPlayPatch] Waiting for server (5s)...");
-            Thread.Sleep(5000);
             
             // 连接到本地服务器
             Console.WriteLine("[HostAndPlayPatch] Connecting to 127.0.0.1:7777...");
