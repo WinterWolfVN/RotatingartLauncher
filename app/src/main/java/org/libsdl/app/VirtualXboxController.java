@@ -9,7 +9,7 @@ import android.view.KeyEvent;
 public class VirtualXboxController {
 
     // Xbox Controller constants
-    public static final int VIRTUAL_DEVICE_ID = 0x80000000;
+    public static final int VIRTUAL_DEVICE_ID = 999999;
     public static final String CONTROLLER_NAME = "Virtual Xbox Controller";
     public static final String CONTROLLER_DESC = "Virtual Xbox 360 Controller";
 

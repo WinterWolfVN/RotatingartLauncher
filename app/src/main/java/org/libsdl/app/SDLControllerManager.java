@@ -10,6 +10,7 @@ import android.content.Context;
 import android.os.Build;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -26,7 +27,7 @@ public class SDLControllerManager
     public static native int nativeAddJoystick(int device_id, String name, String desc,
                                                int vendor_id, int product_id,
                                                boolean is_accelerometer, int button_mask,
-                                               int naxes, int axis_mask, int nhats, int nballs);
+                                               int naxes, int axis_mask, int nhats, int nballs, boolean can_rumble);
     public static native int nativeRemoveJoystick(int device_id);
     public static native int nativeAddHaptic(int device_id, String name);
     public static native int nativeRemoveHaptic(int device_id);
@@ -55,7 +56,9 @@ public class SDLControllerManager
         }
 
         if (mHapticHandler == null) {
-            if (Build.VERSION.SDK_INT >= 26 /* Android 8.0 (O) */) {
+            if (Build.VERSION.SDK_INT >= 31 /* Android 12.0 (S) */) {
+                mHapticHandler = new SDLHapticHandler_API31();
+            } else if (Build.VERSION.SDK_INT >= 26 /* Android 8.0 (O) */) {
                 mHapticHandler = new SDLHapticHandler_API26();
             } else {
                 mHapticHandler = new SDLHapticHandler();
@@ -92,6 +95,13 @@ public class SDLControllerManager
      */
     public static void hapticRun(int device_id, float intensity, int length) {
         mHapticHandler.run(device_id, intensity, length);
+    }
+
+    /**
+     * This method is called by SDL using JNI.
+     */
+    static void hapticRumble(int device_id, float low_frequency_intensity, float high_frequency_intensity, int length) {
+        mHapticHandler.rumble(device_id, low_frequency_intensity, high_frequency_intensity, length);
     }
 
     /**
@@ -241,10 +251,19 @@ class SDLJoystickHandler_API16 extends SDLJoystickHandler {
                         }
                     }
 
+                    boolean can_rumble = false;
+                    if (Build.VERSION.SDK_INT >= 31 /* Android 12.0 (S) */) {
+                        VibratorManager vibratorManager = joystickDevice.getVibratorManager();
+                        int[] vibrators = vibratorManager.getVibratorIds();
+                        if (vibrators.length > 0) {
+                            can_rumble = true;
+                        }
+                    }
+
                     mJoysticks.add(joystick);
                     SDLControllerManager.nativeAddJoystick(joystick.device_id, joystick.name, joystick.desc,
                             getVendorId(joystickDevice), getProductId(joystickDevice), false,
-                            getButtonMask(joystickDevice), joystick.axes.size(), getAxisMask(joystick.axes), joystick.hats.size()/2, 0);
+                            getButtonMask(joystickDevice), joystick.axes.size(), getAxisMask(joystick.axes), joystick.hats.size()/2, 0, can_rumble);
                 }
             }
         }
@@ -567,6 +586,15 @@ class SDLJoyStickHandler_API19_VirtualJoystick extends SDLJoystickHandler_API19 
                         }
                     }
 
+                    boolean can_rumble = false;
+                    if (Build.VERSION.SDK_INT >= 31 /* Android 12.0 (S) */) {
+                        VibratorManager vibratorManager = joystickDevice.getVibratorManager();
+                        int[] vibrators = vibratorManager.getVibratorIds();
+                        if (vibrators.length > 0) {
+                            can_rumble = true;
+                        }
+                    }
+
                     mJoysticks.add(joystick);
                     SDLControllerManager.nativeAddJoystick(
                         joystick.device_id,
@@ -579,7 +607,8 @@ class SDLJoyStickHandler_API19_VirtualJoystick extends SDLJoystickHandler_API19 
                         joystick.axes.size(),
                         getAxisMask(joystick.axes),
                         joystick.hats.size() / 2,
-                        0
+                        0,
+                        can_rumble
                     );
                 }
             }
@@ -624,6 +653,13 @@ class SDLJoyStickHandler_API19_VirtualJoystick extends SDLJoystickHandler_API19 
         if (!virtualJoystickAdded) {
             mJoysticks.add(virtualJoystick);
 
+            /* Check VIBRATOR_SERVICE */
+            Vibrator vib = (Vibrator) SDL.getContext().getSystemService(Context.VIBRATOR_SERVICE);
+            boolean can_rumble = false;
+            if (vib != null) {
+                can_rumble = vib.hasVibrator();
+            }
+
             SDLControllerManager.nativeAddJoystick(
                     virtualJoystick.device_id,
                     virtualJoystick.name,
@@ -635,9 +671,73 @@ class SDLJoyStickHandler_API19_VirtualJoystick extends SDLJoystickHandler_API19 
                     VirtualXboxController.NUM_AXES,
                     controller.getAxisMask(),
                     0,  // nhats (we use buttons for dpad)
-                    0   // nballs
+                    0,   // nballs
+                    can_rumble
             );
             virtualJoystickAdded = true;
+        }
+    }
+}
+
+class SDLHapticHandler_API31 extends SDLHapticHandler {
+    @Override
+    public void run(int device_id, float intensity, int length) {
+        SDLHaptic haptic = getHaptic(device_id);
+        if (haptic != null) {
+            vibrate(haptic.vib, intensity, length);
+        }
+    }
+
+    @Override
+    public void rumble(int device_id, float low_frequency_intensity, float high_frequency_intensity, int length) {
+        InputDevice device = InputDevice.getDevice(device_id);
+        if (device == null) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT < 31 /* Android 12.0 (S) */) {
+            /* Silence 'lint' warning */
+            return;
+        }
+
+        VibratorManager manager = device.getVibratorManager();
+        int[] vibrators = manager.getVibratorIds();
+        if (vibrators.length >= 2) {
+            vibrate(manager.getVibrator(vibrators[0]), low_frequency_intensity, length);
+            vibrate(manager.getVibrator(vibrators[1]), high_frequency_intensity, length);
+        } else if (vibrators.length == 1) {
+            float intensity = (low_frequency_intensity * 0.6f) + (high_frequency_intensity * 0.4f);
+            vibrate(manager.getVibrator(vibrators[0]), intensity, length);
+        }
+    }
+
+    private void vibrate(Vibrator vibrator, float intensity, int length) {
+
+        if (Build.VERSION.SDK_INT < 31 /* Android 12.0 (S) */) {
+            /* Silence 'lint' warning */
+            return;
+        }
+
+        if (intensity == 0.0f) {
+            vibrator.cancel();
+            return;
+        }
+
+        int value = Math.round(intensity * 255);
+        if (value > 255) {
+            value = 255;
+        }
+        if (value < 1) {
+            vibrator.cancel();
+            return;
+        }
+        try {
+            vibrator.vibrate(VibrationEffect.createOneShot(length, value));
+        }
+        catch (Exception e) {
+            // Fall back to the generic method, which uses DEFAULT_AMPLITUDE, but works even if
+            // something went horribly wrong with the Android 8.0 APIs.
+            vibrator.vibrate(length);
         }
     }
 }
@@ -693,6 +793,10 @@ class SDLHapticHandler {
         if (haptic != null) {
             haptic.vib.vibrate(length);
         }
+    }
+
+    void rumble(int device_id, float low_frequency_intensity, float high_frequency_intensity, int length) {
+        // Not supported in older APIs
     }
 
     public void stop(int device_id) {
