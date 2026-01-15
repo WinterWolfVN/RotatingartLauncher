@@ -45,8 +45,8 @@ public class CrashReportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         
         // 强制横屏
-        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
         setContentView(R.layout.activity_crash_report);
 
         Intent intent = getIntent();

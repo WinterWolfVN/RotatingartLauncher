@@ -58,7 +58,7 @@ int Android_CreateWindow(_THIS, SDL_Window *window)
     Android_JNI_SetOrientation(window->w, window->h, window->flags & SDL_WINDOW_RESIZABLE, SDL_GetHint(SDL_HINT_ORIENTATIONS));
 
     /* Adjust the window data to match the screen */
-    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Adjusting window size from %dx%d to %dx%d", 
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "Adjusting window size from %dx%d to %dx%d",
         window->w, window->h, Android_SurfaceWidth, Android_SurfaceHeight);
     window->x = 0;
     window->y = 0;
@@ -98,9 +98,9 @@ int Android_CreateWindow(_THIS, SDL_Window *window)
     {
         const char *fna3d_gl_lib = SDL_getenv("FNA3D_OPENGL_LIBRARY");
         SDL_bool is_osmesa = (fna3d_gl_lib && SDL_strcasestr(fna3d_gl_lib, "osmesa"));
-        
+
         if (is_osmesa) {
-            __android_log_print(ANDROID_LOG_INFO, "SDL_Window", 
+            __android_log_print(ANDROID_LOG_INFO, "SDL_Window",
                 "OSMesa detected, skipping EGL surface creation (OSMesa uses ANativeWindow_lock)");
             data->egl_surface = EGL_NO_SURFACE;
         } else {
@@ -199,6 +199,46 @@ void Android_SetWindowResizable(_THIS, SDL_Window *window, SDL_bool resizable)
 {
     /* Set orientation */
     Android_JNI_SetOrientation(window->w, window->h, window->flags & SDL_WINDOW_RESIZABLE, SDL_GetHint(SDL_HINT_ORIENTATIONS));
+}
+
+void Android_SetWindowSize(_THIS, SDL_Window *window)
+{
+    /* Force window to always be fullscreen size - ignore any resize attempts */
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "🔒 Android_SetWindowSize called - forcing fullscreen size");
+
+    SDL_LockMutex(Android_ActivityMutex);
+
+    if (window == Android_Window) {
+        /* Always reset to fullscreen dimensions */
+        window->x = 0;
+        window->y = 0;
+        window->w = Android_SurfaceWidth;
+        window->h = Android_SurfaceHeight;
+
+        __android_log_print(ANDROID_LOG_INFO, "SDL_Window",
+            "✅ Window forced to fullscreen: %dx%d at (0,0)",
+            Android_SurfaceWidth, Android_SurfaceHeight);
+    }
+
+    SDL_UnlockMutex(Android_ActivityMutex);
+}
+
+void Android_SetWindowPosition(_THIS, SDL_Window *window)
+{
+    /* Force window to always be at (0,0) - ignore any position change attempts */
+    __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "🔒 Android_SetWindowPosition called - forcing position (0,0)");
+
+    SDL_LockMutex(Android_ActivityMutex);
+
+    if (window == Android_Window) {
+        /* Always reset to origin */
+        window->x = 0;
+        window->y = 0;
+
+        __android_log_print(ANDROID_LOG_INFO, "SDL_Window", "✅ Window position forced to (0,0)");
+    }
+
+    SDL_UnlockMutex(Android_ActivityMutex);
 }
 
 void Android_DestroyWindow(_THIS, SDL_Window *window)

@@ -41,7 +41,7 @@
             android:name=".activity.MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
             android:exported="true"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensorLandscape"
             android:theme="@style/FullScreenTheme"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
@@ -54,7 +54,7 @@
             android:name=".activity.GameActivity"
             android:exported="true"
             android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensorLandscape"
             android:theme="@style/GameTheme"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustPan"
@@ -70,7 +70,7 @@
             android:name=".controls.editors.ControlEditorActivity"
             android:exported="false"
             android:label="控制布局编辑器"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensorLandscape"
             android:launchMode="singleTop"
             android:theme="@style/Theme.raLaunch" />
 
@@ -86,7 +86,7 @@
             android:exported="false"
             android:theme="@style/Theme.raLaunch"
             android:launchMode="singleTask"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode" />
 
         <!-- 赞助商展示页面 -->
@@ -94,7 +94,7 @@
             android:name=".sponsor.SponsorsActivity"
             android:exported="false"
             android:theme="@style/Theme.raLaunch"
-            android:screenOrientation="landscape"
+            android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode" />
 
         <!-- 通用进程启动服务 -->
