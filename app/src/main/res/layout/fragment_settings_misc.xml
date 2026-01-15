@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
-    tools:context=".fragment.SettingsMiscFragment">
+    tools:context=".fragment.SettingsFragment">
 
     <!-- 设置内容 -->
     <androidx.core.widget.NestedScrollView
@@ -222,24 +222,36 @@
                         android:layout_marginTop="16dp"
                         android:visibility="gone">
 
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="背景透明度"
+                            android:textColor="?attr/textPrimary"
+                            android:textSize="13sp"
+                            android:layout_marginBottom="4dp" />
+
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
                             android:gravity="center_vertical">
 
-                            <TextView
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/sliderBackgroundOpacity"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="背景透明度"
-                                android:textColor="?attr/textPrimary"
-                                android:textSize="13sp" />
+                                android:valueFrom="0"
+                                android:valueTo="100"
+                                android:stepSize="1"
+                                android:value="75"
+                                app:labelBehavior="gone" />
 
                             <TextView
                                 android:id="@+id/tvBackgroundOpacityValue"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
                                 android:text="75%"
                                 android:textColor="?attr/colorPrimary"
                                 android:textSize="13sp"
@@ -249,15 +261,6 @@
 
                         </LinearLayout>
 
-                        <com.google.android.material.slider.Slider
-                            android:id="@+id/sliderBackgroundOpacity"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:valueFrom="0"
-                            android:valueTo="100"
-                            android:stepSize="5"
-                            android:value="75"
-                            app:labelBehavior="gone" />
 
                     </LinearLayout>
 

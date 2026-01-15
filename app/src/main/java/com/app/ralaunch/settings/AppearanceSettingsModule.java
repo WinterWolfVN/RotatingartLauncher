@@ -300,13 +300,13 @@ public class AppearanceSettingsModule implements SettingsModule {
                 settingsManager.setBackgroundType("default");
                 settingsManager.setBackgroundImagePath("");
                 settingsManager.setBackgroundVideoPath("");
-                settingsManager.setBackgroundOpacity(75);
+                settingsManager.setBackgroundOpacity(0);
                 settingsManager.setVideoPlaybackSpeed(1.0f);
                 
                 updateBackgroundDisplay(tvBackgroundValue, videoSpeedLayout, backgroundOpacityLayout);
                 if (sliderBackgroundOpacity != null && tvBackgroundOpacityValue != null) {
-                    sliderBackgroundOpacity.setValue(75);
-                    tvBackgroundOpacityValue.setText("75%");
+                    sliderBackgroundOpacity.setValue(0);
+                    tvBackgroundOpacityValue.setText("0%");
                 }
                 if (sliderVideoSpeed != null && tvVideoSpeedValue != null) {
                     sliderVideoSpeed.setValue(1.0f);
@@ -314,6 +314,7 @@ public class AppearanceSettingsModule implements SettingsModule {
                 }
                 
                 applyBackgroundChanges();
+                applyOpacityChange(0); // 立即更新视图透明度
                 Toast.makeText(fragment.requireContext(), fragment.getString(R.string.appearance_background_restored), Toast.LENGTH_SHORT).show();
             });
         }
@@ -714,7 +715,7 @@ public class AppearanceSettingsModule implements SettingsModule {
             TextView tvBackgroundOpacityValue = rootView.findViewById(R.id.tvBackgroundOpacityValue);
             if (sliderBackgroundOpacity != null && tvBackgroundOpacityValue != null) {
                 sliderBackgroundOpacity.setValue(90);
-                tvBackgroundOpacityValue.setText("50%");
+                tvBackgroundOpacityValue.setText("90%");
             }
             
             TextView tvBackgroundValue = rootView.findViewById(R.id.tvBackgroundValue);
