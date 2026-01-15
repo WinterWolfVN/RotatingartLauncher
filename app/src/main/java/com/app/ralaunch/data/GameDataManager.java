@@ -4,17 +4,21 @@ import android.content.Context;
 import com.app.ralaunch.model.GameItem;
 import com.app.ralaunch.utils.AppLogger;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 /**
  * 游戏数据管理器
  * 
  * 管理用户添加的游戏列表，提供：
- * - 从 SharedPreferences 加载和保存游戏列表
+ * - 从外部存储文件加载和保存游戏列表
  * - 添加、删除和更新游戏项
  * - 路径有效性验证
  * 
@@ -22,8 +26,8 @@ import java.io.File;
  */
 public class GameDataManager {
     private static final String TAG = "GameDataManager";
-    private static final String PREF_NAME = "game_launcher_prefs";
-    private static final String KEY_GAME_LIST = "game_list";
+    private static final String GAMES_DIR = "games";
+    private static final String GAME_LIST_FILE = "game_list.json";
 
     private Context context;
 
@@ -31,38 +35,41 @@ public class GameDataManager {
         this.context = context;
     }
 
-
+    private File getGameListFile() {
+        File gamesDir = new File(context.getExternalFilesDir(null), GAMES_DIR);
+        if (!gamesDir.exists()) {
+            gamesDir.mkdirs();
+        }
+        return new File(gamesDir, GAME_LIST_FILE);
+    }
 
     // 保存和加载游戏列表
     public void saveGameList(List<GameItem> gameList) {
         try {
-            Gson gson = new Gson();
-            String gameListJson = gson.toJson(gameList);
-            context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                    .edit()
-                    .putString(KEY_GAME_LIST, gameListJson)
-                    .apply();
-
-        } catch (Exception e) {
+            File file = getGameListFile();
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+            String gameListJson = new GsonBuilder().setPrettyPrinting().create().toJson(gameList);
+            Files.write(file.toPath(), gameListJson.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
             AppLogger.error(TAG, "保存游戏列表时发生错误: " + e.getMessage());
         }
     }
 
     public List<GameItem> loadGameList() {
-        try {
-            String gameListJson = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                    .getString(KEY_GAME_LIST, null);
-            if (gameListJson != null && !gameListJson.isEmpty()) {
-                Gson gson = new Gson();
-                Type listType = new TypeToken<ArrayList<GameItem>>(){}.getType();
-                List<GameItem> result = gson.fromJson(gameListJson, listType);
+        File file = getGameListFile();
+        if (!file.exists()) return new ArrayList<>();
 
-                return result != null ? result : new ArrayList<>();
-            }
-        } catch (Exception e) {
+        try {
+            String json = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            Type listType = new TypeToken<ArrayList<GameItem>>(){}.getType();
+            List<GameItem> result = new Gson().fromJson(json, listType);
+            return result != null ? result : new ArrayList<>();
+        } catch (IOException e) {
             AppLogger.error(TAG, "加载游戏列表时发生错误: " + e.getMessage());
+            return new ArrayList<>();
         }
-        return new ArrayList<>();
     }
 
     public void addGame(GameItem game) {

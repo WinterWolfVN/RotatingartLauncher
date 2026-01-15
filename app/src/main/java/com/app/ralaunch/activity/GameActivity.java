@@ -322,7 +322,6 @@ public class GameActivity extends SDLActivity {
         mainActivity.runOnUiThread(() -> {
             if (exitCode == 0) {
                 Toast.makeText(mainActivity, mainActivity.getString(R.string.game_completed_successfully), Toast.LENGTH_LONG).show();
-                mainActivity.finish();
             } else {
                 // 游戏异常退出，使用崩溃捕捉界面
                 showGameCrashReport(exitCode, errorMessage);
