@@ -16,6 +16,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <vector>
 #include <string>
 #include <locale.h>
@@ -59,6 +60,15 @@ static void setup_box64_environment(const char* rootfs_path, const char* game_di
     // Get parent directory of rootfs to find x64lib
     std::string rootfs_str(rootfs_path);
     std::string files_dir = rootfs_str.substr(0, rootfs_str.rfind('/'));  // Remove /rootfs
+    
+    // Set TMPDIR for temporary files (Android doesn't have /tmp)
+    // Use rootfs/tmp as the temp directory
+    std::string tmp_dir = rootfs_str + "/tmp";
+    mkdir(tmp_dir.c_str(), 0755);  // Ensure directory exists
+    setenv("TMPDIR", tmp_dir.c_str(), 1);
+    setenv("TMP", tmp_dir.c_str(), 1);
+    setenv("TEMP", tmp_dir.c_str(), 1);
+    LOGI("  TMPDIR=%s", tmp_dir.c_str());
     std::string x64lib_path = files_dir + "/x64lib";
     
     std::string ld_library_path = std::string(rootfs_path) + "/usr/lib/x86_64-linux-gnu";
