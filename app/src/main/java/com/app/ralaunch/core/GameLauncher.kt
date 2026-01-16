@@ -2,6 +2,7 @@ package com.app.ralaunch.core
 
 import android.content.Context
 import android.os.Environment
+import android.system.Os
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.data.SettingsManager
 import com.app.ralaunch.dotnet.DotNetLauncher
@@ -31,6 +32,13 @@ object GameLauncher {
     // 静态加载 native 库
     init {
         try {
+            // 加载 FMOD 和相关库
+            // Celeste needs this
+            System.loadLibrary("fmodL")
+            System.loadLibrary("fmod")
+            System.loadLibrary("fmodstudioL")
+            System.loadLibrary("fmodstudio")
+
             System.loadLibrary("netcorehost")
             System.loadLibrary("FAudio")
             System.loadLibrary("theorafile")
@@ -236,7 +244,10 @@ object GameLauncher {
                 // 触摸相关
                 "SDL_TOUCH_MOUSE_EVENTS" to "1",
                 "SDL_TOUCH_MOUSE_MULTITOUCH" to if (settings.isTouchMultitouchEnabled) "1" else "0",
-                "RALCORE_MOUSE_RIGHT_STICK" to if (settings.isMouseRightStickEnabled) "1" else null
+                "RALCORE_MOUSE_RIGHT_STICK" to if (settings.isMouseRightStickEnabled) "1" else null,
+
+                // Celeste needs this
+                "LD_LIBRARY_PATH" to "/storage/emulated/0/Android/data/com.app.ralaunch/files/games/Everest/lib64-linux:${Os.getenv("LD_LIBRARY_PATH")}"
             )
             AppLogger.debug(TAG, "Game settings environment variables set: OK")
 

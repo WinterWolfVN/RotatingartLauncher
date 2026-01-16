@@ -98,8 +98,8 @@ android {
 
 dependencies {
 
-   implementation files('../app/libs/libSystem.Security.Cryptography.Native.Android.jar')
-
+    implementation files('../app/libs/libSystem.Security.Cryptography.Native.Android.jar')
+    implementation files('../external/libs/fmod.jar')
 
     implementation 'com.nineoldandroids:library:2.3.0'
 

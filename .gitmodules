@@ -19,3 +19,6 @@
 [submodule "app/src/main/cpp/dxvk"]
 	path = app/src/main/cpp/dxvk
 	url = https://github.com/RotatingArtDev/dxvk.git
+[submodule "app/src/main/cpp/FMOD_SDL"]
+	path = app/src/main/cpp/FMOD_SDL
+	url = https://github.com/RotatingArtDev/FMOD_SDL.git

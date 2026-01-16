@@ -569,7 +569,8 @@ const char *SDL_GetPlatform(void)
 #if defined(__AIX__)
     return "AIX";
 #elif defined(__ANDROID__)
-    return "Android";
+    // we spoof this on Android so games feels more at home
+    return "Linux";
 #elif defined(__BSDI__)
     return "BSDI";
 #elif defined(__DREAMCAST__)

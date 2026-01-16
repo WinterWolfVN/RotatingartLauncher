@@ -115,11 +115,14 @@ set(NO_CONF_INSTALL ON CACHE BOOL "Don't install config files" FORCE)
 # 添加 Box64 子项目
 add_subdirectory(${BOX64_ROOT} ${CMAKE_BINARY_DIR}/box64)
 
+# 添加 FMOD_SDL 子项目 (SDL Audio Output Plugin for FMOD)
+add_subdirectory(FMOD_SDL_BUILD_DEPS)
+
 # 添加主程序子目录
 add_subdirectory(main)
 
 # 添加 glibc_bridge 子目录 (用于Box64运行x86_64 Linux游戏)
 add_subdirectory(glibc_bridge)
 
-install(TARGETS main SDL2 FAudio-shared FNA3D netcorehost glibc_bridge DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS main SDL2 FAudio-shared FNA3D netcorehost glibc_bridge fmod_SDL DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(TARGETS GL_gl4es EGL_gl4es DESTINATION ${CMAKE_INSTALL_LIBDIR})
