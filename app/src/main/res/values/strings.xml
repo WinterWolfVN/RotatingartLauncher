@@ -1315,4 +1315,30 @@
     <string name="import_progress_title">导入进度</string>
     <string name="init_component_rootfs_desc">Box64以及Debian rootfs</string>
     <string name="init_component_x64lib_desc">Box64 x86_64 库 (libstdc++, libssl 等)</string>
+    
+    <!-- Settings Developer -->
+    <string name="settings_experimental_features">实验性功能</string>
+    
+    <!-- Settings Misc -->
+    <string name="settings_custom_background">自定义背景</string>
+    <string name="settings_custom_background_desc">选择图片或视频作为背景</string>
+    <string name="settings_background_opacity">背景透明度</string>
+    <string name="settings_video_playback_speed">视频播放速度</string>
+    
+    <!-- Game Import -->
+    <string name="import_game_title_text">导入游戏</string>
+    <string name="import_game_subtitle_text">选择游戏本体和模组加载器文件开始导入</string>
+    
+    <!-- Settings About -->
+    <string name="about_version_label">版本</string>
+    <string name="about_afdian_sponsor">爱发电赞助</string>
+    <string name="about_patreon_sponsor">Patreon 赞助</string>
+    <string name="about_sponsor_button">赞助</string>
+    <string name="about_discord_community">Discord 社区</string>
+    <string name="about_qq_group">QQ 交流群</string>
+    <string name="about_join_button">加入</string>
+    <string name="about_project_team">项目团队</string>
+    <string name="about_project_author">项目作者</string>
+    <string name="about_developer">开发者</string>
+    <string name="about_github">GitHub</string>
 </resources>

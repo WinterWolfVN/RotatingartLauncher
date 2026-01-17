@@ -507,7 +507,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="实验性功能"
+                android:text="@string/settings_experimental_features"
                 android:textColor="?attr/textPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold"

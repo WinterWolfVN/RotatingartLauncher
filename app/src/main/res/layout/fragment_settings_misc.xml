@@ -187,7 +187,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="自定义背景"
+                                android:text="@string/settings_custom_background"
                                 android:textColor="?attr/textPrimary"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
@@ -195,7 +195,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="选择图片或视频作为背景"
+                                android:text="@string/settings_custom_background_desc"
                                 android:textColor="?attr/textSecondary"
                                 android:textSize="12sp"
                                 android:layout_marginTop="2dp" />
@@ -225,7 +225,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="背景透明度"
+                            android:text="@string/settings_background_opacity"
                             android:textColor="?attr/textPrimary"
                             android:textSize="13sp"
                             android:layout_marginBottom="4dp" />
@@ -283,7 +283,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="视频播放速度"
+                                android:text="@string/settings_video_playback_speed"
                                 android:textColor="?attr/textPrimary"
                                 android:textSize="13sp" />
 

@@ -646,6 +646,14 @@
     <string name="editor_keycode_sdl">Keycode (SDL):</string>
     <string name="editor_opacity_label">Opacity: %d%%</string>
     <string name="editor_joystick_keys">Joystick Keys [Up,Right,Down,Left]:</string>
+    <string name="editor_joystick_key_mapping">Joystick Key Mapping</string>
+    <string name="editor_joystick_key_mapping_desc">Set key values for the four directions of the joystick (default: WASD)</string>
+    <string name="editor_joystick_key_mapping_value">%1$s, %2$s, %3$s, %4$s</string>
+    <string name="editor_joystick_key_up">Up Direction</string>
+    <string name="editor_joystick_key_right">Right Direction</string>
+    <string name="editor_joystick_key_down">Down Direction</string>
+    <string name="editor_joystick_key_left">Left Direction</string>
+    <string name="editor_joystick_key_reset_wasd">Reset to WASD</string>
     <string name="editor_save_button_label">Save</string>
 
     <!-- ControlShapeManager Messages -->
@@ -715,6 +723,8 @@
 
     <!-- KeySelectorDialog XML Messages -->
     <string name="editor_select_key_title">Select Key</string>
+    <string name="editor_keyboard_keys">Keyboard Mapping</string>
+    <string name="editor_gamepad_keys">Gamepad Mapping</string>
 
     <!-- ControlEditDialogMD Category Labels -->
     <string name="editor_category_basic">Basic Info</string>
@@ -821,6 +831,10 @@
     <string name="settings_virtual_controller_vibration_intensity">Virtual Controller Vibration Intensity</string>
     <string name="settings_virtual_controller_vibration_intensity_desc">Adjust the vibration intensity for virtual controller</string>
     <string name="settings_joystick_mouse_mode_info">Right stick mouse mode speed, range, and attack mode settings have been moved to the control editor. Long press a control to enter edit mode.</string>
+    <string name="settings_keyboard_type">Keyboard Type</string>
+    <string name="settings_keyboard_type_desc">Select to use virtual keyboard or system keyboard</string>
+    <string name="keyboard_type_virtual">Virtual Keyboard</string>
+    <string name="keyboard_type_system">System Keyboard</string>
     
     <!-- Settings Launcher -->
     <string name="settings_auto_import">Auto Import Games</string>
@@ -1208,4 +1222,127 @@
     <string name="pack_export_version">Version</string>
     <string name="pack_export_success">Control pack exported</string>
     <string name="pack_export_failed">Export failed: %s</string>
+    
+    <!-- Control Texture -->
+    <string name="control_texture_selector_title">Texture Selection</string>
+    <string name="control_texture_select_hint">Select texture file to apply to control</string>
+    <string name="control_texture_clear">Clear Texture</string>
+    <string name="control_texture_empty">No Texture Files</string>
+    <string name="control_texture_empty_hint">Click the button below to import texture files</string>
+    <string name="control_texture_applied">Texture applied</string>
+    <string name="control_texture_cleared">Texture cleared</string>
+    <string name="control_texture_import">Import Texture</string>
+    <string name="control_texture_imported">Imported: %s</string>
+    <string name="control_texture_import_failed">Import failed</string>
+    <string name="control_texture_unsupported_format">Unsupported format, supports PNG, JPG, WebP, SVG</string>
+    <string name="control_texture_normal">Normal State</string>
+    <string name="control_texture_pressed">Pressed State</string>
+    <string name="control_texture_toggled">Toggled State</string>
+    <string name="control_texture_background">Background</string>
+    <string name="control_texture_knob">Joystick Knob</string>
+    <string name="control_texture_not_supported">Texture not supported</string>
+    <string name="control_texture_enabled">Texture configured</string>
+    <string name="control_texture_disabled">Texture not configured</string>
+    <string name="editor_texture">Texture Settings</string>
+    <string name="editor_texture_desc">Set custom texture images for controls</string>
+    
+    <!-- Plugin Manager -->
+    <string name="plugin_manager_title">Plugin Management</string>
+    <string name="plugin_manager_subtitle">Manage game installation plugins, add or remove external plugins</string>
+    <string name="manage_plugins">Manage Plugins</string>
+    <string name="add_plugin">Add Plugin</string>
+    <string name="installed_plugins">Installed Plugins</string>
+    <string name="available_plugins">Available Plugins</string>
+    <string name="plugin_count">%d plugins installed</string>
+    <string name="no_plugins_available">No plugins available</string>
+    <string name="no_plugins_installed">No plugins installed</string>
+    <string name="no_plugins_hint">Click the button above to add plugins</string>
+    <string name="plugin_source_builtin">Built-in</string>
+    <string name="plugin_source_external">External</string>
+    <string name="plugin_import_success">Plugin imported successfully: %s</string>
+    <string name="plugin_import_failed">Plugin import failed</string>
+    <string name="plugin_restart_required_title">Restart Required</string>
+    <string name="plugin_restart_required_message">Newly imported plugins require app restart to take effect</string>
+    <string name="restart_now">Restart Now</string>
+    <string name="plugin_delete_title">Delete Plugin</string>
+    <string name="plugin_delete_message">Are you sure you want to delete plugin %s?</string>
+    <string name="plugin_delete_success">Plugin deleted</string>
+    <string name="plugin_delete_failed">Failed to delete plugin</string>
+    <string name="plugin_delete_not_found">Plugin file not found</string>
+    <string name="plugin_cannot_delete_builtin">Built-in plugins cannot be deleted</string>
+    <string name="plugin_id_label">Plugin ID: %s</string>
+    <string name="plugin_games_label">Supported games:</string>
+    <string name="plugin_source_label">Source: </string>
+    <string name="delete">Delete</string>
+    
+    <!-- Initialization Fragment Component Descriptions -->
+    <string name="init_component_rootfs_desc">Box64 and Debian rootfs</string>
+    <string name="init_component_x64lib_desc">Box64 x86_64 libraries (libstdc++, libssl, etc.)</string>
+    
+    <!-- Settings Developer -->
+    <string name="settings_experimental_features">Experimental Features</string>
+    
+    <!-- Settings Misc -->
+    <string name="settings_custom_background">Custom Background</string>
+    <string name="settings_custom_background_desc">Select image or video as background</string>
+    <string name="settings_background_opacity">Background Opacity</string>
+    <string name="settings_video_playback_speed">Video Playback Speed</string>
+    
+    <!-- Game Import -->
+    <string name="select_game_file">Select Game File</string>
+    <string name="select_game_file_simple_hint">Supports ZIP format (game body or mod loader)</string>
+    <string name="select_gog_sh_hint">Select GOG installer script (.sh)</string>
+    <string name="game_name_input_hint">Game Name (auto-detected)</string>
+    <string name="start_import">Start Import</string>
+    <string name="import_game_simple_subtitle">Select game ZIP file to start import</string>
+    <string name="import_game_sh_subtitle">Select GOG installer script to start import, game name will be auto-detected</string>
+    <string name="import_hint_zip">• Supports ZIP format game files</string>
+    <string name="import_hint_sh_file">• Supports GOG .sh installer scripts</string>
+    <string name="import_hint_auto_detect">• Auto-detect game type and name</string>
+    <string name="import_hint_examples">• Such as tModLoader, Stardew Valley, Celeste, etc.</string>
+    <string name="import_hint_gog_examples">• Such as Terraria, Celeste, Hollow Knight, etc.</string>
+    <string name="import_select_plugin_hint">Select a game plugin to start import process</string>
+    <string name="import_select_modloader_first">Please select ModLoader file first</string>
+    <string name="import_select_mod_loader_first">Please select mod loader file first</string>
+    <string name="select_files">Select Files</string>
+    <string name="select_file">Select File</string>
+    <string name="import_no_plugin_available">No installation plugins available</string>
+    <string name="import_no_plugin_selected">No plugin selected</string>
+    <string name="import_plugin_not_match">Selected plugin does not match current file</string>
+    <string name="import_cancelled">Import cancelled</string>
+    <string name="import_install_method">Installation Method</string>
+    <string name="import_required">Required</string>
+    <string name="import_game_title_text">Import Game</string>
+    <string name="import_game_subtitle_text">Select game body and mod loader files to start import</string>
+    
+    <!-- Settings About -->
+    <string name="about_version_label">Version</string>
+    <string name="about_afdian_sponsor">Aifadian Sponsor</string>
+    <string name="about_patreon_sponsor">Patreon Sponsor</string>
+    <string name="about_sponsor_button">Sponsor</string>
+    <string name="about_discord_community">Discord Community</string>
+    <string name="about_qq_group">QQ Group</string>
+    <string name="about_join_button">Join</string>
+    <string name="about_project_team">Project Team</string>
+    <string name="about_project_author">Project Author</string>
+    <string name="about_developer">Developer</string>
+    <string name="about_github">GitHub</string>
+    
+    <!-- Import Steps -->
+    <string name="import_step1_title">Select Game Body</string>
+    <string name="import_step2_title">Select Mod Loader</string>
+    <string name="import_step3_title">Confirm Import</string>
+    <string name="next_step">Next Step</string>
+    <string name="import_select_game_body">Select Game Body File</string>
+    <string name="import_click_to_select_sh">Click to select downloaded .sh installer file</string>
+    <string name="import_game_detected_label">Game Detected</string>
+    <string name="import_mod_loader">Mod Loader</string>
+    <string name="import_select_sh_file">Please select game installer file (.sh)</string>
+    <string name="import_select_zip_file">Please select mod loader file (.zip)</string>
+    <string name="import_local_select">Local Select</string>
+    <string name="import_local_select_hint">Select downloaded ZIP file from device</string>
+    <string name="import_online_download">Online Download</string>
+    <string name="import_online_download_hint">Download mod loader from network</string>
+    <string name="import_summary">Import Summary</string>
+    <string name="import_progress_title">Import Progress</string>
 </resources>

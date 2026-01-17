@@ -27,7 +27,7 @@
             android:layout_height="32dp"
             android:scaleType="centerCrop"
             android:background="?attr/colorSurfaceVariant"
-            android:contentDescription="Game Icon" />
+            android:contentDescription="@string/content_desc_game_icon" />
 
         <!-- 游戏名称 -->
         <TextView
