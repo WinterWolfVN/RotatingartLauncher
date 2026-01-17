@@ -32,7 +32,7 @@ import kotlin.math.sqrt
 class VirtualJoystick(
     context: Context,
     data: ControlData,
-    private var mInputBridge: ControlInputBridge
+    private val mInputBridge: ControlInputBridge
 ) : View(context), ControlView {
 
     override var controlData: ControlData = data
@@ -153,10 +153,6 @@ class VirtualJoystick(
     private val mCurrentMouseDy = 0f // 当前摇杆 Y 方向偏移
     private val mMouseMoveActive = false // 鼠标移动是否激活
 
-    // 右摇杆上一帧位置（用于计算位置变化量）
-    private var mLastJoystickDx = 0f
-    private var mLastJoystickDy = 0f
-
     // 运行时从全局设置读取的鼠标速度和范围
     private var mGlobalMouseSpeed = 80.0f
     private var mGlobalMouseRangeLeft = 0.0f
@@ -166,7 +162,7 @@ class VirtualJoystick(
 
     init {
         // 获取屏幕尺寸（用于右摇杆绝对位置计算）
-        val metrics = context.getResources().getDisplayMetrics()
+        val metrics = context.resources.displayMetrics
         mScreenWidth = metrics.widthPixels
         mScreenHeight = metrics.heightPixels
 
@@ -175,12 +171,12 @@ class VirtualJoystick(
         try {
             val settingsManager =
                 SettingsManager.getInstance()
-            mAttackMode = settingsManager.getMouseRightStickAttackMode()
-            mGlobalMouseSpeed = settingsManager.getMouseRightStickSpeed().toFloat()
-            mGlobalMouseRangeLeft = settingsManager.getMouseRightStickRangeLeft()
-            mGlobalMouseRangeTop = settingsManager.getMouseRightStickRangeTop()
-            mGlobalMouseRangeRight = settingsManager.getMouseRightStickRangeRight()
-            mGlobalMouseRangeBottom = settingsManager.getMouseRightStickRangeBottom()
+            mAttackMode = settingsManager.mouseRightStickAttackMode
+            mGlobalMouseSpeed = settingsManager.mouseRightStickSpeed.toFloat()
+            mGlobalMouseRangeLeft = settingsManager.mouseRightStickRangeLeft
+            mGlobalMouseRangeTop = settingsManager.mouseRightStickRangeTop
+            mGlobalMouseRangeRight = settingsManager.mouseRightStickRangeRight
+            mGlobalMouseRangeBottom = settingsManager.mouseRightStickRangeBottom
 
 
             // 验证范围有效性（从中心扩展模式）
@@ -210,10 +206,10 @@ class VirtualJoystick(
 
             // 保存修正后的值（只在检测到无效值时才保存）
             if (needsReset) {
-                settingsManager.setMouseRightStickRangeLeft(mGlobalMouseRangeLeft)
-                settingsManager.setMouseRightStickRangeTop(mGlobalMouseRangeTop)
-                settingsManager.setMouseRightStickRangeRight(mGlobalMouseRangeRight)
-                settingsManager.setMouseRightStickRangeBottom(mGlobalMouseRangeBottom)
+                settingsManager.mouseRightStickRangeLeft = mGlobalMouseRangeLeft
+                settingsManager.mouseRightStickRangeTop = mGlobalMouseRangeTop
+                settingsManager.mouseRightStickRangeRight = mGlobalMouseRangeRight
+                settingsManager.mouseRightStickRangeBottom = mGlobalMouseRangeBottom
             }
 
             Log.i(
@@ -234,8 +230,8 @@ class VirtualJoystick(
         setBackgroundColor(Color.TRANSPARENT)
 
         // 禁用裁剪，让方向指示线可以完整显示
-        setClipToOutline(false)
-        setClipBounds(null)
+        clipToOutline = false
+        clipBounds = null
 
         // 初始化点击攻击 Handler（仅用于非鼠标移动模式）
         mClickAttackHandler = Handler(Looper.getMainLooper())
@@ -284,36 +280,36 @@ class VirtualJoystick(
         // RadialGamePad 风格的颜色系统
         // 背景圆：使用不透明的颜色值，通过 setAlpha 控制透明度，避免颜色值本身的透明度影响
         mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mBackgroundPaint!!.setColor(-0x828283) // 不透明的灰色（RGB: 125, 125, 125）
-        mBackgroundPaint!!.setStyle(Paint.Style.FILL)
+        mBackgroundPaint!!.color = -0x828283 // 不透明的灰色（RGB: 125, 125, 125）
+        mBackgroundPaint!!.style = Paint.Style.FILL
         // 背景透明度只使用 opacity，不受 stickOpacity 影响
         // 直接使用用户设置的 opacity，让变化更明显
-        mBackgroundPaint!!.setAlpha((castedData.opacity * 255).toInt())
+        mBackgroundPaint!!.alpha = (castedData.opacity * 255).toInt()
 
 
         // 摇杆圆心：使用不透明的颜色值，通过 setAlpha 控制透明度
         mStickPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mStickPaint!!.setColor(-0x828283) // 不透明的灰色（RGB: 125, 125, 125）
-        mStickPaint!!.setStyle(Paint.Style.FILL)
+        mStickPaint!!.color = -0x828283 // 不透明的灰色（RGB: 125, 125, 125）
+        mStickPaint!!.style = Paint.Style.FILL
         // 摇杆圆心透明度只使用 stickOpacity，0是有效值
         // 直接使用用户设置的 stickOpacity，让变化更明显（0.0-1.0 全范围）
-        mStickPaint!!.setAlpha((castedData.stickOpacity * 255).toInt())
+        mStickPaint!!.alpha = (castedData.stickOpacity * 255).toInt()
 
 
         // 描边默认透明（RadialGamePad 风格）
         mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mStrokePaint!!.setColor(0x00000000) // 透明
-        mStrokePaint!!.setStyle(Paint.Style.STROKE)
-        mStrokePaint!!.setStrokeWidth(0f)
+        mStrokePaint!!.color = 0x00000000 // 透明
+        mStrokePaint!!.style = Paint.Style.STROKE
+        mStrokePaint!!.strokeWidth = 0f
         // 边框透明度完全独立，默认1.0（完全不透明），0是有效值
-        mStrokePaint!!.setAlpha((castedData.borderOpacity * 255).toInt())
+        mStrokePaint!!.alpha = (castedData.borderOpacity * 255).toInt()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
         // 强制保持正方形（取最小边）
-        val size = min(getMeasuredWidth(), getMeasuredHeight())
+        val size = min(measuredWidth, measuredHeight)
         setMeasuredDimension(size, size)
     }
 
@@ -335,8 +331,8 @@ class VirtualJoystick(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val centerX = getWidth() / 2f
-        val centerY = getHeight() / 2f
+        val centerX = width / 2f
+        val centerY = height / 2f
 
         // 应用旋转
         if (castedData.rotation != 0f) {
@@ -386,23 +382,23 @@ class VirtualJoystick(
             
             // 如果纹理没有完全覆盖，仍然绘制默认形状作为fallback
             if (!castedData.texture.background.enabled) {
-                mBackgroundPaint!!.setAlpha((castedData.opacity * 255).toInt())
+                mBackgroundPaint!!.alpha = (castedData.opacity * 255).toInt()
                 canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint!!)
             }
             if (!castedData.texture.knob.enabled) {
-                mStickPaint!!.setAlpha((castedData.stickOpacity * 255).toInt())
+                mStickPaint!!.alpha = (castedData.stickOpacity * 255).toInt()
                 canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint!!)
             }
         } else {
             // 背景透明度只使用 opacity，不受 stickOpacity 影响
             // 直接使用用户设置的 opacity，让变化更明显
-            mBackgroundPaint!!.setAlpha((castedData.opacity * 255).toInt())
+            mBackgroundPaint!!.alpha = (castedData.opacity * 255).toInt()
             canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint!!)
 
             // 更新摇杆圆心透明度（如果数据已更新）
             // 摇杆圆心透明度只使用 stickOpacity，0是有效值
             // 直接使用用户设置的 stickOpacity，让变化更明显（0.0-1.0 全范围）
-            mStickPaint!!.setAlpha((castedData.stickOpacity * 255).toInt())
+            mStickPaint!!.alpha = (castedData.stickOpacity * 255).toInt()
 
             // 绘制摇杆圆心（前景圆，根据触摸位置移动）
             // RadialGamePad 风格：摇杆圆心是背景半径的 50%（0.5f * radius）
@@ -434,8 +430,8 @@ class VirtualJoystick(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action = event.getActionMasked()
-        val pointerId = event.getPointerId(event.getActionIndex())
+        val action = event.actionMasked
+        val pointerId = event.getPointerId(event.actionIndex)
 
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
@@ -444,7 +440,7 @@ class VirtualJoystick(
                     return false
                 }
 
-                val pointerIndex = event.getActionIndex()
+                val pointerIndex = event.actionIndex
                 val touchX = event.getX(pointerIndex)
                 val touchY = event.getY(pointerIndex)
 
@@ -599,12 +595,6 @@ class VirtualJoystick(
     private fun handleRelease() {
         resetStick()
 
-
-        // 重置右摇杆上一帧位置
-        mLastJoystickDx = 0f
-        mLastJoystickDy = 0f
-
-
         // 根据模式执行不同的释放操作
         if (castedData.mode == ControlData.Joystick.Mode.MOUSE) {
             // 鼠标模式
@@ -629,7 +619,7 @@ class VirtualJoystick(
                             bridge.setVirtualMousePosition(currentX, currentY)
                             Log.d(
                                 TAG,
-                                "Restored mouse position after release: (" + currentX + ", " + currentY + ")"
+                                "Restored mouse position after release: ($currentX, $currentY)"
                             )
                         }
                     }, 50)
@@ -985,89 +975,47 @@ class VirtualJoystick(
      * 功能：
      * - 摇杆静止不动时 → 鼠标不移动
      * - 摇杆位置变化时 → 鼠标跟随移动
-     * - 使用 sendMouseMove 发送真正的鼠标相对移动事件
-     * - 同时更新虚拟鼠标位置追踪，以便松开时恢复位置
+     * - 使用绝对位置计算，类似 VirtualTouchPad
      */
     private fun sendVirtualMouseMove(dx: Float, dy: Float, distance: Float) {
-        // 死区检测：在死区内时，重置上一帧位置
+        // 死区检测：在死区内时，不移动鼠标
         val deadzone: Float = mRadius * DEADZONE_PERCENT
         if (distance < deadzone) {
-            mLastJoystickDx = 0f
-            mLastJoystickDy = 0f
             return
         }
 
+        // 获取设置管理器以读取鼠标速度
+        val settingsManager = SettingsManager.getInstance()
+        val mouseMoveRatio = settingsManager.mouseRightStickSpeed.toFloat() / 100f
 
-        // 计算摇杆位置的变化量（当前位置 - 上一帧位置）
-        val deltaDx = dx - mLastJoystickDx
-        val deltaDy = dy - mLastJoystickDy
+        // 计算绝对鼠标位置（基于屏幕中心 + 摇杆偏移）
+        var onScreenMouseX: Float = (mScreenWidth / 2) + (dx * mouseMoveRatio)
+        var onScreenMouseY: Float = (mScreenHeight / 2) + (dy * mouseMoveRatio)
 
+        // 计算用户设置的范围边界（从中心扩展模式）
+        var minRangeX = (0.5f - settingsManager.mouseRightStickRangeLeft / 2) * mScreenWidth
+        var maxRangeX = (0.5f + settingsManager.mouseRightStickRangeRight / 2) * mScreenWidth
+        var minRangeY = (0.5f - settingsManager.mouseRightStickRangeTop / 2) * mScreenHeight
+        var maxRangeY = (0.5f + settingsManager.mouseRightStickRangeBottom / 2) * mScreenHeight
 
-        // 始终更新上一帧位置，防止delta累积导致的跳动
-        mLastJoystickDx = dx
-        mLastJoystickDy = dy
-
-
-        // 计算变化距离
-        val deltaDistance = sqrt((deltaDx * deltaDx + deltaDy * deltaDy).toDouble()).toFloat()
-
-
-        // 如果摇杆位置变化极小，不移动鼠标（过滤微小抖动）
-        if (deltaDistance < JOYSTICK_MOVE_THRESHOLD) {
-            // 位置变化太小，不移动鼠标，但已更新mLast值避免累积
-            return
+        // 验证范围有效性
+        if (minRangeX >= maxRangeX || minRangeY >= maxRangeY) {
+            minRangeX = mScreenWidth * 0.5f
+            maxRangeX = mScreenWidth * 0.5f
+            minRangeY = mScreenHeight * 0.5f
+            maxRangeY = mScreenHeight * 0.5f
         }
 
+        // 限制到用户设置的范围
+        onScreenMouseX = Math.clamp(onScreenMouseX, minRangeX, maxRangeX)
+        onScreenMouseY = Math.clamp(onScreenMouseY, minRangeY, maxRangeY)
 
-        // 死区平滑映射：将死区外的范围重新映射到 [0, 1]，避免死区边缘突变
-        // 公式：adjusted = (actual - deadzone) / (max - deadzone)
-        // 这样死区边缘输出为0，最大距离输出为1，中间平滑过渡
-        val maxDistance = mRadius - mStickRadius
-        val deadzoneAdjustedMax = maxDistance - deadzone
+        // 限制到屏幕边界
+        onScreenMouseX = Math.clamp(onScreenMouseX, 0f, mScreenWidth.toFloat() - 1)
+        onScreenMouseY = Math.clamp(onScreenMouseY, 0f, mScreenHeight.toFloat() - 1)
 
-
-        // 对变化量应用死区映射（基于当前位置的距离）
-        val currentDistance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-        var mappingRatio = 1.0f
-        if (currentDistance > deadzone && deadzoneAdjustedMax > 0) {
-            // 计算映射比例，让死区边缘的移动更平滑
-            val adjustedDistance = currentDistance - deadzone
-            mappingRatio = adjustedDistance / deadzoneAdjustedMax
-            // 限制在合理范围
-            if (mappingRatio > 1.0f) mappingRatio = 1.0f
-        }
-
-
-        // 标准化变化量，并应用死区映射比例
-        val normalizedDeltaX = (deltaDx / maxDistance) * mappingRatio
-        val normalizedDeltaY = (deltaDy / maxDistance) * mappingRatio
-
-
-        // 应用灵敏度系数（使用全局设置的速度）
-        val sensitivity = mGlobalMouseSpeed
-        val mouseX = normalizedDeltaX * sensitivity
-        val mouseY = normalizedDeltaY * sensitivity
-
-
-        // 更新虚拟鼠标位置追踪（用于松开时恢复位置，并应用范围限制）
-        var actualMouseX = mouseX
-        var actualMouseY = mouseY
-
-        if (mInputBridge is SDLInputBridge) {
-            // 更新虚拟鼠标位置，获取实际移动的量（经过范围限制）
-            val actualDelta =
-                (mInputBridge as SDLInputBridge).updateVirtualMouseDelta(mouseX, mouseY) ?:
-                floatArrayOf(mouseX, mouseY)
-            actualMouseX = actualDelta[0]
-            actualMouseY = actualDelta[1]
-        }
-
-
-        // 发送真正的鼠标相对移动事件（使用实际移动量，而不是请求的移动量）
-        mInputBridge.sendMouseMove(actualMouseX, actualMouseY)
-
-
-        // Log.v(TAG, "Mouse move: requested=(" + mouseX + ", " + mouseY + "), actual=(" + actualMouseX + ", " + actualMouseY + ")");
+        // 发送绝对鼠标位置
+        sdlOnNativeMouseDirect(0, MotionEvent.ACTION_MOVE, onScreenMouseX, onScreenMouseY, false)
     }
 
     /**
@@ -1080,10 +1028,10 @@ class VirtualJoystick(
             try {
                 val settingsManager =
                     SettingsManager.getInstance()
-                var left = settingsManager.getMouseRightStickRangeLeft()
-                var top = settingsManager.getMouseRightStickRangeTop()
-                var right = settingsManager.getMouseRightStickRangeRight()
-                var bottom = settingsManager.getMouseRightStickRangeBottom()
+                var left = settingsManager.mouseRightStickRangeLeft
+                var top = settingsManager.mouseRightStickRangeTop
+                var right = settingsManager.mouseRightStickRangeRight
+                var bottom = settingsManager.mouseRightStickRangeBottom
 
                 Log.i(
                     TAG, "setVirtualMouseRange: Read from settings: left=" + left + ", top=" + top +
@@ -1093,19 +1041,19 @@ class VirtualJoystick(
 
                 // 验证范围有效性（0.0-1.0）
                 if (left < 0 || left > 1.0) {
-                    Log.w(TAG, "Invalid left range: " + left + ", resetting to 1.0")
+                    Log.w(TAG, "Invalid left range: $left, resetting to 1.0")
                     left = 1.0f
                 }
                 if (top < 0 || top > 1.0) {
-                    Log.w(TAG, "Invalid top range: " + top + ", resetting to 1.0")
+                    Log.w(TAG, "Invalid top range: $top, resetting to 1.0")
                     top = 1.0f
                 }
                 if (right < 0 || right > 1.0) {
-                    Log.w(TAG, "Invalid right range: " + right + ", resetting to 1.0")
+                    Log.w(TAG, "Invalid right range: $right, resetting to 1.0")
                     right = 1.0f
                 }
                 if (bottom < 0 || bottom > 1.0) {
-                    Log.w(TAG, "Invalid bottom range: " + bottom + ", resetting to 1.0")
+                    Log.w(TAG, "Invalid bottom range: $bottom, resetting to 1.0")
                     bottom = 1.0f
                 }
 
@@ -1194,7 +1142,19 @@ class VirtualJoystick(
         get() = castedData.isRightStick
 
     private fun dpToPx(dp: Float): Float {
-        return dp * getResources().getDisplayMetrics().density
+        return dp * resources.displayMetrics.density
+    }
+
+    private fun sdlOnNativeMouseDirect(
+        button: Int,
+        action: Int,
+        x: Float,
+        y: Float,
+        relative: Boolean
+    ) {
+        if (mInputBridge is SDLInputBridge) {
+            mInputBridge.sdlOnNativeMouseDirect(button, action, x, y, relative)
+        }
     }
 }
 
