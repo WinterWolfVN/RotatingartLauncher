@@ -149,3 +149,6 @@ tools/assemblypatch/.vs/
 # Control packs repository (separate repo)
 control-packs-repo/
 tools/sponsors/
+
+# Generated reports
+strings_xml_analysis_report.txt

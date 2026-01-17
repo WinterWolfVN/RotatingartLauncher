@@ -27,6 +27,10 @@ public class LocaleManager {
     public static final String LANGUAGE_AUTO = "auto";      // 跟随系统
     public static final String LANGUAGE_ZH = "zh";          // 简体中文
     public static final String LANGUAGE_EN = "en";          // English
+    public static final String LANGUAGE_RU = "ru";          // Русский
+    
+    // Locale 常量
+    private static final Locale LOCALE_RUSSIAN = new Locale("ru");
 
     /**
      * 获取当前设置的语言
@@ -104,6 +108,8 @@ public class LocaleManager {
                 return Locale.SIMPLIFIED_CHINESE;
             case LANGUAGE_EN:
                 return Locale.ENGLISH;
+            case LANGUAGE_RU:
+                return LOCALE_RUSSIAN;
             default:
                 return Locale.getDefault();
         }
@@ -122,6 +128,8 @@ public class LocaleManager {
                 return "简体中文";
             case LANGUAGE_EN:
                 return "English";
+            case LANGUAGE_RU:
+                return "Русский";
             default:
                 return language;
         }
@@ -135,7 +143,8 @@ public class LocaleManager {
         return new String[]{
             LANGUAGE_AUTO,
             LANGUAGE_ZH,
-            LANGUAGE_EN
+            LANGUAGE_EN,
+            LANGUAGE_RU
         };
     }
 }

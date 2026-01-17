@@ -476,7 +476,10 @@ public class AppearanceSettingsModule implements SettingsModule {
                         fragment.getString(R.string.settings_language_desc_en)),
                     new OptionSelectorDialog.Option(LocaleManager.LANGUAGE_ZH,
                         fragment.getString(R.string.language_chinese),
-                        fragment.getString(R.string.settings_language_desc_zh))
+                        fragment.getString(R.string.settings_language_desc_zh)),
+                    new OptionSelectorDialog.Option(LocaleManager.LANGUAGE_RU,
+                        fragment.getString(R.string.language_russian),
+                        fragment.getString(R.string.settings_language_desc_ru))
                 );
 
                 String currentLanguage = LocaleManager.getLanguage(fragment.requireContext());
