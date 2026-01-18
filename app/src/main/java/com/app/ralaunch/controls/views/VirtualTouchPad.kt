@@ -3,7 +3,9 @@ package com.app.ralaunch.controls.views
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Region
 import android.os.Handler
 import android.text.TextPaint
 import android.view.MotionEvent
@@ -140,6 +142,48 @@ class VirtualTouchPad(
         paintRect.set(0f, 0f, w.toFloat(), h.toFloat())
     }
 
+    override fun isTouchInBounds(x: Float, y: Float): Boolean {
+        // 将父视图坐标转换为本地坐标
+        val childRect = android.graphics.Rect()
+        getHitRect(childRect)
+        val localX = x - childRect.left
+        val localY = y - childRect.top
+        
+        return isLocalTouchInBounds(localX, localY)
+    }
+
+    /**
+     * 检查本地坐标是否在控件形状内
+     * @param localX 本地 X 坐标
+     * @param localY 本地 Y 坐标
+     */
+    private fun isLocalTouchInBounds(localX: Float, localY: Float): Boolean {
+        // 使用圆角矩形路径检查触摸点
+        val cornerRadius = dpToPx(castedData.cornerRadius)
+        val path = Path()
+        path.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+        val region = Region()
+        region.setPath(path, Region(0, 0, width, height))
+        return region.contains(localX.toInt(), localY.toInt())
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        // 清理所有待处理的 Handler，防止内存泄漏和状态问题
+        idleDelayHandler.removeCallbacksAndMessages(null)
+        clickDelayHandler.removeCallbacksAndMessages(null)
+
+        // 如果在按下状态，释放鼠标按钮
+        if (currentState == TouchPadState.PRESS_MOVING || currentState == TouchPadState.DOUBLE_CLICK) {
+            sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
+        }
+
+        // 重置状态
+        currentState = TouchPadState.IDLE
+        mIsPressed = false
+        activePointerId = -1
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -151,7 +195,8 @@ class VirtualTouchPad(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val action = event.actionMasked
-        val pointerId = event.getPointerId(event.actionIndex)
+        val actionIndex = event.actionIndex
+        val pointerId = event.getPointerId(actionIndex)
 
         when (action) {
             MotionEvent.ACTION_DOWN,
@@ -160,11 +205,21 @@ class VirtualTouchPad(
                 if (activePointerId != -1) {
                     return false
                 }
+
+                // 对于 POINTER_DOWN，必须使用 actionIndex 获取正确的指针坐标
+                val touchX = event.getX(actionIndex)
+                val touchY = event.getY(actionIndex)
+
+                // 验证触摸点是否在控件的实际形状内（对圆角矩形很重要）
+                if (!isLocalTouchInBounds(touchX, touchY)) {
+                    return false
+                }
+
                 // 记录触摸点
                 activePointerId = pointerId
 
-                lastX = event.x
-                lastY = event.y
+                lastX = touchX
+                lastY = touchY
                 currentX = lastX
                 currentY = lastY
                 initialTouchX = currentX
@@ -183,12 +238,38 @@ class VirtualTouchPad(
             }
 
             MotionEvent.ACTION_MOVE -> {
-                if (pointerId != activePointerId) {
+                // ACTION_MOVE doesn't have a meaningful actionIndex
+                // We need to find our tracked pointer in the event
+                if (activePointerId == -1) {
                     return false
                 }
 
-                currentX = event.x
-                currentY = event.y
+                val pointerIndex = event.findPointerIndex(activePointerId)
+                if (pointerIndex == -1) {
+                    // 我们跟踪的触摸点不在事件中了，说明它已经被释放
+                    // 必须重置状态，否则会导致指针跳跃到其他手指
+                    if (!castedData.isPassThrough) {
+                        TouchPointerTracker.releasePointer(activePointerId)
+                    }
+                    activePointerId = -1
+
+                    // 清理 handlers 并重置状态
+                    idleDelayHandler.removeCallbacksAndMessages(null)
+                    clickDelayHandler.removeCallbacksAndMessages(null)
+
+                    // 如果在按下移动或双击状态，需要释放鼠标按钮
+                    if (currentState == TouchPadState.PRESS_MOVING || currentState == TouchPadState.DOUBLE_CLICK) {
+                        sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
+                    }
+
+                    currentState = TouchPadState.IDLE
+                    mIsPressed = false
+                    invalidate()
+                    return false
+                }
+
+                currentX = event.getX(pointerIndex)
+                currentY = event.getY(pointerIndex)
 
                 // Trigger Move!
                 handleMove()
@@ -201,7 +282,6 @@ class VirtualTouchPad(
             }
 
             MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_CANCEL,
             MotionEvent.ACTION_POINTER_UP -> {
                 // 检查是否是我们跟踪的触摸点
                 if (pointerId == activePointerId) {
@@ -218,6 +298,33 @@ class VirtualTouchPad(
                     return true
                 }
                 return false
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                // 取消事件：无条件强制释放所有状态
+                // 必须取消所有待处理的 Handler，并确保鼠标按钮被释放
+                idleDelayHandler.removeCallbacksAndMessages(null)
+                clickDelayHandler.removeCallbacksAndMessages(null)
+
+                if (activePointerId != -1) {
+                    if (!castedData.isPassThrough) {
+                        TouchPointerTracker.releasePointer(activePointerId)
+                    }
+                    activePointerId = -1
+                }
+
+                // 如果在按下移动或双击状态，需要释放鼠标按钮
+                if (currentState == TouchPadState.PRESS_MOVING || currentState == TouchPadState.DOUBLE_CLICK) {
+                    sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
+                }
+
+                // 强制重置状态
+                currentState = TouchPadState.IDLE
+                mIsPressed = false
+                triggerVibration(false)
+                invalidate()
+
+                return true
             }
         }
         return super.onTouchEvent(event)
@@ -304,9 +411,10 @@ class VirtualTouchPad(
                     MotionEvent.BUTTON_PRIMARY
 
                 idleDelayHandler.postDelayed({
+                    // 检查状态是否仍然是 PENDING，且我们仍在跟踪一个触摸点或刚刚释放
+                    // 注意：对于单击检测，mIsPressed 会是 false，但 currentState 仍是 PENDING
                     if (currentState == TouchPadState.PENDING) { // No double click detected, no movement detected
-                        currentState = TouchPadState.IDLE
-                        if (mIsPressed) {
+                        if (mIsPressed && activePointerId != -1) {
                             // Long Press! Trigger press movement!
                             currentState = TouchPadState.PRESS_MOVING
                             // notify the user press movement start
@@ -314,18 +422,21 @@ class VirtualTouchPad(
                             // Press down left mouse button
                             sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_DOWN, 0f, 0f, true)
                             // the rest of the movements would be handled by handleMove()
-                        } else {
-                            // when double click mode disabled, this wont be triggered as we go back to IDLE on release
+                        } else if (!mIsPressed && castedData.isDoubleClickSimulateJoystick) {
+                            // 双击模式下，单击检测
                             // Single Press! Trigger left click!
+                            currentState = TouchPadState.IDLE
                             clickDelayHandler.removeCallbacksAndMessages(null)
                             sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
                             sdlOnNativeMouseDirect(currentMouseButton,MotionEvent.ACTION_DOWN,0f,0f,true)
                             clickDelayHandler.postDelayed({
                                 sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
                             }, TOUCHPAD_CLICK_TIMEOUT)
+                        } else {
+                            // 既没有按住也没有双击模式，直接回到 IDLE
+                            currentState = TouchPadState.IDLE
                         }
                     }
-                    idleDelayHandler.removeCallbacksAndMessages(null)
                 }, TOUCHPAD_STATE_IDLE_TIMEOUT)
             }
 
@@ -384,12 +495,15 @@ class VirtualTouchPad(
 
         when (currentState) {
             TouchPadState.IDLE -> {
-                // Do nothing
+                // Do nothing, but cancel any pending handlers just in case
+                idleDelayHandler.removeCallbacksAndMessages(null)
+                clickDelayHandler.removeCallbacksAndMessages(null)
             }
 
             TouchPadState.PENDING -> {
                 if (castedData.isDoubleClickSimulateJoystick) {
-                    // Still pending, wait for timeout to confirm single click
+                    // Double-click mode enabled: keep pending state, wait for timeout or second tap
+                    // Don't cancel the handler here - it will handle single click detection
                 }
                 else {
                     // double click not enabled, go back to idle
@@ -408,6 +522,8 @@ class VirtualTouchPad(
             TouchPadState.DOUBLE_CLICK -> {
                 // After double click, go back to idle
                 currentState = TouchPadState.IDLE
+                idleDelayHandler.removeCallbacksAndMessages(null)
+                clickDelayHandler.removeCallbacksAndMessages(null)
                 // Release mouse button
                 sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
             }
@@ -415,11 +531,15 @@ class VirtualTouchPad(
             TouchPadState.MOVING -> {
                 // After moving, go back to idle
                 currentState = TouchPadState.IDLE
+                idleDelayHandler.removeCallbacksAndMessages(null)
+                clickDelayHandler.removeCallbacksAndMessages(null)
             }
 
             TouchPadState.PRESS_MOVING -> {
                 // After press moving, go back to idle
                 currentState = TouchPadState.IDLE
+                idleDelayHandler.removeCallbacksAndMessages(null)
+                clickDelayHandler.removeCallbacksAndMessages(null)
                 // Release mouse button
                 sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
             }

@@ -3,8 +3,10 @@ package com.app.ralaunch.controls.views
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Region
 import android.text.TextPaint
 import android.view.MotionEvent
 import android.view.View
@@ -13,6 +15,7 @@ import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.views.ControlView
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * 虚拟文本控件View
@@ -80,6 +83,35 @@ class VirtualText(
         mRectF.set(0f, 0f, w.toFloat(), h.toFloat())
     }
 
+    override fun isTouchInBounds(x: Float, y: Float): Boolean {
+        // 将父视图坐标转换为本地坐标
+        val childRect = Rect()
+        getHitRect(childRect)
+        val localX = x - childRect.left
+        val localY = y - childRect.top
+        
+        when (castedData.shape) {
+            ControlData.Text.Shape.CIRCLE -> {
+                val centerX = width / 2f
+                val centerY = height / 2f
+                val radius = min(width, height) / 2f
+                val dx = localX - centerX
+                val dy = localY - centerY
+                val distance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                return distance <= radius
+            }
+            ControlData.Text.Shape.RECTANGLE -> {
+                // 使用圆角矩形路径检查触摸点
+                val cornerRadius = dpToPx(controlData.cornerRadius)
+                val path = Path()
+                path.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+                val region = Region()
+                region.setPath(path, Region(0, 0, width, height))
+                return region.contains(localX.toInt(), localY.toInt())
+            }
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -102,10 +134,19 @@ class VirtualText(
 
         // 绘制背景
         if (castedData.displayText.isNotEmpty()) {
-            // 绘制矩形（圆角矩形）- 文本控件默认方形
-            val cornerRadius = dpToPx(controlData.cornerRadius)
-            canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
-            canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
+            when (castedData.shape) {
+                ControlData.Text.Shape.CIRCLE -> {
+                    // 绘制圆形
+                    canvas.drawCircle(centerX, centerY, radius, mBackgroundPaint)
+                    canvas.drawCircle(centerX, centerY, radius, mStrokePaint)
+                }
+                ControlData.Text.Shape.RECTANGLE -> {
+                    // 绘制矩形（圆角矩形）
+                    val cornerRadius = dpToPx(controlData.cornerRadius)
+                    canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
+                    canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
+                }
+            }
         }
 
 

@@ -1,7 +1,5 @@
 package com.app.ralaunch.controls.views
 
-import android.R
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.graphics.Canvas
@@ -9,38 +7,25 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Region
 import android.graphics.Typeface
-import android.os.Handler
-import android.os.Looper
-import android.text.Editable
 import android.text.TextPaint
-import android.text.TextWatcher
 import android.util.Log
-import android.view.Gravity
-import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.view.ViewTreeObserver
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.TextView
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.activity.GameActivity
 import com.app.ralaunch.controls.ControlsSharedState
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.bridges.ControlInputBridge
-import com.app.ralaunch.controls.views.ControlView
 import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.textures.TextureLoader
 import com.app.ralaunch.controls.textures.TextureRenderer
 import java.io.File
-import java.lang.ref.WeakReference
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * 虚拟按钮View
@@ -122,9 +107,7 @@ class VirtualButton(
     private fun initPaints() {
         if (castedData.mode == ControlData.Button.Mode.GAMEPAD) {
             val normalColor = 0x7D7D7D7D // 半透明灰色
-            val pressedColor = -0x828283 // 不透明灰色（按下）
             val textColor = 0x7DFFFFFF // 半透明白色（文字）
-            val backgroundColor = 0x327D7D7D // 很淡的灰色（背景）
 
             mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
             mBackgroundPaint?.color = normalColor
@@ -169,6 +152,55 @@ class VirtualButton(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         mRectF.set(0f, 0f, w.toFloat(), h.toFloat())
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        // 如果还在按下状态，执行释放逻辑
+        if (mActivePointerId != -1 || mIsPressed) {
+            handleRelease()
+        }
+        // 重置所有状态
+        mActivePointerId = -1
+        mIsPressed = false
+    }
+
+    override fun isTouchInBounds(x: Float, y: Float): Boolean {
+        // 将父视图坐标转换为本地坐标
+        val childRect = Rect()
+        getHitRect(childRect)
+        val localX = x - childRect.left
+        val localY = y - childRect.top
+        
+        return isLocalTouchInBounds(localX, localY)
+    }
+
+    /**
+     * 检查本地坐标是否在控件形状内
+     * @param localX 本地 X 坐标
+     * @param localY 本地 Y 坐标
+     */
+    private fun isLocalTouchInBounds(localX: Float, localY: Float): Boolean {
+        when (castedData.shape) {
+            ControlData.Button.Shape.CIRCLE -> {
+                val centerX = width / 2f
+                val centerY = height / 2f
+                val radius = min(width, height) / 2f
+                val dx = localX - centerX
+                val dy = localY - centerY
+                val distance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+                return distance <= radius
+            }
+            ControlData.Button.Shape.RECTANGLE -> {
+                // 使用圆角矩形路径检查触摸点
+                val cornerRadius = dpToPx(castedData.cornerRadius)
+                val path = Path()
+                path.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
+                val region = Region()
+                region.setPath(path, Region(0, 0, width, height))
+                return region.contains(localX.toInt(), localY.toInt())
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -327,7 +359,7 @@ class VirtualButton(
 
                     if (textWidth!! > availableWidth) {
                         // 文本超出，按比例缩小字体
-                        val scale = availableWidth / textWidth!!
+                        val scale = availableWidth / textWidth
                         val newTextSize = mTextPaint?.textSize!! * scale
                         mTextPaint?.textSize = newTextSize
                     }
@@ -348,7 +380,8 @@ class VirtualButton(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val action = event.actionMasked
-        val pointerId = event.getPointerId(event.actionIndex)
+        val actionIndex = event.actionIndex
+        val pointerId = event.getPointerId(actionIndex)
 
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
@@ -357,6 +390,13 @@ class VirtualButton(
                     return false
                 }
 
+                // 验证触摸点是否在控件的实际形状内（对圆形按钮很重要）
+                // 对于 POINTER_DOWN，必须使用 actionIndex 获取正确的指针坐标
+                val touchX = event.getX(actionIndex)
+                val touchY = event.getY(actionIndex)
+                if (!isLocalTouchInBounds(touchX, touchY)) {
+                    return false
+                }
 
                 // 记录触摸点
                 mActivePointerId = pointerId
@@ -370,7 +410,7 @@ class VirtualButton(
                 return true
             }
 
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_UP -> {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 // 检查是否是我们跟踪的触摸点
                 if (pointerId == mActivePointerId) {
                     // 释放触摸点标记（如果之前标记了）
@@ -384,6 +424,24 @@ class VirtualButton(
                     return true
                 }
                 return false
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                // 取消事件：无条件释放所有状态
+                if (mActivePointerId != -1) {
+                    if (!castedData.isPassThrough) {
+                        TouchPointerTracker.releasePointer(mActivePointerId)
+                    }
+                    mActivePointerId = -1
+                }
+
+                // 强制释放按下状态
+                if (mIsPressed) {
+                    triggerVibration(false)
+                    handleRelease()
+                }
+
+                return true
             }
         }
         return super.onTouchEvent(event)

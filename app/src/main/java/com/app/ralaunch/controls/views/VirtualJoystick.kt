@@ -412,6 +412,42 @@ class VirtualJoystick(
         }
     }
 
+    override fun isTouchInBounds(x: Float, y: Float): Boolean {
+        // 将父视图坐标转换为本地坐标
+        val childRect = android.graphics.Rect()
+        getHitRect(childRect)
+        val localX = x - childRect.left
+        val localY = y - childRect.top
+        
+        // 检查触摸点是否在圆形区域内
+        // 注意：虽然绘制时背景圆使用75%半径（backgroundRadius），但触摸区域使用100%半径（mRadius）
+        // 这是为了提供更大的触摸区域，提升用户体验。onTouchEvent中也使用mRadius进行检查。
+        val dx = localX - mCenterX
+        val dy = localY - mCenterY
+        val distance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+        
+        return distance <= mRadius
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        // 清理所有待处理的 Handler，防止内存泄漏和状态问题
+        mClickAttackHandler.removeCallbacksAndMessages(null)
+
+        // 如果还在触摸状态，执行释放逻辑
+        if (mIsTouching || mIsAttacking || mMouseLeftPressed) {
+            handleRelease()
+        }
+
+        // 重置所有状态
+        mIsTouching = false
+        mIsAttacking = false
+        mMouseLeftPressed = false
+        mActivePointerId = -1
+        mCurrentDirection = DIR_NONE
+        resetStick()
+    }
+
     /**
      * 获取方向对应的角度（用于绘制指示线）
      */
@@ -486,10 +522,18 @@ class VirtualJoystick(
                     return false
                 }
 
-
                 // 找到我们跟踪的触摸点
                 val pointerIndex = event.findPointerIndex(mActivePointerId)
                 if (pointerIndex == -1) {
+                    // 我们跟踪的触摸点不在事件中了，说明它已经被释放
+                    // 必须重置状态，否则会导致指针跳跃到其他手指
+                    if (!controlData.isPassThrough) {
+                        TouchPointerTracker.releasePointer(mActivePointerId)
+                    }
+                    mActivePointerId = -1
+                    handleRelease()
+                    mIsTouching = false
+                    invalidate()
                     return false
                 }
 
@@ -500,7 +544,7 @@ class VirtualJoystick(
                 return !controlData.isPassThrough
             }
 
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_UP -> {
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 // 检查是否是我们跟踪的触摸点
                 if (pointerId == mActivePointerId && mIsTouching) {
                     // 释放触摸点标记（如果之前标记了）
@@ -516,6 +560,34 @@ class VirtualJoystick(
                     return !controlData.isPassThrough
                 }
                 return false
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                // 取消事件：无条件强制释放所有状态
+                // 必须清理所有 Handler，防止后续回调导致状态问题
+                mClickAttackHandler.removeCallbacksAndMessages(null)
+
+                if (mActivePointerId != -1) {
+                    if (!controlData.isPassThrough) {
+                        TouchPointerTracker.releasePointer(mActivePointerId)
+                    }
+                    mActivePointerId = -1
+                }
+
+                // 强制调用 handleRelease 并重置所有状态
+                if (mIsTouching || mIsAttacking || mMouseLeftPressed || mCurrentDirection != DIR_NONE) {
+                    handleRelease()
+                }
+
+                mIsTouching = false
+                mIsAttacking = false
+                mMouseLeftPressed = false
+                mCurrentDirection = DIR_NONE
+                resetStick()
+                triggerVibration(false)
+                invalidate()
+
+                return true
             }
         }
         return super.onTouchEvent(event)
