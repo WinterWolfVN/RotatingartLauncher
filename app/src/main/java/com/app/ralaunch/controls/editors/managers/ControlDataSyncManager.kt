@@ -145,6 +145,10 @@ object ControlDataSyncManager {
                 // 同步纹理配置
                 target.texture = source.texture.copy()
             }
+            source is ControlData.MouseWheel && target is ControlData.MouseWheel -> {
+                // 同步纹理配置
+                target.texture = source.texture.copy()
+            }
         }
     }
 }

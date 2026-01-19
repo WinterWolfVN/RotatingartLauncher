@@ -160,6 +160,25 @@ data class TouchPadTextureConfig(
 }
 
 /**
+ * 鼠标滚轮纹理配置
+ */
+@Serializable
+data class MouseWheelTextureConfig(
+    /** 背景纹理 */
+    val background: TextureConfig = TextureConfig(),
+
+    /** 滚轮指示器纹理（可选） */
+    val wheelIndicator: TextureConfig = TextureConfig()
+) {
+    val hasAnyTexture: Boolean
+        get() = background.enabled || wheelIndicator.enabled
+
+    companion object {
+        fun empty() = MouseWheelTextureConfig()
+    }
+}
+
+/**
  * 文本控件纹理配置
  */
 @Serializable

@@ -135,6 +135,7 @@
     <string name="editor_add_button">Добавить кнопку</string>
     <string name="editor_add_joystick">Добавить джойстик</string>
     <string name="editor_add_touchpad_text">Добавить сенсорную панель</string>
+    <string name="editor_add_mousewheel_text">Добавить колесо мыши</string>
     <string name="editor_save">Сохранить раскладку</string>
     <string name="editor_load">Загрузить раскладку</string>
     <string name="editor_reset">Сбросить по умолчанию</string>
@@ -466,6 +467,7 @@
     <string name="editor_button_added">Кнопка добавлена</string>
     <string name="editor_joystick_added">Джойстик добавлен</string>
     <string name="editor_touchpad_added">Сенсорная панель добавлена</string>
+    <string name="editor_mousewheel_added">Колесо мыши добавлено</string>
     <string name="editor_text_added">Текст добавлен</string>
     <string name="editor_select_joystick_type">Выбрать тип джойстика</string>
     <string name="editor_joystick_type_move_aim">Джойстик движения+прицеливания</string>
@@ -598,6 +600,7 @@
     <string name="control_type_button_gamepad">Кнопка (контроллер)</string>
     <string name="control_type_joystick">Джойстик</string>
     <string name="control_type_touchpad">Сенсорная панель</string>
+    <string name="control_type_mousewheel">Колесо мыши</string>
     <string name="control_type_text">Текст</string>
     <string name="control_type_button">Кнопка</string>
     <string name="control_import_success">Раскладка импортирована: %s</string>
@@ -703,6 +706,7 @@
     <!-- ControlEditorOperations Messages -->
     <string name="editor_default_button_name">Кнопка</string>
     <string name="editor_default_touchpad_name">Сенсорная панель</string>
+    <string name="editor_default_mousewheel_name">Колесо мыши</string>
     <string name="editor_default_text_name">Текст</string>
     <string name="editor_stick_right">Правый</string>
     <string name="editor_stick_left">Левый</string>
@@ -772,6 +776,14 @@
     <string name="editor_mouse_speed">Скорость</string>
     <string name="editor_double_click_joystick">Двойной клик для имитации джойстика</string>
     <string name="editor_double_click_joystick_desc">Имитировать движение джойстика при двойном клике на сенсорной панели</string>
+    <string name="editor_mousewheel_orientation">Горизонтальная прокрутка</string>
+    <string name="editor_mousewheel_orientation_desc">Использовать свайп влево-вправо для управления колесом мыши</string>
+    <string name="editor_mousewheel_reverse">Обратное направление</string>
+    <string name="editor_mousewheel_reverse_desc">Изменить направление прокрутки колеса мыши</string>
+    <string name="editor_mousewheel_sensitivity">Чувствительность колеса</string>
+    <string name="editor_mousewheel_sensitivity_desc">Пикселей для перемещения перед событием колеса</string>
+    <string name="editor_mousewheel_ratio">Множитель скорости колеса</string>
+    <string name="editor_mousewheel_ratio_desc">Множитель для силы события колеса</string>
     <string name="editor_combo_keys">Сопоставление комбинации клавиш</string>
     <string name="editor_combo_keys_desc">Установить комбинацию кнопок контроллера для направления джойстика (например, R+B)</string>
     <string name="editor_combo_keys_not_set">Не установлено</string>

@@ -92,6 +92,7 @@ class TextureSelectorDialog : DialogFragment() {
         JOYSTICK_BACKGROUND,
         JOYSTICK_KNOB,
         TOUCHPAD_BACKGROUND,
+        MOUSEWHEEL_BACKGROUND,
         TEXT_BACKGROUND
     }
     
@@ -211,6 +212,10 @@ class TextureSelectorDialog : DialogFragment() {
                 tabLayout?.addTab(tabLayout!!.newTab().setText(R.string.control_texture_background))
                 currentSlot = TextureSlot.TOUCHPAD_BACKGROUND
             }
+            is ControlData.MouseWheel -> {
+                tabLayout?.addTab(tabLayout!!.newTab().setText(R.string.control_texture_background))
+                currentSlot = TextureSlot.MOUSEWHEEL_BACKGROUND
+            }
             is ControlData.Text -> {
                 tabLayout?.addTab(tabLayout!!.newTab().setText(R.string.control_texture_background))
                 currentSlot = TextureSlot.TEXT_BACKGROUND
@@ -248,6 +253,7 @@ class TextureSelectorDialog : DialogFragment() {
                 }
             }
             is ControlData.TouchPad -> TextureSlot.TOUCHPAD_BACKGROUND
+            is ControlData.MouseWheel -> TextureSlot.MOUSEWHEEL_BACKGROUND
             is ControlData.Text -> TextureSlot.TEXT_BACKGROUND
             else -> TextureSlot.BUTTON_NORMAL
         }
@@ -425,6 +431,16 @@ class TextureSelectorDialog : DialogFragment() {
                     )
                 }
             }
+            TextureSlot.MOUSEWHEEL_BACKGROUND -> {
+                if (data is ControlData.MouseWheel) {
+                    data.texture = data.texture.copy(
+                        background = data.texture.background.copy(
+                            path = textureInfo.relativePath,
+                            enabled = true
+                        )
+                    )
+                }
+            }
             TextureSlot.TEXT_BACKGROUND -> {
                 if (data is ControlData.Text) {
                     data.texture = data.texture.copy(
@@ -482,6 +498,13 @@ class TextureSelectorDialog : DialogFragment() {
             }
             TextureSlot.TOUCHPAD_BACKGROUND -> {
                 if (data is ControlData.TouchPad) {
+                    data.texture = data.texture.copy(
+                        background = TextureConfig()
+                    )
+                }
+            }
+            TextureSlot.MOUSEWHEEL_BACKGROUND -> {
+                if (data is ControlData.MouseWheel) {
                     data.texture = data.texture.copy(
                         background = TextureConfig()
                     )

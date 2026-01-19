@@ -190,6 +190,35 @@
 
             </LinearLayout>
 
+            <!-- 添加鼠标滚轮 -->
+            <LinearLayout
+                android:id="@+id/item_add_mousewheel"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit"
+                    android:tint="?attr/textPrimary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/editor_add_mousewheel_text"
+                    android:textColor="?attr/textPrimary"
+                    android:textSize="16sp" />
+
+            </LinearLayout>
+
             <!-- 添加文本 -->
             <LinearLayout
                 android:id="@+id/item_add_text"

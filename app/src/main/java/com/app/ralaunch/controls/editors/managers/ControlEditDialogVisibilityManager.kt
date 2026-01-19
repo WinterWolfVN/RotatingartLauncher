@@ -81,6 +81,7 @@ object ControlEditDialogVisibilityManager {
                     is ControlData.Button -> it.shape == ControlData.Button.Shape.RECTANGLE
                     is ControlData.Text -> it.shape == ControlData.Text.Shape.RECTANGLE
                     is ControlData.TouchPad -> true
+                    is ControlData.MouseWheel -> true
                     else -> false
                 }
             },
@@ -151,7 +152,7 @@ object ControlEditDialogVisibilityManager {
             com.app.ralaunch.R.id.item_right_stick_attack_mode
         )
 
-        // 鼠标范围和速度（摇杆鼠标模式或触摸板显示）
+        // 鼠标范围和速度（摇杆鼠标模式或触摸板显示，不包括鼠标滚轮）
         addRule(
             {
                 (it is ControlData.Joystick && it.mode == ControlData.Joystick.Mode.MOUSE) ||
@@ -164,6 +165,30 @@ object ControlEditDialogVisibilityManager {
         addRule(
             { it is ControlData.TouchPad },
             com.app.ralaunch.R.id.layout_double_click_joystick
+        )
+
+        // 鼠标滚轮方向（仅鼠标滚轮显示）
+        addRule(
+            { it is ControlData.MouseWheel },
+            com.app.ralaunch.R.id.card_mousewheel_orientation
+        )
+
+        // 鼠标滚轮反转（仅鼠标滚轮显示）
+        addRule(
+            { it is ControlData.MouseWheel },
+            com.app.ralaunch.R.id.card_mousewheel_reverse
+        )
+
+        // 鼠标滚轮灵敏度（仅鼠标滚轮显示）
+        addRule(
+            { it is ControlData.MouseWheel },
+            com.app.ralaunch.R.id.card_mousewheel_sensitivity
+        )
+
+        // 鼠标滚轮速度倍率（仅鼠标滚轮显示）
+        addRule(
+            { it is ControlData.MouseWheel },
+            com.app.ralaunch.R.id.card_mousewheel_ratio
         )
 
         // 摇杆左右选择（仅在手柄模式或鼠标模式时显示）

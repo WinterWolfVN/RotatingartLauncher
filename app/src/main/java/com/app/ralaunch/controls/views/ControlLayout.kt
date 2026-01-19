@@ -342,6 +342,7 @@ class ControlLayout : FrameLayout {
         is ControlData.Button -> VirtualButton(context, data, inputBridge!!)
         is ControlData.Joystick -> VirtualJoystick(context, data, inputBridge!!)
         is ControlData.TouchPad -> VirtualTouchPad(context, data, inputBridge!!)
+        is ControlData.MouseWheel -> VirtualMouseWheel(context, data, inputBridge!!)
         is ControlData.Text -> VirtualText(context, data, inputBridge!!)
         else -> {
             AppLogger.warn(TAG, "Unknown control type")

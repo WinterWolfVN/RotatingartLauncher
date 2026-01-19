@@ -46,15 +46,10 @@ object ControlEditorOperations {
      * 添加摇杆到配置
      */
     fun addJoystick(
-        layout: ControlLayout, joystickMode: Joystick.Mode, isRightStick: Boolean,
-        context: android.content.Context? = null
+        layout: ControlLayout, joystickMode: Joystick.Mode, isRightStick: Boolean
     ): Joystick {
         val joystick = Joystick()
-        joystick.name = if (context != null) {
-            if (isRightStick) context.getString(R.string.joystick_right) else context.getString(R.string.joystick_left)
-        } else {
-            if (isRightStick) "右摇杆" else "左摇杆"
-        }
+        joystick.name = if (isRightStick) context.getString(R.string.joystick_right) else context.getString(R.string.joystick_left)
         joystick.mode = joystickMode
         joystick.isRightStick = isRightStick
 
@@ -104,6 +99,25 @@ object ControlEditorOperations {
 
         layout.controls.add(touchpad)
         return touchpad
+    }
+
+    /**
+     * 添加鼠标滚轮到配置
+     */
+    fun addMouseWheel(layout: ControlLayout): ControlData.MouseWheel {
+        val mouseWheel = ControlData.MouseWheel()
+        mouseWheel.name = context.getString(R.string.editor_default_mousewheel_name)
+        mouseWheel.x = 0.5f
+        mouseWheel.y = 0.5f
+        mouseWheel.width = 0.2f
+        mouseWheel.height = 0.3f
+        mouseWheel.isSizeRatioLocked = false
+        mouseWheel.opacity = 0.5f
+        mouseWheel.cornerRadius = 15.0f
+        mouseWheel.isVisible = true
+
+        layout.controls.add(mouseWheel)
+        return mouseWheel
     }
 
     /**

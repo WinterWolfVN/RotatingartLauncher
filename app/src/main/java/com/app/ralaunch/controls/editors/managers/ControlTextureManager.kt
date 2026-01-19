@@ -70,6 +70,7 @@ object ControlTextureManager {
         return data is ControlData.Button || 
                data is ControlData.Joystick ||
                data is ControlData.TouchPad ||
+               data is ControlData.MouseWheel ||
                data is ControlData.Text
     }
     
@@ -81,6 +82,7 @@ object ControlTextureManager {
             is ControlData.Button -> data.texture.hasAnyTexture
             is ControlData.Joystick -> data.texture.hasAnyTexture
             is ControlData.TouchPad -> data.texture.hasAnyTexture
+            is ControlData.MouseWheel -> data.texture.hasAnyTexture
             is ControlData.Text -> data.texture.hasAnyTexture
             else -> false
         }
@@ -136,6 +138,9 @@ object ControlTextureManager {
             }
             is ControlData.TouchPad -> {
                 data.texture = TouchPadTextureConfig()
+            }
+            is ControlData.MouseWheel -> {
+                data.texture = MouseWheelTextureConfig()
             }
             is ControlData.Text -> {
                 data.texture = TextControlTextureConfig()

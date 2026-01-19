@@ -76,6 +76,49 @@ object ControlEditDialogDataFiller {
         if (switchDoubleClickJoystick != null && data is ControlData.TouchPad) {
             switchDoubleClickJoystick.isChecked = data.isDoubleClickSimulateJoystick
         }
+
+        // 鼠标滚轮设置（绑定UI，无论什么数据类型）
+        // 滚轮方向开关
+        val switchMouseWheelOrientation = view.findViewById<SwitchCompat?>(R.id.switch_mousewheel_orientation)
+        if (data is ControlData.MouseWheel) {
+            switchMouseWheelOrientation?.isChecked = (data.orientation == ControlData.MouseWheel.Orientation.HORIZONTAL)
+        } else {
+            switchMouseWheelOrientation?.isChecked = false
+        }
+
+        // 反转方向开关
+        val switchMouseWheelReverse = view.findViewById<SwitchCompat?>(R.id.switch_mousewheel_reverse)
+        if (data is ControlData.MouseWheel) {
+            switchMouseWheelReverse?.isChecked = data.reverseDirection
+        } else {
+            switchMouseWheelReverse?.isChecked = false
+        }
+
+        // 滚轮灵敏度
+        val sliderMouseWheelSensitivity = view.findViewById<Slider?>(R.id.slider_mousewheel_sensitivity)
+        val tvMouseWheelSensitivityValue = view.findViewById<TextView?>(R.id.tv_mousewheel_sensitivity_value)
+        if (sliderMouseWheelSensitivity != null) {
+            if (data is ControlData.MouseWheel) {
+                sliderMouseWheelSensitivity.value = data.scrollSensitivity
+                tvMouseWheelSensitivityValue?.text = String.format("%.1f", data.scrollSensitivity)
+            } else {
+                sliderMouseWheelSensitivity.value = 15.0f
+                tvMouseWheelSensitivityValue?.text = "15.0"
+            }
+        }
+
+        // 滚轮速度倍率
+        val sliderMouseWheelRatio = view.findViewById<Slider?>(R.id.slider_mousewheel_ratio)
+        val tvMouseWheelRatioValue = view.findViewById<TextView?>(R.id.tv_mousewheel_ratio_value)
+        if (sliderMouseWheelRatio != null) {
+            if (data is ControlData.MouseWheel) {
+                sliderMouseWheelRatio.value = data.scrollRatio
+                tvMouseWheelRatioValue?.text = "${(data.scrollRatio * 100).toInt()}%"
+            } else {
+                sliderMouseWheelRatio.value = 1.0f
+                tvMouseWheelRatioValue?.text = "100%"
+            }
+        }
     }
 
     /**

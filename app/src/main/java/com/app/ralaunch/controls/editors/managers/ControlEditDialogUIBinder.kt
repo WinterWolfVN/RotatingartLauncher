@@ -334,6 +334,58 @@ object ControlEditDialogUIBinder {
                 refs.notifyUpdate()
             }
         }
+
+        // 鼠标滚轮方向开关（仅鼠标滚轮显示）
+        val switchMouseWheelOrientation = view.findViewById<SwitchCompat?>(R.id.switch_mousewheel_orientation)
+        switchMouseWheelOrientation?.setOnCheckedChangeListener { _, isChecked ->
+            if (refs.isUpdating) return@setOnCheckedChangeListener
+            val data = refs.currentData
+            if (data is ControlData.MouseWheel) {
+                data.orientation = if (isChecked) {
+                    ControlData.MouseWheel.Orientation.HORIZONTAL
+                } else {
+                    ControlData.MouseWheel.Orientation.VERTICAL
+                }
+                refs.notifyUpdate()
+            }
+        }
+
+        // 鼠标滚轮反转开关（仅鼠标滚轮显示）
+        val switchMouseWheelReverse = view.findViewById<SwitchCompat?>(R.id.switch_mousewheel_reverse)
+        switchMouseWheelReverse?.setOnCheckedChangeListener { _, isChecked ->
+            if (refs.isUpdating) return@setOnCheckedChangeListener
+            val data = refs.currentData
+            if (data is ControlData.MouseWheel) {
+                data.reverseDirection = isChecked
+                refs.notifyUpdate()
+            }
+        }
+
+        // 鼠标滚轮灵敏度滑块（仅鼠标滚轮显示）
+        val sliderMouseWheelSensitivity = view.findViewById<Slider?>(R.id.slider_mousewheel_sensitivity)
+        val tvMouseWheelSensitivityValue = view.findViewById<TextView?>(R.id.tv_mousewheel_sensitivity_value)
+        sliderMouseWheelSensitivity?.addOnChangeListener { _, value, fromUser ->
+            if (refs.isUpdating) return@addOnChangeListener
+            val data = refs.currentData
+            if (data is ControlData.MouseWheel && fromUser) {
+                data.scrollSensitivity = value
+                tvMouseWheelSensitivityValue?.text = String.format("%.1f", value)
+                refs.notifyUpdate()
+            }
+        }
+
+        // 鼠标滚轮速度倍率滑块（仅鼠标滚轮显示）
+        val sliderMouseWheelRatio = view.findViewById<Slider?>(R.id.slider_mousewheel_ratio)
+        val tvMouseWheelRatioValue = view.findViewById<TextView?>(R.id.tv_mousewheel_ratio_value)
+        sliderMouseWheelRatio?.addOnChangeListener { _, value, fromUser ->
+            if (refs.isUpdating) return@addOnChangeListener
+            val data = refs.currentData
+            if (data is ControlData.MouseWheel && fromUser) {
+                data.scrollRatio = value
+                tvMouseWheelRatioValue?.text = "${(value * 100).toInt()}%"
+                refs.notifyUpdate()
+            }
+        }
     }
 
     /**

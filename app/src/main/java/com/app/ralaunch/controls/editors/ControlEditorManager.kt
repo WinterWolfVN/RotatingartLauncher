@@ -319,6 +319,10 @@ class ControlEditorManager(
                 addTouchPad()
             }
 
+            override fun onAddMouseWheel() {
+                addMouseWheel()
+            }
+
             override fun onAddText() {
                 addText()
             }
@@ -422,14 +426,12 @@ class ControlEditorManager(
                     ControlEditorOperations.addJoystick(
                         finalLayout,
                         ControlData.Joystick.Mode.KEYBOARD,
-                        false,
-                        mContext
+                        false
                     )
                     ControlEditorOperations.addJoystick(
                         finalLayout,
                         ControlData.Joystick.Mode.MOUSE,
-                        true,
-                        mContext
+                        true
                     )
 
                     mControlLayout!!.loadLayout(finalLayout)
@@ -474,6 +476,30 @@ class ControlEditorManager(
         mLayoutChangedListener?.onLayoutChanged()
     }
 
+    fun addMouseWheel() {
+        if (mControlLayout == null) return
+
+        var layout = mControlLayout!!.currentLayout
+        if (layout == null) {
+            layout = ControlLayout()
+            layout.controls = mutableListOf()
+            mControlLayout!!.loadLayout(layout)
+        }
+
+        ControlEditorOperations.addMouseWheel(layout)
+
+        mControlLayout!!.loadLayout(layout)
+        disableClippingRecursive(mControlLayout!!)
+        mHasUnsavedChanges = true
+        Toast.makeText(
+            mContext,
+            mContext.getString(R.string.editor_mousewheel_added),
+            Toast.LENGTH_SHORT
+        ).show()
+
+        mLayoutChangedListener?.onLayoutChanged()
+    }
+
     private fun showStickSideDialog(finalLayout: ControlLayout, joystickMode: ControlData.Joystick.Mode) {
         val stickSideOptions = arrayOf(
             mContext.getString(R.string.editor_joystick_side_left),
@@ -485,7 +511,7 @@ class ControlEditorManager(
             .setItems(stickSideOptions) { _, which ->
                 val isRightStick = (which == 1)
                 ControlEditorOperations.addJoystick(
-                    finalLayout, joystickMode, isRightStick, mContext
+                    finalLayout, joystickMode, isRightStick
                 )
 
                 mControlLayout!!.loadLayout(finalLayout)

@@ -135,6 +135,7 @@
     <string name="editor_add_button">Añadir botón</string>
     <string name="editor_add_joystick">Añadir joystick</string>
     <string name="editor_add_touchpad_text">Añadir panel táctil</string>
+    <string name="editor_add_mousewheel_text">Añadir rueda del ratón</string>
     <string name="editor_save">Guardar diseño</string>
     <string name="editor_load">Cargar diseño</string>
     <string name="editor_reset">Restablecer a predeterminado</string>
@@ -443,6 +444,7 @@
     <string name="editor_button_added">Botón añadido</string>
     <string name="editor_joystick_added">Joystick añadido</string>
     <string name="editor_touchpad_added">Panel táctil añadido</string>
+    <string name="editor_mousewheel_added">Rueda del ratón añadida</string>
     <string name="editor_text_added">Texto añadido</string>
     <string name="editor_select_joystick_type">Seleccionar tipo de joystick</string>
     <string name="editor_joystick_type_move_aim">Joystick de movimiento + apuntar</string>
@@ -595,6 +597,7 @@
     <string name="control_type_button_gamepad">Botón (Mando)</string>
     <string name="control_type_joystick">Joystick</string>
     <string name="control_type_touchpad">Panel táctil</string>
+    <string name="control_type_mousewheel">Rueda del ratón</string>
     <string name="control_type_text">Texto</string>
     <string name="control_type_button">Botón</string>
     <string name="control_import_success">Diseño importado: %s</string>
@@ -700,6 +703,7 @@
     <!-- Mensajes de ControlEditorOperations -->
     <string name="editor_default_button_name">Botón</string>
     <string name="editor_default_touchpad_name">Panel táctil</string>
+    <string name="editor_default_mousewheel_name">Rueda del ratón</string>
     <string name="editor_default_text_name">Texto</string>
     <string name="editor_stick_right">Derecha</string>
     <string name="editor_stick_left">Izquierda</string>
@@ -769,6 +773,14 @@
     <string name="editor_mouse_speed">Velocidad</string>
     <string name="editor_double_click_joystick">Simulación de doble clic del joystick</string>
     <string name="editor_double_click_joystick_desc">Simular movimiento del joystick al hacer doble toque en el panel táctil</string>
+    <string name="editor_mousewheel_orientation">Desplazamiento horizontal</string>
+    <string name="editor_mousewheel_orientation_desc">Usar deslizamiento izquierda-derecha para controlar la rueda del ratón</string>
+    <string name="editor_mousewheel_reverse">Invertir dirección</string>
+    <string name="editor_mousewheel_reverse_desc">Invertir la dirección de desplazamiento de la rueda del ratón</string>
+    <string name="editor_mousewheel_sensitivity">Sensibilidad de la rueda</string>
+    <string name="editor_mousewheel_sensitivity_desc">Píxeles a mover antes de activar el evento de rueda</string>
+    <string name="editor_mousewheel_ratio">Multiplicador de velocidad de rueda</string>
+    <string name="editor_mousewheel_ratio_desc">Multiplicador para la intensidad del evento de rueda</string>
     <string name="editor_combo_keys">Mapeo de teclas combinadas</string>
     <string name="editor_combo_keys_desc">Establecer botones combinados del mando para direcciones del joystick (ej: R+B)</string>
     <string name="editor_combo_keys_not_set">No establecido</string>

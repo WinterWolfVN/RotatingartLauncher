@@ -32,6 +32,7 @@ object ControlTypeManager {
                 }
             }
             is ControlData.TouchPad -> context.getString(R.string.control_type_touchpad)
+            is ControlData.MouseWheel -> context.getString(R.string.control_type_mousewheel)
         }
     }
 

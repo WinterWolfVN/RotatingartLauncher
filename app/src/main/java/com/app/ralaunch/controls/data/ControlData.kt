@@ -2,6 +2,7 @@ package com.app.ralaunch.controls.data
 
 import com.app.ralaunch.controls.textures.ButtonTextureConfig
 import com.app.ralaunch.controls.textures.JoystickTextureConfig
+import com.app.ralaunch.controls.textures.MouseWheelTextureConfig
 import com.app.ralaunch.controls.textures.TextControlTextureConfig
 import com.app.ralaunch.controls.textures.TouchPadTextureConfig
 import kotlinx.serialization.SerialName
@@ -517,6 +518,26 @@ sealed class ControlData {
         var isDoubleClickSimulateJoystick = true // 触控板双指点击模拟摇杆移动（默认 true）
         /** 触控板纹理配置 */
         var texture: TouchPadTextureConfig = TouchPadTextureConfig()
+    }
+
+    @Serializable
+    @SerialName("mousewheel")
+    class MouseWheel : ControlData() {
+        enum class Orientation {
+            VERTICAL,   // 垂直方向（上下滑动）
+            HORIZONTAL  // 水平方向（左右滑动）
+        }
+
+        /** 滚轮方向：垂直或水平 (默认垂直) */
+        var orientation: Orientation = Orientation.VERTICAL
+        /** 反转滚动方向 (默认false: 垂直模式上滑=向上滚动, 水平模式左滑=向上滚动) */
+        var reverseDirection: Boolean = false
+        /** 滚轮灵敏度：每移动多少像素发送一次滚轮事件 (默认40.0) */
+        var scrollSensitivity: Float = 40.0f
+        /** 滚轮速度倍率：滚轮事件的值乘以此倍率 (默认1.0，范围0.1-5.0) */
+        var scrollRatio: Float = 1.0f
+        /** 鼠标滚轮纹理配置 */
+        var texture: MouseWheelTextureConfig = MouseWheelTextureConfig()
     }
 
     @Serializable
