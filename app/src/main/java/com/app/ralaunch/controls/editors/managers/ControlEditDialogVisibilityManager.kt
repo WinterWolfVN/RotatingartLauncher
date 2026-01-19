@@ -80,6 +80,7 @@ object ControlEditDialogVisibilityManager {
                 when (it) {
                     is ControlData.Button -> it.shape == ControlData.Button.Shape.RECTANGLE
                     is ControlData.Text -> it.shape == ControlData.Text.Shape.RECTANGLE
+                    is ControlData.TouchPad -> true
                     else -> false
                 }
             },
@@ -116,9 +117,9 @@ object ControlEditDialogVisibilityManager {
             com.app.ralaunch.R.id.item_text_content
         )
 
-        // 普通键值设置（仅按钮和文本控件显示）
+        // 普通键值设置（仅按钮显示，文本控件不支持键值映射）
         addRule(
-            { it is ControlData.Button || it is ControlData.Text },
+            { it is ControlData.Button },
             com.app.ralaunch.R.id.item_key_mapping
         )
 

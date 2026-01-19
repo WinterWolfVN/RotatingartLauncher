@@ -197,7 +197,7 @@ class ControlEditDialogMD : DialogFragment() {
         // 应用背景透明度（使用统一工具类）
         try {
             val dialogAlpha = OpacityHelper.getDialogAlphaFromSettings(requireContext())
-            view.setAlpha(dialogAlpha)
+            view.alpha = dialogAlpha
         } catch (_: Exception) {
             // 忽略错误，使用默认不透明
         }
@@ -214,11 +214,11 @@ class ControlEditDialogMD : DialogFragment() {
 
         // 设置对话框窗口大小
         val dialog = getDialog()
-        if (dialog != null && dialog.getWindow() != null) {
-            val window = dialog.getWindow()
+        if (dialog != null && dialog.window != null) {
+            val window = dialog.window
 
             // 设置窗口宽高
-            val width = (getResources().getDisplayMetrics().widthPixels * 0.9).toInt()
+            val width = (resources.displayMetrics.widthPixels * 0.9).toInt()
             val height = ViewGroup.LayoutParams.WRAP_CONTENT
             window!!.setLayout(width, height)
         }
@@ -266,22 +266,28 @@ class ControlEditDialogMD : DialogFragment() {
         mCurrentCategory = category
 
         // 隐藏所有内容
-        if (mContentBasic != null) mContentBasic!!.setVisibility(View.GONE)
-        if (mContentPosition != null) mContentPosition!!.setVisibility(View.GONE)
-        if (mContentAppearance != null) mContentAppearance!!.setVisibility(View.GONE)
-        if (mContentKeymap != null) mContentKeymap!!.setVisibility(View.GONE)
+        if (mContentBasic != null) mContentBasic!!.visibility = View.GONE
+        if (mContentPosition != null) mContentPosition!!.visibility = View.GONE
+        if (mContentAppearance != null) mContentAppearance!!.visibility = View.GONE
+        if (mContentKeymap != null) mContentKeymap!!.visibility = View.GONE
 
         // 显示选中的内容
         when (category) {
-            0 -> if (mContentBasic != null) mContentBasic!!.setVisibility(View.VISIBLE)
-            1 -> if (mContentPosition != null) mContentPosition!!.setVisibility(View.VISIBLE)
-            2 -> if (mContentAppearance != null) mContentAppearance!!.setVisibility(View.VISIBLE)
+            0 -> if (mContentBasic != null) mContentBasic!!.visibility = View.VISIBLE
+            1 -> if (mContentPosition != null) mContentPosition!!.visibility = View.VISIBLE
+            2 -> if (mContentAppearance != null) mContentAppearance!!.visibility = View.VISIBLE
             3 -> if (mContentKeymap != null) {
-                // 根据控件类型决定是否显示键值设置（按钮显示，其他控件不显示）
-                if (this.currentData != null && currentData is ControlData.Button) {
-                    mContentKeymap!!.setVisibility(View.VISIBLE)
+                // 根据控件类型决定是否显示键值设置
+                val canShowKeymap = when (this.currentData) {
+                    is ControlData.Button -> true
+                    is ControlData.Joystick -> (this.currentData as ControlData.Joystick).mode == ControlData.Joystick.Mode.KEYBOARD
+                    else -> false
+                }
+
+                if (canShowKeymap) {
+                    mContentKeymap!!.visibility = View.VISIBLE
                 } else {
-                    // 如果不是按钮类型，切换回基本信息
+                    // 如果不支持键值设置，切换回基本信息
                     switchToCategory(0)
                     return
                 }
@@ -415,7 +421,7 @@ class ControlEditDialogMD : DialogFragment() {
      */
     private fun findTextViewInCard(card: ViewGroup?): TextView? {
         if (card == null) return null
-        for (i in 0..<card.getChildCount()) {
+        for (i in 0..<card.childCount) {
             val child = card.getChildAt(i)
             if (child is TextView) {
                 return child
@@ -432,7 +438,7 @@ class ControlEditDialogMD : DialogFragment() {
      */
     private fun findImageViewInCard(card: ViewGroup?): ImageView? {
         if (card == null) return null
-        for (i in 0..<card.getChildCount()) {
+        for (i in 0..<card.childCount) {
             val child = card.getChildAt(i)
             if (child is ImageView) {
                 return child
@@ -603,7 +609,7 @@ class ControlEditDialogMD : DialogFragment() {
         this.isUpdating = true
         this.currentData = data
 
-        if (isAdded() && getView() != null) {
+        if (isAdded && view != null) {
             // 对话框已显示，直接刷新UI
             refreshUIForCurrentData()
             // refreshUIForCurrentData() 的 finally 块会清除 mIsUpdating
@@ -671,11 +677,17 @@ class ControlEditDialogMD : DialogFragment() {
     private fun updateKeymapCategoryVisibility() {
         if (this.currentData == null || mCategoryKeymap == null) return
 
-        // 按钮控件显示键值设置分类
-        if (currentData is ControlData.Button) {
-            mCategoryKeymap!!.setVisibility(View.VISIBLE)
+        // 显示键值设置分类：按钮控件 或 键盘模式的摇杆
+        val shouldShowKeymap = when (currentData) {
+            is ControlData.Button -> true
+            is ControlData.Joystick -> (currentData as ControlData.Joystick).mode == ControlData.Joystick.Mode.KEYBOARD
+            else -> false
+        }
+
+        if (shouldShowKeymap) {
+            mCategoryKeymap!!.visibility = View.VISIBLE
         } else {
-            mCategoryKeymap!!.setVisibility(View.GONE)
+            mCategoryKeymap!!.visibility = View.GONE
             // 如果当前正在查看键值设置，切换回基本信息
             if (mCurrentCategory == 3) {
                 switchToCategory(0)

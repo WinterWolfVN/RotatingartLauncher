@@ -58,14 +58,9 @@ object ControlDataSyncManager {
                     }
 
                     // 更新视觉属性
-                    // 对于摇杆，不设置 View 级别的 alpha，因为它们有独立的透明度控制
-                    if (controlData is ControlData.Joystick) {
-                        // 摇杆：View alpha 始终为 1.0，让内部的 Paint alpha 独立控制
-                        child.alpha = 1.0f
-                    } else {
-                        // 按钮和文本：可以使用 View 级别的 alpha
-                        child.alpha = controlData.opacity
-                    }
+                    // 所有控件都不设置 View 级别的 alpha，因为它们的 Paint 已经独立控制透明度
+                    // 如果设置 View alpha，会导致双重透明度效果（opacity * opacity）
+                    child.alpha = 1.0f
                     child.visibility = if (controlData.isVisible) View.VISIBLE else View.INVISIBLE
 
                     // 同步所有字段到原始数据对象，确保数据一致性
