@@ -12,7 +12,6 @@ import android.view.MotionEvent
 import android.view.View
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.controls.ControlsSharedState
-import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.data.ControlData
@@ -117,24 +116,25 @@ class VirtualTouchPad(
     }
 
     private fun initPaints() {
-        backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        backgroundPaint.color = castedData.bgColor
-        backgroundPaint.style = Paint.Style.FILL
-        backgroundPaint.alpha = (castedData.opacity * 255).toInt()
+        backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = castedData.bgColor
+            style = Paint.Style.FILL
+            alpha = (castedData.opacity * 255).toInt()
+        }
 
-        strokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        strokePaint.color = castedData.strokeColor
-        strokePaint.style = Paint.Style.STROKE
-        strokePaint.strokeWidth = dpToPx(castedData.strokeWidth)
-        // 边框透明度完全独立，默认1.0（完全不透明），0是有效值
-        strokePaint.alpha = (castedData.borderOpacity * 255).toInt()
+        strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = castedData.strokeColor
+            style = Paint.Style.STROKE
+            strokeWidth = dpToPx(castedData.strokeWidth)
+            alpha = (castedData.borderOpacity * 255).toInt()
+        }
 
-        textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-        textPaint.color = -0x1
-        textPaint.textSize = dpToPx(16f)
-        textPaint.textAlign = Paint.Align.CENTER
-        // 文本透明度完全独立，默认1.0（完全不透明），0是有效值
-        textPaint.alpha = (castedData.textOpacity * 255).toInt()
+        textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = -0x1
+            textSize = dpToPx(16f)
+            textAlign = Paint.Align.CENTER
+            alpha = (castedData.textOpacity * 255).toInt()
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -167,6 +167,80 @@ class VirtualTouchPad(
         return region.contains(localX.toInt(), localY.toInt())
     }
 
+    // ==================== ControlView 接口方法 ====================
+
+    override fun tryAcquireTouch(pointerId: Int, x: Float, y: Float): Boolean {
+        // 如果已经在跟踪一个触摸点，拒绝新的
+        if (activePointerId != -1) {
+            return false
+        }
+
+        // 验证触摸点是否在控件的实际形状内
+        if (!isLocalTouchInBounds(x, y)) {
+            return false
+        }
+
+        // 记录触摸点
+        activePointerId = pointerId
+
+        lastX = x
+        lastY = y
+        currentX = lastX
+        currentY = lastY
+        initialTouchX = currentX
+        initialTouchY = currentY
+
+        // Trigger Press!
+        handlePress()
+        triggerVibration(true)
+
+        return true
+    }
+
+    override fun handleTouchMove(pointerId: Int, x: Float, y: Float) {
+        if (activePointerId != pointerId) {
+            return
+        }
+
+        currentX = x
+        currentY = y
+
+        // Trigger Move!
+        handleMove()
+
+        // Update last position AFTER handleMove() so delta calculation works
+        lastX = currentX
+        lastY = currentY
+    }
+
+    override fun releaseTouch(pointerId: Int) {
+        if (pointerId == activePointerId) {
+            activePointerId = -1
+            // Trigger Release!
+            handleRelease()
+            triggerVibration(false)
+        }
+    }
+
+    override fun cancelAllTouches() {
+        // 必须取消所有待处理的 Handler，并确保鼠标按钮被释放
+        idleDelayHandler.removeCallbacksAndMessages(null)
+        clickDelayHandler.removeCallbacksAndMessages(null)
+
+        activePointerId = -1
+
+        // 如果在按下移动或双击状态，需要释放鼠标按钮
+        if (currentState == TouchPadState.PRESS_MOVING || currentState == TouchPadState.DOUBLE_CLICK) {
+            sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
+        }
+
+        // 强制重置状态
+        currentState = TouchPadState.IDLE
+        mIsPressed = false
+        triggerVibration(false)
+        invalidate()
+    }
+
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         // 清理所有待处理的 Handler，防止内存泄漏和状态问题
@@ -193,142 +267,6 @@ class VirtualTouchPad(
         canvas.drawRoundRect(paintRect, cornerRadius, cornerRadius, strokePaint)
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action = event.actionMasked
-        val actionIndex = event.actionIndex
-        val pointerId = event.getPointerId(actionIndex)
-
-        when (action) {
-            MotionEvent.ACTION_DOWN,
-            MotionEvent.ACTION_POINTER_DOWN -> {
-                // 如果已经在跟踪一个触摸点，忽略新的
-                if (activePointerId != -1) {
-                    return false
-                }
-
-                // 对于 POINTER_DOWN，必须使用 actionIndex 获取正确的指针坐标
-                val touchX = event.getX(actionIndex)
-                val touchY = event.getY(actionIndex)
-
-                // 验证触摸点是否在控件的实际形状内（对圆角矩形很重要）
-                if (!isLocalTouchInBounds(touchX, touchY)) {
-                    return false
-                }
-
-                // 记录触摸点
-                activePointerId = pointerId
-
-                lastX = touchX
-                lastY = touchY
-                currentX = lastX
-                currentY = lastY
-                initialTouchX = currentX
-                initialTouchY = currentY
-
-                // 如果不穿透，标记这个触摸点被占用（不传递给游戏）
-                if (!castedData.isPassThrough) {
-                    TouchPointerTracker.consumePointer(pointerId)
-                }
-
-                // Trigger Press!
-                handlePress()
-                triggerVibration(true)
-
-                return true
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                // ACTION_MOVE doesn't have a meaningful actionIndex
-                // We need to find our tracked pointer in the event
-                if (activePointerId == -1) {
-                    return false
-                }
-
-                val pointerIndex = event.findPointerIndex(activePointerId)
-                if (pointerIndex == -1) {
-                    // 我们跟踪的触摸点不在事件中了，说明它已经被释放
-                    // 必须重置状态，否则会导致指针跳跃到其他手指
-                    if (!castedData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(activePointerId)
-                    }
-                    activePointerId = -1
-
-                    // 清理 handlers 并重置状态
-                    idleDelayHandler.removeCallbacksAndMessages(null)
-                    clickDelayHandler.removeCallbacksAndMessages(null)
-
-                    // 如果在按下移动或双击状态，需要释放鼠标按钮
-                    if (currentState == TouchPadState.PRESS_MOVING || currentState == TouchPadState.DOUBLE_CLICK) {
-                        sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
-                    }
-
-                    currentState = TouchPadState.IDLE
-                    mIsPressed = false
-                    invalidate()
-                    return false
-                }
-
-                currentX = event.getX(pointerIndex)
-                currentY = event.getY(pointerIndex)
-
-                // Trigger Move!
-                handleMove()
-
-                // Update last position AFTER handleMove() so delta calculation works
-                lastX = currentX
-                lastY = currentY
-
-                return true
-            }
-
-            MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_POINTER_UP -> {
-                // 检查是否是我们跟踪的触摸点
-                if (pointerId == activePointerId) {
-                    // 释放触摸点标记（如果之前标记了）
-                    if (!castedData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(activePointerId)
-                    }
-                    activePointerId = -1
-
-                    // Trigger Release!
-                    handleRelease()
-                    triggerVibration(false)
-
-                    return true
-                }
-                return false
-            }
-
-            MotionEvent.ACTION_CANCEL -> {
-                // 取消事件：无条件强制释放所有状态
-                // 必须取消所有待处理的 Handler，并确保鼠标按钮被释放
-                idleDelayHandler.removeCallbacksAndMessages(null)
-                clickDelayHandler.removeCallbacksAndMessages(null)
-
-                if (activePointerId != -1) {
-                    if (!castedData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(activePointerId)
-                    }
-                    activePointerId = -1
-                }
-
-                // 如果在按下移动或双击状态，需要释放鼠标按钮
-                if (currentState == TouchPadState.PRESS_MOVING || currentState == TouchPadState.DOUBLE_CLICK) {
-                    sdlOnNativeMouseDirect(currentMouseButton, MotionEvent.ACTION_UP, 0f, 0f, true)
-                }
-
-                // 强制重置状态
-                currentState = TouchPadState.IDLE
-                mIsPressed = false
-                triggerVibration(false)
-                invalidate()
-
-                return true
-            }
-        }
-        return super.onTouchEvent(event)
-    }
 
     private fun handleMove() {
         // 处理触摸移动逻辑
@@ -560,7 +498,5 @@ class VirtualTouchPad(
         }
     }
 
-    private fun dpToPx(dp: Float): Float {
-        return dp * resources.displayMetrics.density
-    }
+    private fun dpToPx(dp: Float) = dp * resources.displayMetrics.density
 }

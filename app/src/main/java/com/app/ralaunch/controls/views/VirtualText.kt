@@ -53,30 +53,28 @@ class VirtualText(
     }
 
     private fun initPaints() {
-        mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mBackgroundPaint.setColor(controlData.bgColor)
-        mBackgroundPaint.setStyle(Paint.Style.FILL)
-        // 背景透明度完全独立
-        mBackgroundPaint.setAlpha((controlData.opacity * 255).toInt())
+        mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = controlData.bgColor
+            style = Paint.Style.FILL
+            alpha = (controlData.opacity * 255).toInt()
+        }
 
-        mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mStrokePaint.setColor(controlData.strokeColor)
-        mStrokePaint.setStyle(Paint.Style.STROKE)
-        mStrokePaint.setStrokeWidth(dpToPx(controlData.strokeWidth))
-        // 边框透明度完全独立，默认1.0（完全不透明），0是有效值
-        mStrokePaint.setAlpha((controlData.borderOpacity * 255).toInt())
+        mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = controlData.strokeColor
+            style = Paint.Style.STROKE
+            strokeWidth = dpToPx(controlData.strokeWidth)
+            alpha = (controlData.borderOpacity * 255).toInt()
+        }
 
-        mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-        mTextPaint.setColor(-0x1)
-        mTextPaint.setTextSize(dpToPx(16f))
-        mTextPaint.setTextAlign(Paint.Align.CENTER)
-        // 文本透明度完全独立，默认1.0（完全不透明），0是有效值
-        mTextPaint.setAlpha((controlData.textOpacity * 255).toInt())
+        mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = -0x1
+            textSize = dpToPx(16f)
+            textAlign = Paint.Align.CENTER
+            alpha = (controlData.textOpacity * 255).toInt()
+        }
     }
 
-    private fun dpToPx(dp: Float): Float {
-        return dp * getContext().getResources().getDisplayMetrics().density
-    }
+    private fun dpToPx(dp: Float) = dp * context.resources.displayMetrics.density
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -112,16 +110,32 @@ class VirtualText(
         }
     }
 
+    // ==================== ControlView 接口方法 ====================
+
+    override fun tryAcquireTouch(pointerId: Int, x: Float, y: Float): Boolean {
+        // 文本控件不处理触摸
+        return false
+    }
+
+    override fun handleTouchMove(pointerId: Int, x: Float, y: Float) {
+        // 文本控件不处理触摸
+    }
+
+    override fun releaseTouch(pointerId: Int) {
+        // 文本控件不处理触摸
+    }
+
+    override fun cancelAllTouches() {
+        // 文本控件不处理触摸
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        if (!controlData.isVisible) {
-            return
-        }
+        if (!controlData.isVisible) return
 
-        val centerX = getWidth() / 2f
-        val centerY = getHeight() / 2f
-
+        val centerX = width / 2f
+        val centerY = height / 2f
 
         // 应用旋转
         if (controlData.rotation != 0f) {
@@ -130,18 +144,16 @@ class VirtualText(
         }
 
         val radius = min(mRectF.width(), mRectF.height()) / 2f
-
+        val displayText = castedData.displayText
 
         // 绘制背景
-        if (castedData.displayText.isNotEmpty()) {
+        if (displayText.isNotEmpty()) {
             when (castedData.shape) {
                 ControlData.Text.Shape.CIRCLE -> {
-                    // 绘制圆形
                     canvas.drawCircle(centerX, centerY, radius, mBackgroundPaint)
                     canvas.drawCircle(centerX, centerY, radius, mStrokePaint)
                 }
                 ControlData.Text.Shape.RECTANGLE -> {
-                    // 绘制矩形（圆角矩形）
                     val cornerRadius = dpToPx(controlData.cornerRadius)
                     canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
                     canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
@@ -149,30 +161,17 @@ class VirtualText(
             }
         }
 
-
-        // 绘制文本
-        val displayText = castedData.displayText
-
-
         // 自动计算文字大小以适应区域
-        mTextPaint.setTextSize(20f) // 临时设置用于测量
+        mTextPaint.textSize = 20f // 临时设置用于测量
         val textBounds = Rect()
         mTextPaint.getTextBounds(displayText, 0, displayText.length, textBounds)
         val textAspectRatio = textBounds.width() / max(textBounds.height(), 1).toFloat()
 
-
-        // 自动计算文字大小：minOf(height / 2, width / textAspectRatio)
-        val textSize = min(
-            getHeight() / 2f,
-            getWidth() / max(textAspectRatio, 1f)
-        )
-        mTextPaint.setTextSize(textSize)
-
+        mTextPaint.textSize = min(height / 2f, width / max(textAspectRatio, 1f))
 
         // 居中显示文本
-        val textY = getHeight() / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2)
-        canvas.drawText(displayText, getWidth() / 2f, textY, mTextPaint)
-
+        val textY = height / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2)
+        canvas.drawText(displayText, width / 2f, textY, mTextPaint)
 
         // 恢复旋转
         if (controlData.rotation != 0f) {
@@ -180,8 +179,5 @@ class VirtualText(
         }
     }
 
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        // 文本控件不支持触摸事件（不处理按键映射）
-        return false
-    }
+    override fun onTouchEvent(event: MotionEvent?) = false
 }

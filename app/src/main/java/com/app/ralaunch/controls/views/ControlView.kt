@@ -28,4 +28,39 @@ interface ControlView {
      * @return true 如果触摸点在控件形状内，false 否则
      */
     fun isTouchInBounds(x: Float, y: Float): Boolean
+
+    /**
+     * 尝试获取一个新的触摸点
+     * 由 ControlLayout 在 DOWN/POINTER_DOWN 时调用
+     *
+     * @param pointerId 触摸点ID
+     * @param x 本地坐标X
+     * @param y 本地坐标Y
+     * @return true 如果控件接受了这个触摸点，false 如果拒绝
+     */
+    fun tryAcquireTouch(pointerId: Int, x: Float, y: Float): Boolean
+
+    /**
+     * 处理触摸移动事件
+     * 由 ControlLayout 在 MOVE 时调用（仅当此控件拥有该触摸点时）
+     *
+     * @param pointerId 触摸点ID
+     * @param x 本地坐标X
+     * @param y 本地坐标Y
+     */
+    fun handleTouchMove(pointerId: Int, x: Float, y: Float)
+
+    /**
+     * 释放触摸点
+     * 由 ControlLayout 在 UP/POINTER_UP/CANCEL 时调用
+     *
+     * @param pointerId 触摸点ID
+     */
+    fun releaseTouch(pointerId: Int)
+
+    /**
+     * 取消所有触摸点
+     * 由 ControlLayout 在 ACTION_CANCEL 时调用
+     */
+    fun cancelAllTouches()
 }

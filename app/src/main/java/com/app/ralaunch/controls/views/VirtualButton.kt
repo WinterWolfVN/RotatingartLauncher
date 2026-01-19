@@ -11,14 +11,12 @@ import android.graphics.Region
 import android.graphics.Typeface
 import android.text.TextPaint
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
 import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.activity.GameActivity
 import com.app.ralaunch.controls.ControlsSharedState
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.bridges.ControlInputBridge
-import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.textures.TextureLoader
 import com.app.ralaunch.controls.textures.TextureRenderer
@@ -74,11 +72,11 @@ class VirtualButton(
     }
 
     // 绘制相关
-    private var mBackgroundPaint: Paint? = null    // initialized in initPaints
-    private var mStrokePaint: Paint? = null        // initialized in initPaints
-    private var mTextPaint: TextPaint? = null      // initialized in initPaints
-    private val mRectF: RectF = RectF()
-    private val mClipPath: Path = Path()
+    private lateinit var mBackgroundPaint: Paint
+    private lateinit var mStrokePaint: Paint
+    private lateinit var mTextPaint: TextPaint
+    private val mRectF = RectF()
+    private val mClipPath = Path()
 
     // 按钮状态
     private var mIsPressed = false
@@ -86,17 +84,11 @@ class VirtualButton(
     private var mActivePointerId = -1 // 跟踪的触摸点 ID
 
     var isPressedState: Boolean
-        /**
-         * 获取按下状态
-         */
         get() = mIsPressed
-        /**
-         * 设置按下状态（用于编辑模式的选择反馈）
-         */
         set(pressed) {
             if (mIsPressed != pressed) {
                 mIsPressed = pressed
-                invalidate() // 刷新绘制
+                invalidate()
             }
         }
 
@@ -106,46 +98,45 @@ class VirtualButton(
 
     private fun initPaints() {
         if (castedData.mode == ControlData.Button.Mode.GAMEPAD) {
-            val normalColor = 0x7D7D7D7D // 半透明灰色
-            val textColor = 0x7DFFFFFF // 半透明白色（文字）
+            mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0x7D7D7D7D // 半透明灰色
+                style = Paint.Style.FILL
+                alpha = (castedData.opacity * 255).toInt()
+            }
 
-            mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mBackgroundPaint?.color = normalColor
-            mBackgroundPaint?.style = Paint.Style.FILL
-            mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
+            mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0x00000000 // 透明
+                style = Paint.Style.STROKE
+                strokeWidth = 0f
+            }
 
-
-            mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mStrokePaint?.color = 0x00000000 // 透明
-            mStrokePaint?.style = Paint.Style.STROKE
-            mStrokePaint?.strokeWidth = 0f
-
-            mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-            mTextPaint?.color = textColor
-            mTextPaint?.typeface = Typeface.DEFAULT_BOLD // 粗体
-            mTextPaint?.textAlign = Paint.Align.CENTER
-            // 使用文本透明度，0是有效值
-            mTextPaint?.alpha = (castedData.textOpacity * 255).toInt()
+            mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0x7DFFFFFF // 半透明白色（文字）
+                typeface = Typeface.DEFAULT_BOLD
+                textAlign = Paint.Align.CENTER
+                alpha = (castedData.textOpacity * 255).toInt()
+            }
         } else {
-            // 键盘模式保持原有逻辑
-            mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mBackgroundPaint?.color = castedData.bgColor
-            mBackgroundPaint?.style = Paint.Style.FILL
-            mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
+            // 键盘模式
+            mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = castedData.bgColor
+                style = Paint.Style.FILL
+                alpha = (castedData.opacity * 255).toInt()
+            }
 
-            mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            mStrokePaint?.color = castedData.strokeColor
-            mStrokePaint?.style = Paint.Style.STROKE
-            mStrokePaint?.strokeWidth = dpToPx(castedData.strokeWidth)
-            // 边框透明度完全独立，默认1.0（完全不透明），0是有效值
-            mStrokePaint?.alpha = (castedData.borderOpacity * 255).toInt()
+            mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = castedData.strokeColor
+                style = Paint.Style.STROKE
+                strokeWidth = dpToPx(castedData.strokeWidth)
+                alpha = (castedData.borderOpacity * 255).toInt()
+            }
 
-            mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
-            mTextPaint?.color = -0x1
-            mTextPaint?.textSize = dpToPx(16f)
-            mTextPaint?.textAlign = Paint.Align.CENTER
-            // 文本透明度完全独立，默认1.0（完全不透明），0是有效值
-            mTextPaint?.alpha = (castedData.textOpacity * 255).toInt()
+            mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = -0x1
+                textSize = dpToPx(16f)
+                textAlign = Paint.Align.CENTER
+                alpha = (castedData.textOpacity * 255).toInt()
+            }
         }
     }
 
@@ -203,24 +194,63 @@ class VirtualButton(
         }
     }
 
+    // ==================== ControlView 接口方法 ====================
+
+    override fun tryAcquireTouch(pointerId: Int, x: Float, y: Float): Boolean {
+        // 如果已经在跟踪一个触摸点，拒绝新的
+        if (mActivePointerId != -1) {
+            return false
+        }
+
+        // 验证触摸点是否在控件的实际形状内
+        if (!isLocalTouchInBounds(x, y)) {
+            return false
+        }
+
+        // 记录触摸点
+        mActivePointerId = pointerId
+        handlePress()
+        triggerVibration(true)
+        return true
+    }
+
+    override fun handleTouchMove(pointerId: Int, x: Float, y: Float) {
+        // 按钮不需要处理移动事件
+    }
+
+    override fun releaseTouch(pointerId: Int) {
+        if (pointerId == mActivePointerId) {
+            mActivePointerId = -1
+            triggerVibration(false)
+            handleRelease()
+        }
+    }
+
+    override fun cancelAllTouches() {
+        if (mActivePointerId != -1) {
+            mActivePointerId = -1
+        }
+        // 强制释放按下状态
+        if (mIsPressed) {
+            triggerVibration(false)
+            handleRelease()
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // 根据形状类型绘制背景
         val shape = castedData.shape
         val centerXDraw = mRectF.centerX()
         val centerYDraw = mRectF.centerY()
         val radius = min(mRectF.width(), mRectF.height()) / 2f
-        
-        // 检查是否有纹理
         val hasTexture = castedData.texture.hasAnyTexture && assetsDir != null && textureLoader != null
-        
+
         // 更新裁剪路径
         mClipPath.reset()
         when (shape) {
-            ControlData.Button.Shape.CIRCLE -> {
+            ControlData.Button.Shape.CIRCLE ->
                 mClipPath.addCircle(centerXDraw, centerYDraw, radius, Path.Direction.CW)
-            }
             ControlData.Button.Shape.RECTANGLE -> {
                 val cornerRadius = dpToPx(castedData.cornerRadius)
                 mClipPath.addRoundRect(mRectF, cornerRadius, cornerRadius, Path.Direction.CW)
@@ -230,9 +260,7 @@ class VirtualButton(
         when (shape) {
             ControlData.Button.Shape.RECTANGLE -> {
                 val cornerRadius = dpToPx(castedData.cornerRadius)
-                
                 if (hasTexture) {
-                    // 使用纹理渲染
                     TextureRenderer.renderButton(
                         canvas = canvas,
                         textureLoader = textureLoader!!,
@@ -244,14 +272,12 @@ class VirtualButton(
                         clipPath = mClipPath
                     )
                 } else {
-                    // 绘制矩形（圆角矩形）
-                    canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint!!)
+                    canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
                 }
-                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint!!)
+                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
             }
             ControlData.Button.Shape.CIRCLE -> {
                 if (hasTexture) {
-                    // 使用纹理渲染
                     TextureRenderer.renderButton(
                         canvas = canvas,
                         textureLoader = textureLoader!!,
@@ -262,40 +288,33 @@ class VirtualButton(
                         isToggled = mIsToggled,
                         clipPath = mClipPath
                     )
-                    canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint!!)
+                    canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint)
                 } else {
                     when (castedData.mode) {
                         ControlData.Button.Mode.KEYBOARD -> {
-                            // 普通圆形（键盘模式）
-                            // 根据状态调整颜色
-                            val alpha = mBackgroundPaint?.alpha
-                            if (mIsPressed || mIsToggled) {
-                                mBackgroundPaint?.alpha = min(255, (alpha!! * 1.5f).toInt())
+                            mBackgroundPaint.alpha = if (mIsPressed || mIsToggled) {
+                                min(255, (castedData.opacity * 255 * 1.5f).toInt())
                             } else {
-                                mBackgroundPaint?.alpha = (castedData.opacity * 255).toInt()
+                                (castedData.opacity * 255).toInt()
                             }
-                            canvas.drawCircle(centerXDraw, centerYDraw, radius, mBackgroundPaint!!)
-                            canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint!!)
+                            canvas.drawCircle(centerXDraw, centerYDraw, radius, mBackgroundPaint)
+                            canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint)
                         }
                         ControlData.Button.Mode.GAMEPAD -> {
-                            val margin = 0.15f // DEFAULT_MARGIN
-                            val outerRadius = radius * (1.0f - margin) // 85% 半径（外圈）
-                            val innerRadius = radius * (1.0f - 2 * margin) // 70% 半径（内圈）
+                            val margin = 0.15f
+                            val outerRadius = radius * (1.0f - margin)
+                            val innerRadius = radius * (1.0f - 2 * margin)
 
-                            // 绘制外圈（背景）
-                            val backgroundPaint = Paint(mBackgroundPaint)
-                            backgroundPaint.color = 0x327D7D7D // backgroundColor
-                            backgroundPaint.alpha = (castedData.opacity * 255).toInt()
+                            val backgroundPaint = Paint(mBackgroundPaint).apply {
+                                color = 0x327D7D7D
+                                alpha = (castedData.opacity * 255).toInt()
+                            }
                             canvas.drawCircle(centerXDraw, centerYDraw, outerRadius, backgroundPaint)
 
-                            // 绘制内圈（前景，按下时使用 pressedColor）
-                            val foregroundPaint = Paint(mBackgroundPaint)
-                            if (mIsPressed || mIsToggled) {
-                                foregroundPaint.color = -0x828283 // pressedColor
-                            } else {
-                                foregroundPaint.color = 0x7D7D7D7D // normalColor
+                            val foregroundPaint = Paint(mBackgroundPaint).apply {
+                                color = if (mIsPressed || mIsToggled) -0x828283 else 0x7D7D7D7D
+                                alpha = (castedData.opacity * 255).toInt()
                             }
-                            foregroundPaint.alpha = (castedData.opacity * 255).toInt()
                             canvas.drawCircle(centerXDraw, centerYDraw, innerRadius, foregroundPaint)
                         }
                     }
@@ -303,148 +322,54 @@ class VirtualButton(
             }
         }
 
-
-        // 绘制文字（名称 + 按键）
         // 当有纹理背景时，隐藏文字
-        if (hasTexture) {
-            // 有纹理时不绘制文字，纹理本身已经代表了按钮功能
-            return
-        }
-        
+        if (hasTexture) return
+
         // 为特殊按键显示特殊符号
         val displayText = if (castedData.keycode == ControlData.KeyCode.SPECIAL_TOUCHPAD_RIGHT_BUTTON)
             if (ControlsSharedState.isTouchPadRightButton) "◑" else "◐"
         else
             castedData.name
 
-        if (!displayText.isEmpty()) {
-            // 保存 canvas 状态以便裁剪
+        if (displayText.isNotEmpty()) {
             canvas.save()
-
 
             // 根据控件形状设置裁剪区域
             if (shape == ControlData.Button.Shape.CIRCLE) {
-                // 圆形裁剪：使用圆形路径
-                val clipPath = Path()
-                clipPath.addCircle(centerXDraw, centerYDraw, radius, Path.Direction.CW)
-                canvas.clipPath(clipPath)
+                canvas.clipPath(Path().apply {
+                    addCircle(centerXDraw, centerYDraw, radius, Path.Direction.CW)
+                })
             } else {
-                // 矩形裁剪：使用矩形区域（留出一些边距）
                 val padding = dpToPx(2f)
                 canvas.clipRect(padding, padding, width - padding, height - padding)
             }
 
-
-            // RadialGamePad 风格：自动计算文字大小以适应区域
-            if (castedData.mode == ControlData.Button.Mode.GAMEPAD) {
-                // 计算文字宽高比
-                mTextPaint?.textSize = 20f // 临时设置用于测量
-                val textBounds = Rect()
-                mTextPaint?.getTextBounds(displayText, 0, displayText.length, textBounds)
-                val textAspectRatio = textBounds.width() / max(textBounds.height(), 1).toFloat()
-
-
-                // 自动计算文字大小：minOf(height / 2, width / textAspectRatio)
-                val textSize = min(
-                    height / 2f,
-                    width / max(textAspectRatio, 1f)
-                )
-                mTextPaint?.textSize = textSize
-            } else {
-                if (castedData.keycode != ControlData.KeyCode.SPECIAL_TOUCHPAD_RIGHT_BUTTON) {
-                    // 键盘模式：检查文本宽度，如果超出则缩小字体
-                    mTextPaint?.textSize = dpToPx(16f)
-                    val textWidth = mTextPaint?.measureText(displayText)
-                    val availableWidth = width - dpToPx(4f) // 留出边距
-
-                    if (textWidth!! > availableWidth) {
-                        // 文本超出，按比例缩小字体
-                        val scale = availableWidth / textWidth
-                        val newTextSize = mTextPaint?.textSize!! * scale
-                        mTextPaint?.textSize = newTextSize
-                    }
+            // 计算文字大小
+            when {
+                castedData.mode == ControlData.Button.Mode.GAMEPAD -> {
+                    mTextPaint.textSize = 20f
+                    val textBounds = Rect()
+                    mTextPaint.getTextBounds(displayText, 0, displayText.length, textBounds)
+                    val textAspectRatio = textBounds.width() / max(textBounds.height(), 1).toFloat()
+                    mTextPaint.textSize = min(height / 2f, width / max(textAspectRatio, 1f))
                 }
-                else {
-                    // 特殊按键：保持固定字体大小
-                    mTextPaint?.textSize = dpToPx(32f)
+                castedData.keycode == ControlData.KeyCode.SPECIAL_TOUCHPAD_RIGHT_BUTTON -> {
+                    mTextPaint.textSize = dpToPx(32f)
+                }
+                else -> {
+                    mTextPaint.textSize = dpToPx(16f)
+                    val textWidth = mTextPaint.measureText(displayText)
+                    val availableWidth = width - dpToPx(4f)
+                    if (textWidth > availableWidth) {
+                        mTextPaint.textSize = mTextPaint.textSize * (availableWidth / textWidth)
+                    }
                 }
             }
 
-
-            // 只显示名称（居中）
-            // 显示真实按键会挡视野
-            val textY = height / 2f - ((mTextPaint!!.descent() + mTextPaint!!.ascent()) / 2)
-            canvas.drawText(displayText, width / 2f, textY, mTextPaint!!)
+            val textY = height / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2)
+            canvas.drawText(displayText, width / 2f, textY, mTextPaint)
+            canvas.restore()
         }
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action = event.actionMasked
-        val actionIndex = event.actionIndex
-        val pointerId = event.getPointerId(actionIndex)
-
-        when (action) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                // 如果已经在跟踪一个触摸点，忽略新的
-                if (mActivePointerId != -1) {
-                    return false
-                }
-
-                // 验证触摸点是否在控件的实际形状内（对圆形按钮很重要）
-                // 对于 POINTER_DOWN，必须使用 actionIndex 获取正确的指针坐标
-                val touchX = event.getX(actionIndex)
-                val touchY = event.getY(actionIndex)
-                if (!isLocalTouchInBounds(touchX, touchY)) {
-                    return false
-                }
-
-                // 记录触摸点
-                mActivePointerId = pointerId
-                // 如果不穿透，标记这个触摸点被占用（不传递给游戏）
-                if (!castedData.isPassThrough) {
-                    TouchPointerTracker.consumePointer(pointerId)
-                }
-
-                handlePress()
-                triggerVibration(true)
-                return true
-            }
-
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                // 检查是否是我们跟踪的触摸点
-                if (pointerId == mActivePointerId) {
-                    // 释放触摸点标记（如果之前标记了）
-                    if (!castedData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(mActivePointerId)
-                    }
-                    mActivePointerId = -1
-
-                    triggerVibration(false)
-                    handleRelease()
-                    return true
-                }
-                return false
-            }
-
-            MotionEvent.ACTION_CANCEL -> {
-                // 取消事件：无条件释放所有状态
-                if (mActivePointerId != -1) {
-                    if (!castedData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(mActivePointerId)
-                    }
-                    mActivePointerId = -1
-                }
-
-                // 强制释放按下状态
-                if (mIsPressed) {
-                    triggerVibration(false)
-                    handleRelease()
-                }
-
-                return true
-            }
-        }
-        return super.onTouchEvent(event)
     }
 
     private fun handlePress() {
@@ -571,7 +496,5 @@ class VirtualButton(
         }
     }
 
-    private fun dpToPx(dp: Float): Float {
-        return dp * resources.displayMetrics.density
-    }
+    private fun dpToPx(dp: Float) = dp * resources.displayMetrics.density
 }

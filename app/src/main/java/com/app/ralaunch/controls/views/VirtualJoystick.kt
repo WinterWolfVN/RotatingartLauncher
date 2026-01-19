@@ -15,7 +15,6 @@ import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.bridges.SDLInputBridge
-import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.controls.textures.TextureLoader
 import com.app.ralaunch.controls.textures.TextureRenderer
 import com.app.ralaunch.data.SettingsManager
@@ -277,32 +276,24 @@ class VirtualJoystick(
     }
 
     private fun initPaints() {
-        // RadialGamePad 风格的颜色系统
-        // 背景圆：使用不透明的颜色值，通过 setAlpha 控制透明度，避免颜色值本身的透明度影响
-        mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mBackgroundPaint!!.color = -0x828283 // 不透明的灰色（RGB: 125, 125, 125）
-        mBackgroundPaint!!.style = Paint.Style.FILL
-        // 背景透明度只使用 opacity，不受 stickOpacity 影响
-        // 直接使用用户设置的 opacity，让变化更明显
-        mBackgroundPaint!!.alpha = (castedData.opacity * 255).toInt()
+        mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = -0x828283 // 不透明的灰色（RGB: 125, 125, 125）
+            style = Paint.Style.FILL
+            alpha = (castedData.opacity * 255).toInt()
+        }
 
+        mStickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = -0x828283
+            style = Paint.Style.FILL
+            alpha = (castedData.stickOpacity * 255).toInt()
+        }
 
-        // 摇杆圆心：使用不透明的颜色值，通过 setAlpha 控制透明度
-        mStickPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mStickPaint!!.color = -0x828283 // 不透明的灰色（RGB: 125, 125, 125）
-        mStickPaint!!.style = Paint.Style.FILL
-        // 摇杆圆心透明度只使用 stickOpacity，0是有效值
-        // 直接使用用户设置的 stickOpacity，让变化更明显（0.0-1.0 全范围）
-        mStickPaint!!.alpha = (castedData.stickOpacity * 255).toInt()
-
-
-        // 描边默认透明（RadialGamePad 风格）
-        mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        mStrokePaint!!.color = 0x00000000 // 透明
-        mStrokePaint!!.style = Paint.Style.STROKE
-        mStrokePaint!!.strokeWidth = 0f
-        // 边框透明度完全独立，默认1.0（完全不透明），0是有效值
-        mStrokePaint!!.alpha = (castedData.borderOpacity * 255).toInt()
+        mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0x00000000 // 透明
+            style = Paint.Style.STROKE
+            strokeWidth = 0f
+            alpha = (castedData.borderOpacity * 255).toInt()
+        }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -382,28 +373,19 @@ class VirtualJoystick(
             
             // 如果纹理没有完全覆盖，仍然绘制默认形状作为fallback
             if (!castedData.texture.background.enabled) {
-                mBackgroundPaint!!.alpha = (castedData.opacity * 255).toInt()
-                canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint!!)
+                mBackgroundPaint.alpha = (castedData.opacity * 255).toInt()
+                canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint)
             }
             if (!castedData.texture.knob.enabled) {
-                mStickPaint!!.alpha = (castedData.stickOpacity * 255).toInt()
-                canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint!!)
+                mStickPaint.alpha = (castedData.stickOpacity * 255).toInt()
+                canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint)
             }
         } else {
-            // 背景透明度只使用 opacity，不受 stickOpacity 影响
-            // 直接使用用户设置的 opacity，让变化更明显
-            mBackgroundPaint!!.alpha = (castedData.opacity * 255).toInt()
-            canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint!!)
+            mBackgroundPaint.alpha = (castedData.opacity * 255).toInt()
+            canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint)
 
-            // 更新摇杆圆心透明度（如果数据已更新）
-            // 摇杆圆心透明度只使用 stickOpacity，0是有效值
-            // 直接使用用户设置的 stickOpacity，让变化更明显（0.0-1.0 全范围）
-            mStickPaint!!.alpha = (castedData.stickOpacity * 255).toInt()
-
-            // 绘制摇杆圆心（前景圆，根据触摸位置移动）
-            // RadialGamePad 风格：摇杆圆心是背景半径的 50%（0.5f * radius）
-            // 但我们已经根据 mStickRadius 计算了，这里直接使用
-            canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint!!)
+            mStickPaint.alpha = (castedData.stickOpacity * 255).toInt()
+            canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint)
         }
 
         // 恢复旋转
@@ -429,6 +411,77 @@ class VirtualJoystick(
         return distance <= mRadius
     }
 
+    // ==================== ControlView 接口方法 ====================
+
+    override fun tryAcquireTouch(pointerId: Int, x: Float, y: Float): Boolean {
+        // 如果已经在跟踪一个触摸点，拒绝新的
+        if (mIsTouching) {
+            return false
+        }
+
+        // 检查触摸点是否在圆形区域内
+        val dx = x - mCenterX
+        val dy = y - mCenterY
+        val distance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+
+        // 只响应圆形区域内的触摸
+        if (distance > mRadius) {
+            return false
+        }
+
+        // 记录触摸点
+        mActivePointerId = pointerId
+
+        // 如果是右摇杆鼠标模式，初始化并设置虚拟鼠标范围
+        if (castedData.mode == ControlData.Joystick.Mode.MOUSE && castedData.isRightStick) {
+            if (mInputBridge is SDLInputBridge) {
+                (mInputBridge as SDLInputBridge).initVirtualMouse(mScreenWidth, mScreenHeight)
+            }
+            setVirtualMouseRange()
+        }
+
+        handleMove(x, y)
+        mIsTouching = true
+        triggerVibration(true)
+        return true
+    }
+
+    override fun handleTouchMove(pointerId: Int, x: Float, y: Float) {
+        if (!mIsTouching || mActivePointerId != pointerId) {
+            return
+        }
+        handleMove(x, y)
+    }
+
+    override fun releaseTouch(pointerId: Int) {
+        if (pointerId == mActivePointerId && mIsTouching) {
+            mActivePointerId = -1
+            handleRelease()
+            mIsTouching = false
+            triggerVibration(false)
+        }
+    }
+
+    override fun cancelAllTouches() {
+        // 必须清理所有 Handler，防止后续回调导致状态问题
+        mClickAttackHandler.removeCallbacksAndMessages(null)
+
+        mActivePointerId = -1
+
+        // 强制调用 handleRelease 并重置所有状态
+        if (mIsTouching || mIsAttacking || mMouseLeftPressed || mCurrentDirection != DIR_NONE) {
+            handleRelease()
+        }
+
+        mIsTouching = false
+        mIsAttacking = false
+        mMouseLeftPressed = false
+        mCurrentDirection = DIR_NONE
+        resetStick()
+        triggerVibration(false)
+        invalidate()
+    }
+
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         // 清理所有待处理的 Handler，防止内存泄漏和状态问题
@@ -452,145 +505,17 @@ class VirtualJoystick(
      * 获取方向对应的角度（用于绘制指示线）
      */
     private fun getAngleForDirection(direction: Int): Float {
-        when (direction) {
-            DIR_RIGHT -> return 0f
-            DIR_UP_RIGHT -> return 45f
-            DIR_UP -> return 90f
-            DIR_UP_LEFT -> return 135f
-            DIR_LEFT -> return 180f
-            DIR_DOWN_LEFT -> return 225f
-            DIR_DOWN -> return 270f
-            DIR_DOWN_RIGHT -> return 315f
-            else -> return -1f
+        return when (direction) {
+            DIR_RIGHT -> 0f
+            DIR_UP_RIGHT -> 45f
+            DIR_UP -> 90f
+            DIR_UP_LEFT -> 135f
+            DIR_LEFT -> 180f
+            DIR_DOWN_LEFT -> 225f
+            DIR_DOWN -> 270f
+            DIR_DOWN_RIGHT -> 315f
+            else -> -1f
         }
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action = event.actionMasked
-        val pointerId = event.getPointerId(event.actionIndex)
-
-        when (action) {
-            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
-                // 如果已经在跟踪一个触摸点，忽略新的
-                if (mIsTouching) {
-                    return false
-                }
-
-                val pointerIndex = event.actionIndex
-                val touchX = event.getX(pointerIndex)
-                val touchY = event.getY(pointerIndex)
-
-
-                // 检查触摸点是否在圆形区域内
-                val dx = touchX - mCenterX
-                val dy = touchY - mCenterY
-                val distance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-
-                // 只响应圆形区域内的触摸
-                if (distance > mRadius) {
-                    return false
-                }
-
-                // 记录触摸点
-                mActivePointerId = pointerId
-                // 如果不穿透，标记这个触摸点被占用（不传递给游戏）
-                if (!controlData.isPassThrough) {
-                    TouchPointerTracker.consumePointer(pointerId)
-                }
-
-                // 如果是右摇杆鼠标模式，初始化并设置虚拟鼠标范围
-                if (castedData.mode == ControlData.Joystick.Mode.MOUSE && castedData.isRightStick) {
-                    // 初始化虚拟鼠标（使用实际屏幕尺寸）
-                    if (mInputBridge is SDLInputBridge) {
-                        (mInputBridge as SDLInputBridge).initVirtualMouse(
-                            mScreenWidth,
-                            mScreenHeight
-                        )
-                    }
-                    setVirtualMouseRange()
-                }
-
-                handleMove(touchX, touchY)
-                mIsTouching = true
-                triggerVibration(true)
-                // 如果设置了穿透，返回 false 让事件继续传递；否则返回 true 消费事件
-                return !controlData.isPassThrough
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                if (!mIsTouching || mActivePointerId == -1) {
-                    return false
-                }
-
-                // 找到我们跟踪的触摸点
-                val pointerIndex = event.findPointerIndex(mActivePointerId)
-                if (pointerIndex == -1) {
-                    // 我们跟踪的触摸点不在事件中了，说明它已经被释放
-                    // 必须重置状态，否则会导致指针跳跃到其他手指
-                    if (!controlData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(mActivePointerId)
-                    }
-                    mActivePointerId = -1
-                    handleRelease()
-                    mIsTouching = false
-                    invalidate()
-                    return false
-                }
-
-                val touchX = event.getX(pointerIndex)
-                val touchY = event.getY(pointerIndex)
-                handleMove(touchX, touchY)
-                // 如果设置了穿透，返回 false 让事件继续传递；否则返回 true 消费事件
-                return !controlData.isPassThrough
-            }
-
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                // 检查是否是我们跟踪的触摸点
-                if (pointerId == mActivePointerId && mIsTouching) {
-                    // 释放触摸点标记（如果之前标记了）
-                    if (!controlData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(mActivePointerId)
-                    }
-                    mActivePointerId = -1
-
-                    handleRelease()
-                    mIsTouching = false
-                    triggerVibration(false)
-                    // 如果设置了穿透，返回 false 让事件继续传递；否则返回 true 消费事件
-                    return !controlData.isPassThrough
-                }
-                return false
-            }
-
-            MotionEvent.ACTION_CANCEL -> {
-                // 取消事件：无条件强制释放所有状态
-                // 必须清理所有 Handler，防止后续回调导致状态问题
-                mClickAttackHandler.removeCallbacksAndMessages(null)
-
-                if (mActivePointerId != -1) {
-                    if (!controlData.isPassThrough) {
-                        TouchPointerTracker.releasePointer(mActivePointerId)
-                    }
-                    mActivePointerId = -1
-                }
-
-                // 强制调用 handleRelease 并重置所有状态
-                if (mIsTouching || mIsAttacking || mMouseLeftPressed || mCurrentDirection != DIR_NONE) {
-                    handleRelease()
-                }
-
-                mIsTouching = false
-                mIsAttacking = false
-                mMouseLeftPressed = false
-                mCurrentDirection = DIR_NONE
-                resetStick()
-                triggerVibration(false)
-                invalidate()
-
-                return true
-            }
-        }
-        return super.onTouchEvent(event)
     }
 
     private fun handleMove(touchX: Float, touchY: Float) {
@@ -607,6 +532,7 @@ class VirtualJoystick(
             mStickX = mCenterX + dx * ratio
             mStickY = mCenterY + dy * ratio
         } else {
+
             // 触摸点在摇杆圆内，摇杆小圆点跟随触摸点（提供视觉反馈）
             // 注意：即使在死区内，小圆点也会移动，但不会触发输入事件（由后续的死区检测处理）
             mStickX = touchX

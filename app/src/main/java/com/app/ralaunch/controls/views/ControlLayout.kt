@@ -7,6 +7,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import com.app.ralaunch.RaLaunchApplication
+import com.app.ralaunch.controls.TouchPointerTracker
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.packs.ControlLayout as PackControlLayout
@@ -18,7 +19,11 @@ import kotlin.math.sqrt
  * 虚拟控制布局管理器
  * 负责管理所有虚拟控制元素的布局和显示
  *
- * 重要：所有触摸事件都会转发给 SDLSurface，确保游戏能收到完整的多点触控输入
+ * 重要：触摸事件优先由控件处理，未处理的触摸事件会转发给 SDLSurface
+ *
+ * 触摸点跟踪：ControlLayout 集中管理所有触摸点的归属
+ * - 每个触摸点 ID 只会分配给一个控件
+ * - 未被任何控件接受的触摸点会转发给 SDLSurface
  *
  * - 设计图基准：2560x1080px
  * - density 会在 Activity.onCreate() 中动态调整
@@ -31,6 +36,12 @@ class ControlLayout : FrameLayout {
 
     private var mControls: MutableList<ControlView> = ArrayList()
     var inputBridge: ControlInputBridge? = null
+
+    /**
+     * 触摸点 ID 到控件的映射
+     * 用于集中管理哪些触摸点被哪些控件占用
+     */
+    private val mPointerToControl: MutableMap<Int, ControlView> = HashMap()
 
     /**
      * 获取当前布局
@@ -83,298 +94,181 @@ class ControlLayout : FrameLayout {
     }
 
     /**
-     * 重写 onInterceptTouchEvent 确保每个新的触摸点独立判断是否由控件处理
-     *
-     * 关键：默认的 FrameLayout 行为会将整个手势序列绑定到第一个接受 ACTION_DOWN 的 View
-     * 但我们需要每个 POINTER_DOWN 独立判断，允许不同手指触摸不同控件
+     * 拦截所有触摸事件
+     * ControlLayout 完全接管触摸事件的分发，手动将事件路由到子控件
      */
     override fun onInterceptTouchEvent(event: MotionEvent?): Boolean {
-        // 永远不拦截 - 让所有事件都能到达子控件
-        // 我们在 dispatchTouchEvent 中手动转发给 SDL
-        return false
+        // 编辑模式下，使用默认的拦截行为
+        if (mModifiable) {
+            return super.onInterceptTouchEvent(event)
+        }
+        // 非编辑模式下，拦截所有触摸事件，由 onTouchEvent 手动分发
+        return true
     }
 
     /**
-     * 重写 dispatchTouchEvent 确保控件优先处理，SDLSurface 收到未处理的触摸事件
-     *
-     * 关键修复：FrameLayout 默认会将整个手势序列绑定到处理 ACTION_DOWN 的 View
-     * 对于多点触控，我们需要每个 POINTER_DOWN 独立判断，允许不同手指触摸不同控件
+     * 处理所有触摸事件
+     * 手动将事件分发给虚拟控件，未处理的事件转发给 SDLSurface
      */
-    override fun dispatchTouchEvent(event: MotionEvent?): Boolean {
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
         if (event == null) {
             return false
         }
 
+        // 编辑模式下，使用默认处理
+        if (mModifiable) {
+            return super.onTouchEvent(event)
+        }
+
+        return handleTouchEvent(event)
+    }
+
+    /**
+     * 核心触摸事件处理逻辑
+     *
+     * - DOWN/POINTER_DOWN: 检查控件是否接受触摸点，如果接受则记录映射
+     * - MOVE: 根据映射将移动事件分发给对应控件
+     * - UP/POINTER_UP: 释放控件的触摸点并清除映射
+     * - 未被控件处理的触摸点转发给 SDLSurface
+     */
+    private fun handleTouchEvent(event: MotionEvent): Boolean {
         // 检查是否是真实鼠标事件（而非触摸事件）
         // 真实鼠标事件应该直接传递给 SDLSurface，不被虚拟控件拦截
-        //
-        // 鼠标事件的判断方式：
-        // 1. source == SOURCE_MOUSE (纯鼠标)
-        // 2. source == SOURCE_MOUSE | SOURCE_TOUCHSCREEN (Samsung DeX 模式等)
-        // 3. toolType == TOOL_TYPE_MOUSE (更可靠的判断方式)
         val source = event.source
-        val isMouseSource = source == android.view.InputDevice.SOURCE_MOUSE ||
-                source == (android.view.InputDevice.SOURCE_MOUSE or android.view.InputDevice.SOURCE_TOUCHSCREEN)
-        val isMouseTool = event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE
+        val isMouseEvent = source == android.view.InputDevice.SOURCE_MOUSE ||
+                source == (android.view.InputDevice.SOURCE_MOUSE or android.view.InputDevice.SOURCE_TOUCHSCREEN) ||
+                event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE
 
-        if (isMouseSource || isMouseTool) {
-            // 鼠标事件，直接传递给 SDLSurface
-            if (mSDLSurface != null) {
-                return mSDLSurface!!.dispatchTouchEvent(event)
-            }
-            return false
+        if (isMouseEvent) {
+            return mSDLSurface?.dispatchTouchEvent(event) ?: false
         }
 
         val action = event.actionMasked
         val actionIndex = event.actionIndex
         val pointerId = event.getPointerId(actionIndex)
 
-        // Debug logging
-        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
-            AppLogger.debug(TAG, "dispatchTouchEvent: action=${actionName(action)} pointerId=$pointerId " +
-                "x=${event.getX(actionIndex)} y=${event.getY(actionIndex)} modifiable=$mModifiable childCount=$childCount")
-
-            // Log all children
-            for (i in 0 until childCount) {
-                val child = getChildAt(i)
-                val childRect = android.graphics.Rect()
-                child.getHitRect(childRect)
-                AppLogger.debug(TAG, "  Child $i: ${child.javaClass.simpleName} " +
-                    "bounds=[${childRect.left},${childRect.top},${childRect.right},${childRect.bottom}] " +
-                    "visibility=${child.visibility} clickable=${child.isClickable} hasOnTouchListener=${child.hasOnClickListeners()}")
+        return when (action) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
+                handlePointerDown(event, actionIndex, pointerId)
+            MotionEvent.ACTION_MOVE ->
+                handlePointerMove(event)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP ->
+                handlePointerUp(event, pointerId)
+            MotionEvent.ACTION_CANCEL ->
+                handleCancel(event)
+            else -> {
+                // 对于其他事件，转发给 SDLSurface
+                mSDLSurface?.dispatchTouchEvent(event)
+                true
             }
         }
+    }
 
-        // 编辑模式下，只处理控件，不转发给 SDLSurface
-        if (mModifiable) {
-            return super.dispatchTouchEvent(event)
-        }
+    /**
+     * 处理触摸点按下事件
+     * 尝试将触摸点分配给控件，如果没有控件接受则转发给 SDL
+     */
+    private fun handlePointerDown(event: MotionEvent, actionIndex: Int, pointerId: Int): Boolean {
+        val x = event.getX(actionIndex)
+        val y = event.getY(actionIndex)
 
-        // 对于多点触控相关事件，手动检查并分发到所有子控件
-        // 这绕过了 FrameLayout 的默认行为（将手势绑定到第一个处理 ACTION_DOWN 的 View）
-        when (action) {
-            MotionEvent.ACTION_POINTER_DOWN,
-            MotionEvent.ACTION_POINTER_UP -> {
-                // 新指针按下/抬起 - 需要检查该指针位置的控件
-                val x = event.getX(actionIndex)
-                val y = event.getY(actionIndex)
+        AppLogger.debug(TAG, "handlePointerDown: pointerId=$pointerId x=$x y=$y")
 
-                AppLogger.debug(TAG, "dispatchTouchEvent: Manually checking ${actionName(action)} for children")
+        // 从后往前遍历控件（后添加的在上层），找到第一个接受触摸的控件
+        for (i in childCount - 1 downTo 0) {
+            val child = getChildAt(i)
+            val controlView = child as? ControlView ?: continue
+            if (child.visibility != VISIBLE) continue
 
-                var anyHandled = false
+            // 获取控件边界并检查触摸点是否在内
+            val childRect = android.graphics.Rect()
+            child.getHitRect(childRect)
+            if (!childRect.contains(x.toInt(), y.toInt())) continue
 
-                // 从后往前遍历（后添加的在上层）
-                // 重要：不能在第一个控件处理后就返回，因为多个控件可能都在该位置
-                // 例如：一个按钮和一个摇杆重叠，两者都应该有机会接收事件
-                for (i in childCount - 1 downTo 0) {
-                    val child = getChildAt(i)
-                    if (child.visibility != VISIBLE) {
-                        continue
-                    }
+            // 转换为本地坐标并尝试让控件接受触摸
+            val localX = x - childRect.left
+            val localY = y - childRect.top
 
-                    // 检查触摸点是否在子视图的边界内
-                    val childRect = android.graphics.Rect()
-                    child.getHitRect(childRect)
+            if (controlView.tryAcquireTouch(pointerId, localX, localY)) {
+                AppLogger.debug(TAG, "  Control ${controlView.javaClass.simpleName} accepted pointer $pointerId")
+                mPointerToControl[pointerId] = controlView
 
-                    if (childRect.contains(x.toInt(), y.toInt())) {
-                        AppLogger.debug(TAG, "  Touch in bounds of child $i, dispatching")
-
-                        // 创建一个坐标转换后的新事件，避免修改原事件影响其他指针
-                        // 使用 offsetLocation 而不是 setLocation，因为 setLocation 只修改主指针(pointer 0)
-                        // 而 offsetLocation 会正确偏移所有指针的坐标
-                        val localEvent = MotionEvent.obtain(event)
-                        localEvent.offsetLocation(-childRect.left.toFloat(), -childRect.top.toFloat())
-
-                        AppLogger.debug(TAG, "  Transformed coords: parent($x, $y) -> local(${x - childRect.left}, ${y - childRect.top})")
-
-                        // 手动分发事件到子视图（使用本地坐标）
-                        val handled = child.dispatchTouchEvent(localEvent)
-
-                        // 回收临时事件
-                        localEvent.recycle()
-
-                        AppLogger.debug(TAG, "  Child $i returned $handled")
-
-                        if (handled) {
-                            anyHandled = true
-                            // 不要在这里 return！继续检查其他控件
-                            // 这样多个控件可以同时响应不同的手指
-                        }
-                    }
+                if (!controlView.controlData.isPassThrough) {
+                    TouchPointerTracker.consumePointer(pointerId)
                 }
-
-                // 转发给 SDL（SDL 会过滤已消费的指针）
-                if (mSDLSurface != null) {
-                    mSDLSurface!!.dispatchTouchEvent(event)
-                }
-
-                if (!anyHandled) {
-                    AppLogger.debug(TAG, "dispatchTouchEvent: No child handled ${actionName(action)}")
-                }
-
-                return true
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                // MOVE 事件包含所有活动指针的位置
-                // 需要将事件分发给所有可能正在跟踪指针的控件
-                var anyChildHandled = false
-
-                // 遍历所有子控件，让它们有机会处理 MOVE 事件
-                for (i in childCount - 1 downTo 0) {
-                    val child = getChildAt(i)
-                    if (child.visibility != VISIBLE) {
-                        continue
-                    }
-
-                    val childRect = android.graphics.Rect()
-                    child.getHitRect(childRect)
-
-                    // 为该子控件创建坐标转换后的事件
-                    // MOVE 事件比较特殊，包含多个指针，我们需要转换所有指针坐标
-                    val localEvent = MotionEvent.obtain(event)
-                    localEvent.offsetLocation(-childRect.left.toFloat(), -childRect.top.toFloat())
-
-                    val handled = child.dispatchTouchEvent(localEvent)
-                    localEvent.recycle()
-
-                    if (handled) {
-                        anyChildHandled = true
-                    }
-                }
-
-                // 转发给 SDL（SDL 会过滤已消费的指针）
-                if (mSDLSurface != null) {
-                    mSDLSurface!!.dispatchTouchEvent(event)
-                }
-
-                return true
-            }
-
-            MotionEvent.ACTION_CANCEL -> {
-                // 取消事件需要通知所有子控件清理状态
-                for (i in 0 until childCount) {
-                    val child = getChildAt(i)
-                    if (child.visibility == VISIBLE) {
-                        val childRect = android.graphics.Rect()
-                        child.getHitRect(childRect)
-
-                        val localEvent = MotionEvent.obtain(event)
-                        localEvent.offsetLocation(-childRect.left.toFloat(), -childRect.top.toFloat())
-
-                        child.dispatchTouchEvent(localEvent)
-                        localEvent.recycle()
-                    }
-                }
-
-                // 转发给 SDL
-                if (mSDLSurface != null) {
-                    mSDLSurface!!.dispatchTouchEvent(event)
-                }
-
-                return true
-            }
-
-            MotionEvent.ACTION_DOWN -> {
-                // 第一个手指按下 - 手动分发到所有可能的控件
-                val x = event.getX(actionIndex)
-                val y = event.getY(actionIndex)
-
-                AppLogger.debug(TAG, "dispatchTouchEvent: Manually checking ACTION_DOWN for children")
-
-                var anyHandled = false
-
-                // 从后往前遍历（后添加的在上层）
-                for (i in childCount - 1 downTo 0) {
-                    val child = getChildAt(i)
-                    if (child.visibility != VISIBLE) {
-                        continue
-                    }
-
-                    val childRect = android.graphics.Rect()
-                    child.getHitRect(childRect)
-
-                    if (childRect.contains(x.toInt(), y.toInt())) {
-                        AppLogger.debug(TAG, "  Touch in bounds of child $i, dispatching ACTION_DOWN")
-
-                        val localEvent = MotionEvent.obtain(event)
-                        localEvent.offsetLocation(-childRect.left.toFloat(), -childRect.top.toFloat())
-
-                        val handled = child.dispatchTouchEvent(localEvent)
-                        localEvent.recycle()
-
-                        AppLogger.debug(TAG, "  Child $i returned $handled")
-
-                        if (handled) {
-                            anyHandled = true
-                            // 对于 DOWN，找到第一个处理的控件后可以停止
-                            // 但为了一致性，继续检查其他控件
-                        }
-                    }
-                }
-
-                // 转发给 SDL
-                if (mSDLSurface != null) {
-                    mSDLSurface!!.dispatchTouchEvent(event)
-                }
-
-                return true
-            }
-
-            MotionEvent.ACTION_UP -> {
-                // 最后一个手指抬起 - 需要通知所有控件，让它们检查是否是自己跟踪的指针
-                AppLogger.debug(TAG, "dispatchTouchEvent: Broadcasting ACTION_UP to all children")
-
-                for (i in 0 until childCount) {
-                    val child = getChildAt(i)
-                    if (child.visibility != VISIBLE) {
-                        continue
-                    }
-
-                    val childRect = android.graphics.Rect()
-                    child.getHitRect(childRect)
-
-                    val localEvent = MotionEvent.obtain(event)
-                    localEvent.offsetLocation(-childRect.left.toFloat(), -childRect.top.toFloat())
-
-                    child.dispatchTouchEvent(localEvent)
-                    localEvent.recycle()
-                }
-
-                // 转发给 SDL
-                if (mSDLSurface != null) {
-                    mSDLSurface!!.dispatchTouchEvent(event)
-                }
-
                 return true
             }
         }
 
-        // 对于其他事件，使用默认行为（不应该走到这里，上面已经处理了所有主要事件）
-        val handled = super.dispatchTouchEvent(event)
-
-        AppLogger.debug(TAG, "dispatchTouchEvent: Fallback to super for action ${actionName(action)}, handled=$handled")
-
-        // 转发给 SDLSurface
-        if (mSDLSurface != null) {
-            mSDLSurface!!.dispatchTouchEvent(event)
-        }
-
-        // 总是返回 true，因为我们处理了事件（转发给控件或SDL）
+        // 没有控件接受，转发给 SDLSurface
+        AppLogger.debug(TAG, "  No control accepted pointer $pointerId, forwarding to SDL")
+        mSDLSurface?.dispatchTouchEvent(event)
         return true
     }
 
-    private fun actionName(action: Int): String {
-        return when (action) {
-            MotionEvent.ACTION_DOWN -> "DOWN"
-            MotionEvent.ACTION_UP -> "UP"
-            MotionEvent.ACTION_MOVE -> "MOVE"
-            MotionEvent.ACTION_POINTER_DOWN -> "POINTER_DOWN"
-            MotionEvent.ACTION_POINTER_UP -> "POINTER_UP"
-            MotionEvent.ACTION_CANCEL -> "CANCEL"
-            else -> "UNKNOWN($action)"
+    /**
+     * 处理触摸点移动事件
+     * 将移动事件分发给拥有对应触摸点的控件
+     */
+    private fun handlePointerMove(event: MotionEvent): Boolean {
+        // 遍历所有指针，分发给对应的控件
+        for (i in 0 until event.pointerCount) {
+            val pointerId = event.getPointerId(i)
+            mPointerToControl[pointerId]?.let { controlView ->
+                val view = controlView as View
+                val childRect = android.graphics.Rect()
+                view.getHitRect(childRect)
+                controlView.handleTouchMove(
+                    pointerId,
+                    event.getX(i) - childRect.left,
+                    event.getY(i) - childRect.top
+                )
+            }
         }
+
+        // 转发给 SDL（SDL 会过滤已消费的指针）
+        mSDLSurface?.dispatchTouchEvent(event)
+        return true
     }
+
+    /**
+     * 处理触摸点抬起事件
+     * 释放控件的触摸点并清除映射
+     */
+    private fun handlePointerUp(event: MotionEvent, pointerId: Int): Boolean {
+        AppLogger.debug(TAG, "handlePointerUp: pointerId=$pointerId")
+
+        mPointerToControl.remove(pointerId)?.let { controlView ->
+            AppLogger.debug(TAG, "  Releasing pointer $pointerId from ${controlView.javaClass.simpleName}")
+            if (!controlView.controlData.isPassThrough) {
+                TouchPointerTracker.releasePointer(pointerId)
+            }
+            controlView.releaseTouch(pointerId)
+        }
+
+        mSDLSurface?.dispatchTouchEvent(event)
+        return true
+    }
+
+    /**
+     * 处理取消事件
+     * 通知所有控件取消并清除所有映射
+     */
+    private fun handleCancel(event: MotionEvent): Boolean {
+        AppLogger.debug(TAG, "handleCancel: clearing ${mPointerToControl.size} pointers")
+
+        mPointerToControl.forEach { (pointerId, controlView) ->
+            if (!controlView.controlData.isPassThrough) {
+                TouchPointerTracker.releasePointer(pointerId)
+            }
+            controlView.cancelAllTouches()
+        }
+        mPointerToControl.clear()
+
+        mSDLSurface?.dispatchTouchEvent(event)
+        return true
+    }
+
 
     /**
      * 加载控制布局配置
@@ -393,25 +287,20 @@ class ControlLayout : FrameLayout {
             return false
         }
 
-        // 创建虚拟控制元素
-        val controlViews = layout.controls
-            .map { Pair(createControlView(it), it) }
-            .filter { it.first != null }
-            .toTypedArray()
-
         // 清除现有控件视图
         clearControls()
 
-        if (controlViews.isEmpty()) {
+        // 创建并添加虚拟控制元素
+        val addedCount = layout.controls.mapNotNull { data ->
+            createControlView(data)?.also { addControlView(it, data) }
+        }.size
+
+        if (addedCount == 0) {
             AppLogger.warn(TAG, "No visible controls were added, layout may appear empty")
             return false
         }
 
-        // 添加新的控件视图
-        controlViews.forEach { (controlView, data) ->
-            addControlView(controlView, data)
-        }
-        AppLogger.debug(TAG, "Loaded " + controlViews.size + " controls from layout: " + layout.name)
+        AppLogger.debug(TAG, "Loaded $addedCount controls from layout: ${layout.name}")
         return true
     }
 
@@ -449,24 +338,14 @@ class ControlLayout : FrameLayout {
     /**
      * 创建控制View
      */
-    private fun createControlView(data: ControlData?): ControlView? {
-        when (data) {
-            is ControlData.Button -> {
-                return VirtualButton(context, data, inputBridge!!)
-            }
-            is ControlData.Joystick -> {
-                return VirtualJoystick(context, data, inputBridge!!)
-            }
-            is ControlData.TouchPad -> {
-                return VirtualTouchPad(context, data, inputBridge!!)
-            }
-            is ControlData.Text -> {
-                return VirtualText(context, data, inputBridge!!)
-            }
-            else -> {
-                AppLogger.warn(TAG, "Unknown control type")
-                return null
-            }
+    private fun createControlView(data: ControlData?): ControlView? = when (data) {
+        is ControlData.Button -> VirtualButton(context, data, inputBridge!!)
+        is ControlData.Joystick -> VirtualJoystick(context, data, inputBridge!!)
+        is ControlData.TouchPad -> VirtualTouchPad(context, data, inputBridge!!)
+        is ControlData.Text -> VirtualText(context, data, inputBridge!!)
+        else -> {
+            AppLogger.warn(TAG, "Unknown control type")
+            null
         }
     }
 
@@ -600,6 +479,15 @@ class ControlLayout : FrameLayout {
      * 清除所有控制元素
      */
     fun clearControls() {
+        // 清除所有触摸点映射并通知 SDL
+        mPointerToControl.forEach { (pointerId, controlView) ->
+            if (!controlView.controlData.isPassThrough) {
+                TouchPointerTracker.releasePointer(pointerId)
+            }
+            controlView.cancelAllTouches()
+        }
+        mPointerToControl.clear()
+
         removeAllViews()
         mControls.clear()
     }
@@ -608,38 +496,30 @@ class ControlLayout : FrameLayout {
         get() = mVisible
         set(visible) {
             mVisible = visible
-            setVisibility(if (visible) VISIBLE else GONE)
+            visibility = if (visible) VISIBLE else GONE
         }
 
     /**
      * 切换控制布局显示状态
      */
     fun toggleControlsVisible() {
-        this.isControlsVisible = !mVisible
+        isControlsVisible = !mVisible
     }
 
     /**
      * 重置所有切换按钮状态
      */
     fun resetAllToggles() {
-        for (control in mControls) {
-            if (control is VirtualButton) {
-                control.resetToggle()
-            }
-        }
+        mControls.filterIsInstance<VirtualButton>().forEach { it.resetToggle() }
     }
 
     var isModifiable: Boolean
         get() = mModifiable
         set(modifiable) {
             mModifiable = modifiable
-
-            if (this.currentLayout != null) {
-                for (i in mControls.indices) {
-                    val controlView = mControls[i]
-                    val data = currentLayout!!.controls[i]
-                    val view = controlView as View
-                    setupEditModeListeners(view, controlView, data)
+            currentLayout?.let { layout ->
+                mControls.forEachIndexed { i, controlView ->
+                    setupEditModeListeners(controlView as View, controlView, layout.controls[i])
                 }
             }
         }
@@ -660,29 +540,12 @@ class ControlLayout : FrameLayout {
         fun onControlChanged()
     }
 
-    private fun xToPx(value: Float): Int {
-        return (value * resources.displayMetrics.widthPixels).toInt()
-    }
-
-    private fun yToPx(value: Float): Int {
-        return (value * resources.displayMetrics.heightPixels).toInt()
-    }
-
-    private fun widthToPx(value: Float): Int {
-        return (value * resources.displayMetrics.heightPixels).toInt()
-    }
-
-    private fun heightToPx(value: Float): Int {
-        return (value * resources.displayMetrics.heightPixels).toInt()
-    }
-
-    private fun xFromPx(px: Int): Float {
-        return px.toFloat() / resources.displayMetrics.widthPixels
-    }
-
-    private fun yFromPx(px: Int): Float {
-        return px.toFloat() / resources.displayMetrics.heightPixels
-    }
+    private fun xToPx(value: Float) = (value * resources.displayMetrics.widthPixels).toInt()
+    private fun yToPx(value: Float) = (value * resources.displayMetrics.heightPixels).toInt()
+    private fun widthToPx(value: Float) = (value * resources.displayMetrics.heightPixels).toInt()
+    private fun heightToPx(value: Float) = (value * resources.displayMetrics.heightPixels).toInt()
+    private fun xFromPx(px: Int) = px.toFloat() / resources.displayMetrics.widthPixels
+    private fun yFromPx(px: Int) = px.toFloat() / resources.displayMetrics.heightPixels
 
     companion object {
         private const val TAG = "ControlLayout"
