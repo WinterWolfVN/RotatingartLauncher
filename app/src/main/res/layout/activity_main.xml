@@ -61,25 +61,19 @@
             android:orientation="horizontal"
             android:background="@android:color/transparent">
 
-            <ScrollView
-                android:layout_width="wrap_content"
+            <!-- 左侧 NavigationRail - 现代化风格 (80dp) -->
+            <com.google.android.material.navigationrail.NavigationRailView
+                android:id="@+id/navigationRail"
+                android:layout_width="80dp"
                 android:layout_height="wrap_content"
-                android:scrollbars="vertical"
-                android:scrollbarSize="0dp">
-                <!-- 左侧 NavigationRail - 现代化风格 (80dp) -->
-                <com.google.android.material.navigationrail.NavigationRailView
-                    android:id="@+id/navigationRail"
-                    android:layout_width="80dp"
-                    android:layout_height="match_parent"
-                    android:background="@android:color/transparent"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp"
-                    app:itemIconTint="@color/navigation_rail_item_color"
-                    app:itemTextColor="@color/navigation_rail_item_color"
-                    app:itemActiveIndicatorStyle="@style/Widget.App.NavigationRailView.ActiveIndicator"
-                    app:labelVisibilityMode="labeled"
-                    app:menu="@menu/navigation_rail_menu" />
-            </ScrollView>
+                android:background="@android:color/transparent"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                app:itemIconTint="@color/navigation_rail_item_color"
+                app:itemTextColor="@color/navigation_rail_item_color"
+                app:itemActiveIndicatorStyle="@style/Widget.App.NavigationRailView.ActiveIndicator"
+                app:labelVisibilityMode="labeled"
+                app:menu="@menu/navigation_rail_menu" />
 
             <!-- 主内容区域 - 根据导航切换 -->
             <FrameLayout
@@ -260,74 +254,6 @@
 
                         </ScrollView>
 
-                        <!-- 运行时版本选择 - 独立在卡片外部 -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:id="@+id/runtimeSelectContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:foreground="?attr/selectableItemBackground"
-                            app:cardBackgroundColor="?attr/colorSurface"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="?attr/colorOutline"
-                            android:visibility="gone"
-                            style="@style/Widget.App.CardView.Small">
-
-                            <LinearLayout
-                                android:id="@+id/btnRuntimeSelector"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:padding="12dp"
-                                android:gravity="center_vertical">
-
-                                <ImageView
-                                    android:layout_width="28dp"
-                                    android:layout_height="28dp"
-                                    android:src="@drawable/ic_settings"
-                                    android:background="@drawable/bg_circle"
-                                    android:backgroundTint="?attr/colorSurface"
-                                    android:padding="6dp"
-                                    app:tint="?attr/colorOnSurfaceVariant"
-                                    android:layout_marginEnd="10dp" />
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="@string/main_runtime_title"
-                                        android:textSize="10sp"
-                                        android:textColor="?attr/textSecondary" />
-
-                                    <TextView
-                                        android:id="@+id/tvCurrentRuntime"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text=".NET 10.0.0"
-                                        android:textColor="?attr/textPrimary"
-                                        android:textSize="13sp"
-                                        android:textStyle="bold"
-                                        android:layout_marginTop="2dp" />
-
-                                </LinearLayout>
-
-                                <ImageView
-                                    android:layout_width="18dp"
-                                    android:layout_height="18dp"
-                                    android:src="@drawable/ic_arrow_forward"
-                                    app:tint="?attr/colorOnSurfaceVariant" />
-
-                            </LinearLayout>
-
-                        </com.google.android.material.card.MaterialCardView>
-
                         <!-- 启动游戏按钮 -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/launchGameButton"
@@ -349,14 +275,6 @@
                     </LinearLayout>
 
                 </LinearLayout>
-
-                <!-- 文件管理器页面 -->
-                <FrameLayout
-                    android:id="@+id/fileManagerPage"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@android:color/transparent"
-                    android:visibility="gone" />
 
                 <!-- 控制布局页面 -->
                 <FrameLayout

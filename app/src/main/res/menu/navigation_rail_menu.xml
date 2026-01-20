@@ -9,12 +9,6 @@
         android:enabled="true" />
     
     <item
-        android:id="@+id/nav_file"
-        android:icon="@drawable/ic_folder"
-        android:title="@string/nav_file"
-        android:enabled="true" />
-    
-    <item
         android:id="@+id/nav_control"
         android:icon="@drawable/ic_controller"
         android:title="@string/nav_control"

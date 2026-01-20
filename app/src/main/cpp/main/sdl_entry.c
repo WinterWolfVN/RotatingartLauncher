@@ -4,7 +4,6 @@
 #include <android/log.h>
 #include "jni_bridge.h"
 #include "app_logger.h"
-#include "osmesa/osm_renderer.h"
 
 
 #define LOG_TAG "GameLauncher"

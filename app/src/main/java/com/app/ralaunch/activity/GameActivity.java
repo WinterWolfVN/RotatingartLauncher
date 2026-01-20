@@ -24,7 +24,6 @@ import com.app.ralib.patch.Patch;
 import com.app.ralib.patch.PatchManager;
 import com.app.ralaunch.renderer.RendererConfig;
 import com.app.ralaunch.renderer.RendererLoader;
-import com.app.ralaunch.renderer.OSMSurface;
 
 import org.libsdl.app.SDLActivity;
 
@@ -49,26 +48,6 @@ public class GameActivity extends SDLActivity {
     protected void attachBaseContext(Context newBase) {
         // 应用语言设置
         super.attachBaseContext(com.app.ralaunch.utils.LocaleManager.applyLanguage(newBase));
-    }
-
-    /**
-     * 创建 SDL Surface（使用 OSMesa-aware Surface）
-     */
-    @Override
-    protected org.libsdl.app.SDLSurface createSDLSurface(Context context) {
-        try {
-            String currentRenderer = RendererLoader.getCurrentRenderer();
-            boolean isZink = RendererConfig.RENDERER_ZINK.equals(currentRenderer) ||
-                    "vulkan_zink".equals(currentRenderer);
-
-            if (isZink) {
-                return new OSMSurface(context);
-            }
-        } catch (Exception e) {
-        }
-
-        // 默认使用标准 SDL Surface
-        return super.createSDLSurface(context);
     }
 
     @Override
@@ -126,16 +105,6 @@ public class GameActivity extends SDLActivity {
 
         // 设置游戏内菜单（需要在虚拟控制初始化后）
         gameMenuController.setup(this, (ViewGroup) mLayout, virtualControlsManager);
-
-        String runtimePref = getIntent().getStringExtra("DOTNET_FRAMEWORK");
-
-        if (runtimePref != null && !runtimePref.isEmpty()) {
-            try {
-                RuntimePreference.setDotnetFramework(this, runtimePref);
-            }
-            catch (Throwable t) {
-            }
-        }
     }
 
     @Override

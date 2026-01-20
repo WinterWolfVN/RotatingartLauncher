@@ -8,11 +8,6 @@ set(MAIN_SOURCES
         app_logger_jni.c
         renderer_loader.c
         thread_affinity_manager.cpp
-        osmesa/osmesa_loader.c
-        osmesa/osm_bridge.c
-        osmesa/osm_renderer.c
-        osmesa/osm_renderer_jni.c
-        osmesa/vulkan_loader.c
         vulkan_turnip_loader.c
         dxvk_loader.c
         turnip_loader_nsbypass.cpp

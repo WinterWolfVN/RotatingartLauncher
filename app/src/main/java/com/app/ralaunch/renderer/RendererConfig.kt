@@ -32,10 +32,6 @@ object RendererConfig {
     const val RENDERER_GL4ES_ANGLE: String = "gl4es+angle" // GL4ES + ANGLE
     const val RENDERER_MOBILEGLUES: String = "mobileglues" // MobileGlues
     const val RENDERER_ANGLE: String = "angle" // ANGLE
-    const val RENDERER_ZINK: String = "zink" // Zink (Mesa)
-    const val RENDERER_ZINK_25: String = "zink25" // Zink (Mesa 25)
-    const val RENDERER_VIRGL: String = "virgl" // VirGL
-    const val RENDERER_FREEDRENO: String = "freedreno" // Freedreno
     const val RENDERER_DXVK: String = "dxvk" // DXVK (D3D11 -> Vulkan)
 
     // 已弃用的渲染器 ID（向后兼容）
@@ -155,46 +151,6 @@ object RendererConfig {
             "libGLESv2_angle.so",
             true,
             Build.VERSION_CODES.N // Vulkan 需要 Android 7.0+
-        ),
-        // Zink 渲染器
-        RendererInfo(
-            RENDERER_ZINK,
-            "Zink (Mesa)",
-            "OpenGL 4.6 over Vulkan (Mesa Zink)",
-            "libOSMesa.so",
-            "libOSMesa.so",
-            true,
-            Build.VERSION_CODES.N
-        ),
-        // Zink Mesa 25 渲染器
-        RendererInfo(
-            RENDERER_ZINK_25,
-            "Zink (Mesa 25)",
-            "OpenGL 4.6 over Vulkan (Mesa 25 - 最新特性支持）",
-            "libOSMesa_25.so",
-            "libOSMesa_25.so",
-            true,
-            Build.VERSION_CODES.Q // Mesa 25 需要 Android 10+
-        ),
-        // VirGL 渲染器
-        RendererInfo(
-            RENDERER_VIRGL,
-            "VirGL Renderer",
-            "Gallium3D VirGL (OpenGL 4.3)",
-            "libOSMesa.so",
-            "libOSMesa.so",
-            true,
-            Build.VERSION_CODES.N
-        ),
-        // Freedreno 渲染器
-        RendererInfo(
-            RENDERER_FREEDRENO,
-            "Freedreno (Adreno)",
-            "Mesa Freedreno for Qualcomm Adreno GPU",
-            "libOSMesa.so",
-            "libOSMesa.so",
-            true,
-            Build.VERSION_CODES.N
         ),
         // DXVK 渲染器 (D3D11 over Vulkan)
         RendererInfo(
@@ -322,10 +278,6 @@ object RendererConfig {
             RENDERER_GL4ES_ANGLE -> addGl4esAngleEnv(envMap)
             RENDERER_MOBILEGLUES -> addMobileGluesEnv(envMap)
             RENDERER_ANGLE -> addAngleEnv(envMap)
-            RENDERER_ZINK -> addZinkEnv(context, envMap)
-            RENDERER_ZINK_25 -> addZink25Env(context, envMap)
-            RENDERER_VIRGL -> addVirglEnv(context, envMap)
-            RENDERER_FREEDRENO -> addFreedrenoEnv(context, envMap)
             RENDERER_DXVK -> addDxvkEnv(envMap)
             RENDERER_NATIVE_GLES -> { /* No additional env vars needed */ }
         }
@@ -369,66 +321,6 @@ object RendererConfig {
         envMap.apply {
             put("RALCORE_EGL", "libEGL_angle.so")
             put("LIBGL_GLES", "libGLESv2_angle.so")
-        }
-    }
-
-    private fun addZinkEnv(context: Context, envMap: MutableMap<String?, String?>) {
-        envMap.apply {
-            put("RALCORE_RENDERER", "vulkan_zink")
-            put("GALLIUM_DRIVER", "zink")
-            put("MESA_LOADER_DRIVER_OVERRIDE", "zink")
-            put("MESA_GL_VERSION_OVERRIDE", "4.6")
-            put("MESA_GLSL_VERSION_OVERRIDE", "460")
-            put("MESA_GLSL_CACHE_DIR", context.cacheDir.absolutePath)
-            put("force_glsl_extensions_warn", "true")
-            put("allow_higher_compat_version", "true")
-            put("allow_glsl_extension_directive_midshader", "true")
-            put("ZINK_DESCRIPTORS", "auto")
-            // Note: Do NOT set LIBGL_ALWAYS_SOFTWARE=1
-            // It forces zink to look for CPU devices which don't exist on Android
-        }
-    }
-
-    private fun addZink25Env(context: Context, envMap: MutableMap<String?, String?>) {
-        envMap.apply {
-            put("RALCORE_RENDERER", "vulkan_zink")
-            put("GALLIUM_DRIVER", "zink")
-            put("MESA_LOADER_DRIVER_OVERRIDE", "zink")
-            put("MESA_GL_VERSION_OVERRIDE", "4.6")
-            put("MESA_GLSL_VERSION_OVERRIDE", "460")
-            put("MESA_GLSL_CACHE_DIR", context.cacheDir.absolutePath)
-            // Mesa 25 features
-            put("ZINK_DESCRIPTORS", "auto")
-            put("ZINK_DEBUG", "nir")
-            put("force_glsl_extensions_warn", "true")
-            put("allow_higher_compat_version", "true")
-            put("allow_glsl_extension_directive_midshader", "true")
-            put("MESA_EXTENSION_MAX_YEAR", "2025")
-            put("SDL_EGL_SKIP_RENDERABLE_TYPE", "1")
-            put("LIBGL_ALWAYS_SOFTWARE", "1") // Force Mesa for consistency
-        }
-    }
-
-    private fun addVirglEnv(context: Context, envMap: MutableMap<String?, String?>) {
-        envMap.apply {
-            put("RALCORE_RENDERER", "gallium_virgl")
-            put("GALLIUM_DRIVER", "virpipe")
-            put("MESA_GL_VERSION_OVERRIDE", "4.3")
-            put("MESA_GLSL_VERSION_OVERRIDE", "430")
-            put("MESA_GLSL_CACHE_DIR", context.cacheDir.absolutePath)
-            put("OSMESA_NO_FLUSH_FRONTBUFFER", "1")
-            put("VTEST_SOCKET_NAME", File(context.cacheDir, ".virgl_test").absolutePath)
-        }
-    }
-
-    private fun addFreedrenoEnv(context: Context, envMap: MutableMap<String?, String?>) {
-        envMap.apply {
-            put("RALCORE_RENDERER", "gallium_freedreno")
-            put("GALLIUM_DRIVER", "freedreno")
-            put("MESA_LOADER_DRIVER_OVERRIDE", "kgsl")
-            put("MESA_GL_VERSION_OVERRIDE", "4.6")
-            put("MESA_GLSL_VERSION_OVERRIDE", "460")
-            put("MESA_GLSL_CACHE_DIR", context.cacheDir.absolutePath)
         }
     }
 
@@ -520,17 +412,12 @@ object RendererConfig {
      */
     private fun getOpenGlVersionConfig(rendererId: String): Map<String, String?> {
         return when {
-            // Desktop OpenGL renderers (GL4ES, Zink) - unset ES3 constraints
-            rendererId == RENDERER_GL4ES || rendererId == RENDERER_ZINK -> {
+            // Desktop OpenGL renderers (GL4ES) - unset ES3 constraints
+            rendererId == RENDERER_GL4ES -> {
                 buildMap {
                     put("FNA3D_OPENGL_FORCE_ES3", null)
                     put("FNA3D_OPENGL_FORCE_VER_MAJOR", null)
                     put("FNA3D_OPENGL_FORCE_VER_MINOR", null)
-
-                    // Zink needs special MojoShader profile
-                    if (rendererId == RENDERER_ZINK) {
-                        put("FNA3D_MOJOSHADER_PROFILE", "glsles3")
-                    }
                 }
             }
             // OpenGL ES 3.0 for all other renderers
@@ -550,8 +437,6 @@ object RendererConfig {
     private fun getMapBufferRangeValue(context: Context?, rendererId: String): String? {
         // Vulkan-translated renderers need it disabled for compatibility
         val vulkanTranslatedRenderers = setOf(
-            RENDERER_ZINK,
-            RENDERER_ZINK_25,
             RENDERER_ANGLE,
             RENDERER_GL4ES_ANGLE
         )
@@ -577,17 +462,13 @@ object RendererConfig {
         when (rendererId) {
             RENDERER_GL4ES ->
                 Log.i(TAG, "OpenGL Profile: Desktop OpenGL 2.1 Compatibility Profile")
-            RENDERER_ZINK -> {
-                Log.i(TAG, "OpenGL Profile: Desktop OpenGL 4.6")
-                Log.i(TAG, "MojoShader Profile: glsles3 (avoiding glspirv)")
-            }
             else ->
                 Log.i(TAG, "OpenGL Profile: OpenGL ES 3.0")
         }
 
         val mapBufferRange = envVars["FNA3D_OPENGL_USE_MAP_BUFFER_RANGE"]
         when {
-            mapBufferRange == "0" && rendererId in setOf(RENDERER_ZINK, RENDERER_ZINK_25, RENDERER_ANGLE, RENDERER_GL4ES_ANGLE) ->
+            mapBufferRange == "0" && rendererId in setOf(RENDERER_ANGLE, RENDERER_GL4ES_ANGLE) ->
                 Log.i(TAG, "Map Buffer Range: Disabled (Vulkan-translated renderer)")
             mapBufferRange == "0" ->
                 Log.i(TAG, "Map Buffer Range: Disabled (via settings)")

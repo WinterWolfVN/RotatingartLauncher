@@ -52,9 +52,6 @@ public class RendererLoader {
                     // 通过 FNA3D_OPENGL_LIBRARY 环境变量指定库路径
                     String eglLibPath = RendererConfig.getRendererLibraryPath(context, renderer.eglLibrary);
                     EnvVarsManager.INSTANCE.quickSetEnvVar("FNA3D_OPENGL_LIBRARY", eglLibPath);
-                    if (RendererConfig.RENDERER_ZINK.equals(rendererId)) {
-                        EnvVarsManager.INSTANCE.quickSetEnvVar("SDL_VIDEO_GL_DRIVER", eglLibPath);
-                    }
 
                 } catch (UnsatisfiedLinkError e) {
                     AppLogger.error(TAG, "Failed to preload renderer library: " + e.getMessage());
@@ -67,15 +64,6 @@ public class RendererLoader {
 
             // 加载 Turnip Vulkan 驱动（如果启用且是 Adreno GPU）
             loadTurnipDriverIfNeeded(context);
-            
-            // 对于 zink 渲染器，先加载 Vulkan（必须在 OSMesa 初始化之前）
-            if (RendererConfig.RENDERER_ZINK.equals(rendererId)) {
-                try {
-                    OSMRenderer.nativeLoadVulkan();
-                } catch (Exception e) {
-                    AppLogger.error(TAG, "Failed to initialize zink renderer: " + e.getMessage());
-                }
-            }
             
             // 对于 DXVK 渲染器，加载 DXVK 和 vkd3d 库
             if (RendererConfig.RENDERER_DXVK.equals(rendererId)) {
@@ -146,10 +134,6 @@ public class RendererLoader {
         EnvVarsManager.INSTANCE.quickSetEnvVar("LIBGL_NORMALIZE", null);
         EnvVarsManager.INSTANCE.quickSetEnvVar("LIBGL_NOINTOVLHACK", null);
         EnvVarsManager.INSTANCE.quickSetEnvVar("LIBGL_NOERROR", null);
-        EnvVarsManager.INSTANCE.quickSetEnvVar("GALLIUM_DRIVER", null);
-        EnvVarsManager.INSTANCE.quickSetEnvVar("MESA_LOADER_DRIVER_OVERRIDE", null);
-        EnvVarsManager.INSTANCE.quickSetEnvVar("MESA_GL_VERSION_OVERRIDE", null);
-        EnvVarsManager.INSTANCE.quickSetEnvVar("MESA_GLSL_VERSION_OVERRIDE", null);
     }
     
     /**

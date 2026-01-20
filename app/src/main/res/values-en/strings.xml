@@ -184,16 +184,10 @@
     <string name="renderer_gl4es_angle_desc">Translates to Vulkan backend, best balance of compatibility and performance (Recommended)</string>
     <string name="renderer_angle">ANGLE (Vulkan)</string>
     <string name="renderer_angle_desc">OpenGL ES over Vulkan (Google official, requires Android 7.0+)</string>
-    <string name="renderer_zink">Zink (Mesa)</string>
-    <string name="renderer_zink_desc">OpenGL 4.6 over Vulkan (Mesa Zink, requires Android 7.0+)</string>
-    <string name="renderer_virgl">VirGL Renderer</string>
-    <string name="renderer_virgl_desc">Gallium3D VirGL (OpenGL 4.3, requires Android 7.0+)</string>
-    <string name="renderer_freedreno">Freedreno (Adreno)</string>
-    <string name="renderer_freedreno_desc">Mesa Freedreno for Qualcomm Adreno GPU (requires Android 7.0+)</string>
     
     <!-- Vulkan Driver Settings -->
     <string name="vulkan_driver_turnip">Turnip Vulkan Driver</string>
-    <string name="vulkan_driver_turnip_desc">Use Mesa Turnip open-source Vulkan driver (Adreno GPU only, usually better performance)</string>
+    <string name="vulkan_driver_turnip_desc">Use Turnip open-source Vulkan driver (Adreno GPU only, usually better performance)</string>
     <string name="renderer_opengl">OpenGL (gl4es+)</string>
     <string name="renderer_opengl_desc">Via gl4es+ translation layer</string>
     <string name="renderer_opengles3">OpenGL ES 3 (Native)</string>

@@ -10,10 +10,8 @@ import com.app.ralaunch.manager.GameDeletionManager;
 import com.app.ralaunch.manager.GameLaunchManager;
 import com.app.ralaunch.manager.GameListManager;
 import com.app.ralaunch.manager.PermissionManager;
-import com.app.ralaunch.manager.RuntimeSelectorManager;
 import com.app.ralaunch.manager.UIManager;
 import com.app.ralaunch.manager.ThemeManager;
-import com.app.ralaunch.utils.AppLogger;
 
 
 public class MainInitializationDelegate {
@@ -22,7 +20,6 @@ public class MainInitializationDelegate {
         public PermissionManager permissionManager;
         public UIManager uiManager;
         public GameListManager gameListManager;
-        public RuntimeSelectorManager runtimeSelectorManager;
     }
 
     public static class InitAfterResult {
@@ -39,7 +36,6 @@ public class MainInitializationDelegate {
 
         result.uiManager = new UIManager(activity);
         result.gameListManager = new GameListManager(activity);
-        result.runtimeSelectorManager = new RuntimeSelectorManager(activity);
         return result;
     }
 
@@ -75,9 +71,7 @@ public class MainInitializationDelegate {
 
     public void onInitializationComplete(MainActivity activity,
                                          UIManager uiManager,
-                                         FragmentNavigator fragmentNavigator,
-                                         RuntimeSelectorManager runtimeSelectorManager,
-                                         View btnRuntimeSelector) {
+                                         FragmentNavigator fragmentNavigator) {
         if (uiManager != null) {
             uiManager.showMainLayout();
         }
@@ -85,18 +79,11 @@ public class MainInitializationDelegate {
         if (fragmentContainer != null) {
             fragmentContainer.setVisibility(View.GONE);
         }
-        initializeApp(activity, runtimeSelectorManager, fragmentNavigator, btnRuntimeSelector);
+        initializeApp(activity);
     }
 
-    public void initializeApp(MainActivity activity,
-                              RuntimeSelectorManager runtimeSelectorManager,
-                              FragmentNavigator fragmentNavigator,
-                              View btnRuntimeSelector) {
+    public void initializeApp(MainActivity activity) {
         initializeGameData();
-        if (runtimeSelectorManager != null && fragmentNavigator != null && btnRuntimeSelector != null) {
-            btnRuntimeSelector.setOnClickListener(v ->
-                    runtimeSelectorManager.showRuntimeSelectorDialog(fragmentNavigator.getFragmentManager()));
-        }
     }
 
     private void initializeGameData() {
@@ -109,4 +96,3 @@ public class MainInitializationDelegate {
         return (!legalAgreed || !componentsExtracted);
     }
 }
-

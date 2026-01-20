@@ -5,8 +5,6 @@ import androidx.fragment.app.FragmentManager;
 import com.app.ralaunch.R;
 import com.app.ralaunch.fragment.ControlLayoutFragment;
 import com.app.ralaunch.fragment.ControlPackFragment;
-import com.app.ralaunch.fragment.FileBrowserFragment;
-import com.app.ralaunch.fragment.ModManagerFragment;
 import com.app.ralaunch.fragment.SettingsFragment;
 import com.app.ralaunch.fragment.LocalImportFragment;
 import com.app.ralaunch.fragment.GameImportFragment;
@@ -22,11 +20,9 @@ public class MainNavigationDelegate {
 
     private final MainActivity activity;
     private final FragmentManager fragmentManager;
-    private final FileBrowserFragment.OnPermissionRequestListener permissionRequestListener;
     
     // 页面 View 引用
     private View gameListPage;
-    private View fileManagerPage;
     private View controlPage;
     private View downloadPage;
     private View settingsPage;
@@ -36,11 +32,9 @@ public class MainNavigationDelegate {
     // TopAppBar 引用
     private com.google.android.material.appbar.MaterialToolbar topAppBar;
 
-    public MainNavigationDelegate(MainActivity activity, FragmentManager fragmentManager, 
-                                  FileBrowserFragment.OnPermissionRequestListener permissionRequestListener) {
+    public MainNavigationDelegate(MainActivity activity, FragmentManager fragmentManager) {
         this.activity = activity;
         this.fragmentManager = fragmentManager;
-        this.permissionRequestListener = permissionRequestListener;
         initializeViews();
     }
 
@@ -49,7 +43,6 @@ public class MainNavigationDelegate {
      */
     private void initializeViews() {
         gameListPage = activity.findViewById(R.id.gameListPage);
-        fileManagerPage = activity.findViewById(R.id.fileManagerPage);
         controlPage = activity.findViewById(R.id.controlPage);
         downloadPage = activity.findViewById(R.id.downloadPage);
         settingsPage = activity.findViewById(R.id.settingsPage);
@@ -85,9 +78,6 @@ public class MainNavigationDelegate {
                         showGamePage();
                     }
                     return true;
-                } else if (itemId == R.id.nav_file) {
-                    showFilePage();
-                    return true;
                 } else if (itemId == R.id.nav_control) {
                     showControlPage();
                     return true;
@@ -106,34 +96,15 @@ public class MainNavigationDelegate {
      * 显示游戏页面
      */
     public void showGamePage() {
-        setPageVisibility(true, false, false, false, false, false, false);
+        setPageVisibility(true, false, false, false, false, false);
         updateTopAppBar();
-    }
-
-    /**
-     * 显示文件管理器页面（模组管理器）
-     */
-    public void showFilePage() {
-        setPageVisibility(false, true, false, false, false, false, false);
-        updateTopAppBar();
-        
-        // 初始化模组管理器 Fragment（如果尚未初始化）
-        if (fileManagerPage != null && fragmentManager.findFragmentById(R.id.fileManagerPage) == null) {
-            ModManagerFragment modManagerFragment = new ModManagerFragment();
-            
-            fragmentManager.beginTransaction()
-                    .replace(R.id.fileManagerPage, modManagerFragment, "mod_manager")
-                    .commit();
-        }
-        
-        hideFragmentTopBar(fileManagerPage);
     }
 
     /**
      * 显示控制布局页面
      */
     public void showControlPage() {
-        setPageVisibility(false, false, true, false, false, false, false);
+        setPageVisibility(false, true, false, false, false, false);
         updateTopAppBar();
         
         // 获取已存在的 Fragment
@@ -167,7 +138,7 @@ public class MainNavigationDelegate {
      * 显示控件商店页面
      */
     public void showControlStorePage() {
-        setPageVisibility(false, false, false, false, false, false, true);
+        setPageVisibility(false, false, false, false, false, true);
         updateTopAppBar();
         
         // 初始化控件商店 Fragment（如果尚未初始化）
@@ -188,7 +159,7 @@ public class MainNavigationDelegate {
      * 显示下载页面
      */
     public void showDownloadPage() {
-        setPageVisibility(false, false, false, true, false, false, false);
+        setPageVisibility(false, false, true, false, false, false);
         updateTopAppBar();
         
         // 初始化下载 Fragment（如果尚未初始化）
@@ -207,7 +178,7 @@ public class MainNavigationDelegate {
      * 显示设置页面
      */
     public void showSettingsPage() {
-        setPageVisibility(false, false, false, false, true, false, false);
+        setPageVisibility(false, false, false, true, false, false);
         updateTopAppBar();
         
         // 初始化设置 Fragment（如果尚未初始化）
@@ -228,17 +199,16 @@ public class MainNavigationDelegate {
      * 显示导入游戏页面（由 MainImportDelegate 调用）
      */
     public void showImportPage() {
-        setPageVisibility(false, false, false, false, false, true, false);
+        setPageVisibility(false, false, false, false, true, false);
         updateTopAppBar();
     }
 
     /**
      * 设置页面可见性
      */
-    private void setPageVisibility(boolean game, boolean file, boolean control, 
+    private void setPageVisibility(boolean game, boolean control, 
                                   boolean download, boolean settings, boolean importPage, boolean controlStore) {
         if (gameListPage != null) gameListPage.setVisibility(game ? View.VISIBLE : View.GONE);
-        if (fileManagerPage != null) fileManagerPage.setVisibility(file ? View.VISIBLE : View.GONE);
         if (controlPage != null) controlPage.setVisibility(control ? View.VISIBLE : View.GONE);
         if (downloadPage != null) downloadPage.setVisibility(download ? View.VISIBLE : View.GONE);
         if (settingsPage != null) settingsPage.setVisibility(settings ? View.VISIBLE : View.GONE);

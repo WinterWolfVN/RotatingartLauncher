@@ -20,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.app.ralaunch.R;
 import com.app.ralaunch.utils.AppLogger;
-import com.app.ralib.error.ErrorHandler;
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -37,8 +36,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * GOG 客户端界面 Fragment - 现代化 MD3 设计
- * 提供 GOG 游戏库的登录、浏览和下载功能
+ * GOG 客户端界面 Fragment - 现代化 MD3 风格
+ * 提供 GOG 游戏库登录、列表和一键下载安装功能
  */
 public class GogClientFragment extends Fragment {
     private static final String TAG = "GogClientFragment";
@@ -79,12 +78,12 @@ public class GogClientFragment extends Fragment {
         downloadExecutor = Executors.newSingleThreadExecutor();
         modLoaderConfigManager = new ModLoaderConfigManager(requireContext());
 
-        // 设置两步验证回调
+        // 设置双重验证回调
         apiClient.setTwoFactorCallback(this::showTwoFactorDialog);
     }
 
     /**
-     * 显示两步验证对话框
+     * 显示双重验证对话框
      */
     private String showTwoFactorDialog(String type) {
         final String[] result = {null};
@@ -125,9 +124,9 @@ public class GogClientFragment extends Fragment {
                             .setCancelable(false)
                             .show();
                 } catch (Exception e) {
-                    AppLogger.error(TAG, "创建对话框时发生异常", e);
+                    AppLogger.error(TAG, "创建验证对话框时发生异常", e);
                     synchronized (lock) {
-                        lock.notify(); // 发生错误时也要唤醒等待线程
+                        lock.notify(); // 发生异常时也要唤醒等待线程
                     }
                 }
             });
@@ -168,14 +167,14 @@ public class GogClientFragment extends Fragment {
     }
 
     private void initViews(View view) {
-        // 登录界面组件
+        // 登录界面容器
         loginContainer = view.findViewById(R.id.loginContainer);
         editUsername = view.findViewById(R.id.editUsername);
         editPassword = view.findViewById(R.id.editPassword);
         btnLogin = view.findViewById(R.id.btnLogin);
         btnVisitGog = view.findViewById(R.id.btnVisitGog);
 
-        // 已登录界面组件
+        // 已登录界面容器
         loggedInContainer = view.findViewById(R.id.loggedInContainer);
         userAvatar = view.findViewById(R.id.userAvatar);
         userName = view.findViewById(R.id.userName);
@@ -186,14 +185,14 @@ public class GogClientFragment extends Fragment {
         gamesRecyclerView = view.findViewById(R.id.gamesRecyclerView);
         emptyState = view.findViewById(R.id.emptyState);
 
-        // 加载组件
+        // 加载布局
         loadingLayout = view.findViewById(R.id.loadingLayout);
         loadingText = view.findViewById(R.id.loadingText);
 
-        // GOG Logo - 使用布局文件中的静态资源
+        // GOG Logo - 使用资源文件中的静态资源
         gogLogoImage = view.findViewById(R.id.gogLogoImage);
 
-        // 设置游戏列表 - 横屏网格布局
+        // 游戏列表 - 使用网格布局
         gameAdapter = new GogGameAdapter(new ArrayList<>(), this::onGameClick);
         gameAdapter.setViewType(true); // 默认网格视图
         androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
@@ -206,7 +205,7 @@ public class GogClientFragment extends Fragment {
         // 登录按钮
         btnLogin.setOnClickListener(v -> startLogin());
 
-        // 访问 GOG 官网
+        // 访问 GOG 网页
         if (btnVisitGog != null) {
             btnVisitGog.setOnClickListener(v -> {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.gog.com"));
@@ -237,7 +236,7 @@ public class GogClientFragment extends Fragment {
     }
 
     /**
-     * 搜索过滤游戏
+     * 根据关键字过滤游戏
      */
     private void filterGames(String query) {
         if (query == null || query.trim().isEmpty()) {
@@ -245,7 +244,7 @@ public class GogClientFragment extends Fragment {
             filteredGames.clear();
             filteredGames.addAll(allGames);
         } else {
-            // 根据标题过滤
+            // 根据标题搜索
             filteredGames.clear();
             String lowerQuery = query.toLowerCase();
             for (GogApiClient.GogGame game : allGames) {
@@ -256,7 +255,7 @@ public class GogClientFragment extends Fragment {
         }
         
         // 更新适配器
-            if (gameAdapter != null) {
+        if (gameAdapter != null) {
             gameAdapter.updateGames(filteredGames);
         }
         
@@ -338,10 +337,10 @@ public class GogClientFragment extends Fragment {
                 // 刷新游戏列表（在主线程中调用 showLoading）
                 requireActivity().runOnUiThread(() -> refreshGames());
             } catch (IOException e) {
-                AppLogger.error(TAG, "加载用户信息失败", e);
+                AppLogger.error(TAG, "获取用户信息失败", e);
                 requireActivity().runOnUiThread(() -> {
                     hideLoading();
-                    // 即使用户信息加载失败，也继续刷新游戏列表
+                    // 即使用户信息加载失败，也尝试刷新游戏列表
                     refreshGames();
                 });
             }
@@ -375,7 +374,7 @@ public class GogClientFragment extends Fragment {
                     hideLoading();
                     if (success) {
                         Toast.makeText(requireContext(), getString(R.string.gog_login_success), Toast.LENGTH_SHORT).show();
-                        // 清空密码
+                        // 清除密码
                         editPassword.setText("");
                         updateLoginState();
                     } else {
@@ -459,7 +458,7 @@ public class GogClientFragment extends Fragment {
     }
 
     /**
-     * 处理游戏点击 - 显示版本选择对话框
+     * 点击游戏项 - 显示版本选择对话框
      */
     private void onGameClick(GogApiClient.GogGame game) {
         if (!isAdded()) return;
@@ -488,7 +487,7 @@ public class GogClientFragment extends Fragment {
                 requireActivity().runOnUiThread(() -> {
                     hideLoading();
                     
-                    // 根据错误类型给出友好提示
+                    // 根据错误类型提供友好提示
                     String errorMsg;
                     if (e.getMessage() != null && e.getMessage().contains("connection abort")) {
                         errorMsg = getString(R.string.gog_network_abort);
@@ -519,14 +518,14 @@ public class GogClientFragment extends Fragment {
                                            ModLoaderConfigManager.ModLoaderRule rule) {
         if (!isAdded()) return;
         
-        // 构建游戏版本列表
+        // 准备游戏版本列表
         List<GogApiClient.GameFile> gameVersions = details.installers;
         if (gameVersions.isEmpty()) {
             Toast.makeText(requireContext(), getString(R.string.gog_no_game_version), Toast.LENGTH_SHORT).show();
             return;
         }
         
-        // 构建ModLoader版本列表
+        // 准备ModLoader版本列表
         List<ModLoaderConfigManager.ModLoaderVersion> modLoaderVersions = rule.versions;
         if (modLoaderVersions.isEmpty()) {
             Toast.makeText(requireContext(), getString(R.string.gog_no_modloader_version), Toast.LENGTH_SHORT).show();
@@ -537,14 +536,14 @@ public class GogClientFragment extends Fragment {
         final int[] selectedGameVersion = {0};
         final int[] selectedModLoaderVersion = {0};
         
-        // 构建游戏版本字符串数组
+        // 创建游戏版本字符串数组
         String[] gameVersionNames = new String[gameVersions.size()];
         for (int i = 0; i < gameVersions.size(); i++) {
             GogApiClient.GameFile file = gameVersions.get(i);
             gameVersionNames[i] = file.version + " (" + file.getSizeFormatted() + ")";
         }
         
-        // 构建ModLoader版本字符串数组
+        // 创建ModLoader版本字符串数组
         String[] modLoaderVersionNames = new String[modLoaderVersions.size()];
         for (int i = 0; i < modLoaderVersions.size(); i++) {
             modLoaderVersionNames[i] = modLoaderVersions.get(i).getDisplayString(requireContext());
@@ -554,7 +553,7 @@ public class GogClientFragment extends Fragment {
         View dialogView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.dialog_version_selection, null);
         
-        // 获取视图组件
+        // 获取视图引用
         TextView tvDialogTitle = dialogView.findViewById(R.id.tvDialogTitle);
         TextView tvModLoaderTitle = dialogView.findViewById(R.id.tvModLoaderTitle);
         android.widget.Spinner spinnerGameVersion = dialogView.findViewById(R.id.spinnerGameVersion);
@@ -594,7 +593,7 @@ public class GogClientFragment extends Fragment {
             public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
         
-        // 创建对话框 - 使用自定义的 GOG 对话框样式（透明背景）
+        // 创建对话框 - 使用自定义的 GOG 对话框样式（半透明背景）
         androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext(), R.style.GogDialogStyle)
                 .setView(dialogView)
                 .setCancelable(true)
@@ -612,10 +611,10 @@ public class GogClientFragment extends Fragment {
         
         dialog.show();
         
-        // 只移除窗口装饰和内边距，不设置窗口大小（由 XML 控制）
+        // 去除默认安装后的内边距，让大小由 XML 控制
         if (dialog.getWindow() != null) {
             android.view.Window window = dialog.getWindow();
-            // 移除窗口装饰视图的所有内边距
+            // 移除默认容器视图的垂直内边距
             android.view.View decorView = window.getDecorView();
             decorView.setPadding(0, 0, 0, 0);
             // 设置窗口背景为完全透明
@@ -628,7 +627,7 @@ public class GogClientFragment extends Fragment {
     private GogDownloadProgressDialog progressDialog;
 
     /**
-     * 针对有 ModLoader 规则的游戏，执行下载+安装流程
+     * 针对带 ModLoader 规则的游戏执行下载+安装流程
      */
     private void startModLoaderFlow(GogApiClient.GogGame game,
                                     GogApiClient.GameDetails details,
@@ -637,7 +636,7 @@ public class GogClientFragment extends Fragment {
                                     ModLoaderConfigManager.ModLoaderRule rule) {
         if (!isAdded()) return;
 
-        // 显示进度对话框
+        // 显示下载进度对话框
         String gameFileName = installer.name != null && !installer.name.isEmpty() 
                 ? installer.name : game.title;
         String modLoaderName = rule.name + " " + modLoaderVersion.version;
@@ -659,7 +658,7 @@ public class GogClientFragment extends Fragment {
                 return;
             }
 
-            // 获取安装程序链接
+            // 获取安装程序下载链接
             requireActivity().runOnUiThread(() -> {
                 if (progressDialog != null) {
                     progressDialog.setGameDownloadStatus(getString(R.string.gog_download_status_getting_link));
@@ -696,7 +695,7 @@ public class GogClientFragment extends Fragment {
                     modLoaderVersion.fileName : "modloader.zip"));
 
             try {
-                // 下载游戏本体
+                // 下载游戏文件
                 String downloadingStatus = getString(R.string.gog_download_status_downloading);
                 String completedStatus = getString(R.string.gog_download_status_completed);
                 requireActivity().runOnUiThread(() -> {
@@ -734,19 +733,18 @@ public class GogClientFragment extends Fragment {
                     }
                 });
 
-                // 下载完成，使用导入游戏相同的 API 进行安装
+                // 下载完成后，使用通用导入 API 进行安装
                 requireActivity().runOnUiThread(() -> {
                     if (progressDialog != null) {
                         progressDialog.dismiss();
                     }
                     
-                    // 使用 MainActivity 的 startGameImport 方法，复用导入游戏的逻辑
+                    // 使用 MainActivity 的 startGameImport 逻辑处理下载的游戏
                     if (getActivity() instanceof com.app.ralaunch.activity.MainActivity) {
                         com.app.ralaunch.activity.MainActivity activity = 
                                 (com.app.ralaunch.activity.MainActivity) getActivity();
                         
-                        // 调用 MainActivity 的导入方法
-                        // 这会显示 LocalImportFragment 并使用相同的安装流程
+                        // 构建跳转到 LocalImportFragment 的参数
                         Bundle args = new Bundle();
                         args.putString("gameFilePath", installerFile.getAbsolutePath());
                         args.putString("modLoaderFilePath", modLoaderFile.getAbsolutePath());
@@ -761,8 +759,7 @@ public class GogClientFragment extends Fragment {
                             com.app.ralib.utils.FileUtils.deleteDirectoryRecursively(modLoaderFile);
                             com.app.ralib.utils.FileUtils.deleteDirectoryRecursively(downloadDir);
                             
-                            // 使用 MainActivity 的 onImportComplete 方法添加游戏到列表
-                            // 但不要重复添加，所以先检查 LocalImportFragment 是否已经添加了
+                            // 调用 MainActivity 的回调添加游戏到列表
                             activity.onImportComplete(gameType, newGame);
                             
                             Toast.makeText(requireContext(), 
@@ -778,15 +775,13 @@ public class GogClientFragment extends Fragment {
                         // 显示导入页面
                         View importPage = activity.findViewById(R.id.importPage);
                         if (importPage != null) {
-                            // 先切换到导入页面
+                            // 切换到导入页面布局
                             importPage.setVisibility(View.VISIBLE);
                             View gameListPage = activity.findViewById(R.id.gameListPage);
-                            View fileManagerPage = activity.findViewById(R.id.fileManagerPage);
                             View controlPage = activity.findViewById(R.id.controlPage);
                             View downloadPage = activity.findViewById(R.id.downloadPage);
                             View settingsPage = activity.findViewById(R.id.settingsPage);
                             if (gameListPage != null) gameListPage.setVisibility(View.GONE);
-                            if (fileManagerPage != null) fileManagerPage.setVisibility(View.GONE);
                             if (controlPage != null) controlPage.setVisibility(View.GONE);
                             if (downloadPage != null) downloadPage.setVisibility(View.GONE);
                             if (settingsPage != null) settingsPage.setVisibility(View.GONE);

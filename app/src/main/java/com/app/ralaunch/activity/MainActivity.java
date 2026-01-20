@@ -12,7 +12,6 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.app.ralaunch.R;
 import com.app.ralaunch.fragment.ControlLayoutFragment;
-import com.app.ralaunch.fragment.FileBrowserFragment;
 import com.app.ralaunch.fragment.GameImportFragment;
 import com.app.ralaunch.fragment.InitializationFragment;
 import com.app.ralaunch.fragment.LocalImportFragment;
@@ -30,14 +29,12 @@ public class MainActivity extends AppCompatActivity implements
         GameAdapter.OnGameClickListener,
         GameAdapter.OnGameDeleteListener,
         SettingsFragment.OnSettingsBackListener,
-        FileBrowserFragment.OnPermissionRequestListener,
         LocalImportFragment.OnImportCompleteListener {
 
     // 管理器
     private GameListManager gameListManager;
     private PermissionManager permissionManager;
     private FragmentNavigator fragmentNavigator;
-    private RuntimeSelectorManager runtimeSelectorManager;
     private GameDeletionManager gameDeletionManager;
     private UIManager uiManager;
     private ThemeManager themeManager;
@@ -60,9 +57,6 @@ public class MainActivity extends AppCompatActivity implements
     private com.google.android.material.button.MaterialButton launchGameButton;
     private LinearLayout emptySelectionText;
     private RecyclerView gameRecyclerView;
-    private View runtimeSelectContainer;
-    private View btnRuntimeSelector;
-    private TextView tvCurrentRuntime;
 
     // 权限回调接口
     public interface PermissionCallback {
@@ -72,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements
 
     // 提供给初始化 Fragment 回调
     public void onInitializationCompleteDelegate() {
-        initDelegate.onInitializationComplete(this, uiManager, fragmentNavigator, runtimeSelectorManager, btnRuntimeSelector);
+        initDelegate.onInitializationComplete(this, uiManager, fragmentNavigator);
     }
 
     @Override
@@ -103,7 +97,6 @@ public class MainActivity extends AppCompatActivity implements
         permissionManager = beforeResult.permissionManager;
         uiManager = beforeResult.uiManager;
         gameListManager = beforeResult.gameListManager;
-        runtimeSelectorManager = beforeResult.runtimeSelectorManager;
         // 设置全屏模式
         uiManager.setupFullscreen();
 
@@ -130,14 +123,7 @@ public class MainActivity extends AppCompatActivity implements
         themeManager = afterResult.themeManager;
 
         // 初始化 delegate（必须在 setupUI 之前，因为 NavigationRail 需要 navigationDelegate）
-        FileBrowserFragment.OnPermissionRequestListener permissionListener = callback -> {
-            if (hasRequiredPermissions()) {
-                callback.onPermissionsGranted();
-            } else {
-                requestRequiredPermissions(callback);
-            }
-        };
-        navigationDelegate = new MainNavigationDelegate(this, getSupportFragmentManager(), permissionListener);
+        navigationDelegate = new MainNavigationDelegate(this, getSupportFragmentManager());
         importDelegate = new MainImportDelegate(this, getSupportFragmentManager(), fragmentNavigator, navigationDelegate);
         importDelegate.setOnImportCompleteListener(this::onImportComplete);
         controlFragmentDelegate = new MainControlFragmentDelegate(this, fragmentNavigator, uiManager);
@@ -158,7 +144,7 @@ public class MainActivity extends AppCompatActivity implements
         if (initDelegate.needInitialization(this)) {
             initDelegate.showInitializationFragment(this, fragmentNavigator, uiManager);
         } else {
-            initDelegate.initializeApp(this, runtimeSelectorManager, fragmentNavigator, btnRuntimeSelector);
+            initDelegate.initializeApp(this);
         }
         
         // 如果需要恢复设置页面，在 UI 初始化完成后立即显示（无延迟）
@@ -200,16 +186,6 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    // 实现 FileBrowserFragment.OnPermissionRequestListener
-    @Override
-    public void onPermissionRequest(PermissionCallback callback) {
-        if (hasRequiredPermissions()) {
-            callback.onPermissionsGranted();
-        } else {
-            requestRequiredPermissions(callback);
-        }
-    }
-
     /**
      * Initialize logging system
      */
@@ -234,9 +210,6 @@ public class MainActivity extends AppCompatActivity implements
         selectedGameDescription = findViewById(R.id.selectedGameDescription);
         launchGameButton = findViewById(R.id.launchGameButton);
         emptySelectionText = findViewById(R.id.emptySelectionText);
-        runtimeSelectContainer = findViewById(R.id.runtimeSelectContainer);
-        btnRuntimeSelector = findViewById(R.id.btnRuntimeSelector);
-        tvCurrentRuntime = findViewById(R.id.tvCurrentRuntime);
 
         // 初始化RecyclerView
         gameRecyclerView = findViewById(R.id.gameRecyclerView);
@@ -248,10 +221,6 @@ public class MainActivity extends AppCompatActivity implements
         gameListManager.setOnGameSelectedListener(game -> {
             // 游戏选择处理 - 显示启动按钮
             uiManager.showLaunchGameButton();
-            // 根据游戏的运行时类型更新显示
-            if (runtimeSelectorManager != null) {
-                runtimeSelectorManager.updateForGameRuntime(game.getRuntime());
-            }
         });
         gameListManager.setOnGameDeleteListener(this);
 
@@ -259,12 +228,6 @@ public class MainActivity extends AppCompatActivity implements
         // 初始化 UI 管理器（刷新和添加游戏按钮已移至 NavigationRail）
         // settingsButton 和 gogButton 已移至 NavigationRail，不再需要
         uiManager.initialize(mainLayout, null, null, null, null, launchGameButton);
-        
-        // 初始化运行时选择器管理器
-        runtimeSelectorManager.initialize(runtimeSelectContainer, btnRuntimeSelector, tvCurrentRuntime);
-        runtimeSelectorManager.setOnVersionChangedListener(version -> {
-            showSuccessSnackbar(getString(R.string.main_runtime_switched, version));
-        });
 
         // NavigationRail 点击监听器 - 由 MainNavigationDelegate 处理
         NavigationRailView navigationRail = findViewById(R.id.navigationRail);
@@ -316,15 +279,6 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    /**
-     * 显示文件管理器页面
-     */
-    private void showFilePage() {
-        if (navigationDelegate != null) {
-            navigationDelegate.showFilePage();
-        }
-    }
-    
     /**
      * 显示控制布局页面
      */
