@@ -202,7 +202,31 @@ SDL_bool Android_LoadRenderer(const char *renderer_name)
     /* 使用 dlopen 加载渲染器库 (RTLD_GLOBAL 很关键!) */
     LOGI("  Loading with dlopen(RTLD_NOW | RTLD_GLOBAL)...");
 
+    /* 首先尝试直接加载（如果库在 LD_LIBRARY_PATH 中） */
     renderer_handle = dlopen(backend->egl_library, RTLD_NOW | RTLD_GLOBAL);
+    
+    /* 如果失败，尝试从 runtime_libs 目录加载 */
+    if (!renderer_handle) {
+        const char *runtime_dir = getenv("RALCORE_RUNTIMEDIR");
+        if (runtime_dir) {
+            char full_path[512];
+            SDL_snprintf(full_path, sizeof(full_path), "%s/%s", runtime_dir, backend->egl_library);
+            LOGI("  Trying runtime_libs path: %s", full_path);
+            renderer_handle = dlopen(full_path, RTLD_NOW | RTLD_GLOBAL);
+        }
+    }
+    
+    /* 如果还是失败，尝试从 native lib 目录加载 */
+    if (!renderer_handle) {
+        const char *native_dir = getenv("RALCORE_NATIVEDIR");
+        if (native_dir) {
+            char full_path[512];
+            SDL_snprintf(full_path, sizeof(full_path), "%s/%s", native_dir, backend->egl_library);
+            LOGI("  Trying native lib path: %s", full_path);
+            renderer_handle = dlopen(full_path, RTLD_NOW | RTLD_GLOBAL);
+        }
+    }
+    
     if (!renderer_handle) {
         LOGE("  ✗ dlopen failed: %s", dlerror());
         LOGE("  Falling back to native renderer");

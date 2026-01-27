@@ -133,7 +133,7 @@ class ControlPackManager(private val context: Context) {
      */
     private fun saveManagerState(state: ManagerState) {
         try {
-            managerStateFile.writeText(json.encodeToString(state))
+            managerStateFile.writeText(json.encodeToString(ManagerState.serializer(), state))
         } catch (e: Exception) {
             AppLogger.error(TAG, "Failed to save manager state", e)
         }

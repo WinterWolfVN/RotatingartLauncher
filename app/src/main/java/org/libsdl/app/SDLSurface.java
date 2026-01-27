@@ -38,7 +38,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     private static native void nativeSetTouchData(int count, float[] x, float[] y, int screenWidth, int screenHeight);
     private static native void nativeClearTouchData();
     
-      private com.app.ralaunch.activity.GameVirtualControlsManager mVirtualControlsManager;
+      private com.app.ralaunch.game.controls.GameVirtualControlsManager mVirtualControlsManager;
       
       // Touch bridge availability flag (lazy init)
     private static Boolean sTouchBridgeAvailable = null;
@@ -505,7 +505,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     /**
      * 设置虚拟控件管理器（用于更新虚拟鼠标光标）
      */
-    public void setVirtualControlsManager(com.app.ralaunch.activity.GameVirtualControlsManager manager) {
+    public void setVirtualControlsManager(com.app.ralaunch.game.controls.GameVirtualControlsManager manager) {
         mVirtualControlsManager = manager;
     }
     

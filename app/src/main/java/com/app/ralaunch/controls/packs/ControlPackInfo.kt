@@ -125,7 +125,7 @@ data class ControlPackInfo(
         }
     }
     
-    fun toJson(): String = json.encodeToString(this)
+    fun toJson(): String = json.encodeToString(serializer(), this)
     
     fun saveTo(file: File) {
         file.parentFile?.mkdirs()

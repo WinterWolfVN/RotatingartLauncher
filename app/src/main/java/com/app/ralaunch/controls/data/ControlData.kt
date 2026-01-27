@@ -460,8 +460,8 @@ sealed class ControlData {
             ignoreUnknownKeys = true
             encodeDefaults = true
         }
-        val jsonString = json.encodeToString( this)
-        return json.decodeFromString(jsonString)
+        val jsonString = json.encodeToString(ControlData.serializer(), this)
+        return json.decodeFromString(ControlData.serializer(), jsonString)
     }
 
     @Serializable

@@ -854,16 +854,22 @@
     <string name="gog_login_title">登录 GOG</string>
     <string name="gog_login_subtitle">访问您的 DRM-Free 游戏库</string>
     <string name="gog_email_hint">邮箱地址</string>
+    <string name="gog_email_label">邮箱地址</string>
     <string name="gog_password_hint">密码</string>
+    <string name="gog_password_label">密码</string>
     <string name="gog_visit_website">访问官网</string>
     <string name="gog_login_button">登录</string>
     <string name="gog_user">GOG 用户</string>
     <string name="gog_library">游戏库</string>
     <string name="gog_search_hint">搜索游戏</string>
+    <string name="gog_search_placeholder">搜索游戏...</string>
     <string name="gog_logout_button">登出</string>
+    <string name="gog_logout">登出</string>
     <string name="gog_no_games_found">没有找到游戏</string>
     <string name="gog_no_games_message">您的 GOG 库中暂无游戏</string>
     <string name="gog_loading">加载中...</string>
+    <string name="gog_select_game">选择一个游戏</string>
+    <string name="installed">已安装</string>
     
     <!-- Local Import -->
     <string name="import_game_title">导入游戏</string>
@@ -1027,6 +1033,8 @@
     <string name="key_open_keyboard">打开键盘</string>
     <string name="key_keyboard">键盘</string>
     <string name="key_touchpad_buttons">触摸板左右键</string>
+    <string name="key_selector_keyboard_mode">键盘</string>
+    <string name="key_selector_gamepad_mode">手柄</string>
     <string name="key_space">空格</string>
     <string name="key_enter">回车</string>
     <string name="key_arrow_up">↑ 上</string>
@@ -1327,6 +1335,9 @@
     <string name="import_progress_title">导入进度</string>
     <string name="init_component_rootfs_desc">Box64以及Debian rootfs</string>
     <string name="init_component_x64lib_desc">Box64 x86_64 库 (libstdc++, libssl 等)</string>
+    <string name="init_component_runtime_libs_desc">运行时库 (Box64, 渲染器等)</string>
+    <string name="init_extracting_runtime_libs">解压运行时库...</string>
+    <string name="init_extraction_failed_simple">解压失败</string>
     
     <!-- Settings Developer -->
     <string name="settings_experimental_features">实验性功能</string>

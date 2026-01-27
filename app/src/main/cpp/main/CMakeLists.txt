@@ -26,17 +26,19 @@ set(MAIN_SOURCES
 add_library(${CMAKE_PROJECT_NAME} SHARED ${MAIN_SOURCES})
 
 # 基础链接库
+# 注意：box64 改为运行时动态加载 (dlopen)，不再编译时链接
+# 这样可以将 libbox64.so 压缩存储，减小 APK 体积约 50MB
 target_link_libraries(${CMAKE_PROJECT_NAME}
         android
         log
         SDL2            # SDL2使用EGL后端
-        dl              # 用于dlopen/dlsym（动态加载EGL库）
+        dl              # 用于dlopen/dlsym（动态加载 Box64 等库）
         FAudio-shared   # FAudio音频库
         FNA3D           # FNA3D图形库
         mojoshader      # MojoShader着色器库（FNA3D需要）
         netcorehost     # .NET Core Hosting库
         linkernsbypass  # Android命名空间绕过库
-        box64           # Box64 库
+        # box64         # Box64 改为运行时 dlopen 加载
         glibc_bridge    # glibc-bridge 库（Box64 使用）
         c++_shared
         ${CXX_SHARED_LIB}

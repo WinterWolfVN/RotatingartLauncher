@@ -1,0 +1,863 @@
+package com.app.ralaunch.ui.init
+
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.app.ralaunch.R
+import com.app.ralaunch.manager.PermissionManager
+import com.app.ralaunch.shared.AppConstants
+import com.app.ralaunch.shared.ui.model.ComponentState
+import com.app.ralaunch.shared.ui.model.InitUiState
+
+/**
+ * 初始化页面步骤
+ */
+enum class InitPage {
+    LEGAL,      // 法律说明
+    SETUP       // 初始化（权限+解压）
+}
+
+/**
+ * 横屏初始化界面
+ * 第一页：法律说明
+ * 第二页：初始化（权限请求 + 组件解压）
+ */
+@Composable
+fun InitializationScreen(
+    permissionManager: PermissionManager,
+    onComplete: () -> Unit,
+    onExit: () -> Unit,
+    onExtract: (List<ComponentState>, (Int, Int, Boolean, String) -> Unit) -> Unit,
+    prefs: SharedPreferences,
+    context: Context
+) {
+    var currentPage by remember { mutableStateOf(InitPage.LEGAL) }
+    var uiState by remember { mutableStateOf(InitUiState()) }
+    
+    // 初始化组件列表（仅显示核心组件，runtime_libs 在后台处理）
+    LaunchedEffect(Unit) {
+        val components = mutableListOf(
+            ComponentState("rootfs", context.getString(R.string.init_component_rootfs_desc), "rootfs.tar.xz", true),
+            ComponentState("x64lib", context.getString(R.string.init_component_x64lib_desc), "x64lib.tar.xz", true),
+            ComponentState("dotnet", context.getString(R.string.init_component_dotnet_desc), "dotnet.tar.xz", true)
+        )
+        
+        uiState = uiState.copy(
+            components = components,
+            hasPermissions = permissionManager.hasRequiredPermissions()
+        )
+        
+        // 检查是否已同意法律条款
+        val legalAgreed = prefs.getBoolean(AppConstants.InitKeys.LEGAL_AGREED, false)
+        if (legalAgreed) {
+            currentPage = InitPage.SETUP
+        }
+    }
+
+    // 深色渐变背景
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF0D1117),
+                        Color(0xFF161B22),
+                        Color(0xFF21262D)
+                    )
+                )
+            )
+    ) {
+        // 装饰性背景元素
+        DecorativeBackground()
+        
+        // 主内容
+        AnimatedContent(
+            targetState = currentPage,
+            transitionSpec = {
+                slideInHorizontally(
+                    initialOffsetX = { if (targetState > initialState) it else -it },
+                    animationSpec = tween(400, easing = FastOutSlowInEasing)
+                ) + fadeIn(tween(300)) togetherWith
+                slideOutHorizontally(
+                    targetOffsetX = { if (targetState > initialState) -it else it },
+                    animationSpec = tween(400, easing = FastOutSlowInEasing)
+                ) + fadeOut(tween(200))
+            },
+            label = "page_transition"
+        ) { page ->
+            when (page) {
+                InitPage.LEGAL -> LegalPage(
+                    onAccept = {
+                        prefs.edit().putBoolean(AppConstants.InitKeys.LEGAL_AGREED, true).apply()
+                        currentPage = InitPage.SETUP
+                    },
+                    onDecline = onExit,
+                    context = context
+                )
+                InitPage.SETUP -> SetupPage(
+                    uiState = uiState,
+                    permissionManager = permissionManager,
+                    onRequestPermissions = {
+                        if (permissionManager.hasRequiredPermissions()) {
+                            prefs.edit().putBoolean(AppConstants.InitKeys.PERMISSIONS_GRANTED, true).apply()
+                            uiState = uiState.copy(hasPermissions = true)
+                        } else {
+                            permissionManager.requestRequiredPermissions(object : PermissionManager.PermissionCallback {
+                                override fun onPermissionsGranted() {
+                                    prefs.edit().putBoolean(AppConstants.InitKeys.PERMISSIONS_GRANTED, true).apply()
+                                    uiState = uiState.copy(hasPermissions = true)
+                                    Toast.makeText(context, context.getString(R.string.init_permissions_granted), Toast.LENGTH_SHORT).show()
+                                }
+                                override fun onPermissionsDenied() {
+                                    Toast.makeText(context, context.getString(R.string.init_permissions_denied), Toast.LENGTH_LONG).show()
+                                }
+                            })
+                        }
+                    },
+                    onStartExtraction = {
+                        if (uiState.isExtracting) return@SetupPage
+                        uiState = uiState.copy(isExtracting = true, statusMessage = context.getString(R.string.init_preparing_file))
+                        
+                        onExtract(uiState.components) { index, progress, installed, status ->
+                            val list = uiState.components.toMutableList()
+                            list[index] = list[index].copy(progress = progress, isInstalled = installed, status = status)
+                            val overall = list.sumOf { it.progress } / list.size
+                            uiState = uiState.copy(
+                                components = list,
+                                overallProgress = overall,
+                                statusMessage = status,
+                                isComplete = overall >= 100
+                            )
+                        }
+                    },
+                    context = context
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 装饰性背景
+ */
+@Composable
+private fun DecorativeBackground() {
+    val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(60000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+    
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 渐变光晕
+        Box(
+            modifier = Modifier
+                .size(600.dp)
+                .offset(x = (-200).dp, y = (-100).dp)
+                .graphicsLayer { rotationZ = rotation }
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF238636).copy(alpha = 0.15f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(500.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 150.dp, y = 100.dp)
+                .graphicsLayer { rotationZ = -rotation * 0.5f }
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF1F6FEB).copy(alpha = 0.1f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+    }
+}
+
+/**
+ * 法律说明页面 - 横屏双栏布局
+ */
+@Composable
+private fun LegalPage(
+    onAccept: () -> Unit,
+    onDecline: () -> Unit,
+    context: Context
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp)
+    ) {
+        // 左侧品牌区域
+        Column(
+            modifier = Modifier
+                .weight(0.4f)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Logo
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFF21262D))
+                    .border(2.dp, Color(0xFF30363D), RoundedCornerShape(24.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(R.mipmap.ic_launcher_foreground),
+                    contentDescription = "Logo",
+                    modifier = Modifier.size(80.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                text = "RaLaunch",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            
+            Text(
+                text = "v1.0",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF8B949E)
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // 步骤指示器
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StepDot(isActive = true, isPassed = false, label = "1")
+                Box(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(2.dp)
+                        .background(Color(0xFF30363D))
+                )
+                StepDot(isActive = false, isPassed = false, label = "2")
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = stringResource(R.string.init_legal_title),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF58A6FF)
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(32.dp))
+        
+        // 右侧内容区域
+        Column(
+            modifier = Modifier
+                .weight(0.6f)
+                .fillMaxHeight()
+        ) {
+            // 标题
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = null,
+                    tint = Color(0xFF58A6FF),
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.init_legal_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // 法律条款滚动区域
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF161B22),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF30363D))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = stringResource(R.string.init_legal_terms),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFC9D1D9),
+                        lineHeight = 24.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // 官方链接
+                    TextButton(
+                        onClick = {
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/nicholasng1998/RotatingartLauncher")))
+                            } catch (e: Exception) {
+                                Toast.makeText(context, context.getString(R.string.init_cannot_open_browser), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Link,
+                            contentDescription = null,
+                            tint = Color(0xFF58A6FF),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.init_legal_official_download),
+                            color = Color(0xFF58A6FF)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // 按钮区域
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                OutlinedButton(
+                    onClick = onDecline,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF8B949E)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF30363D))
+                ) {
+                    Text(stringResource(R.string.init_exit))
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Button(
+                    onClick = onAccept,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF238636)
+                    )
+                ) {
+                    Text(stringResource(R.string.init_accept_and_continue))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 初始化页面 - 横屏双栏布局
+ */
+@Composable
+private fun SetupPage(
+    uiState: InitUiState,
+    permissionManager: PermissionManager,
+    onRequestPermissions: () -> Unit,
+    onStartExtraction: () -> Unit,
+    context: Context
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp)
+    ) {
+        // 左侧品牌区域
+        Column(
+            modifier = Modifier
+                .weight(0.4f)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Logo 带动画
+            val infiniteTransition = rememberInfiniteTransition(label = "logo_anim")
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.05f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2000, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "scale"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .scale(if (uiState.isExtracting) scale else 1f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xFF21262D))
+                    .border(2.dp, Color(0xFF30363D), RoundedCornerShape(24.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(R.mipmap.ic_launcher_foreground),
+                    contentDescription = "Logo",
+                    modifier = Modifier.size(80.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                text = "RaLaunch",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            
+            Text(
+                text = if (uiState.isExtracting) stringResource(R.string.init_installing) 
+                       else stringResource(R.string.init_click_to_start),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF8B949E)
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            // 步骤指示器
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StepDot(isActive = false, isPassed = true, label = "1")
+                Box(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(2.dp)
+                        .background(Color(0xFF238636))
+                )
+                StepDot(isActive = true, isPassed = false, label = "2")
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = if (uiState.isExtracting) stringResource(R.string.init_installing) else "组件安装",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF58A6FF)
+            )
+            
+            // 总进度
+            if (uiState.isExtracting) {
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = "${uiState.overallProgress}%",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF58A6FF)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(32.dp))
+        
+        // 右侧内容区域
+        Column(
+            modifier = Modifier
+                .weight(0.6f)
+                .fillMaxHeight()
+        ) {
+            // 权限状态卡片
+            if (!uiState.hasPermissions) {
+                PermissionCard(
+                    hasPermissions = uiState.hasPermissions,
+                    onRequestPermissions = onRequestPermissions
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            // 组件列表标题
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Inventory,
+                    contentDescription = null,
+                    tint = Color(0xFF58A6FF),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "组件列表",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // 组件列表
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(uiState.components) { component ->
+                    ComponentCard(component)
+                }
+            }
+            
+            // 状态信息
+            if (uiState.isExtracting && uiState.statusMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = uiState.statusMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF8B949E),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "${uiState.overallProgress}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF58A6FF)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { uiState.overallProgress / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = Color(0xFF238636),
+                    trackColor = Color(0xFF21262D)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            // 开始按钮
+            Button(
+                onClick = onStartExtraction,
+                enabled = !uiState.isExtracting && uiState.hasPermissions,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF238636),
+                    disabledContainerColor = Color(0xFF21262D)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (uiState.isExtracting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(stringResource(R.string.init_installing))
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (uiState.hasPermissions) 
+                            stringResource(R.string.init_accept_and_continue)
+                        else 
+                            stringResource(R.string.init_grant_permissions)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 步骤指示点
+ */
+@Composable
+private fun StepDot(
+    isActive: Boolean,
+    isPassed: Boolean,
+    label: String
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(
+                when {
+                    isActive -> Color(0xFF238636)
+                    isPassed -> Color(0xFF238636).copy(alpha = 0.5f)
+                    else -> Color(0xFF21262D)
+                }
+            )
+            .then(
+                if (!isActive && !isPassed) 
+                    Modifier.border(1.dp, Color(0xFF30363D), CircleShape)
+                else Modifier
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isPassed) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+        } else {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isActive) Color.White else Color(0xFF8B949E)
+            )
+        }
+    }
+}
+
+/**
+ * 权限请求卡片
+ */
+@Composable
+private fun PermissionCard(
+    hasPermissions: Boolean,
+    onRequestPermissions: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF161B22),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, 
+            if (hasPermissions) Color(0xFF238636) else Color(0xFFD29922)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (hasPermissions) Color(0xFF238636).copy(alpha = 0.2f)
+                        else Color(0xFFD29922).copy(alpha = 0.2f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (hasPermissions) Icons.Default.CheckCircle else Icons.Default.FolderOpen,
+                    contentDescription = null,
+                    tint = if (hasPermissions) Color(0xFF238636) else Color(0xFFD29922),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.init_grant_permissions),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+                Text(
+                    text = stringResource(R.string.init_permission_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF8B949E)
+                )
+            }
+            
+            if (!hasPermissions) {
+                FilledTonalButton(
+                    onClick = onRequestPermissions,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Color(0xFFD29922).copy(alpha = 0.2f),
+                        contentColor = Color(0xFFD29922)
+                    )
+                ) {
+                    Text(stringResource(R.string.init_grant_permissions))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 组件卡片
+ */
+@Composable
+private fun ComponentCard(component: ComponentState) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF161B22),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            when {
+                component.isInstalled -> Color(0xFF238636).copy(alpha = 0.5f)
+                component.progress > 0 -> Color(0xFF58A6FF).copy(alpha = 0.3f)
+                else -> Color(0xFF30363D)
+            }
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 状态图标
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        when {
+                            component.isInstalled -> Color(0xFF238636).copy(alpha = 0.2f)
+                            component.progress > 0 -> Color(0xFF58A6FF).copy(alpha = 0.2f)
+                            else -> Color(0xFF21262D)
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    component.isInstalled -> Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color(0xFF238636),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    component.progress > 0 -> CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = Color(0xFF58A6FF)
+                    )
+                    else -> Icon(
+                        imageVector = Icons.Outlined.Inventory,
+                        contentDescription = null,
+                        tint = Color(0xFF8B949E),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = component.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+                Text(
+                    text = component.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF8B949E),
+                    maxLines = 1
+                )
+                
+                // 进度条
+                if (component.progress > 0 && !component.isInstalled) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { component.progress / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = Color(0xFF58A6FF),
+                        trackColor = Color(0xFF21262D)
+                    )
+                }
+            }
+            
+            // 进度百分比
+            if (component.progress > 0 || component.isInstalled) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (component.isInstalled) "✓" else "${component.progress}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (component.isInstalled) Color(0xFF238636) else Color(0xFF58A6FF)
+                )
+            }
+        }
+    }
+}

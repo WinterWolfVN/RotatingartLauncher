@@ -11,6 +11,7 @@
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <android/log.h>
 
 #define LOG_TAG "DXVKLoader"
@@ -31,19 +32,62 @@ static bool g_dxvk_initialized = false;
 static const char* DXVK_VERSION = "2.7.1-android";
 
 /**
- * @brief 获取库文件的完整路径
+ * @brief 尝试从多个路径加载库
+ * @return dlopen 句柄，或 NULL 如果失败
+ */
+static void* try_load_lib(const char* lib_name) {
+    char path[512];
+    void* handle = NULL;
+    
+    // 1. 首先尝试直接加载
+    handle = dlopen(lib_name, RTLD_NOW | RTLD_GLOBAL);
+    if (handle) return handle;
+    
+    // 2. 尝试从 runtime_libs 目录加载
+    const char* runtime_dir = getenv("RALCORE_RUNTIMEDIR");
+    if (runtime_dir != NULL) {
+        snprintf(path, sizeof(path), "%s/%s", runtime_dir, lib_name);
+        handle = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
+        if (handle) return handle;
+    }
+    
+    // 3. 尝试从 native 目录加载
+    const char* native_dir = getenv("RALCORE_NATIVEDIR");
+    if (native_dir != NULL) {
+        snprintf(path, sizeof(path), "%s/%s", native_dir, lib_name);
+        handle = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
+        if (handle) return handle;
+    }
+    
+    return NULL;
+}
+
+/**
+ * @brief 获取库文件的完整路径（优先 runtime_libs）
  */
 static char* get_lib_path(const char* lib_name) {
     static char path[512];
-    const char* native_dir = getenv("RALCORE_NATIVEDIR");
     
-    if (native_dir != NULL) {
-        snprintf(path, sizeof(path), "%s/%s", native_dir, lib_name);
-    } else {
-        // 默认路径
-        snprintf(path, sizeof(path), "%s", lib_name);
+    // 优先检查 runtime_libs 目录
+    const char* runtime_dir = getenv("RALCORE_RUNTIMEDIR");
+    if (runtime_dir != NULL) {
+        snprintf(path, sizeof(path), "%s/%s", runtime_dir, lib_name);
+        if (access(path, F_OK) == 0) {
+            return path;
+        }
     }
     
+    // 然后检查 native 目录
+    const char* native_dir = getenv("RALCORE_NATIVEDIR");
+    if (native_dir != NULL) {
+        snprintf(path, sizeof(path), "%s/%s", native_dir, lib_name);
+        if (access(path, F_OK) == 0) {
+            return path;
+        }
+    }
+    
+    // 默认返回库名
+    snprintf(path, sizeof(path), "%s", lib_name);
     return path;
 }
 

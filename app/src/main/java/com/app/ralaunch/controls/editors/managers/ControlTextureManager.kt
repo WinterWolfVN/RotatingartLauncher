@@ -4,8 +4,9 @@ import android.content.Context
 import android.view.View
 import android.widget.TextView
 import com.app.ralaunch.R
-import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.controls.data.ControlData
+import com.app.ralaunch.controls.packs.ControlPackManager
+import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.textures.*
 import java.io.File
 
@@ -20,7 +21,8 @@ object ControlTextureManager {
      */
     fun getPackAssetsDir(packId: String?): File? {
         if (packId == null) return null
-        return RaLaunchApplication.getControlPackManager().getPackAssetsDir(packId)
+        val packManager: ControlPackManager = KoinJavaComponent.get(ControlPackManager::class.java)
+        return packManager.getPackAssetsDir(packId)
     }
     
     /**

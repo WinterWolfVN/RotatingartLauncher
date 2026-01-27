@@ -1,9 +1,9 @@
 package com.app.ralaunch.dotnet
 
 import android.content.Context
-import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.core.EnvVarsManager
 import com.app.ralaunch.data.SettingsManager
+import org.koin.java.KoinJavaComponent
 
 /**
  * CoreCLR 配置工具类
@@ -26,7 +26,7 @@ object CoreCLRConfig {
      */
     fun applyConfigAndInitHooking() {
         val settings = SettingsManager.getInstance()
-        val context = RaLaunchApplication.getAppContext()
+        val context: Context = KoinJavaComponent.get(Context::class.java)
         EnvVarsManager.quickSetEnvVars(
             // 应用 GC 配置
             "DOTNET_gcServer" to if (settings.isServerGC) "1" else "0",

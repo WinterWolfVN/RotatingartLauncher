@@ -10,7 +10,7 @@ import java.io.File
 class GameInstaller(private val context: Context) {
     
     companion object {
-        private const val GAMES_DIR = "games"
+        private val GAMES_DIR = com.app.ralaunch.shared.AppConstants.Dirs.GAMES
     }
     
     private var currentPlugin: GameInstallPlugin? = null
@@ -33,7 +33,6 @@ class GameInstaller(private val context: Context) {
         
         // 选择合适的插件
         val plugin = if (modLoaderFile != null) {
-            // 优先根据模组加载器选择插件
             InstallPluginRegistry.selectPluginForModLoader(modLoaderFile)
                 ?: InstallPluginRegistry.selectPluginForGame(gameFile)
         } else {
@@ -50,14 +49,10 @@ class GameInstaller(private val context: Context) {
         // 检测游戏类型
         val detectResult = plugin.detectGame(gameFile)
         
-        // Box64 游戏列表 - 需要安装到内部存储以获得执行权限和避免 SELinux 限制
-        val box64GameTypes = setOf("starbound", "dontstarve", "dont_starve")
-        val box64PluginIds = setOf("starbound", "dontstarve")
-        
-        val isBox64Game = detectResult?.gameType in box64GameTypes || plugin.pluginId in box64PluginIds
+        // Box64 游戏需要安装到内部存储
+        val isBox64Game = detectResult?.definition?.runtime == "box64"
         
         // 创建游戏目录
-        // Box64 游戏需要安装到内部存储以获得执行权限和避免 FMOD/ALSA 的 SELinux 限制
         val gamesDir = if (isBox64Game) {
             File(context.filesDir, GAMES_DIR)
         } else {
@@ -69,8 +64,8 @@ class GameInstaller(private val context: Context) {
         
         // 确定游戏名称
         val finalGameName = gameName 
-            ?: modLoaderFile?.let { plugin.detectModLoader(it)?.name }
-            ?: detectResult?.gameName
+            ?: modLoaderFile?.let { plugin.detectModLoader(it)?.definition?.displayName }
+            ?: detectResult?.definition?.displayName
             ?: extractGameNameFromPath(gameFilePath)
         
         val gameDir = createGameDirectory(gamesDir, finalGameName)
@@ -109,7 +104,6 @@ class GameInstaller(private val context: Context) {
         val file = File(path)
         var name = file.nameWithoutExtension
         
-        // 清理常见后缀
         val suffixes = listOf("_linux", "_win", "_osx", "_android", "_setup", "_installer",
                               "-linux", "-win", "-osx", "-android", "-setup", "-installer")
         for (suffix in suffixes) {
@@ -118,10 +112,8 @@ class GameInstaller(private val context: Context) {
             }
         }
         
-        // 转换下划线和连字符为空格
         name = name.replace('_', ' ').replace('-', ' ')
         
-        // 首字母大写
         return name.split(' ')
             .filter { it.isNotBlank() }
             .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
@@ -132,11 +124,8 @@ class GameInstaller(private val context: Context) {
      */
     private fun createGameDirectory(gamesDir: File, gameName: String): File {
         val baseName = gameName.replace(Regex("[^a-zA-Z0-9\\u4e00-\\u9fa5]"), "_")
-        
-        // 生成随机哈希后缀
         val hash = java.util.UUID.randomUUID().toString().replace("-", "").take(8)
         val gameDir = File(gamesDir, "${baseName}_$hash")
-        
         gameDir.mkdirs()
         return gameDir
     }

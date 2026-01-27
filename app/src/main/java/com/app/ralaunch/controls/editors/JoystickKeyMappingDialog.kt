@@ -45,7 +45,7 @@ class JoystickKeyMappingDialog(
     }
 
     private fun initDialog() {
-        val localizedContext = getLocalizedContext()
+        val localizedContext = localizedContext
 
         // 创建布局
         val layout = LinearLayout(getContext())

@@ -1,8 +1,8 @@
 package com.app.ralaunch.installer
 
-import com.app.ralib.extractors.BasicSevenZipExtractor
-import com.app.ralib.extractors.ExtractorCollection
-import com.app.ralib.extractors.GogShFileExtractor
+import com.app.ralaunch.extractors.BasicSevenZipExtractor
+import com.app.ralaunch.extractors.ExtractorCollection
+import com.app.ralaunch.extractors.GogShFileExtractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -55,21 +55,21 @@ object GameExtractorUtils {
                 shFile.toPath(),
                 outputDir.toPath(),
                 object : ExtractorCollection.ExtractionListener {
-                    override fun onProgress(message: String, progress: Float, state: HashMap<String, Any>?) {
+                    override fun onProgress(message: String, progress: Float, state: HashMap<String, Any?>?) {
                         progressCallback(message, progress)
                     }
 
-                    override fun onComplete(message: String, state: HashMap<String, Any>?) {
+                    override fun onComplete(message: String, state: HashMap<String, Any?>?) {
                         success = true
                         gamePath = state?.get(GogShFileExtractor.STATE_KEY_GAME_PATH) as? Path
                     }
 
-                    override fun onError(message: String, ex: Exception?, state: HashMap<String, Any>?) {
+                    override fun onError(message: String, ex: Exception?, state: HashMap<String, Any?>?) {
                         errorMsg = message
                     }
                 }
             )
-            extractor.state = state
+            extractor.state = HashMap(state)
 
             val result = extractor.extract()
 
@@ -104,15 +104,15 @@ object GameExtractorUtils {
             var errorMsg: String? = null
 
             val listener = object : ExtractorCollection.ExtractionListener {
-                override fun onProgress(message: String, progress: Float, state: HashMap<String, Any>?) {
+                override fun onProgress(message: String, progress: Float, state: HashMap<String, Any?>?) {
                     progressCallback(message, progress)
                 }
 
-                override fun onComplete(message: String, state: HashMap<String, Any>?) {
+                override fun onComplete(message: String, state: HashMap<String, Any?>?) {
                     success = true
                 }
 
-                override fun onError(message: String, ex: Exception?, state: HashMap<String, Any>?) {
+                override fun onError(message: String, ex: Exception?, state: HashMap<String, Any?>?) {
                     errorMsg = message
                 }
             }
@@ -123,7 +123,7 @@ object GameExtractorUtils {
                 outputDir.toPath(),
                 listener
             )
-            extractor.state = state
+            extractor.state = HashMap(state)
 
             val result = extractor.extract()
 

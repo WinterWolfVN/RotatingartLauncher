@@ -1,9 +1,7 @@
 package com.app.ralaunch.dotnet
 
-import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.core.EnvVarsManager
 import com.app.ralaunch.utils.AppLogger
-import com.app.ralaunch.utils.RuntimeManager
 import com.app.ralaunch.utils.RuntimePreference
 
 object DotNetLauncher {
@@ -22,8 +20,10 @@ object DotNetLauncher {
      * @return 程序集退出代码
      */
     fun hostfxrLaunch(assemblyPath: String, args: Array<String>): Int {
-        val dotnetRoot = RuntimePreference.getDotnetRootPath()
-        val dotnetVersion = RuntimeManager.getSelectedVersion(RaLaunchApplication.getAppContext())
+        val dotnetRoot = RuntimePreference.getDotnetRootPath() ?: run {
+            AppLogger.error(TAG, "Failed to get dotnet root path")
+            return -1
+        }
 
         // Implementation to launch .NET assembly
         AppLogger.info(TAG, "Launching .NET assembly at $assemblyPath with arguments: ${args.joinToString(", ")}")
@@ -31,7 +31,7 @@ object DotNetLauncher {
 
         EnvVarsManager.quickSetEnvVar("DOTNET_ROOT", dotnetRoot)
         CoreCLRConfig.applyConfigAndInitHooking()
-        DotNetNativeLibraryLoader.loadAllLibraries(dotnetRoot, dotnetVersion)
+        DotNetNativeLibraryLoader.loadAllLibraries(dotnetRoot)
 
         val exitCode = nativeDotNetLauncherHostfxrLaunch(assemblyPath, args, dotnetRoot)
         if (exitCode != 0) {

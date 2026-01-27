@@ -19,21 +19,21 @@ interface GameInstallPlugin {
     val displayName: String
     
     /**
-     * 支持的游戏类型列表
+     * 支持的游戏定义列表
      */
-    val supportedGameTypes: List<String>
+    val supportedGames: List<GameDefinition>
     
     /**
      * 检测游戏文件
      * @param gameFile 游戏文件路径
-     * @return 游戏信息，如果不支持返回 null
+     * @return 游戏检测结果，如果不支持返回 null
      */
     fun detectGame(gameFile: File): GameDetectResult?
     
     /**
      * 检测模组加载器文件
      * @param modLoaderFile 模组加载器文件路径
-     * @return 模组加载器信息，如果不支持返回 null
+     * @return 模组加载器检测结果，如果不支持返回 null
      */
     fun detectModLoader(modLoaderFile: File): ModLoaderDetectResult?
     
@@ -61,21 +61,18 @@ interface GameInstallPlugin {
  * 游戏检测结果
  */
 data class GameDetectResult(
-    val gameName: String,
-    val gameType: String,
-    val version: String = "",
-    val launchTarget: String? = null,
-    val iconPath: String? = null
+    /** 游戏定义 */
+    val definition: GameDefinition,
+    /** 检测到的版本（可选） */
+    val version: String = ""
 )
 
 /**
  * 模组加载器检测结果
  */
 data class ModLoaderDetectResult(
-    val name: String,
-    val type: String,
-    val version: String = "",
-    val launchTarget: String,
-    val iconPath: String? = null
+    /** 模组加载器定义 */
+    val definition: GameDefinition,
+    /** 检测到的版本（可选） */
+    val version: String = ""
 )
-

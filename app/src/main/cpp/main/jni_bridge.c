@@ -141,7 +141,7 @@ void Bridge_NotifyGameExitWithMessage(int exitCode, const char* errorMessage) {
     if (!env) return;
 
     // 查找 GameActivity 类
-    jclass clazz = (*env)->FindClass(env, "com/app/ralaunch/activity/GameActivity");
+    jclass clazz = (*env)->FindClass(env, "com/app/ralaunch/ui/game/GameActivity");
     if (clazz) {
         // 查找 onGameExitWithMessage 静态方法
         jmethodID method = (*env)->GetStaticMethodID(env, clazz, "onGameExitWithMessage", "(ILjava/lang/String;)V");

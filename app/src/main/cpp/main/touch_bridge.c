@@ -84,13 +84,13 @@ Java_org_libsdl_app_SDLSurface_nativeClearTouchData(JNIEnv *env, jclass clazz) {
 
 // GameActivity JNI 函数
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_activity_GameActivity_nativeSetTouchData(JNIEnv *env, jclass clazz,
+Java_com_app_ralaunch_ui_game_GameActivity_nativeSetTouchData(JNIEnv *env, jclass clazz,
     int count, jfloatArray x_arr, jfloatArray y_arr, int screenWidth, int screenHeight) {
     setTouchDataInternal(env, count, x_arr, y_arr, screenWidth, screenHeight);
 }
 
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_activity_GameActivity_nativeClearTouchData(JNIEnv *env, jclass clazz) {
+Java_com_app_ralaunch_ui_game_GameActivity_nativeClearTouchData(JNIEnv *env, jclass clazz) {
     g_touch_data.count = 0;
 }
 

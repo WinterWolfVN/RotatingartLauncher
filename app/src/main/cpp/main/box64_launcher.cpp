@@ -1,10 +1,11 @@
 /*
  * Box64 Launcher for RotatingartLauncher
  * 
- * 基于 box64droid 的实现方式，直接调用 Box64 的 main 函数
+ * 基于 box64droid 的实现方式，通过 dlopen 动态加载 Box64
  * 
  * Architecture:
- * - Box64 is compiled as Bionic SO and linked directly into the app
+ * - Box64 is compiled as separate SO and loaded at runtime via dlopen
+ * - This reduces APK size by allowing box64.so to be compressed in assets
  * - Box64's wrapped libraries use glibc_bridge's dlopen_wrapper for lib redirection
  * - JNI calls from SDL work correctly because Box64 runs in SDL thread
  */
@@ -23,16 +24,14 @@
 #include <locale>
 #include <ios>
 
-// Box64 的 main 函数入口点 (定义在 main.c 中)
+// Box64 函数指针类型定义
+typedef int (*box64_main_fn)(int argc, const char **argv, char **env);
+typedef void* (*glibc_bridge_dlopen_fn)(const char* filename, int flags);
+typedef void* (*glibc_bridge_dlsym_fn)(void* handle, const char* symbol);
+typedef void (*box64_set_hooks_fn)(glibc_bridge_dlopen_fn dlopen_hook, glibc_bridge_dlsym_fn dlsym_hook);
+
+// glibc_bridge 提供的函数 (定义在 wrapper_libc.c 中)
 extern "C" {
-    int main(int argc, const char **argv, char **env);
-    
-    // Box64 的 glibc_bridge 钩子设置函数 (定义在 wrappedlibdl.c 中)
-    typedef void* (*glibc_bridge_dlopen_fn)(const char* filename, int flags);
-    typedef void* (*glibc_bridge_dlsym_fn)(void* handle, const char* symbol);
-    void box64_set_glibc_bridge_hooks(glibc_bridge_dlopen_fn dlopen_hook, glibc_bridge_dlsym_fn dlsym_hook);
-    
-    // glibc_bridge 提供的 dlopen/dlsym 函数 (定义在 wrapper_libc.c 中)
     void* glibc_bridge_dlopen_for_box64(const char* filename, int flags);
     void* glibc_bridge_dlsym_for_box64(void* handle, const char* symbol);
     
@@ -40,10 +39,80 @@ extern "C" {
     extern char g_glibc_root[512];
 }
 
+// Box64 动态加载句柄和函数指针
+static void* g_box64_handle = nullptr;
+static box64_main_fn g_box64_main = nullptr;
+static box64_set_hooks_fn g_box64_set_hooks = nullptr;
+
 #define LOG_TAG "Box64Launcher"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+/**
+ * 动态加载 Box64 库
+ * @param lib_path Box64 库的完整路径
+ * @return 0 成功，-1 失败
+ */
+static int load_box64_library(const char* lib_path) {
+    if (g_box64_handle) {
+        LOGI("Box64 already loaded");
+        return 0;
+    }
+    
+    LOGI("Loading Box64 from: %s", lib_path);
+    
+    // 使用 RTLD_NOW 确保所有符号立即解析
+    g_box64_handle = dlopen(lib_path, RTLD_NOW | RTLD_GLOBAL);
+    if (!g_box64_handle) {
+        LOGE("Failed to load Box64: %s", dlerror());
+        return -1;
+    }
+    
+    // 获取 main 函数
+    g_box64_main = (box64_main_fn)dlsym(g_box64_handle, "main");
+    if (!g_box64_main) {
+        LOGE("Failed to find Box64 main: %s", dlerror());
+        dlclose(g_box64_handle);
+        g_box64_handle = nullptr;
+        return -1;
+    }
+    
+    // 获取钩子设置函数
+    g_box64_set_hooks = (box64_set_hooks_fn)dlsym(g_box64_handle, "box64_set_glibc_bridge_hooks");
+    if (!g_box64_set_hooks) {
+        LOGW("box64_set_glibc_bridge_hooks not found, hooks disabled");
+    }
+    
+    LOGI("Box64 loaded successfully");
+    return 0;
+}
+
+/**
+ * JNI: 加载 Box64 库
+ */
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_app_ralaunch_box64_Box64Helper_loadBox64Library(
+    JNIEnv* env,
+    jclass clazz,
+    jstring jlibPath
+) {
+    const char* libPath = env->GetStringUTFChars(jlibPath, nullptr);
+    int result = load_box64_library(libPath);
+    env->ReleaseStringUTFChars(jlibPath, libPath);
+    return result == 0;
+}
+
+/**
+ * JNI: 检查 Box64 是否已加载
+ */
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_app_ralaunch_box64_Box64Helper_isBox64Loaded(
+    JNIEnv* env,
+    jclass clazz
+) {
+    return g_box64_handle != nullptr && g_box64_main != nullptr;
+}
 
 /**
  * Set up Box64 environment variables
@@ -200,15 +269,25 @@ Java_com_app_ralaunch_box64_Box64Helper_runBox64InProcess(
     filtered_env.push_back(nullptr);
     
     
+    // 检查 Box64 是否已加载
+    if (!g_box64_handle || !g_box64_main) {
+        LOGE("Box64 not loaded! Call loadBox64Library first.");
+        delete[] string_block;
+        delete[] argv;
+        return -2;
+    }
+    
     // 设置 glibc_bridge rootfs 路径
     strncpy(g_glibc_root, rootfs_path, sizeof(g_glibc_root) - 1);
     g_glibc_root[sizeof(g_glibc_root) - 1] = '\0';
     
     // 设置 glibc_bridge 钩子
-    box64_set_glibc_bridge_hooks(glibc_bridge_dlopen_for_box64, glibc_bridge_dlsym_for_box64);
+    if (g_box64_set_hooks) {
+        g_box64_set_hooks(glibc_bridge_dlopen_for_box64, glibc_bridge_dlsym_for_box64);
+    }
     
-    // 调用 Box64 main
-    int result = main(argc + 1, argv, filtered_env.data());
+    // 调用 Box64 main (通过动态加载的函数指针)
+    int result = g_box64_main(argc + 1, argv, filtered_env.data());
     
     // 清理内存
     delete[] string_block;

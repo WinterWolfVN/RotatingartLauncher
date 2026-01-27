@@ -3,6 +3,7 @@ package com.app.ralaunch.controls.views
 import android.app.Activity
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -12,8 +13,9 @@ import android.graphics.Typeface
 import android.text.TextPaint
 import android.util.Log
 import android.view.View
-import com.app.ralaunch.RaLaunchApplication
-import com.app.ralaunch.activity.GameActivity
+import com.app.ralaunch.manager.VibrationManager
+import com.app.ralaunch.ui.game.GameActivity
+import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.ControlsSharedState
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.bridges.ControlInputBridge
@@ -37,15 +39,23 @@ class VirtualButton(
 
     companion object {
         private const val TAG = "VirtualButton"
+    }
+
+    // 使用 Koin 延迟获取 VibrationManager
+    private val vibrationManager: VibrationManager? by lazy {
+        try {
+            KoinJavaComponent.get(VibrationManager::class.java)
+        } catch (e: Exception) {
+            Log.w(TAG, "VibrationManager not available: ${e.message}")
+            null
+        }
+    }
 
         private fun triggerVibration(isPress: Boolean) {
             if (isPress) {
-                RaLaunchApplication.getVibrationManager().vibrateOneShot(50, 30)
-            } else {
-                // 释放时不振动
-//            RaLaunchApplication.getVibrationManager().vibrateOneShot(50, 30);
-            }
+            vibrationManager?.vibrateOneShot(50, 30)
         }
+                // 释放时不振动
     }
 
     override var controlData: ControlData = data
@@ -246,6 +256,15 @@ class VirtualButton(
         val radius = min(mRectF.width(), mRectF.height()) / 2f
         val hasTexture = castedData.texture.hasAnyTexture && assetsDir != null && textureLoader != null
 
+        // 动态计算阴影和发光效果 (适配深浅主题)
+        val elevation = if (mIsPressed || mIsToggled) dpToPx(2f) else dpToPx(4f)
+        val alphaMultiplier = if (mIsPressed || mIsToggled) 1.2f else 1.0f
+        
+        // 自动检测深浅色主题 (根据背景亮度)
+        val isDarkTheme = Color.luminance(castedData.bgColor) < 0.5f
+        val strokeColorValue = if (isDarkTheme) Color.WHITE else Color.BLACK
+        val textColorValue = if (isDarkTheme) Color.WHITE else Color.BLACK
+
         // 更新裁剪路径
         mClipPath.reset()
         when (shape) {
@@ -272,7 +291,15 @@ class VirtualButton(
                         clipPath = mClipPath
                     )
                 } else {
+                    // 绘制具有深度感的背景
+                    mBackgroundPaint.alpha = min(255, (castedData.opacity * 255 * alphaMultiplier).toInt())
                     canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
+                }
+                
+                // 绘制精致描边 (根据主题自动切换黑白)
+                mStrokePaint.apply {
+                    color = strokeColorValue
+                    alpha = min(255, (castedData.borderOpacity * 255 * 0.6f * alphaMultiplier).toInt())
                 }
                 canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
             }
@@ -292,30 +319,33 @@ class VirtualButton(
                 } else {
                     when (castedData.mode) {
                         ControlData.Button.Mode.KEYBOARD -> {
-                            mBackgroundPaint.alpha = if (mIsPressed || mIsToggled) {
-                                min(255, (castedData.opacity * 255 * 1.5f).toInt())
-                            } else {
-                                (castedData.opacity * 255).toInt()
-                            }
+                            mBackgroundPaint.alpha = min(255, (castedData.opacity * 255 * alphaMultiplier).toInt())
                             canvas.drawCircle(centerXDraw, centerYDraw, radius, mBackgroundPaint)
+                            
+                            mStrokePaint.apply {
+                                color = strokeColorValue
+                                alpha = min(255, (castedData.borderOpacity * 255 * 0.6f * alphaMultiplier).toInt())
+                            }
                             canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint)
                         }
                         ControlData.Button.Mode.GAMEPAD -> {
-                            val margin = 0.15f
+                            val margin = 0.12f
                             val outerRadius = radius * (1.0f - margin)
-                            val innerRadius = radius * (1.0f - 2 * margin)
+                            val innerRadius = radius * (1.0f - 2.5f * margin)
 
-                            val backgroundPaint = Paint(mBackgroundPaint).apply {
-                                color = 0x327D7D7D
+                            // 绘制外圈发光感
+                            val glowPaint = Paint(mBackgroundPaint).apply {
+                                color = if (mIsPressed || mIsToggled) castedData.bgColor else 0x327D7D7D
+                                alpha = (castedData.opacity * 255 * 0.4f).toInt()
+                            }
+                            canvas.drawCircle(centerXDraw, centerYDraw, outerRadius, glowPaint)
+
+                            // 绘制内层核心
+                            val corePaint = Paint(mBackgroundPaint).apply {
+                                color = if (mIsPressed || mIsToggled) -0x1 else -0x828283
                                 alpha = (castedData.opacity * 255).toInt()
                             }
-                            canvas.drawCircle(centerXDraw, centerYDraw, outerRadius, backgroundPaint)
-
-                            val foregroundPaint = Paint(mBackgroundPaint).apply {
-                                color = if (mIsPressed || mIsToggled) -0x828283 else 0x7D7D7D7D
-                                alpha = (castedData.opacity * 255).toInt()
-                            }
-                            canvas.drawCircle(centerXDraw, centerYDraw, innerRadius, foregroundPaint)
+                            canvas.drawCircle(centerXDraw, centerYDraw, innerRadius, corePaint)
                         }
                     }
                 }
@@ -343,6 +373,10 @@ class VirtualButton(
                 val padding = dpToPx(2f)
                 canvas.clipRect(padding, padding, width - padding, height - padding)
             }
+
+            // 更新文字颜色适配深浅主题
+            mTextPaint.color = textColorValue
+            mTextPaint.alpha = (castedData.textOpacity * 255).toInt()
 
             // 计算文字大小
             when {

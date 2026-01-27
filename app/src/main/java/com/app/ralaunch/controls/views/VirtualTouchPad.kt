@@ -8,10 +8,12 @@ import android.graphics.RectF
 import android.graphics.Region
 import android.os.Handler
 import android.text.TextPaint
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import com.app.ralaunch.RaLaunchApplication
+import com.app.ralaunch.manager.VibrationManager
 import com.app.ralaunch.controls.ControlsSharedState
+import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.data.ControlData
@@ -35,15 +37,23 @@ class VirtualTouchPad(
         private const val TOUCHPAD_STATE_IDLE_TIMEOUT = 200L // 毫秒
         private const val TOUCHPAD_CLICK_TIMEOUT = 50L // 毫秒
         private const val TOUCHPAD_MOVE_THRESHOLD = 5 // dp, 移动超过这个距离视为移动操作, 应该用dpToPx转换
+    }
 
-        private fun triggerVibration(isPress: Boolean) {
-            if (isPress) {
-                RaLaunchApplication.getVibrationManager().vibrateOneShot(50, 30)
-            } else {
-                // 释放时不振动
-//            RaLaunchApplication.getVibrationManager().vibrateOneShot(50, 30);
-            }
+    // 使用 Koin 延迟获取 VibrationManager
+    private val vibrationManager: VibrationManager? by lazy {
+        try {
+            KoinJavaComponent.get(VibrationManager::class.java)
+        } catch (e: Exception) {
+            Log.w(TAG, "VibrationManager not available: ${e.message}")
+            null
         }
+    }
+
+    private fun triggerVibration(isPress: Boolean) {
+        if (isPress) {
+            vibrationManager?.vibrateOneShot(50, 30)
+        }
+        // 释放时不振动
     }
 
     enum class TouchPadState {

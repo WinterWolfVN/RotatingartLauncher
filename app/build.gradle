@@ -34,11 +34,21 @@ android {
             debuggable true
             minifyEnabled false
             jniDebuggable true  // 启用 Native 调试
+            
+         
         }
         release {
             debuggable false
-            minifyEnabled false
+            minifyEnabled false  // TODO: 修复类重复后启用 R8
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // Release 移除调试符号，减小 native 库体积
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=Release"
+                }
+            }
         }
     }
     compileOptions {
@@ -58,11 +68,26 @@ android {
     }
 
     packagingOptions {
-        // 确保渲染器库被打包
         jniLibs {
             useLegacyPackaging = true
-            keepDebugSymbols += ['**/*.so']
+            // Debug 版本保留符号便于调试，Release 版本移除符号减小体积
+            // keepDebugSymbols += ['**/*.so']  // 仅 debug 时启用
             pickFirsts += ['lib/arm64-v8a/libc++_shared.so', 'lib/arm64-v8a/libnetcorehost.so']
+            
+            // 排除运行时动态加载的大型库（改为压缩存储在 assets 中）
+            // 这些库在运行时通过 RuntimeLibraryLoader 解压并用 System.load() 加载
+            // 总计节省约 90 MB APK 体积
+            excludes += [
+                'lib/arm64-v8a/libbox64.so',           // 56 MB - Box64
+                'lib/arm64-v8a/libvulkan_freedreno.so', // 10 MB - Turnip
+                'lib/arm64-v8a/libmobileglues.so',     // 8 MB - GLES 转换
+                'lib/arm64-v8a/libSkiaSharp.so',       // 7 MB - Skia
+                'lib/arm64-v8a/libGLESv2_angle.so',    // 5 MB - ANGLE GLES
+                'lib/arm64-v8a/libEGL_angle.so',       // 0.3 MB - ANGLE EGL
+                'lib/arm64-v8a/libGL_gl4es.so',        // 4 MB - GL4ES
+                'lib/arm64-v8a/libEGL_gl4es.so',       // 0.03 MB - GL4ES EGL
+                // lib7-Zip-JBinding.so 保留在 APK 中，因为安装游戏时需要立即使用
+            ]
         }
     }
 
@@ -97,52 +122,33 @@ android {
 }
 
 dependencies {
-
+    // 本地 JAR/AAR 依赖
     implementation files('../app/libs/libSystem.Security.Cryptography.Native.Android.jar')
     implementation files('../external/libs/fmod.jar')
-
-    implementation 'com.nineoldandroids:library:2.3.0'
-
-    implementation 'com.daimajia.easing:library:2.0@aar'
-
-    // 使用 AndroidX 兼容的动画库
-    implementation 'com.daimajia.androidanimations:library:2.4@aar'
-
-    // 添加 AndroidX 核心库
-    implementation 'androidx.core:core:1.13.1'
-
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-
-    implementation 'androidx.recyclerview:recyclerview:1.3.2'
-
-    // Glide 图片加载库
-    implementation 'com.github.bumptech.glide:glide:4.16.0'
-
-    // Konfetti 粒子庆祝效果库
-    implementation 'nl.dionsegijn:konfetti-xml:2.0.5'
-
-    implementation 'com.google.code.gson:gson:2.13.2'
-
-    implementation 'org.apache.commons:commons-compress:1.24.0'
-    implementation 'org.tukaani:xz:1.9'
-
-    implementation project(path: ':ralib')
-
     implementation files('libs/fishnet-release.aar')
 
-    // Material 3 动态颜色支持
-    implementation 'com.google.android.material:material:1.12.0'
+    // 项目模块
+    implementation project(path: ':shared')
 
+    // 从 ralib 迁移的依赖
+    implementation 'com.github.omicronapps:7-Zip-JBinding-4Android:Release-16.02-2.03'
+    implementation 'com.google.code.gson:gson:2.13.2'
+
+    // AndroidX 核心库
+    implementation libs.core.ktx
+    implementation libs.appcompat
+    implementation libs.activity
+    implementation libs.constraintlayout
+    implementation libs.recyclerview
+
+    // Material Design
+    implementation libs.material
+
+    // Kotlin 扩展
     implementation libs.kotlinx.coroutines.core
     implementation libs.kotlinx.coroutines.android
     implementation libs.kotlinx.serialization.json
 
-    implementation libs.appcompat
-    implementation libs.material
-    implementation libs.constraintlayout
-    implementation libs.activity
-    implementation libs.core.ktx
-    
     // Compose
     implementation platform(libs.compose.bom)
     implementation libs.compose.ui
@@ -155,10 +161,20 @@ dependencies {
     implementation libs.lifecycle.runtime.compose
     implementation libs.coil.compose
     debugImplementation 'androidx.compose.ui:ui-tooling'
-    
-    // SVG 支持（用于纹理加载）
-    implementation 'com.caverock:androidsvg-aar:1.4'
-    
+
+    // Koin DI
+    implementation libs.koin.core
+    implementation libs.koin.android
+    implementation libs.koin.compose
+
+    // 第三方工具库
+    implementation libs.glide
+    implementation libs.konfetti
+    implementation libs.commons.compress
+    implementation libs.xz
+    implementation libs.android.svg
+
+    // 测试依赖
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core

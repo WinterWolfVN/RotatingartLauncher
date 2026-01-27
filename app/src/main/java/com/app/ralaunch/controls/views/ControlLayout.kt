@@ -6,8 +6,9 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
-import com.app.ralaunch.RaLaunchApplication
+import com.app.ralaunch.controls.packs.ControlPackManager
 import com.app.ralaunch.controls.TouchPointerTracker
+import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.packs.ControlLayout as PackControlLayout
@@ -191,7 +192,13 @@ class ControlLayout : FrameLayout {
 
             if (controlView.tryAcquireTouch(pointerId, localX, localY)) {
                 AppLogger.debug(TAG, "  Control ${controlView.javaClass.simpleName} accepted pointer $pointerId")
+                val wasEmpty = mPointerToControl.isEmpty()
                 mPointerToControl[pointerId] = controlView
+
+                // 通知控件正在被使用
+                if (wasEmpty) {
+                    mOnControlChangedListener?.onControlInUse(true)
+                }
 
                 if (!controlView.controlData.isPassThrough) {
                     TouchPointerTracker.consumePointer(pointerId)
@@ -244,6 +251,11 @@ class ControlLayout : FrameLayout {
                 TouchPointerTracker.releasePointer(pointerId)
             }
             controlView.releaseTouch(pointerId)
+            
+            // 通知控件不再被使用
+            if (mPointerToControl.isEmpty()) {
+                mOnControlChangedListener?.onControlInUse(false)
+            }
         }
 
         mSDLSurface?.dispatchTouchEvent(event)
@@ -257,6 +269,7 @@ class ControlLayout : FrameLayout {
     private fun handleCancel(event: MotionEvent): Boolean {
         AppLogger.debug(TAG, "handleCancel: clearing ${mPointerToControl.size} pointers")
 
+        val hadPointers = mPointerToControl.isNotEmpty()
         mPointerToControl.forEach { (pointerId, controlView) ->
             if (!controlView.controlData.isPassThrough) {
                 TouchPointerTracker.releasePointer(pointerId)
@@ -264,6 +277,11 @@ class ControlLayout : FrameLayout {
             controlView.cancelAllTouches()
         }
         mPointerToControl.clear()
+        
+        // 通知控件不再被使用
+        if (hadPointers) {
+            mOnControlChangedListener?.onControlInUse(false)
+        }
 
         mSDLSurface?.dispatchTouchEvent(event)
         return true
@@ -309,7 +327,13 @@ class ControlLayout : FrameLayout {
      * @return 是否成功加载布局
      */
     fun loadLayoutFromPackManager(): Boolean {
-        val packManager = RaLaunchApplication.getControlPackManager()
+        val packManager: ControlPackManager = try {
+            KoinJavaComponent.get(ControlPackManager::class.java)
+        } catch (e: Exception) {
+            AppLogger.error(TAG, "Failed to get ControlPackManager: ${e.message}")
+            return false
+        }
+        
         val packId = packManager.getSelectedPackId()
         val layout = packManager.getCurrentLayout()
         
@@ -409,7 +433,10 @@ class ControlLayout : FrameLayout {
                     mLastTouchY = event.rawY
                     state.isDragging = false
 
-                    v.alpha = 0.5f
+                    // 显示按下效果
+                    if (controlView is VirtualButton) {
+                        controlView.isPressedState = true
+                    }
                     return@OnTouchListener true
                 }
 
@@ -427,9 +454,52 @@ class ControlLayout : FrameLayout {
                         }
 
                         if (state.isDragging) {
+                            // 开始拖拽时取消按下效果，切换为半透明
+                            if (controlView is VirtualButton) {
+                                controlView.isPressedState = false
+                            }
+                            v.alpha = 0.6f
+                            // 通知监听器
+                            mOnControlChangedListener?.onControlDragging(true)
+                            
                             val params = v.layoutParams as LayoutParams
-                            params.leftMargin += deltaX.toInt()
-                            params.topMargin += deltaY.toInt()
+                            var newLeft = params.leftMargin + deltaX.toInt()
+                            var newTop = params.topMargin + deltaY.toInt()
+
+                            // ===== 自动吸附逻辑 (灵敏度优化) =====
+                            val SNAP_THRESHOLD = 10 // 调小阈值，从 20 降至 10，减弱“磁铁”感
+                            val GRID_SIZE = 50 
+
+                            // 1. 吸附到网格
+                            if (Math.abs(newLeft % GRID_SIZE) < SNAP_THRESHOLD) {
+                                newLeft = (newLeft / GRID_SIZE) * GRID_SIZE
+                            } else if (Math.abs(newLeft % GRID_SIZE) > (GRID_SIZE - SNAP_THRESHOLD)) {
+                                newLeft = ((newLeft / GRID_SIZE) + 1) * GRID_SIZE
+                            }
+
+                            if (Math.abs(newTop % GRID_SIZE) < SNAP_THRESHOLD) {
+                                newTop = (newTop / GRID_SIZE) * GRID_SIZE
+                            } else if (Math.abs(newTop % GRID_SIZE) > (GRID_SIZE - SNAP_THRESHOLD)) {
+                                newTop = ((newTop / GRID_SIZE) + 1) * GRID_SIZE
+                            }
+
+                            // 2. 吸附到屏幕中心
+                            val centerX = resources.displayMetrics.widthPixels / 2
+                            val centerY = resources.displayMetrics.heightPixels / 2
+                            
+                            // 控件中心吸附
+                            val controlCenterX = newLeft + v.width / 2
+                            val controlCenterY = newTop + v.height / 2
+                            
+                            if (Math.abs(controlCenterX - centerX) < SNAP_THRESHOLD) {
+                                newLeft = centerX - v.width / 2
+                            }
+                            if (Math.abs(controlCenterY - centerY) < SNAP_THRESHOLD) {
+                                newTop = centerY - v.height / 2
+                            }
+
+                            params.leftMargin = newLeft
+                            params.topMargin = newTop
                             v.layoutParams = params
 
                             data.x = xFromPx(params.leftMargin)
@@ -443,8 +513,8 @@ class ControlLayout : FrameLayout {
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // 恢复正常状态
                     v.alpha = 1.0f
-
                     if (controlView is VirtualButton) {
                         controlView.isPressedState = false
                     }
@@ -457,6 +527,7 @@ class ControlLayout : FrameLayout {
                     if (finalDistance <= DRAG_THRESHOLD && !state.isDragging) {
                         mEditControlListener?.onEditControl(data)
                     } else {
+                        mOnControlChangedListener?.onControlDragging(false)
                         mOnControlChangedListener?.onControlChanged()
                     }
 
@@ -537,8 +608,11 @@ class ControlLayout : FrameLayout {
         fun onEditControl(data: ControlData?)
     }
 
-    fun interface OnControlChangedListener {
+    interface OnControlChangedListener {
         fun onControlChanged()
+        fun onControlDragging(isDragging: Boolean) {}
+        /** 控件是否正在被使用（有触摸点在控件上） */
+        fun onControlInUse(inUse: Boolean) {}
     }
 
     private fun xToPx(value: Float) = (value * resources.displayMetrics.widthPixels).toInt()

@@ -11,8 +11,9 @@ import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import com.app.ralaunch.RaLaunchApplication
+import com.app.ralaunch.manager.VibrationManager
 import com.app.ralaunch.controls.data.ControlData
+import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.bridges.SDLInputBridge
 import com.app.ralaunch.controls.textures.TextureLoader
@@ -105,15 +106,23 @@ class VirtualJoystick(
             DIR_DOWN,  // 6: 正下 (270度)
             DIR_DOWN_RIGHT // 7: 右下 (315度)
         )
+    }
 
-        private fun triggerVibration(isPress: Boolean) {
-            if (isPress) {
-                RaLaunchApplication.getVibrationManager().vibrateOneShot(50, 30)
-            } else {
-                // 释放时不振动
-//            RaLaunchApplication.getVibrationManager().vibrateOneShot(50, 30);
-            }
+    // 使用 Koin 延迟获取 VibrationManager
+    private val vibrationManager: VibrationManager? by lazy {
+        try {
+            KoinJavaComponent.get(VibrationManager::class.java)
+        } catch (e: Exception) {
+            Log.w(TAG, "VibrationManager not available: ${e.message}")
+            null
         }
+    }
+
+    private fun triggerVibration(isPress: Boolean) {
+        if (isPress) {
+            vibrationManager?.vibrateOneShot(50, 30)
+        }
+        // 释放时不振动
     }
 
     // 绘制相关
@@ -381,11 +390,43 @@ class VirtualJoystick(
                 canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint)
             }
         } else {
-            mBackgroundPaint.alpha = (castedData.opacity * 255).toInt()
-            canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint)
+            // 绘制具有深度感的背景 (自动适配深浅主题)
+            val bgAlpha = (castedData.opacity * 255).toInt()
+            val knobAlpha = (castedData.stickOpacity * 255).toInt()
+            
+            // 自动检测深浅色主题 (根据背景亮度)
+            val isDarkTheme = Color.luminance(castedData.bgColor) < 0.5f
+            val baseStrokeColor = if (isDarkTheme) Color.WHITE else Color.BLACK
+            val baseKnobColor = if (isDarkTheme) -0x828283 else Color.LTGRAY.toInt()
 
-            mStickPaint.alpha = (castedData.stickOpacity * 255).toInt()
+            // 绘制底座阴影/发光
+            mBackgroundPaint.alpha = (bgAlpha * 0.8f).toInt()
+            canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint)
+            
+            // 绘制底座精致边框 (根据主题自动切换黑白)
+            mStrokePaint.apply {
+                color = baseStrokeColor
+                alpha = (bgAlpha * 0.3f).toInt()
+                strokeWidth = dpToPx(1.5f)
+                style = Paint.Style.STROKE
+            }
+            canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mStrokePaint)
+
+            // 绘制摇杆头 (增加按下时的发光感)
+            val knobColor = if (mIsTouching) 0xFF6200EE.toInt() else baseKnobColor
+            mStickPaint.apply {
+                color = knobColor
+                alpha = knobAlpha
+            }
             canvas.drawCircle(mStickX, mStickY, mStickRadius, mStickPaint)
+            
+            // 摇杆头高光 (保持白色，增加通透感)
+            mStrokePaint.apply {
+                color = Color.WHITE
+                alpha = (knobAlpha * 0.4f).toInt()
+                strokeWidth = dpToPx(1f)
+            }
+            canvas.drawCircle(mStickX, mStickY, mStickRadius * 0.8f, mStrokePaint)
         }
 
         // 恢复旋转
@@ -990,7 +1031,7 @@ class VirtualJoystick(
         var onScreenMouseX: Float = (mScreenWidth / 2) + (dx * mouseMoveRatio)
         var onScreenMouseY: Float = (mScreenHeight / 2) + (dy * mouseMoveRatio)
 
-        // 计算用户设置的范围边界（从中心扩展模式）
+        // 计算用户设置的 range 边界（从中心扩展模式）
         var minRangeX = (0.5f - settingsManager.mouseRightStickRangeLeft / 2) * mScreenWidth
         var maxRangeX = (0.5f + settingsManager.mouseRightStickRangeRight / 2) * mScreenWidth
         var minRangeY = (0.5f - settingsManager.mouseRightStickRangeTop / 2) * mScreenHeight
@@ -1155,4 +1196,3 @@ class VirtualJoystick(
         }
     }
 }
-

@@ -1,0 +1,159 @@
+package com.app.ralaunch.ui.main
+
+import android.content.Context
+import android.content.SharedPreferences
+import com.app.ralaunch.shared.AppConstants
+import com.app.ralaunch.R
+import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.data.repository.GameRepository
+import com.app.ralaunch.manager.GameLaunchManager
+import com.app.ralaunch.manager.GameDeletionManager
+import com.app.ralaunch.ui.base.BasePresenter
+import org.koin.java.KoinJavaComponent.get
+
+/**
+ * 主界面 Presenter
+ * 处理所有业务逻辑，包括游戏列表、导航、初始化
+ */
+class MainPresenter(
+    private val context: Context
+) : BasePresenter<MainContract.View>(), MainContract.Presenter {
+
+    /**
+     * 导航页面枚举（替代 R.id.nav_* 资源引用）
+     */
+    enum class NavPage(val id: Int) {
+        GAME(0),
+        CONTROL(1),
+        DOWNLOAD(2),
+        ADD_GAME(3),
+        SETTINGS(4)
+    }
+
+    // 通过 Koin 获取 GameRepository
+    private val gameRepository: GameRepository = get(GameRepository::class.java)
+    private val gameLaunchManager: GameLaunchManager = GameLaunchManager(context)
+    private val gameDeletionManager: GameDeletionManager = GameDeletionManager(context)
+    
+    private var gameList: MutableList<GameItem> = mutableListOf()
+    private var selectedGame: GameItem? = null
+    private var currentPage: NavPage = NavPage.GAME
+
+    private val prefs: SharedPreferences
+        get() = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
+
+    // ==================== 生命周期 ====================
+
+    override fun onCreate() {
+        loadGameList()
+    }
+
+    override fun onResume() {
+        // 可添加恢复逻辑
+    }
+
+    override fun onPause() {
+        // 可添加暂停逻辑
+    }
+
+    override fun onDestroy() {
+        detach()
+    }
+
+    // ==================== 游戏列表 ====================
+
+    override fun loadGameList() {
+        gameList = gameRepository.loadGameList().toMutableList()
+        withView { showGameList(gameList) }
+    }
+
+    override fun selectGame(game: GameItem) {
+        selectedGame = game
+        withView {
+            showSelectedGame(game)
+            showLaunchButton()
+        }
+    }
+
+    override fun deleteGame(game: GameItem, position: Int) {
+        if (selectedGame == game) {
+            selectedGame = null
+            withView { 
+                showNoGameSelected()
+                hideLaunchButton()
+            }
+        }
+        
+        if (position in gameList.indices) {
+            gameList.removeAt(position)
+            gameRepository.removeGame(position)
+            withView { refreshGameList() }
+        }
+    }
+
+    override fun launchSelectedGame() {
+        android.util.Log.d("MainPresenter", "launchSelectedGame called, selectedGame=$selectedGame, isViewAttached=$isViewAttached")
+        val game = selectedGame
+        if (game != null) {
+            android.util.Log.d("MainPresenter", "Launching game: ${game.gameName}")
+            withView { launchGame(game) }
+        } else {
+            android.util.Log.w("MainPresenter", "selectedGame is null!")
+            withView { showToast(context.getString(R.string.main_select_game_first)) }
+        }
+    }
+
+    override fun addGame(game: GameItem) {
+        gameList.add(0, game)
+        gameRepository.addGame(game)
+        withView {
+            refreshGameList()
+            showToast(context.getString(R.string.game_added_success))
+            showGamePage()
+        }
+    }
+
+    fun getSelectedGame(): GameItem? = selectedGame
+
+    fun getGameList(): List<GameItem> = gameList
+
+    // ==================== 导航 ====================
+
+    override fun onNavigationSelected(itemId: Int): Boolean {
+        val page = NavPage.entries.find { it.id == itemId } ?: return false
+        if (currentPage == page) return true
+        currentPage = page
+        
+        withView {
+            when (page) {
+                NavPage.GAME -> showGamePage()
+                NavPage.SETTINGS -> showSettingsPage()
+                NavPage.CONTROL -> showControlPage()
+                NavPage.DOWNLOAD -> showDownloadPage()
+                NavPage.ADD_GAME -> showImportPage()
+            }
+        }
+        return true
+    }
+
+    override fun onBackPressed(): Boolean {
+        if (currentPage != NavPage.GAME) {
+            currentPage = NavPage.GAME
+            withView { showGamePage() }
+            return true
+        }
+        return false
+    }
+
+    // ==================== 导入 ====================
+
+    override fun onGameImportComplete(gameType: String, game: GameItem) {
+        addGame(game)
+    }
+
+    // ==================== 工具方法 ====================
+
+    fun getGameDeletionManager(): GameDeletionManager = gameDeletionManager
+
+    fun getGameLaunchManager(): GameLaunchManager = gameLaunchManager
+}

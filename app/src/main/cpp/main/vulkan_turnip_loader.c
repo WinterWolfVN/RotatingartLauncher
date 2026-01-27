@@ -50,51 +50,56 @@ bool vulkan_turnip_loader_load(void) {
     LOGI("  Attempting to load Turnip Vulkan driver");
     LOGI("========================================");
 
-    // 获取 native 库目录
+    // 获取库目录
     const char* native_dir = getenv("RALCORE_NATIVEDIR");
+    const char* runtime_dir = getenv("RALCORE_RUNTIMEDIR");
     if (native_dir == NULL) {
         native_dir = getenv("ANDROID_APP_NATIVE_LIB_DIR");
     }
     LOGI("Native lib directory: %s", native_dir ? native_dir : "(not set)");
+    LOGI("Runtime lib directory: %s", runtime_dir ? runtime_dir : "(not set)");
 
-    // 尝试从多个路径加载 Turnip 驱动
-    const char* lib_names[] = {
-        "libvulkan_freedreno.so",  // 直接名称（如果在 LD_LIBRARY_PATH 中）
-        NULL
-    };
-    
-    // 构建完整路径
+    const char* lib_name = "libvulkan_freedreno.so";
     char full_path[512];
     
-    for (int i = 0; lib_names[i] != NULL; i++) {
-        // 首先尝试直接加载（系统路径）
-        LOGI("Trying to load: %s", lib_names[i]);
-        g_turnip_handle = dlopen(lib_names[i], RTLD_NOW | RTLD_LOCAL);
-        
+    // 1. 首先尝试直接加载（系统路径）
+    LOGI("Trying to load: %s", lib_name);
+    g_turnip_handle = dlopen(lib_name, RTLD_NOW | RTLD_LOCAL);
+    if (g_turnip_handle != NULL) {
+        LOGI("✓ Turnip driver loaded from system path: %p", g_turnip_handle);
+        set_vulkan_ptr(g_turnip_handle);
+        return true;
+    }
+    LOGW("  Failed: %s", dlerror());
+    
+    // 2. 尝试从 runtime_libs 目录加载
+    if (runtime_dir != NULL) {
+        snprintf(full_path, sizeof(full_path), "%s/%s", runtime_dir, lib_name);
+        LOGI("Trying to load: %s", full_path);
+        g_turnip_handle = dlopen(full_path, RTLD_NOW | RTLD_LOCAL);
         if (g_turnip_handle != NULL) {
-            LOGI("✓ Turnip driver loaded from system path: %p", g_turnip_handle);
+            LOGI("✓ Turnip driver loaded from runtime dir: %p", g_turnip_handle);
             set_vulkan_ptr(g_turnip_handle);
             return true;
         }
         LOGW("  Failed: %s", dlerror());
-        
-        // 尝试从 native 目录加载
-        if (native_dir != NULL) {
-            snprintf(full_path, sizeof(full_path), "%s/%s", native_dir, lib_names[i]);
-            LOGI("Trying to load: %s", full_path);
-            g_turnip_handle = dlopen(full_path, RTLD_NOW | RTLD_LOCAL);
-            
-            if (g_turnip_handle != NULL) {
-                LOGI("✓ Turnip driver loaded from native dir: %p", g_turnip_handle);
-                set_vulkan_ptr(g_turnip_handle);
-                return true;
-            }
-            LOGW("  Failed: %s", dlerror());
+    }
+    
+    // 3. 尝试从 native 目录加载
+    if (native_dir != NULL) {
+        snprintf(full_path, sizeof(full_path), "%s/%s", native_dir, lib_name);
+        LOGI("Trying to load: %s", full_path);
+        g_turnip_handle = dlopen(full_path, RTLD_NOW | RTLD_LOCAL);
+        if (g_turnip_handle != NULL) {
+            LOGI("✓ Turnip driver loaded from native dir: %p", g_turnip_handle);
+            set_vulkan_ptr(g_turnip_handle);
+            return true;
         }
+        LOGW("  Failed: %s", dlerror());
     }
 
     LOGE("✗ Failed to load Turnip driver from any path");
-    LOGI("  Note: Turnip requires libvulkan_freedreno.so in the app's native library directory");
+    LOGI("  Note: Turnip requires libvulkan_freedreno.so in runtime_libs or native library directory");
     
     return false;
 }

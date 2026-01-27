@@ -5,8 +5,9 @@ import android.content.Context
 import android.content.DialogInterface
 import android.widget.Toast
 import com.app.ralaunch.R
-import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.controls.data.ControlData
+import com.app.ralaunch.controls.packs.ControlPackManager
+import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.data.ControlData.Joystick
 import com.app.ralaunch.controls.data.ControlData.KeyCode
 import com.app.ralaunch.controls.data.ControlData.TouchPad
@@ -21,8 +22,12 @@ import com.app.ralaunch.controls.packs.ControlLayout
  * - 摇杆模式设置
  */
 object ControlEditorOperations {
+    private val packManager: ControlPackManager by lazy {
+        KoinJavaComponent.get(ControlPackManager::class.java)
+    }
+    
     val context: Context
-        get() = RaLaunchApplication.getAppContext()
+        get() = KoinJavaComponent.get(android.content.Context::class.java)
 
     /**
      * 添加按钮到配置
@@ -237,7 +242,6 @@ object ControlEditorOperations {
         }
 
         try {
-            val packManager = RaLaunchApplication.getControlPackManager()
             val packId = packManager.getSelectedPackId()
             
             if (packId != null) {
@@ -266,16 +270,14 @@ object ControlEditorOperations {
      * 从 ControlPackManager 加载布局
      */
     fun loadLayout(packId: String?): ControlLayout? {
-        try {
-            val packManager = RaLaunchApplication.getControlPackManager()
-
+        return try {
             if (packId != null) {
-                return packManager.getPackLayout(packId)
+                packManager.getPackLayout(packId)
             } else {
-                return packManager.getCurrentLayout()
+                packManager.getCurrentLayout()
             }
         } catch (_: Exception) {
-            return null
+            null
         }
     }
 }

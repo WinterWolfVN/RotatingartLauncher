@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.util.Log
-import com.app.ralaunch.RaLaunchApplication
 import com.app.ralaunch.core.EnvVarsManager
 import com.app.ralaunch.data.SettingsManager
 import com.app.ralaunch.utils.GLInfoUtils
@@ -112,12 +111,12 @@ object RendererConfig {
             false,
             0
         ),
-        // gl4es 渲染器
+        // gl4es 渲染器（EGL 和 GL 都在 runtime_libs 中）
         RendererInfo(
             RENDERER_GL4ES,
             "GL4ES",
             "最完美，游戏兼容性最强，但帧率稍慢",
-            "libEGL_gl4es.so",
+            "libEGL_gl4es.so",  // 现在在 runtime_libs 中
             "libGL_gl4es.so",
             true,
             0
@@ -127,7 +126,7 @@ object RendererConfig {
             RENDERER_GL4ES_ANGLE,
             "GL4ES + ANGLE",
             "翻译成Vulkan，速度和兼容性最佳，推荐高通骁龙使用",
-            "libEGL_gl4es.so",
+            "libEGL_gl4es.so",  // 现在在 runtime_libs 中
             "libGL_gl4es.so",
             true,
             0
@@ -142,12 +141,12 @@ object RendererConfig {
             true,
             0
         ),
-        // ANGLE 渲染器
+        // ANGLE 渲染器（EGL 和 GLES 都在 runtime_libs 中）
         RendererInfo(
             RENDERER_ANGLE,
             "ANGLE (Vulkan Backend)",
             "OpenGL ES over Vulkan (Google官方)",
-            "libEGL_angle.so",
+            "libEGL_angle.so",  // 现在在 runtime_libs 中
             "libGLESv2_angle.so",
             true,
             Build.VERSION_CODES.N // Vulkan 需要 Android 7.0+
@@ -166,11 +165,13 @@ object RendererConfig {
 
     /**
      * 获取所有兼容的渲染器
+     * 检查 APK lib 目录和 runtime_libs 目录
      */
     @JvmStatic
     fun getCompatibleRenderers(context: Context): MutableList<RendererInfo> {
         val compatible: MutableList<RendererInfo> = ArrayList()
         val nativeLibDir = File(context.applicationInfo.nativeLibraryDir)
+        val runtimeLibsDir = File(context.filesDir, "runtime_libs")
 
         for (renderer in ALL_RENDERERS) {
             if (Build.VERSION.SDK_INT < renderer.minAndroidVersion) {
@@ -179,15 +180,17 @@ object RendererConfig {
 
             var hasLibraries = true
             if (renderer.eglLibrary != null) {
-                val eglLib = File(nativeLibDir, renderer.eglLibrary)
-                if (!eglLib.exists()) {
+                val eglLibNative = File(nativeLibDir, renderer.eglLibrary)
+                val eglLibRuntime = File(runtimeLibsDir, renderer.eglLibrary)
+                if (!eglLibNative.exists() && !eglLibRuntime.exists()) {
                     hasLibraries = false
                 }
             }
 
             if (hasLibraries && renderer.glesLibrary != null && (renderer.glesLibrary != renderer.eglLibrary)) {
-                val glesLib = File(nativeLibDir, renderer.glesLibrary)
-                if (!glesLib.exists()) {
+                val glesLibNative = File(nativeLibDir, renderer.glesLibrary)
+                val glesLibRuntime = File(runtimeLibsDir, renderer.glesLibrary)
+                if (!glesLibNative.exists() && !glesLibRuntime.exists()) {
                     hasLibraries = false
                 }
             }
@@ -358,6 +361,7 @@ object RendererConfig {
      * 加载渲染器库和基础环境变量
      */
     private fun loadRendererLibraries(context: Context?, rendererId: String) {
+        if (context == null) return
         val success = RendererLoader.loadRenderer(context, rendererId)
 
         if (success) {

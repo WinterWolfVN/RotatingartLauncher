@@ -1,0 +1,626 @@
+package com.app.ralaunch.controls.editors.ui
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import kotlin.math.roundToInt
+import com.app.ralaunch.controls.data.ControlData
+import com.app.ralaunch.controls.packs.ControlLayout
+import com.app.ralaunch.controls.packs.ControlPackManager
+import com.app.ralaunch.controls.textures.TextureConfig
+import com.app.ralaunch.controls.textures.TextureLoader
+import com.app.ralaunch.controls.views.ControlLayout as ControlLayoutView
+import com.app.ralaunch.controls.views.GridOverlayView
+import com.app.ralaunch.data.SettingsManager
+import com.app.ralaunch.ui.compose.dialogs.KeyBindingDialog
+import kotlinx.coroutines.flow.SharedFlow
+import java.io.File
+import java.io.FileOutputStream
+
+/**
+ * 游戏内控制 Overlay
+ * 整合悬浮菜单、控件编辑、属性面板
+ */
+@Composable
+fun GameControlsOverlay(
+    controlLayoutView: ControlLayoutView,
+    packManager: ControlPackManager,
+    settingsManager: SettingsManager,
+    toggleFloatingBallEvent: SharedFlow<Unit>,
+    onExitGame: () -> Unit,
+    onEditModeChanged: (Boolean) -> Unit = {},
+    onActiveAreaChanged: (android.graphics.RectF?) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    // 菜单状态
+    val menuState = rememberFloatingMenuState()
+    
+    // 初始化菜单状态
+    LaunchedEffect(Unit) {
+        menuState.isFpsDisplayEnabled = settingsManager.isFPSDisplayEnabled
+        menuState.isTouchEventEnabled = settingsManager.isTouchEventEnabled
+    }
+    
+    // 监听音量键切换悬浮球可见性
+    LaunchedEffect(toggleFloatingBallEvent) {
+        toggleFloatingBallEvent.collect {
+            menuState.toggleFloatingBallVisibility()
+        }
+    }
+    
+    // 通知外部编辑模式变化
+    LaunchedEffect(menuState.isInEditMode) {
+        onEditModeChanged(menuState.isInEditMode)
+    }
+    
+    // 当前选中的控件
+    var selectedControl by remember { mutableStateOf<ControlData?>(null) }
+    
+    // 布局数据
+    var currentLayout by remember { mutableStateOf<ControlLayout?>(controlLayoutView.currentLayout) }
+    
+    // 是否有未保存的更改
+    var hasUnsavedChanges by remember { mutableStateOf(false) }
+    
+    // 对话框状态
+    var showKeySelector by remember { mutableStateOf<ControlData.Button?>(null) }
+    var showJoystickKeyMapping by remember { mutableStateOf<ControlData.Joystick?>(null) }
+    var showTextureSelector by remember { mutableStateOf<Pair<ControlData, String>?>(null) }
+    
+    // 属性面板偏移量（可拖动）
+    var propertyPanelOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    
+    // 图片选择器
+    val context = LocalContext.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            // 处理选择的图片
+            showTextureSelector?.let { (control, textureType) ->
+                handleImagePicked(
+                    context = context,
+                    uri = selectedUri,
+                    packManager = packManager,
+                    control = control,
+                    textureType = textureType,
+                    controlLayoutView = controlLayoutView,
+                    onControlUpdated = { updated ->
+                        selectedControl = updated
+                        hasUnsavedChanges = true
+                    }
+                )
+                showTextureSelector = null
+            }
+        }
+    }
+    
+    // 获取屏幕尺寸用于计算活跃区域
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+    
+    // 更新 Compose 活跃区域（菜单展开或属性面板显示时）
+    LaunchedEffect(menuState.isExpanded, selectedControl, menuState.isInEditMode, propertyPanelOffset) {
+        if (menuState.isExpanded || (menuState.isInEditMode && selectedControl != null)) {
+            // 计算活跃区域：左侧菜单 + 右侧属性面板
+            val menuWidth = with(density) { 300.dp.toPx() }  // 菜单大约 260dp + padding
+            val panelWidth = with(density) { 350.dp.toPx() } // 属性面板大约 320dp + padding
+            
+            // 创建一个覆盖活跃 UI 的矩形
+            val rect = android.graphics.RectF()
+            if (menuState.isExpanded) {
+                rect.union(0f, 0f, menuWidth, screenHeightPx)
+            }
+            if (menuState.isInEditMode && selectedControl != null) {
+                rect.union(screenWidthPx - panelWidth + propertyPanelOffset.x, 0f, screenWidthPx, screenHeightPx)
+            }
+            onActiveAreaChanged(rect)
+        } else {
+            onActiveAreaChanged(null)
+        }
+    }
+    
+    // 回调实现
+    val callbacks = remember(controlLayoutView, packManager, settingsManager) {
+        object : FloatingMenuCallbacks {
+            override fun onAddButton() {
+                val layout = controlLayoutView.currentLayout ?: ControlLayout().also {
+                    it.controls = mutableListOf()
+                }
+                InGameControlOperations.addButton(layout)
+                controlLayoutView.loadLayout(layout)
+                currentLayout = layout
+                hasUnsavedChanges = true
+            }
+            
+            override fun onAddJoystick() {
+                val layout = controlLayoutView.currentLayout ?: ControlLayout().also {
+                    it.controls = mutableListOf()
+                }
+                InGameControlOperations.addJoystick(layout, ControlData.Joystick.Mode.KEYBOARD, false)
+                controlLayoutView.loadLayout(layout)
+                currentLayout = layout
+                hasUnsavedChanges = true
+            }
+            
+            override fun onAddTouchPad() {
+                val layout = controlLayoutView.currentLayout ?: ControlLayout().also {
+                    it.controls = mutableListOf()
+                }
+                InGameControlOperations.addTouchPad(layout)
+                controlLayoutView.loadLayout(layout)
+                currentLayout = layout
+                hasUnsavedChanges = true
+            }
+            
+            override fun onAddMouseWheel() {
+                val layout = controlLayoutView.currentLayout ?: ControlLayout().also {
+                    it.controls = mutableListOf()
+                }
+                InGameControlOperations.addMouseWheel(layout)
+                controlLayoutView.loadLayout(layout)
+                currentLayout = layout
+                hasUnsavedChanges = true
+            }
+            
+            override fun onAddText() {
+                val layout = controlLayoutView.currentLayout ?: ControlLayout().also {
+                    it.controls = mutableListOf()
+                }
+                InGameControlOperations.addText(layout)
+                controlLayoutView.loadLayout(layout)
+                currentLayout = layout
+                hasUnsavedChanges = true
+            }
+            
+            override fun onSave() {
+                val layout = controlLayoutView.currentLayout ?: return
+                val packId = packManager.getSelectedPackId() ?: return
+                packManager.savePackLayout(packId, layout)
+                hasUnsavedChanges = false
+            }
+            
+            override fun onToggleEditMode() {
+                // isModifiable 已在 LaunchedEffect 中设置
+                if (!menuState.isInEditMode) {
+                    // 退出编辑模式时重新加载布局
+                    controlLayoutView.loadLayoutFromPackManager()
+                    selectedControl = null
+                }
+            }
+            
+            override fun onToggleControls() {
+                controlLayoutView.isControlsVisible = menuState.isControlsVisible
+            }
+            
+            override fun onFpsDisplayChanged(enabled: Boolean) {
+                settingsManager.isFPSDisplayEnabled = enabled
+            }
+            
+            override fun onTouchEventChanged(enabled: Boolean) {
+                settingsManager.isTouchEventEnabled = enabled
+            }
+            
+            override fun onExitGame() {
+                onExitGame()
+            }
+        }
+    }
+    
+    // 设置控件编辑监听
+    LaunchedEffect(controlLayoutView) {
+        controlLayoutView.setEditControlListener { data ->
+            if (menuState.isInEditMode) {
+                selectedControl = data
+            }
+        }
+        controlLayoutView.setOnControlChangedListener(object : ControlLayoutView.OnControlChangedListener {
+            override fun onControlChanged() {
+                hasUnsavedChanges = true
+            }
+            override fun onControlDragging(isDragging: Boolean) {
+                menuState.isGhostMode = isDragging
+            }
+            override fun onControlInUse(inUse: Boolean) {
+                // 控件正在被使用时，悬浮菜单进入幽灵模式
+                menuState.isControlInUse = inUse
+            }
+        })
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        // 网格辅助线 (仅编辑模式，不拦截触摸事件)
+        if (menuState.isGridVisible && menuState.isInEditMode) {
+            AndroidView(
+                factory = { context -> 
+                    GridOverlayView(context).apply {
+                        // 禁用触摸事件，让事件穿透到下层
+                        isClickable = false
+                        isFocusable = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // 悬浮菜单
+        FloatingControlMenu(
+            mode = FloatingMenuMode.IN_GAME,
+            state = menuState,
+            callbacks = callbacks
+        )
+
+        // 右侧属性面板 (仅编辑模式下选中控件时显示，可拖动)
+        AnimatedVisibility(
+            visible = menuState.isInEditMode && selectedControl != null,
+            enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+            exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset { IntOffset(propertyPanelOffset.x.roundToInt(), propertyPanelOffset.y.roundToInt()) }
+        ) {
+            PropertyPanel(
+                control = selectedControl,
+                onUpdate = { updatedControl ->
+                    // 更新控件数据 - 使用 name 作为标识
+                    val layout = controlLayoutView.currentLayout ?: return@PropertyPanel
+                    val index = layout.controls.indexOfFirst { it.name == updatedControl.name }
+                    if (index >= 0) {
+                        layout.controls[index] = updatedControl
+                        controlLayoutView.loadLayout(layout)
+                        currentLayout = layout
+                        hasUnsavedChanges = true
+                    }
+                    selectedControl = updatedControl
+                },
+                onClose = { selectedControl = null },
+                onOpenKeySelector = { button -> showKeySelector = button },
+                onOpenJoystickKeyMapping = { joystick -> showJoystickKeyMapping = joystick },
+                onOpenTextureSelector = { control, type -> showTextureSelector = control to type },
+                onDrag = { delta -> 
+                    propertyPanelOffset = androidx.compose.ui.geometry.Offset(
+                        propertyPanelOffset.x + delta.x,
+                        propertyPanelOffset.y + delta.y
+                    )
+                }
+            )
+        }
+
+        // 删除按钮 (仅编辑模式下选中控件时显示)
+        if (menuState.isInEditMode && selectedControl != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp)
+                    .graphicsLayer { alpha = if (menuState.isGhostMode) 0.3f else 1.0f }
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        val layout = controlLayoutView.currentLayout ?: return@FloatingActionButton
+                        val controlToDelete = selectedControl ?: return@FloatingActionButton
+                        layout.controls.removeAll { it.name == controlToDelete.name }
+                        controlLayoutView.loadLayout(layout)
+                        currentLayout = layout
+                        hasUnsavedChanges = true
+                        selectedControl = null
+                    },
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                    contentColor = MaterialTheme.colorScheme.error
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "删除控件")
+                }
+            }
+        }
+    }
+
+    // ========== 对话框 ==========
+    
+    // 按键绑定选择器对话框
+    showKeySelector?.let { button ->
+        KeyBindingDialog(
+            initialGamepadMode = button.keycode.type == ControlData.KeyType.GAMEPAD,
+            onKeySelected = { keyCode, _ ->
+                val updated = button.deepCopy() as ControlData.Button
+                updated.keycode = keyCode
+                // 更新到布局 - 使用 name 作为标识
+                val layout = controlLayoutView.currentLayout ?: return@KeyBindingDialog
+                val index = layout.controls.indexOfFirst { it.name == button.name }
+                if (index >= 0) {
+                    layout.controls[index] = updated
+                    controlLayoutView.loadLayout(layout)
+                    hasUnsavedChanges = true
+                }
+                if (selectedControl?.name == button.name) {
+                    selectedControl = updated
+                }
+                showKeySelector = null
+            },
+            onDismiss = { showKeySelector = null }
+        )
+    }
+
+    // 摇杆键位映射
+    showJoystickKeyMapping?.let { joystick ->
+        JoystickKeyMappingDialog(
+            currentKeys = joystick.joystickKeys,
+            onUpdateKeys = { keys ->
+                val updated = joystick.deepCopy() as ControlData.Joystick
+                updated.joystickKeys = keys
+                // 更新到布局 - 使用 name 作为标识
+                val layout = controlLayoutView.currentLayout ?: return@JoystickKeyMappingDialog
+                val index = layout.controls.indexOfFirst { it.name == joystick.name }
+                if (index >= 0) {
+                    layout.controls[index] = updated
+                    controlLayoutView.loadLayout(layout)
+                    hasUnsavedChanges = true
+                }
+                if (selectedControl?.name == joystick.name) {
+                    selectedControl = updated
+                }
+                showJoystickKeyMapping = null
+            },
+            onDismiss = { showJoystickKeyMapping = null }
+        )
+    }
+    
+    // 纹理选择对话框
+    showTextureSelector?.let { (control, textureType) ->
+        TextureSelectorDialog(
+            control = control,
+            textureType = textureType,
+            onUpdateButtonTexture = { btn, type, path, enabled -> 
+                val updated = btn.deepCopy() as ControlData.Button
+                val newConfig = TextureConfig(path = path, enabled = enabled)
+                updated.texture = when (type) {
+                    "normal" -> updated.texture.copy(normal = newConfig)
+                    "pressed" -> updated.texture.copy(pressed = newConfig)
+                    "toggled" -> updated.texture.copy(toggled = newConfig)
+                    else -> updated.texture
+                }
+                // 清除纹理缓存
+                if (path.isNotEmpty()) {
+                    val assetsDir = packManager.getPackAssetsDir(controlLayoutView.currentLayout?.id ?: "")
+                    assetsDir?.let {
+                        val textureLoader = TextureLoader.getInstance(context)
+                        textureLoader.evictFromCache(File(it, path).absolutePath)
+                    }
+                }
+                // 更新到布局
+                val layout = controlLayoutView.currentLayout ?: return@TextureSelectorDialog
+                val index = layout.controls.indexOfFirst { it.name == btn.name }
+                if (index >= 0) {
+                    layout.controls[index] = updated
+                    controlLayoutView.loadLayout(layout)
+                    controlLayoutView.invalidate()
+                    hasUnsavedChanges = true
+                }
+                if (selectedControl?.name == btn.name) {
+                    selectedControl = updated
+                }
+                showTextureSelector = null
+            },
+            onUpdateJoystickTexture = { js, type, path, enabled -> 
+                val updated = js.deepCopy() as ControlData.Joystick
+                val newConfig = TextureConfig(path = path, enabled = enabled)
+                updated.texture = when (type) {
+                    "background" -> updated.texture.copy(background = newConfig)
+                    "knob" -> updated.texture.copy(knob = newConfig)
+                    "backgroundPressed" -> updated.texture.copy(backgroundPressed = newConfig)
+                    "knobPressed" -> updated.texture.copy(knobPressed = newConfig)
+                    else -> updated.texture
+                }
+                // 清除纹理缓存
+                if (path.isNotEmpty()) {
+                    val assetsDir = packManager.getPackAssetsDir(controlLayoutView.currentLayout?.id ?: "")
+                    assetsDir?.let {
+                        val textureLoader = TextureLoader.getInstance(context)
+                        textureLoader.evictFromCache(File(it, path).absolutePath)
+                    }
+                }
+                // 更新到布局
+                val layout = controlLayoutView.currentLayout ?: return@TextureSelectorDialog
+                val index = layout.controls.indexOfFirst { it.name == js.name }
+                if (index >= 0) {
+                    layout.controls[index] = updated
+                    controlLayoutView.loadLayout(layout)
+                    controlLayoutView.invalidate()
+                    hasUnsavedChanges = true
+                }
+                if (selectedControl?.name == js.name) {
+                    selectedControl = updated
+                }
+                showTextureSelector = null
+            },
+            onPickImage = { imagePickerLauncher.launch("image/*") },
+            onDismiss = { showTextureSelector = null }
+        )
+    }
+}
+
+/**
+ * 处理图片选择结果
+ */
+private fun handleImagePicked(
+    context: android.content.Context,
+    uri: Uri,
+    packManager: ControlPackManager,
+    control: ControlData,
+    textureType: String,
+    controlLayoutView: ControlLayoutView,
+    onControlUpdated: (ControlData) -> Unit
+) {
+    try {
+        // 获取当前布局的 pack ID
+        val layout = controlLayoutView.currentLayout ?: return
+        val packId = layout.id
+        
+        // 获取或创建 assets 目录
+        val assetsDir = packManager.getOrCreatePackAssetsDir(packId) ?: return
+        
+        // 生成唯一文件名
+        val fileName = "texture_${System.currentTimeMillis()}.png"
+        val targetFile = File(assetsDir, fileName)
+        
+        // 复制文件
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            FileOutputStream(targetFile).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+        
+        // 计算相对路径
+        val relativePath = targetFile.name
+        
+        // 清除纹理缓存，确保新纹理能被加载
+        val textureLoader = TextureLoader.getInstance(context)
+        textureLoader.evictFromCache(targetFile.absolutePath)
+        
+        // 更新控件纹理配置
+        val updated = when (control) {
+            is ControlData.Button -> {
+                val btn = control.deepCopy() as ControlData.Button
+                val newConfig = TextureConfig(path = relativePath, enabled = true)
+                btn.texture = when (textureType) {
+                    "normal" -> btn.texture.copy(normal = newConfig)
+                    "pressed" -> btn.texture.copy(pressed = newConfig)
+                    "toggled" -> btn.texture.copy(toggled = newConfig)
+                    else -> btn.texture
+                }
+                btn
+            }
+            is ControlData.Joystick -> {
+                val js = control.deepCopy() as ControlData.Joystick
+                val newConfig = TextureConfig(path = relativePath, enabled = true)
+                js.texture = when (textureType) {
+                    "background" -> js.texture.copy(background = newConfig)
+                    "knob" -> js.texture.copy(knob = newConfig)
+                    "backgroundPressed" -> js.texture.copy(backgroundPressed = newConfig)
+                    "knobPressed" -> js.texture.copy(knobPressed = newConfig)
+                    else -> js.texture
+                }
+                js
+            }
+            is ControlData.TouchPad -> {
+                val tp = control.deepCopy() as ControlData.TouchPad
+                val newConfig = TextureConfig(path = relativePath, enabled = true)
+                tp.texture = tp.texture.copy(background = newConfig)
+                tp
+            }
+            is ControlData.MouseWheel -> {
+                val mw = control.deepCopy() as ControlData.MouseWheel
+                val newConfig = TextureConfig(path = relativePath, enabled = true)
+                mw.texture = mw.texture.copy(background = newConfig)
+                mw
+            }
+            is ControlData.Text -> {
+                val txt = control.deepCopy() as ControlData.Text
+                val newConfig = TextureConfig(path = relativePath, enabled = true)
+                txt.texture = txt.texture.copy(background = newConfig)
+                txt
+            }
+            else -> return
+        }
+        
+        // 更新到布局并重新加载（会触发所有控件重新初始化）
+        val index = layout.controls.indexOfFirst { it.name == control.name }
+        if (index >= 0) {
+            layout.controls[index] = updated
+            // 确保 assets 目录已设置
+            controlLayoutView.setPackAssetsDir(assetsDir)
+            // 重新加载布局以刷新纹理显示
+            controlLayoutView.loadLayout(layout)
+            // 强制刷新视图
+            controlLayoutView.invalidate()
+            onControlUpdated(updated)
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+/**
+ * 游戏内控件操作辅助对象
+ * 直接操作布局添加控件
+ */
+private object InGameControlOperations {
+    fun addButton(layout: ControlLayout) {
+        val button = ControlData.Button().apply {
+            name = "按钮_${System.currentTimeMillis()}"
+            x = 0.1f
+            y = 0.3f
+            width = 0.08f
+            height = 0.08f
+        }
+        layout.controls.add(button)
+    }
+    
+    fun addJoystick(layout: ControlLayout, mode: ControlData.Joystick.Mode, isRightStick: Boolean) {
+        val joystick = ControlData.Joystick().apply {
+            name = if (isRightStick) "右摇杆_${System.currentTimeMillis()}" else "左摇杆_${System.currentTimeMillis()}"
+            x = if (isRightStick) 0.75f else 0.05f
+            y = 0.4f
+            width = 0.2f
+            height = 0.35f
+            this.mode = mode
+            this.isRightStick = isRightStick
+            if (mode == ControlData.Joystick.Mode.KEYBOARD) {
+                joystickKeys = arrayOf(
+                    ControlData.KeyCode.KEYBOARD_W,
+                    ControlData.KeyCode.KEYBOARD_D,
+                    ControlData.KeyCode.KEYBOARD_S,
+                    ControlData.KeyCode.KEYBOARD_A
+                )
+            }
+        }
+        layout.controls.add(joystick)
+    }
+    
+    fun addTouchPad(layout: ControlLayout) {
+        val touchPad = ControlData.TouchPad().apply {
+            name = "触控板_${System.currentTimeMillis()}"
+            x = 0.3f
+            y = 0.3f
+            width = 0.4f
+            height = 0.4f
+        }
+        layout.controls.add(touchPad)
+    }
+    
+    fun addMouseWheel(layout: ControlLayout) {
+        val mouseWheel = ControlData.MouseWheel().apply {
+            name = "滚轮_${System.currentTimeMillis()}"
+            x = 0.9f
+            y = 0.5f
+            width = 0.06f
+            height = 0.15f
+        }
+        layout.controls.add(mouseWheel)
+    }
+    
+    fun addText(layout: ControlLayout) {
+        val text = ControlData.Text().apply {
+            name = "文本_${System.currentTimeMillis()}"
+            x = 0.5f
+            y = 0.1f
+            width = 0.1f
+            height = 0.05f
+            displayText = "文本内容"
+        }
+        layout.controls.add(text)
+    }
+}

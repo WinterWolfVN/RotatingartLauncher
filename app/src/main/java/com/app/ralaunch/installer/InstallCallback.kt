@@ -1,5 +1,7 @@
 package com.app.ralaunch.installer
 
+import com.app.ralaunch.data.model.GameItem
+
 /**
  * 安装回调接口
  */
@@ -13,19 +15,9 @@ interface InstallCallback {
     
     /**
      * 安装完成回调
-     * @param gamePath 游戏目录路径（包含游戏文件的实际目录）
-     * @param gameBasePath 游戏根目录路径（用于删除时删除整个安装目录）
-     * @param gameName 游戏名称
-     * @param launchTarget 启动目标（如 tModLoader.dll 或 StardewModdingAPI.dll）
-     * @param iconPath 图标路径
+     * @param gameItem 已创建的游戏项
      */
-    fun onComplete(
-        gamePath: String,
-        gameBasePath: String,
-        gameName: String,
-        launchTarget: String?,
-        iconPath: String?
-    )
+    fun onComplete(gameItem: GameItem)
     
     /**
      * 安装错误回调

@@ -29,7 +29,7 @@ data class ControlLayout(
     @Transient
     var id: String = "pack_${System.currentTimeMillis()}"
 
-    fun toJson(): String = json.encodeToString(this)
+    fun toJson(): String = json.encodeToString(serializer(), this)
 
     fun saveTo(file: File) {
         file.parentFile?.mkdirs()

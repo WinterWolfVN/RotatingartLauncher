@@ -7,9 +7,11 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Region
 import android.text.TextPaint
+import android.util.Log
 import android.view.View
-import com.app.ralaunch.RaLaunchApplication
+import com.app.ralaunch.manager.VibrationManager
 import com.app.ralaunch.controls.bridges.ControlInputBridge
+import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.data.ControlData
 import kotlin.math.abs
 
@@ -25,10 +27,21 @@ class VirtualMouseWheel(
 ) : View(context), ControlView {
 
     companion object {
+        private const val TAG = "VirtualMouseWheel"
+    }
+
+    // 使用 Koin 延迟获取 VibrationManager
+    private val vibrationManager: VibrationManager? by lazy {
+        try {
+            KoinJavaComponent.get(VibrationManager::class.java)
+        } catch (e: Exception) {
+            Log.w(TAG, "VibrationManager not available: ${e.message}")
+            null
+        }
+    }
 
         private fun triggerVibration() {
-            RaLaunchApplication.getVibrationManager().vibrateOneShot(10, 20)
-        }
+        vibrationManager?.vibrateOneShot(10, 20)
     }
 
     override var controlData: ControlData = data

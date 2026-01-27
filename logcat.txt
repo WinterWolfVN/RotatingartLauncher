@@ -1,0 +1,237 @@
+    D  vri.Setup new sync=wmsSync-VRI[MainActivity]#2
+2026-01-20 22:26:59.579 15398-15398 VRI[MainActivity]       com.app.ralaunch                     D  vri.reportDrawFinished 0 0 Rect(0, 0 - 2400, 1080)
+2026-01-20 22:26:59.591 15398-15398 HandWritingStubImpl     com.app.ralaunch                     I  refreshLastKeyboardType: 1
+2026-01-20 22:26:59.591 15398-15398 HandWritingStubImpl     com.app.ralaunch                     I  getCurrentKeyboardType: 1
+2026-01-20 22:26:59.595 15398-15398 InsetsController        com.app.ralaunch                     D  Setting requestedVisibleTypes to -16 (was -14)
+2026-01-20 22:26:59.595 15398-22323 InsetsController        com.app.ralaunch                     D  default animation onReady types: 2 controller=android.view.InsetsAnimationControlImpl@6a0b457
+2026-01-20 22:26:59.596 15398-22323 ViewRootImplStubImpl    com.app.ralaunch                     D  requestedTypes: 2
+2026-01-20 22:26:59.600 15398-15398 VRI[MainActivity]       com.app.ralaunch                     D  getMiuiFreeformStackInfo mTmpFrames.miuiFreeFormStackInfo: null
+2026-01-20 22:26:59.604 15398-15398 InsetsController        com.app.ralaunch                     D  hide(ime(), fromIme=false)
+2026-01-20 22:26:59.604 15398-15398 ImeTracker              com.app.ralaunch                     I  com.app.ralaunch:dacecca1: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+2026-01-20 22:26:59.620 15398-15398 HandWritingStubImpl     com.app.ralaunch                     I  getCurrentKeyboardType: 1
+2026-01-20 22:26:59.628  2820-4903  HyperSentinel           system_server                        E  ->pid:15398,processName:"com.app.ralaunch",Rss Memory Size Change 259812kb -> 324784kb
+2026-01-20 22:26:59.929 15398-22323 InsetsAnimationCtrlImpl com.app.ralaunch                     D  notifyFinished shown: false, currentAlpha: 1.000000, currentInsets: Insets{left=0, top=0, right=0, bottom=0}
+2026-01-20 22:26:59.930 15398-22323 InsetsAnimationCtrlImpl com.app.ralaunch                     D  Animation finished abruptly.
+2026-01-20 22:26:59.930 15398-22323 InsetsController        com.app.ralaunch                     D  onAnimationFinish showOnFinish: false
+2026-01-20 22:26:59.930 15398-15398 InsetsController        com.app.ralaunch                     D  cancelAnimation of types:1 animType:1 host:com.app.ralaunch/com.app.ralaunch.ui.main.MainActivity invokeCallback=false
+2026-01-20 22:26:59.930 15398-15398 InsetsController        com.app.ralaunch                     D  notifyFinished. shown: false runner=android.view.InsetsAnimationThreadControlRunner@196ebe5
+2026-01-20 22:26:59.931 15398-22323 InteractionJankMonitor  com.app.ralaunch                     W  Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.app.ralaunch
+2026-01-20 22:26:59.962 15398-22323 InsetsAnimationCtrlImpl com.app.ralaunch                     D  notifyFinished shown: false, currentAlpha: 1.000000, currentInsets: Insets{left=0, top=0, right=0, bottom=0}
+2026-01-20 22:26:59.962 15398-15398 InsetsController        com.app.ralaunch                     D  cancelAnimation of types:2 animType:1 host:com.app.ralaunch/com.app.ralaunch.ui.main.MainActivity invokeCallback=false
+2026-01-20 22:26:59.962 15398-22323 InsetsAnimationCtrlImpl com.app.ralaunch                     D  Animation finished abruptly.
+2026-01-20 22:26:59.962 15398-22323 InsetsController        com.app.ralaunch                     D  onAnimationFinish showOnFinish: false
+2026-01-20 22:26:59.962 15398-15398 InsetsController        com.app.ralaunch                     D  notifyFinished. shown: false runner=android.view.InsetsAnimationThreadControlRunner@14066ba
+2026-01-20 22:27:00.021 15398-22161 om.app.ralaunch         com.app.ralaunch                     I  Compiler allocated 6363KB to compile void android.view.ViewRootImpl.performTraversals()
+2026-01-20 22:27:04.186 15398-22402 ProfileInstaller        com.app.ralaunch                     D  Installing profile for com.app.ralaunch
+2026-01-20 22:27:06.006  9548-11361 GameBoosterTableHelper  com.miui.securitycenter.remote       E  loadGamesFromSql:[com.movtery.zalithlauncher.v2, com.and.games505.TerrariaPaid, com.app.ralaunch]
+2026-01-20 22:27:06.007 14813-15406 GameBoosterTableHelper  com.miui.securitycenter              E  loadGamesFromSql:[com.movtery.zalithlauncher.v2, com.and.games505.TerrariaPaid, com.app.ralaunch]
+2026-01-20 22:27:09.057 15398-22186 om.app.ralaunch         com.app.ralaunch                     I  ProcessProfilingInfo new_methods=1 is saved saved_to_disk=1
+2026-01-20 22:27:13.556 15398-15398 MIUIInput               com.app.ralaunch                     I  [MotionEvent] ViewRootImpl windowName 'com.app.ralaunch/com.app.ralaunch.ui.main.MainActivity', { action=ACTION_DOWN, id[0]=0, pointerCount=1, eventTime=196019859, downTime=196019859, phoneEventTime=22:27:13.547 } moveCount:0
+2026-01-20 22:27:13.560 15398-15398 VRI[MainActivity]       com.app.ralaunch                     D  getMiuiFreeformStackInfo mTmpFrames.miuiFreeFormStackInfo: null
+2026-01-20 22:27:13.562 15398-15398 MIUIInput               com.app.ralaunch                     I  [MotionEvent] ViewRootImpl windowName 'com.app.ralaunch/com.app.ralaunch.ui.main.MainActivity', { action=ACTION_UP, id[0]=0, pointerCount=1, eventTime=196019868, downTime=196019859, phoneEventTime=22:27:13.555 } moveCount:0
+2026-01-20 22:27:13.571 15398-22250 om.app.ralaunch         com.app.ralaunch                     E  FrameInsert open fail: No such file or directory
+2026-01-20 22:27:13.573 15398-22430 om.app.ralaunch         com.app.ralaunch                     D  GameRender inotify watch for /data/system/mcd/rf is set up
+2026-01-20 22:27:13.574 15398-15398 WindowOnBackDispatcher  com.app.ralaunch                     W  OnBackInvokedCallback is not enabled for the application.
+                                                                                                    Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+2026-01-20 22:27:13.621 15398-15398 ControlPackManager      com.app.ralaunch                     I  Loaded pack: pack_1768020338099 - 星露谷物语 v0.0.2 beta
+2026-01-20 22:27:13.622 15398-15398 ControlPackManager      com.app.ralaunch                     I  Loaded pack: pack_zaie_keyboard - 灾厄键盘布局
+2026-01-20 22:27:13.623 15398-15398 ControlPackManager      com.app.ralaunch                     I  Loaded pack: gamepad-terraria - 手柄模式
+2026-01-20 22:27:13.623 15398-15398 ControlPackManager      com.app.ralaunch                     I  Total loaded packs: 3
+2026-01-20 22:27:13.644 15398-15398 AndroidRuntime          com.app.ralaunch                     D  Shutting down VM
+2026-01-20 22:27:13.644 15398-15398 AndroidRuntime          com.app.ralaunch                     E  FATAL EXCEPTION: main
+                                                                                                    Process: com.app.ralaunch, PID: 15398
+                                                                                                    java.lang.IllegalStateException: Size(2147483647 x 168) is out of range. Each dimension must be between 0 and 16777215.
+                                                                                                    	at androidx.compose.ui.internal.InlineClassHelperKt.throwIllegalStateException(InlineClassHelper.kt:26)
+                                                                                                    	at androidx.compose.ui.node.LookaheadCapablePlaceable.layout(LookaheadDelegate.kt:576)
+                                                                                                    	at androidx.compose.ui.layout.MeasureScope.layout(MeasureScope.kt:54)
+                                                                                                    	at androidx.compose.ui.layout.MeasureScope.layout$default(MeasureScope.kt:49)
+                                                                                                    	at androidx.compose.material3.AppBarKt$TopAppBarLayout$2$1.measure-3p2s80s(AppBar.kt:2206)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:135)
+                                                                                                    	at androidx.compose.foundation.layout.SizeNode.measure-3p2s80s(Size.kt:838)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:188)
+                                                                                                    	at androidx.compose.ui.graphics.SimpleGraphicsLayerModifier.measure-3p2s80s(GraphicsLayerModifier.kt:646)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:188)
+                                                                                                    	at androidx.compose.foundation.layout.InsetsPaddingModifier.measure-3p2s80s(WindowInsetsPadding.kt:359)
+                                                                                                    	at androidx.compose.ui.node.BackwardsCompatNode.measure-3p2s80s(BackwardsCompatNode.kt:312)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:188)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:316)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:315)
+                                                                                                    	at androidx.compose.runtime.snapshots.Snapshot$Companion.observe(Snapshot.kt:503)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver$ObservedScopeMap.observe(SnapshotStateObserver.kt:502)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:258)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeReads$ui_release(OwnerSnapshotObserver.kt:133)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeMeasureSnapshotReads$ui_release(OwnerSnapshotObserver.kt:113)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:1782)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.access$performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:40)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.remeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:696)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.measure-BRTryo0(LayoutNodeLayoutDelegate.kt:672)
+                                                                                                    	at androidx.compose.foundation.layout.BoxMeasurePolicy.measure-3p2s80s(Box.kt:151)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:135)
+                                                                                                    	at androidx.compose.ui.graphics.SimpleGraphicsLayerModifier.measure-3p2s80s(GraphicsLayerModifier.kt:646)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:188)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:316)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:315)
+                                                                                                    	at androidx.compose.runtime.snapshots.Snapshot$Companion.observe(Snapshot.kt:503)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver$ObservedScopeMap.observe(SnapshotStateObserver.kt:502)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:258)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeReads$ui_release(OwnerSnapshotObserver.kt:133)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeMeasureSnapshotReads$ui_release(OwnerSnapshotObserver.kt:113)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:1782)
+2026-01-20 22:27:13.645 15398-15398 AndroidRuntime          com.app.ralaunch                     E  	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.access$performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:40)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.remeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:696)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.measure-BRTryo0(LayoutNodeLayoutDelegate.kt:672)
+                                                                                                    	at androidx.compose.material3.ScaffoldKt$ScaffoldLayout$1$1.invoke-0kLqBqw(Scaffold.kt:148)
+                                                                                                    	at androidx.compose.material3.ScaffoldKt$ScaffoldLayout$1$1.invoke(Scaffold.kt:140)
+                                                                                                    	at androidx.compose.ui.layout.LayoutNodeSubcompositionsState$createMeasurePolicy$1.measure-3p2s80s(SubcomposeLayout.kt:725)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:135)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:316)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:315)
+                                                                                                    	at androidx.compose.runtime.snapshots.Snapshot$Companion.observe(Snapshot.kt:503)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver$ObservedScopeMap.observe(SnapshotStateObserver.kt:502)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:258)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeReads$ui_release(OwnerSnapshotObserver.kt:133)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeMeasureSnapshotReads$ui_release(OwnerSnapshotObserver.kt:113)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:1782)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.access$performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:40)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.remeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:696)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.measure-BRTryo0(LayoutNodeLayoutDelegate.kt:672)
+                                                                                                    	at androidx.compose.foundation.layout.BoxMeasurePolicy.measure-3p2s80s(Box.kt:151)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:135)
+                                                                                                    	at androidx.compose.ui.graphics.SimpleGraphicsLayerModifier.measure-3p2s80s(GraphicsLayerModifier.kt:646)
+                                                                                                    	at androidx.compose.ui.node.LayoutModifierNodeCoordinator.measure-BRTryo0(LayoutModifierNodeCoordinator.kt:188)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:316)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:315)
+                                                                                                    	at androidx.compose.runtime.snapshots.Snapshot$Companion.observe(Snapshot.kt:503)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver$ObservedScopeMap.observe(SnapshotStateObserver.kt:502)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:258)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeReads$ui_release(OwnerSnapshotObserver.kt:133)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeMeasureSnapshotReads$ui_release(OwnerSnapshotObserver.kt:113)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:1782)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.access$performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:40)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.remeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:696)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.measure-BRTryo0(LayoutNodeLayoutDelegate.kt:672)
+                                                                                                    	at androidx.compose.ui.layout.RootMeasurePolicy.measure-3p2s80s(RootMeasurePolicy.kt:38)
+                                                                                                    	at androidx.compose.ui.node.InnerNodeCoordinator.measure-BRTryo0(InnerNodeCoordinator.kt:135)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:316)
+2026-01-20 22:27:13.647 15398-15398 AndroidRuntime          com.app.ralaunch                     E  	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$performMeasureBlock$1.invoke(LayoutNodeLayoutDelegate.kt:315)
+                                                                                                    	at androidx.compose.runtime.snapshots.Snapshot$Companion.observe(Snapshot.kt:2441)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver$ObservedScopeMap.observe(SnapshotStateObserver.kt:502)
+                                                                                                    	at androidx.compose.runtime.snapshots.SnapshotStateObserver.observeReads(SnapshotStateObserver.kt:258)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeReads$ui_release(OwnerSnapshotObserver.kt:133)
+                                                                                                    	at androidx.compose.ui.node.OwnerSnapshotObserver.observeMeasureSnapshotReads$ui_release(OwnerSnapshotObserver.kt:113)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:1782)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate.access$performMeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:40)
+                                                                                                    	at androidx.compose.ui.node.LayoutNodeLayoutDelegate$MeasurePassDelegate.remeasure-BRTryo0(LayoutNodeLayoutDelegate.kt:696)
+                                                                                                    	at androidx.compose.ui.node.LayoutNode.remeasure-_Sx5XlM$ui_release(LayoutNode.kt:1222)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.doRemeasure-sdFAvZA(MeasureAndLayoutDelegate.kt:367)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.remeasureOnly(MeasureAndLayoutDelegate.kt:622)
+                                                                                                    	at androidx.compose.ui.node.MeasureAndLayoutDelegate.measureOnly(MeasureAndLayoutDelegate.kt:420)
+                                                                                                    	at androidx.compose.ui.platform.AndroidComposeView.onMeasure(AndroidComposeView.android.kt:1370)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at androidx.compose.ui.platform.AbstractComposeView.internalOnMeasure$ui_release(ComposeView.android.kt:309)
+                                                                                                    	at androidx.compose.ui.platform.AbstractComposeView.onMeasure(ComposeView.android.kt:296)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.FrameLayout.onMeasure(FrameLayout.java:194)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.FrameLayout.onMeasure(FrameLayout.java:194)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.widget.LinearLayout.measureHorizontal(LinearLayout.java:1221)
+                                                                                                    	at android.widget.LinearLayout.onMeasure(LinearLayout.java:723)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.widget.LinearLayout.measureVertical(LinearLayout.java:1031)
+                                                                                                    	at android.widget.LinearLayout.onMeasure(LinearLayout.java:721)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.FrameLayout.onMeasure(FrameLayout.java:194)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.FrameLayout.onMeasure(FrameLayout.java:194)
+                                                                                                    	at androidx.appcompat.widget.ContentFrameLayout.onMeasure(ContentFrameLayout.java:141)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.LinearLayout.measureChildBeforeLayout(LinearLayout.java:1608)
+                                                                                                    	at android.widget.LinearLayout.measureVertical(LinearLayout.java:878)
+                                                                                                    	at android.widget.LinearLayout.onMeasure(LinearLayout.java:721)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.FrameLayout.onMeasure(FrameLayout.java:194)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.LinearLayout.measureChildBeforeLayout(LinearLayout.java:1608)
+                                                                                                    	at android.widget.LinearLayout.measureVertical(LinearLayout.java:878)
+                                                                                                    	at android.widget.LinearLayout.onMeasure(LinearLayout.java:721)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewGroup.measureChildWithMargins(ViewGroup.java:7081)
+                                                                                                    	at android.widget.FrameLayout.onMeasure(FrameLayout.java:194)
+2026-01-20 22:27:13.647 15398-15398 AndroidRuntime          com.app.ralaunch                     E  	at com.android.internal.policy.DecorView.onMeasure(DecorView.java:868)
+                                                                                                    	at android.view.View.measure(View.java:30102)
+                                                                                                    	at android.view.ViewRootImpl.performMeasure(ViewRootImpl.java:6082)
+                                                                                                    	at android.view.ViewRootImpl.measureHierarchy(ViewRootImpl.java:4361)
+                                                                                                    	at android.view.ViewRootImpl.performTraversals(ViewRootImpl.java:4716)
+                                                                                                    	at android.view.ViewRootImpl.doTraversal(ViewRootImpl.java:4036)
+                                                                                                    	at android.view.ViewRootImpl$TraversalRunnable.run(ViewRootImpl.java:12396)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:2022)
+                                                                                                    	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:2031)
+                                                                                                    	at android.view.Choreographer.doCallbacks(Choreographer.java:1515)
+                                                                                                    	at android.view.Choreographer.doFrame(Choreographer.java:1396)
+                                                                                                    	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:1985)
+                                                                                                    	at android.os.Handler.handleCallback(Handler.java:995)
+                                                                                                    	at android.os.Handler.dispatchMessage(Handler.java:103)
+                                                                                                    	at android.os.Looper.loopOnce(Looper.java:265)
+                                                                                                    	at android.os.Looper.loop(Looper.java:358)
+                                                                                                    	at android.app.ActivityThread.main(ActivityThread.java:10080)
+                                                                                                    	at java.lang.reflect.Method.invoke(Native Method)
+                                                                                                    	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:616)
+                                                                                                    	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1115)
+2026-01-20 22:27:13.662 15398-15398 Process                 com.app.ralaunch                     I  Process is going to kill itself!
+                                                                                                    java.lang.Exception
+                                                                                                    	at android.os.Process.killProcess(Process.java:1449)
+                                                                                                    	at com.app.ralib.error.ErrorHandler.killProcess(ErrorHandler.java:261)
+                                                                                                    	at com.app.ralib.error.ErrorHandler.lambda$setupUncaughtExceptionHandler$0$com-app-ralib-error-ErrorHandler(ErrorHandler.java:194)
+                                                                                                    	at com.app.ralib.error.ErrorHandler$$ExternalSyntheticLambda3.uncaughtException(D8$$SyntheticClass:0)
+                                                                                                    	at java.lang.ThreadGroup.uncaughtException(ThreadGroup.java:1071)
+                                                                                                    	at java.lang.ThreadGroup.uncaughtException(ThreadGroup.java:1066)
+                                                                                                    	at java.lang.Thread.dispatchUncaughtException(Thread.java:2442)
+2026-01-20 22:27:13.662 15398-15398 Process                 com.app.ralaunch                     I  Sending signal. PID: 15398 SIG: 9
+2026-01-20 22:27:13.662 15398-15398 libc                    com.app.ralaunch                     I  kill: send 9 to pid 15398
+2026-01-20 22:27:13.662 15398-15398 libc                    com.app.ralaunch                     I  debug pid reuse, real pid 15398
+2026-01-20 22:27:13.665  5333-7127  ActivityManagerWrapper  com.miui.home                        E  getRecentTasksForceIncludingTaskIdIfValid: getRecentTasks: size=12
+                                                                                                     mainTaskId=2061   userId=0   windowMode=1   baseIntent=Intent { act=null flag=268468224 cmp=ComponentInfo{com.app.ralaunch/com.app.ralaunch.crash.CrashReportActivity} }
+                                                                                                     mainTaskId=1996   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=271581184 cmp=ComponentInfo{com.tencent.mobileqq/com.tencent.mobileqq.activity.SplashActivity} }
+                                                                                                     mainTaskId=2003   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.tencent.mm/com.tencent.mm.ui.LauncherUI} }
+                                                                                                     mainTaskId=2000   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{tv.danmaku.bili/tv.danmaku.bili.MainActivityV2} }
+                                                                                                     mainTaskId=2001   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.microsoft.emmx/com.microsoft.ruby.Main} }
+                                                                                                     mainTaskId=2049   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.VIEW flag=335544320 cmp=ComponentInfo{bin.mt.plus/bin.mt.plus.Main} }
+                                                                                                     mainTaskId=2047   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.ss.android.ugc.aweme/com.ss.android.ugc.aweme.splash.SplashActivity} }
+                                                                                                     mainTaskId=2046   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.android.settings/com.android.settings.MainSettings} }
+                                                                                                     mainTaskId=2031   userId=0   windowMode=1   baseIntent=Intent { act=android.settings.APPLICATION_DETAILS_SETTINGS flag=268468224 cmp=ComponentInfo{com.android.settings/com.android.settings.applications.InstalledAppDetails} }
+                                                                                                     mainTaskId=2002   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.netease.uuremote/com.remote.app.ui.activity.LaunchActivity} }
+                                                                                                     mainTaskId=2028   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.usts.englishlearning/io.legado.app.ui.welcome.WelcomeActivity} }
+                                                                                                     mainTaskId=2016   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.github.kr328.clash/com.github.kr328.clash.MainActivity} }
+2026-01-20 22:27:13.677  5333-7127  ActivityManagerWrapper  com.miui.home                        E  getRecentTasksForceIncludingTaskIdIfValid: getRecentTasks: size=12
+                                                                                                     mainTaskId=2061   userId=0   windowMode=1   baseIntent=Intent { act=null flag=268468224 cmp=ComponentInfo{com.app.ralaunch/com.app.ralaunch.crash.CrashReportActivity} }
+                                                                                                     mainTaskId=1996   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=271581184 cmp=ComponentInfo{com.tencent.mobileqq/com.tencent.mobileqq.activity.SplashActivity} }
+                                                                                                     mainTaskId=2003   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.tencent.mm/com.tencent.mm.ui.LauncherUI} }
+                                                                                                     mainTaskId=2000   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{tv.danmaku.bili/tv.danmaku.bili.MainActivityV2} }
+                                                                                                     mainTaskId=2001   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.microsoft.emmx/com.microsoft.ruby.Main} }
+                                                                                                     mainTaskId=2049   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.VIEW flag=335544320 cmp=ComponentInfo{bin.mt.plus/bin.mt.plus.Main} }
+                                                                                                     mainTaskId=2047   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.ss.android.ugc.aweme/com.ss.android.ugc.aweme.splash.SplashActivity} }
+                                                                                                     mainTaskId=2046   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.android.settings/com.android.settings.MainSettings} }
+                                                                                                     mainTaskId=2031   userId=0   windowMode=1   baseIntent=Intent { act=android.settings.APPLICATION_DETAILS_SETTINGS flag=268468224 cmp=ComponentInfo{com.android.settings/com.android.settings.applications.InstalledAppDetails} }
+                                                                                                     mainTaskId=2002   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.netease.uuremote/com.remote.app.ui.activity.LaunchActivity} }
+                                                                                                     mainTaskId=2028   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.usts.englishlearning/io.legado.app.ui.welcome.WelcomeActivity} }
+                                                                                                     mainTaskId=2016   userId=0   windowMode=1   baseIntent=Intent { act=android.intent.action.MAIN flag=270532608 cmp=ComponentInfo{com.github.kr328.clash/com.github.kr328.clash.MainActivity} }
+2026-01-20 22:27:13.686  2820-4441  InputDispatcher         system_server                        E  channel '5865e52 com.app.ralaunch/com.app.ralaunch.ui.main.MainActivity' ~ Channel is unrecoverably broken and will be disposed!
+---------------------------- PROCESS ENDED (15398) for package com.app.ralaunch ----------------------------
+2026-01-20 22:27:13.702 15601-15601 Zygote                  usap64                               E  process_name_ptr:15601 com.app.ralaunch
+2026-01-20 22:27:13.702 15601-15601 Zygote                  usap64                               E  SetMemoryProtected process_name_ptr:15601 com.app.ralaunch
+2026-01-20 22:27:13.704  2820-5719  TransitionChain         system_server                        E  Mismatch between current collecting (TransitionRecord{ac3dd29 id=4761 type=CLOSE flags=0x0 c=[
+                                                                                                       ChangeInfo{97dd8ae container=Display{#0 state=ON size=2400x1080 ROTATION_90} flags=0x0}
+                                                                                                       ChangeInfo{72e764f container=ActivityRecord{22798129 u0 com.app.ralaunch/.ui.main.MainActivity t2060 f} isExiting} flags=0x0}
+                                                                                                       ChangeInfo{18c3a0c container=ActivityRecord{28442568 u0 com.app.ralaunch/.crash.CrashReportActivity t2061} flags=0x0}
+                                                                                                       ChangeInfo{6eea1dc container=Task{5d01b97 #2060 type=standard A=11387:com.app.ralaunch} flags=0x0}
+                                                                                                       ChangeInfo{3ac8f55 container=Task{64c4f86 #2061 type=standard A=11387:com.app.ralaunch} flags=0x0}
+                                                                                                       ChangeInfo{51422e5 container=DefaultTaskDisplayArea@211780407 flags=0x0}
+                                                                                                    ]

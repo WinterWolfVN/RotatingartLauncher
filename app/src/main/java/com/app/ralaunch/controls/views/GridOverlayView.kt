@@ -18,15 +18,22 @@ class GridOverlayView(context: Context?) : View(context) {
     }
 
     private fun init() {
-        // 网格线画笔（灰色半透明）
+        val isDarkTheme = (context.resources.configuration.uiMode and 
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+        val gridColor = if (isDarkTheme) 0x33FFFFFF else 0x22000000.toInt()
+        val axisColor = if (isDarkTheme) 0x55FFFFFF else 0x44000000.toInt()
+
+        // 网格线画笔
         mGridPaint = Paint()
-        mGridPaint!!.color = 0x33FFFFFF
+        mGridPaint!!.color = gridColor
         mGridPaint!!.strokeWidth = 1f
         mGridPaint!!.style = Paint.Style.STROKE
 
-        // 坐标轴画笔（更明显的线）
+        // 坐标轴画笔
         mAxisPaint = Paint()
-        mAxisPaint!!.color = 0x55FFFFFF
+        mAxisPaint!!.color = axisColor
         mAxisPaint!!.strokeWidth = 2f
         mAxisPaint!!.style = Paint.Style.STROKE
     }
