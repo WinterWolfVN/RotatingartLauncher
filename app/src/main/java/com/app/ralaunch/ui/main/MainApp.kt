@@ -67,45 +67,35 @@ fun MainApp(
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                // 根据当前屏幕显示内容
-                AppNavHost(
-                    navState = navState,
-                    modifier = Modifier.fillMaxSize()
-                ) { screen ->
-                    when (screen) {
-                        is Screen.Games -> {
-                            GamesPageContent(
-                                games = games,
-                                selectedGame = selectedGame,
-                                isLoading = isLoading,
-                                onGameClick = onGameClick,
-                                onGameLongClick = onGameLongClick,
-                                onLaunchClick = onLaunchClick,
-                                onDeleteClick = onDeleteClick,
-                                onAddClick = { navState.navigateTo(Screen.Import) },
-                                iconLoader = iconLoader
-                            )
-                        }
-                        is Screen.Controls -> controlsContent()
-                        is Screen.Download -> downloadContent()
-                        is Screen.Settings -> settingsContent()
-                        is Screen.Import -> importContent()
-                        is Screen.ControlStore -> controlStoreContent()
-                        is Screen.Initialization -> { /* 已移至独立 Activity */ }
-                        is Screen.FileBrowser -> fileBrowserContent(screen.initialPath, screen.allowedExtensions, screen.fileType)
-                        is Screen.GameDetail -> {
-                            // TODO: 游戏详情全屏页面
-                            PlaceholderScreen("游戏详情: ${screen.gameId}")
-                        }
-                        is Screen.ControlEditor -> {
-                            // TODO: 控制布局编辑器
-                            PlaceholderScreen("布局编辑器")
-                        }
+                val currentScreen = navState.currentScreen
+                
+                when (currentScreen) {
+                    is Screen.Games -> {
+                        GamesPageContent(
+                            games = games,
+                            selectedGame = selectedGame,
+                            isLoading = isLoading,
+                            onGameClick = onGameClick,
+                            onGameLongClick = onGameLongClick,
+                            onLaunchClick = onLaunchClick,
+                            onDeleteClick = onDeleteClick,
+                            onAddClick = { navState.navigateTo(Screen.Import) },
+                            iconLoader = iconLoader
+                        )
                     }
+                    is Screen.Controls -> controlsContent()
+                    is Screen.Download -> downloadContent()
+                    is Screen.Settings -> settingsContent()
+                    is Screen.Import -> importContent()
+                    is Screen.ControlStore -> controlStoreContent()
+                    is Screen.FileBrowser -> fileBrowserContent(currentScreen.initialPath, currentScreen.allowedExtensions, currentScreen.fileType)
+                    is Screen.GameDetail -> PlaceholderScreen("游戏详情: ${currentScreen.gameId}")
+                    is Screen.ControlEditor -> PlaceholderScreen("布局编辑器")
+                    is Screen.Initialization -> { /* 已移至独立 Activity */ }
                 }
 
                 // 加载指示器
-                if (isLoading) {
+                if (isLoading && currentScreen is Screen.Games) {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center)
                     )

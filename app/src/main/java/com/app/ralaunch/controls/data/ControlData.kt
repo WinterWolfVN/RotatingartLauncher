@@ -432,6 +432,7 @@ sealed class ControlData {
         XBOX_TRIGGER_RIGHT(-221, KeyType.GAMEPAD) // Right Trigger (0.0 = 释放, 1.0 = 按下)
     }
 
+    var id: String = java.util.UUID.randomUUID().toString() // 唯一标识符
     var name: String = ""
     var x: Float = 0.0f // 屏幕位置 X (0-1相对值，相对于屏幕宽度)
     var y: Float = 0.0f // 屏幕位置 Y (0-1相对值，相对于屏幕高度)
@@ -475,16 +476,30 @@ sealed class ControlData {
 
         enum class Shape {
             RECTANGLE,
-            CIRCLE
+            CIRCLE,
+            POLYGON  // 自定义多边形
         }
+
+        /**
+         * 多边形顶点 (归一化坐标 0-1)
+         * 相对于控件边界框
+         */
+        @Serializable
+        data class Point(val x: Float, val y: Float)
 
         var mode: Mode = Mode.KEYBOARD
         var keycode: KeyCode = KeyCode.UNKNOWN // SDL按键码或鼠标按键或手柄按键
         var isToggle: Boolean = false // 是否是切换按钮（按下保持状态）
         var shape: Shape = Shape.RECTANGLE
         
+        /** 自定义多边形顶点 (仅 shape = POLYGON 时使用) */
+        var polygonPoints: List<Point> = emptyList()
+        
         /** 按钮纹理配置 */
         var texture: ButtonTextureConfig = ButtonTextureConfig()
+        
+        /** 使用纹理透明度作为点击区域 */
+        var useTextureAlphaHitTest: Boolean = false
     }
 
     @Serializable

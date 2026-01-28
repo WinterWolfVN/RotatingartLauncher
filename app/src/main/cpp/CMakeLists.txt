@@ -127,3 +127,5 @@ add_subdirectory(glibc_bridge)
 
 install(TARGETS main SDL2 FAudio-shared FNA3D netcorehost glibc_bridge fmod_SDL DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(TARGETS GL_gl4es EGL_gl4es DESTINATION ${CMAKE_INSTALL_LIBDIR})
+# Box64 库单独安装（编译为共享库模式）
+install(TARGETS box64 DESTINATION ${CMAKE_INSTALL_LIBDIR})

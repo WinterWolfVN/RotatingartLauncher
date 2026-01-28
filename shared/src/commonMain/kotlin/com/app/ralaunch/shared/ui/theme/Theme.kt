@@ -72,14 +72,14 @@ private fun generateLightColorScheme(seedColor: Color): ColorScheme {
         onError = Color.White,
         errorContainer = AppColors.Error90,
         onErrorContainer = AppColors.Error10,
-        // 背景带有明显主题色调（降低亮度、提高饱和度）
-        background = hslToColor(hsl[0], 0.35f, 0.92f),
-        onBackground = hslToColor(hsl[0], 0.30f, 0.15f),
-        surface = hslToColor(hsl[0], 0.25f, 0.95f),
-        onSurface = hslToColor(hsl[0], 0.25f, 0.12f),
-        surfaceVariant = hslToColor(hsl[0], 0.30f, 0.88f),
-        onSurfaceVariant = hslToColor(hsl[0], 0.20f, 0.25f),
-        outline = hslToColor(hsl[0], 0.20f, 0.50f)
+        // 背景使用低饱和度，接近纯白但带有轻微主题色调
+        background = hslToColor(hsl[0], 0.08f, 0.98f),
+        onBackground = hslToColor(hsl[0], 0.20f, 0.15f),
+        surface = hslToColor(hsl[0], 0.05f, 0.99f),
+        onSurface = hslToColor(hsl[0], 0.15f, 0.12f),
+        surfaceVariant = hslToColor(hsl[0], 0.10f, 0.95f),
+        onSurfaceVariant = hslToColor(hsl[0], 0.15f, 0.30f),
+        outline = hslToColor(hsl[0], 0.15f, 0.60f)
     )
 }
 

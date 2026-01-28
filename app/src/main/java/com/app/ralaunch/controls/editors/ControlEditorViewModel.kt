@@ -67,6 +67,10 @@ class ControlEditorViewModel : ViewModel() {
     private val _showTextureSelector = MutableStateFlow<Pair<ControlData, String>?>(null)
     val showTextureSelector: StateFlow<Pair<ControlData, String>?> = _showTextureSelector.asStateFlow()
 
+    // 多边形编辑器对话框
+    private val _showPolygonEditor = MutableStateFlow<ControlData.Button?>(null)
+    val showPolygonEditor: StateFlow<ControlData.Button?> = _showPolygonEditor.asStateFlow()
+
     // 图片选择请求事件 (由 Activity 消费)
     private val _pickImageRequest = MutableStateFlow(false)
     val pickImageRequest: StateFlow<Boolean> = _pickImageRequest.asStateFlow()
@@ -133,7 +137,8 @@ class ControlEditorViewModel : ViewModel() {
      */
     fun updateControl(updatedData: ControlData) {
         val layout = _layoutState.value ?: return
-        val index = layout.controls.indexOfFirst { it.name == updatedData.name }
+        // 使用 id 作为标识，支持修改控件名称
+        val index = layout.controls.indexOfFirst { it.id == updatedData.id }
         if (index >= 0) {
             val newControls = layout.controls.toMutableList()
             newControls[index] = updatedData
@@ -227,10 +232,33 @@ class ControlEditorViewModel : ViewModel() {
         val layout = _layoutState.value ?: return
         
         val newControls = layout.controls.toMutableList()
-        newControls.removeAll { it.name == selected.name }
+        newControls.removeAll { it.id == selected.id }
         
         _layoutState.value = layout.copy(controls = newControls)
         selectControl(null)
+        saveLayout()
+    }
+
+    /**
+     * 复制当前选中的控件
+     */
+    fun duplicateSelectedControl() {
+        val selected = _selectedControl.value ?: return
+        val layout = _layoutState.value ?: return
+        
+        // 深拷贝控件并生成新的 ID 和名称
+        val duplicated = selected.deepCopy().apply {
+            id = java.util.UUID.randomUUID().toString()
+            name = "${selected.name}_副本"
+            // 稍微偏移位置，避免完全重叠
+            x = (x + 0.05f).coerceAtMost(0.95f)
+            y = (y + 0.05f).coerceAtMost(0.95f)
+        }
+        
+        val newControls = layout.controls.toMutableList()
+        newControls.add(duplicated)
+        _layoutState.value = layout.copy(controls = newControls)
+        selectControl(duplicated)
         saveLayout()
     }
 
@@ -361,6 +389,30 @@ class ControlEditorViewModel : ViewModel() {
      */
     fun dismissTextureSelector() {
         _showTextureSelector.value = null
+    }
+
+    /**
+     * 显示多边形编辑器
+     */
+    fun showPolygonEditor(button: ControlData.Button) {
+        _showPolygonEditor.value = button
+    }
+
+    /**
+     * 关闭多边形编辑器
+     */
+    fun dismissPolygonEditor() {
+        _showPolygonEditor.value = null
+    }
+
+    /**
+     * 更新多边形顶点
+     */
+    fun updatePolygonPoints(button: ControlData.Button, points: List<ControlData.Button.Point>) {
+        val updated = button.deepCopy() as ControlData.Button
+        updated.polygonPoints = points
+        updateControl(updated)
+        _showPolygonEditor.value = null
     }
 
     /**

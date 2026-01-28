@@ -64,7 +64,11 @@ fun ControlEditorScreen(
     val showJoystickKeyMapping by viewModel.showJoystickKeyMapping.collectAsState()
     val showEditorSettings by viewModel.showEditorSettings.collectAsState()
     val showTextureSelector by viewModel.showTextureSelector.collectAsState()
+    val showPolygonEditor by viewModel.showPolygonEditor.collectAsState()
     val isGridVisible by viewModel.isGridVisible.collectAsState()
+    
+    // 属性面板偏移量（可拖动）
+    var propertyPanelOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
     // 处理返回键
     BackHandler {
@@ -193,12 +197,14 @@ fun ControlEditorScreen(
                 }
             }
 
-            // 右侧属性面板
+            // 右侧属性面板 (可拖动)
             AnimatedVisibility(
                 visible = isPropertyPanelVisible,
                 enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
                 exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut(),
-                modifier = Modifier.align(Alignment.CenterEnd)
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset { IntOffset(propertyPanelOffset.x.roundToInt(), propertyPanelOffset.y.roundToInt()) }
             ) {
                 PropertyPanel(
                     control = selectedControl,
@@ -206,7 +212,16 @@ fun ControlEditorScreen(
                     onClose = { viewModel.selectControl(null) },
                     onOpenKeySelector = { viewModel.showKeySelector(it) },
                     onOpenJoystickKeyMapping = { viewModel.showJoystickKeyMapping(it) },
-                    onOpenTextureSelector = { control, type -> viewModel.showTextureSelector(control, type) }
+                    onOpenTextureSelector = { control, type -> viewModel.showTextureSelector(control, type) },
+                    onOpenPolygonEditor = { viewModel.showPolygonEditor(it) },
+                    onDrag = { delta ->
+                        propertyPanelOffset = androidx.compose.ui.geometry.Offset(
+                            propertyPanelOffset.x + delta.x,
+                            propertyPanelOffset.y + delta.y
+                        )
+                    },
+                    onDuplicate = { viewModel.duplicateSelectedControl() },
+                    onDelete = { viewModel.deleteSelectedControl() }
                 )
             }
         }
@@ -281,6 +296,17 @@ fun ControlEditorScreen(
             },
             onPickImage = { viewModel.requestPickImage() },
             onDismiss = { viewModel.dismissTextureSelector() }
+        )
+    }
+    
+    // 多边形编辑器对话框
+    showPolygonEditor?.let { button ->
+        PolygonEditorDialog(
+            currentPoints = button.polygonPoints,
+            onConfirm = { points ->
+                viewModel.updatePolygonPoints(button, points)
+            },
+            onDismiss = { viewModel.dismissPolygonEditor() }
         )
     }
 }
@@ -551,7 +577,10 @@ fun PropertyPanel(
     onOpenKeySelector: ((ControlData.Button) -> Unit)? = null,
     onOpenJoystickKeyMapping: ((ControlData.Joystick) -> Unit)? = null,
     onOpenTextureSelector: ((ControlData, String) -> Unit)? = null,
-    onDrag: ((androidx.compose.ui.geometry.Offset) -> Unit)? = null
+    onOpenPolygonEditor: ((ControlData.Button) -> Unit)? = null,
+    onDrag: ((androidx.compose.ui.geometry.Offset) -> Unit)? = null,
+    onDuplicate: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     Surface(
         modifier = Modifier
@@ -606,8 +635,27 @@ fun PropertyPanel(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                IconButton(onClick = onClose) {
-                    Icon(Icons.Default.Close, contentDescription = "关闭")
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // 复制按钮
+                    if (onDuplicate != null) {
+                        IconButton(onClick = onDuplicate) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "复制控件")
+                        }
+                    }
+                    // 删除按钮
+                    if (onDelete != null) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "删除控件",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    // 关闭按钮
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = "关闭")
+                    }
                 }
             }
 
@@ -637,98 +685,75 @@ fun PropertyPanel(
 
                 // ===== 尺寸与位置 =====
                 PropertySection(title = "尺寸与位置") {
+                    // X 坐标滑块
+                    PropertySlider(
+                        label = "X 位置",
+                        value = control.x,
+                        onValueChange = { 
+                            val updated = control.deepCopy().apply { x = it }
+                            onUpdate(updated)
+                        }
+                    )
+                    // Y 坐标滑块
+                    PropertySlider(
+                        label = "Y 位置",
+                        value = control.y,
+                        onValueChange = { 
+                            val updated = control.deepCopy().apply { y = it }
+                            onUpdate(updated)
+                        }
+                    )
+                    // 锁定宽高比按钮
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = String.format("%.3f", control.x),
-                            onValueChange = { 
-                                it.toFloatOrNull()?.let { v ->
-                                    val updated = control.deepCopy().apply { x = v.coerceIn(0f, 1f) }
-                                    onUpdate(updated)
-                                }
-                            },
-                            label = { Text("X") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        OutlinedTextField(
-                            value = String.format("%.3f", control.y),
-                            onValueChange = { 
-                                it.toFloatOrNull()?.let { v ->
-                                    val updated = control.deepCopy().apply { y = v.coerceIn(0f, 1f) }
-                                    onUpdate(updated)
-                                }
-                            },
-                            label = { Text("Y") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
-                            value = String.format("%.3f", control.width),
-                            onValueChange = { 
-                                it.toFloatOrNull()?.let { v ->
-                                    val updated = control.deepCopy().apply { 
-                                        width = v.coerceIn(0.01f, 1f)
-                                        // 如果锁定宽高比，同步修改高度
-                                        if (isSizeRatioLocked) {
-                                            height = width
-                                        }
-                                    }
-                                    onUpdate(updated)
-                                }
-                            },
-                            label = { Text("宽度") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        
-                        // 锁定宽高比按钮
-                        IconButton(
-                            onClick = {
+                        Text("锁定宽高比", style = MaterialTheme.typography.bodyMedium)
+                        Switch(
+                            checked = control.isSizeRatioLocked,
+                            onCheckedChange = {
                                 val updated = control.deepCopy().apply { 
-                                    isSizeRatioLocked = !isSizeRatioLocked 
+                                    isSizeRatioLocked = it 
                                 }
                                 onUpdate(updated)
                             }
-                        ) {
-                            Icon(
-                                imageVector = if (control.isSizeRatioLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                                contentDescription = if (control.isSizeRatioLocked) "解锁宽高比" else "锁定宽高比",
-                                tint = if (control.isSizeRatioLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        
-                        OutlinedTextField(
-                            value = String.format("%.3f", control.height),
-                            onValueChange = { 
-                                it.toFloatOrNull()?.let { v ->
-                                    val updated = control.deepCopy().apply { 
-                                        height = v.coerceIn(0.01f, 1f)
-                                        // 如果锁定宽高比，同步修改宽度
-                                        if (isSizeRatioLocked) {
-                                            width = height
-                                        }
-                                    }
-                                    onUpdate(updated)
-                                }
-                            },
-                            label = { Text("高度") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
                         )
                     }
+                    
+                    // 宽度滑块
+                    PropertySlider(
+                        label = "宽度",
+                        value = control.width,
+                        valueRange = 0.02f..0.5f,
+                        onValueChange = { newWidth ->
+                            val updated = control.deepCopy().apply { 
+                                width = newWidth
+                                // 如果锁定宽高比，同步修改高度
+                                if (isSizeRatioLocked) {
+                                    height = newWidth
+                                }
+                            }
+                            onUpdate(updated)
+                        }
+                    )
+                    
+                    // 高度滑块
+                    PropertySlider(
+                        label = "高度",
+                        value = control.height,
+                        valueRange = 0.02f..0.5f,
+                        onValueChange = { newHeight ->
+                            val updated = control.deepCopy().apply { 
+                                height = newHeight
+                                // 如果锁定宽高比，同步修改宽度
+                                if (isSizeRatioLocked) {
+                                    width = newHeight
+                                }
+                            }
+                            onUpdate(updated)
+                        }
+                    )
                     PropertySlider(
                         label = "旋转角度",
                         value = control.rotation / 360f,
@@ -820,6 +845,36 @@ fun PropertyPanel(
                                     },
                                     label = { Text("圆形") }
                                 )
+                                FilterChip(
+                                    selected = control.shape == ControlData.Button.Shape.POLYGON,
+                                    onClick = {
+                                        val updated = control.deepCopy() as ControlData.Button
+                                        updated.shape = ControlData.Button.Shape.POLYGON
+                                        // 如果没有多边形点，设置默认三角形
+                                        if (updated.polygonPoints.isEmpty()) {
+                                            updated.polygonPoints = listOf(
+                                                ControlData.Button.Point(0.5f, 0.1f),
+                                                ControlData.Button.Point(0.9f, 0.9f),
+                                                ControlData.Button.Point(0.1f, 0.9f)
+                                            )
+                                        }
+                                        onUpdate(updated)
+                                    },
+                                    label = { Text("多边形") }
+                                )
+                            }
+                            
+                            // 多边形编辑按钮
+                            if (control.shape == ControlData.Button.Shape.POLYGON) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = { onOpenPolygonEditor?.invoke(control) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("编辑多边形 (${control.polygonPoints.size}个顶点)")
+                                }
                             }
                         }
 
@@ -841,6 +896,33 @@ fun PropertyPanel(
                                     hasTexture = control.texture.toggled.enabled,
                                     onClick = { onOpenTextureSelector?.invoke(control, "toggled") }
                                 )
+                            }
+                            
+                            // 透明纹理点击区域开关
+                            if (control.texture.normal.enabled) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("自定义形状", style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            "使用纹理透明度作为控件形状，透明区域不响应点击",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Switch(
+                                        checked = control.useTextureAlphaHitTest,
+                                        onCheckedChange = {
+                                            val updated = control.deepCopy() as ControlData.Button
+                                            updated.useTextureAlphaHitTest = it
+                                            onUpdate(updated)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

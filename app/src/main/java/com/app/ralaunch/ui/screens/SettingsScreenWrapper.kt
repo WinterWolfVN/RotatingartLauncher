@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
 import com.app.ralaunch.data.SettingsManager
 import com.app.ralaunch.patch.PatchManager
 import org.koin.java.KoinJavaComponent
@@ -43,9 +45,16 @@ fun SettingsScreenWrapper(
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity ?: return
     val scope = rememberCoroutineScope()
     
-    val viewModel = remember { AppSettingsViewModel(context) }
+    // 使用 Activity 级别的 ViewModel 缓存，避免页面切换时重建
+    val viewModel: AppSettingsViewModel = remember {
+        ViewModelProvider(
+            activity as ViewModelStoreOwner,
+            AppSettingsViewModel.Factory(context)
+        )[AppSettingsViewModel::class.java]
+    }
     val uiState by viewModel.uiState.collectAsState()
     val effect by viewModel.effect.collectAsState()
 
@@ -629,3 +638,4 @@ private fun GameSettingsContent(
         }
     }
 }
+

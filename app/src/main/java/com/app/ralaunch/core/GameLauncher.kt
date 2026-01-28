@@ -31,7 +31,9 @@ import com.app.ralaunch.patch.Patch
 import com.app.ralaunch.patch.PatchManager
 import com.app.ralaunch.box64.Box64Helper
 import com.app.ralaunch.box64.NativeBridge
+import com.app.ralaunch.runtime.RuntimeLibraryLoader
 import com.app.ralaunch.service.ProcessLauncherService
+import kotlinx.coroutines.runBlocking
 import org.libsdl.app.SDL
 import java.io.File
 import kotlin.io.path.Path
@@ -75,6 +77,13 @@ object GameLauncher {
      * Whether SDL JNI environment is initialized
      */
     private var isSDLJNIInitialized = false
+
+    /**
+     * 最后一次 Box64 错误消息
+     * Last Box64 error message
+     */
+    @Volatile
+    private var lastBox64ErrorMessage: String = ""
 
     /**
      * 重置初始化状态
@@ -150,7 +159,28 @@ object GameLauncher {
      *         Error message string, or empty string if no error
      */
     fun getLastErrorMessage(): String {
+        // 优先返回 Box64 错误（如果有）
+        if (lastBox64ErrorMessage.isNotEmpty()) {
+            return lastBox64ErrorMessage
+        }
         return DotNetLauncher.hostfxrLastErrorMsg
+    }
+
+    /**
+     * 设置 Box64 错误消息
+     * Set Box64 error message
+     */
+    private fun setBox64Error(message: String) {
+        lastBox64ErrorMessage = message
+        AppLogger.error(TAG, "Box64 Error: $message")
+    }
+
+    /**
+     * 清除 Box64 错误消息
+     * Clear Box64 error message
+     */
+    private fun clearBox64Error() {
+        lastBox64ErrorMessage = ""
     }
 
     /**
@@ -186,6 +216,9 @@ object GameLauncher {
      *         - -3：启动过程中发生异常 / Exception during launch
      */
     fun launchBox64Game(context: Context, gamePath: String): Int {
+        // 清除之前的错误信息
+        clearBox64Error()
+        
         try {
             AppLogger.info(TAG, "=== 开始启动 Box64 游戏 / Starting Box64 Game Launch ===")
             AppLogger.info(TAG, "游戏路径 / Game path: $gamePath")
@@ -193,6 +226,7 @@ object GameLauncher {
             // 步骤1：初始化 Box64 环境
             // Step 1: Initialize Box64 environment
             if (!initializeBox64(context)) {
+                // 错误信息已在 initializeBox64 中设置
                 return -1
             }
 
@@ -215,7 +249,11 @@ object GameLauncher {
 
             val filesDir = context.filesDir.absolutePath
             val rootfsPath = "$filesDir/rootfs"
-            val gameDir = File(gamePath).parent ?: return -2
+            val gameDir = File(gamePath).parent
+            if (gameDir == null) {
+                setBox64Error("无法获取游戏目录，游戏路径可能无效: $gamePath")
+                return -2
+            }
 
             // 设置 Box64 的 rootfs 路径
             // Set Box64 rootfs path
@@ -232,10 +270,34 @@ object GameLauncher {
             AppLogger.info(TAG, "=== Box64 游戏启动完成 / Box64 Game Launch Completed ===")
             AppLogger.info(TAG, "退出代码 / Exit code: $result")
 
+            // 根据退出码设置错误信息
+            if (result != 0) {
+                setBox64Error(getBox64ExitCodeDescription(result))
+            }
+
             return result
         } catch (e: Exception) {
             AppLogger.error(TAG, "启动 Box64 游戏失败 / Failed to launch Box64 game: $gamePath", e)
+            setBox64Error("启动异常: ${e.message}\n${e.stackTraceToString().take(500)}")
             return -3
+        }
+    }
+
+    /**
+     * 获取 Box64 退出码的描述
+     */
+    private fun getBox64ExitCodeDescription(exitCode: Int): String {
+        return when (exitCode) {
+            -1 -> "Box64 初始化失败（运行时库未就绪或加载失败）"
+            -2 -> "Box64 库未加载，请确保 runtime_libs 已正确解压"
+            -3 -> "Box64 启动过程中发生异常"
+            1 -> "游戏异常退出（通用错误）"
+            127 -> "找不到游戏可执行文件或缺少依赖库"
+            134 -> "游戏崩溃 (SIGABRT)"
+            136 -> "浮点异常 (SIGFPE)"
+            137 -> "进程被杀死 (SIGKILL)"
+            139 -> "段错误 (SIGSEGV) - 内存访问错误"
+            else -> "游戏退出，代码: $exitCode"
         }
     }
 
@@ -262,19 +324,83 @@ object GameLauncher {
         try {
             AppLogger.info(TAG, "正在初始化 Box64 环境 / Initializing Box64 environment...")
 
+            // 检查 assets 中是否存在 runtime_libs.tar.xz
+            val hasRuntimeLibsAsset = try {
+                context.assets.list("")?.contains("runtime_libs.tar.xz") == true
+            } catch (e: Exception) {
+                false
+            }
+
+            // 确保运行时库已解压
+            // Ensure runtime libraries are extracted
+            if (!RuntimeLibraryLoader.isExtracted(context)) {
+                if (!hasRuntimeLibsAsset) {
+                    val runtimeDir = RuntimeLibraryLoader.getRuntimeLibsDir(context)
+                    setBox64Error(buildString {
+                        append("运行时库未找到\n")
+                        append("- assets 中不存在 runtime_libs.tar.xz\n")
+                        append("- 运行时目录: ${runtimeDir.absolutePath}\n")
+                        append("- 目录存在: ${runtimeDir.exists()}\n")
+                        if (runtimeDir.exists()) {
+                            val files = runtimeDir.listFiles()?.map { it.name } ?: emptyList()
+                            append("- 目录内容: ${files.take(10).joinToString(", ")}")
+                            if (files.size > 10) append("... (共${files.size}个文件)")
+                        }
+                    })
+                    return false
+                }
+                
+                AppLogger.info(TAG, "运行时库未解压，正在解压... / Runtime libs not extracted, extracting...")
+                val extracted = runBlocking {
+                    RuntimeLibraryLoader.extractRuntimeLibs(context) { progress, message ->
+                        AppLogger.debug(TAG, "解压进度 / Extract progress: $progress% - $message")
+                    }
+                }
+                if (!extracted) {
+                    setBox64Error("运行时库解压失败，请检查存储空间是否充足")
+                    return false
+                }
+                AppLogger.info(TAG, "运行时库解压完成 / Runtime libraries extracted successfully")
+            }
+
             val filesDir = context.filesDir.absolutePath
             val result = NativeBridge.init(context, filesDir)
 
-            if (result == 0) {
-                isBox64Initialized = true
-                AppLogger.info(TAG, "Box64 初始化成功 / Box64 initialized successfully")
-                return true
-            } else {
-                AppLogger.error(TAG, "Box64 初始化失败，错误码 / Box64 initialization failed with code: $result")
+            if (result != 0) {
+                setBox64Error("glibc_bridge 初始化失败，错误码: $result\n可能原因：rootfs 不完整或权限问题")
                 return false
             }
+            AppLogger.info(TAG, "glibc_bridge 初始化成功 / glibc_bridge initialized successfully")
+
+            // 加载 Box64 库
+            // Load Box64 library
+            val box64Path = Box64Helper.getBox64LibPath(context)
+            val box64File = File(box64Path)
+            if (!box64File.exists()) {
+                setBox64Error(buildString {
+                    append("Box64 库文件不存在\n")
+                    append("- 期望路径: $box64Path\n")
+                    append("- 请确保 runtime_libs.tar.xz 中包含 libbox64.so")
+                })
+                return false
+            }
+            
+            if (!Box64Helper.ensureBox64Loaded(context)) {
+                setBox64Error(buildString {
+                    append("Box64 库加载失败\n")
+                    append("- 库路径: $box64Path\n")
+                    append("- 文件大小: ${box64File.length() / 1024 / 1024} MB\n")
+                    append("- 可能原因: 库文件损坏、ABI 不兼容或内存不足")
+                })
+                return false
+            }
+
+            isBox64Initialized = true
+            AppLogger.info(TAG, "Box64 初始化成功 / Box64 initialized successfully")
+            return true
         } catch (e: Exception) {
             AppLogger.error(TAG, "Box64 初始化异常 / Failed to initialize Box64", e)
+            setBox64Error("Box64 初始化异常: ${e.message}")
             return false
         }
     }

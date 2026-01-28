@@ -396,21 +396,30 @@ class VirtualJoystick(
             
             // 自动检测深浅色主题 (根据背景亮度)
             val isDarkTheme = Color.luminance(castedData.bgColor) < 0.5f
-            val baseStrokeColor = if (isDarkTheme) Color.WHITE else Color.BLACK
+            // 如果用户设置了非透明的边框颜色，则使用用户设置的；否则自动计算
+            val userStrokeColor = castedData.strokeColor
+            val hasUserStrokeColor = (userStrokeColor ushr 24) > 0 // alpha > 0
+            val baseStrokeColor = if (hasUserStrokeColor) userStrokeColor else (if (isDarkTheme) Color.WHITE else Color.BLACK)
             val baseKnobColor = if (isDarkTheme) -0x828283 else Color.LTGRAY.toInt()
 
             // 绘制底座阴影/发光
             mBackgroundPaint.alpha = (bgAlpha * 0.8f).toInt()
             canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mBackgroundPaint)
             
-            // 绘制底座精致边框 (根据主题自动切换黑白)
+            // 绘制底座边框 (用户设置颜色或自动计算)
             mStrokePaint.apply {
                 color = baseStrokeColor
-                alpha = (bgAlpha * 0.3f).toInt()
-                strokeWidth = dpToPx(1.5f)
+                alpha = if (hasUserStrokeColor) {
+                    (castedData.borderOpacity * 255).toInt()
+                } else {
+                    (bgAlpha * 0.3f).toInt()
+                }
+                strokeWidth = if (hasUserStrokeColor) dpToPx(castedData.strokeWidth) else dpToPx(1.5f)
                 style = Paint.Style.STROKE
             }
-            canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mStrokePaint)
+            if (castedData.strokeWidth > 0 || !hasUserStrokeColor) {
+                canvas.drawCircle(mCenterX, mCenterY, backgroundRadius, mStrokePaint)
+            }
 
             // 绘制摇杆头 (增加按下时的发光感)
             val knobColor = if (mIsTouching) 0xFF6200EE.toInt() else baseKnobColor

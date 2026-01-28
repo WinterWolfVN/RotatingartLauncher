@@ -177,12 +177,46 @@ class VirtualButton(
     }
 
     /**
+     * 检查纹理透明度
+     * 当启用纹理透明点击检测时，检查触摸点对应的纹理像素是否为透明
+     * @return true 如果点击位置不透明（可点击），false 如果透明（穿透）
+     */
+    private fun checkTextureAlpha(localX: Float, localY: Float): Boolean {
+        // 如果没有启用透明检测，直接返回 true
+        if (!castedData.useTextureAlphaHitTest) return true
+        
+        // 检查是否有纹理
+        val texturePath = castedData.texture.normal.path
+        if (texturePath.isEmpty() || !castedData.texture.normal.enabled) return true
+        
+        // 获取纹理 Bitmap
+        val loader = textureLoader ?: return true
+        val assetsPath = assetsDir ?: return true
+        val fullPath = File(assetsPath, texturePath).absolutePath
+        val bitmap = loader.loadTexture(fullPath, width, height) ?: return true
+        
+        // 将触摸坐标映射到纹理坐标
+        val texX = ((localX / width) * bitmap.width).toInt().coerceIn(0, bitmap.width - 1)
+        val texY = ((localY / height) * bitmap.height).toInt().coerceIn(0, bitmap.height - 1)
+        
+        // 检查像素 Alpha 值 (阈值 50，避免边缘问题)
+        val pixel = bitmap.getPixel(texX, texY)
+        val alpha = (pixel shr 24) and 0xFF
+        return alpha > 50
+    }
+    
+    /**
      * 检查本地坐标是否在控件形状内
      * @param localX 本地 X 坐标
      * @param localY 本地 Y 坐标
      */
     private fun isLocalTouchInBounds(localX: Float, localY: Float): Boolean {
-        when (castedData.shape) {
+        // 首先检查纹理透明度（如果启用）
+        if (!checkTextureAlpha(localX, localY)) {
+            return false
+        }
+        
+        return when (castedData.shape) {
             ControlData.Button.Shape.CIRCLE -> {
                 val centerX = width / 2f
                 val centerY = height / 2f
@@ -190,7 +224,7 @@ class VirtualButton(
                 val dx = localX - centerX
                 val dy = localY - centerY
                 val distance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-                return distance <= radius
+                distance <= radius
             }
             ControlData.Button.Shape.RECTANGLE -> {
                 // 使用圆角矩形路径检查触摸点
@@ -199,7 +233,27 @@ class VirtualButton(
                 path.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), cornerRadius, cornerRadius, Path.Direction.CW)
                 val region = Region()
                 region.setPath(path, Region(0, 0, width, height))
-                return region.contains(localX.toInt(), localY.toInt())
+                region.contains(localX.toInt(), localY.toInt())
+            }
+            ControlData.Button.Shape.POLYGON -> {
+                // 检查多边形触摸区域
+                if (castedData.polygonPoints.size >= 3) {
+                    val path = Path()
+                    val w = width.toFloat()
+                    val h = height.toFloat()
+                    val points = castedData.polygonPoints
+                    path.moveTo(points[0].x * w, points[0].y * h)
+                    for (i in 1 until points.size) {
+                        path.lineTo(points[i].x * w, points[i].y * h)
+                    }
+                    path.close()
+                    val region = Region()
+                    region.setPath(path, Region(0, 0, width, height))
+                    region.contains(localX.toInt(), localY.toInt())
+                } else {
+                    // 默认矩形检查
+                    localX >= 0 && localX <= width && localY >= 0 && localY <= height
+                }
             }
         }
     }
@@ -250,6 +304,15 @@ class VirtualButton(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        val centerX = width / 2f
+        val centerY = height / 2f
+
+        // 应用旋转
+        if (castedData.rotation != 0f) {
+            canvas.save()
+            canvas.rotate(castedData.rotation, centerX, centerY)
+        }
+
         val shape = castedData.shape
         val centerXDraw = mRectF.centerX()
         val centerYDraw = mRectF.centerY()
@@ -262,7 +325,10 @@ class VirtualButton(
         
         // 自动检测深浅色主题 (根据背景亮度)
         val isDarkTheme = Color.luminance(castedData.bgColor) < 0.5f
-        val strokeColorValue = if (isDarkTheme) Color.WHITE else Color.BLACK
+        // 如果用户设置了非透明的边框颜色，则使用用户设置的；否则自动计算
+        val userStrokeColor = castedData.strokeColor
+        val hasUserStrokeColor = (userStrokeColor ushr 24) > 0 // alpha > 0
+        val strokeColorValue = if (hasUserStrokeColor) userStrokeColor else (if (isDarkTheme) Color.WHITE else Color.BLACK)
         val textColorValue = if (isDarkTheme) Color.WHITE else Color.BLACK
 
         // 更新裁剪路径
@@ -273,6 +339,25 @@ class VirtualButton(
             ControlData.Button.Shape.RECTANGLE -> {
                 val cornerRadius = dpToPx(castedData.cornerRadius)
                 mClipPath.addRoundRect(mRectF, cornerRadius, cornerRadius, Path.Direction.CW)
+            }
+            ControlData.Button.Shape.POLYGON -> {
+                if (castedData.polygonPoints.size >= 3) {
+                    val points = castedData.polygonPoints
+                    mClipPath.moveTo(
+                        mRectF.left + points[0].x * mRectF.width(),
+                        mRectF.top + points[0].y * mRectF.height()
+                    )
+                    for (i in 1 until points.size) {
+                        mClipPath.lineTo(
+                            mRectF.left + points[i].x * mRectF.width(),
+                            mRectF.top + points[i].y * mRectF.height()
+                        )
+                    }
+                    mClipPath.close()
+                } else {
+                    // 默认矩形
+                    mClipPath.addRect(mRectF, Path.Direction.CW)
+                }
             }
         }
 
@@ -296,12 +381,19 @@ class VirtualButton(
                     canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mBackgroundPaint)
                 }
                 
-                // 绘制精致描边 (根据主题自动切换黑白)
+                // 绘制描边 (用户设置颜色或自动计算)
                 mStrokePaint.apply {
                     color = strokeColorValue
-                    alpha = min(255, (castedData.borderOpacity * 255 * 0.6f * alphaMultiplier).toInt())
+                    strokeWidth = if (hasUserStrokeColor) dpToPx(castedData.strokeWidth) else dpToPx(1f)
+                    alpha = if (hasUserStrokeColor) {
+                        min(255, (castedData.borderOpacity * 255 * alphaMultiplier).toInt())
+                    } else {
+                        min(255, (castedData.borderOpacity * 255 * 0.6f * alphaMultiplier).toInt())
+                    }
                 }
-                canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
+                if (castedData.strokeWidth > 0 || !hasUserStrokeColor) {
+                    canvas.drawRoundRect(mRectF, cornerRadius, cornerRadius, mStrokePaint)
+                }
             }
             ControlData.Button.Shape.CIRCLE -> {
                 if (hasTexture) {
@@ -324,9 +416,16 @@ class VirtualButton(
                             
                             mStrokePaint.apply {
                                 color = strokeColorValue
-                                alpha = min(255, (castedData.borderOpacity * 255 * 0.6f * alphaMultiplier).toInt())
+                                strokeWidth = if (hasUserStrokeColor) dpToPx(castedData.strokeWidth) else dpToPx(1f)
+                                alpha = if (hasUserStrokeColor) {
+                                    min(255, (castedData.borderOpacity * 255 * alphaMultiplier).toInt())
+                                } else {
+                                    min(255, (castedData.borderOpacity * 255 * 0.6f * alphaMultiplier).toInt())
+                                }
                             }
-                            canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint)
+                            if (castedData.strokeWidth > 0 || !hasUserStrokeColor) {
+                                canvas.drawCircle(centerXDraw, centerYDraw, radius, mStrokePaint)
+                            }
                         }
                         ControlData.Button.Mode.GAMEPAD -> {
                             val margin = 0.12f
@@ -350,16 +449,55 @@ class VirtualButton(
                     }
                 }
             }
+            ControlData.Button.Shape.POLYGON -> {
+                if (hasTexture) {
+                    TextureRenderer.renderButton(
+                        canvas = canvas,
+                        textureLoader = textureLoader!!,
+                        assetsDir = assetsDir,
+                        textureConfig = castedData.texture,
+                        bounds = mRectF,
+                        isPressed = mIsPressed,
+                        isToggled = mIsToggled,
+                        clipPath = mClipPath
+                    )
+                } else {
+                    // 绘制多边形背景
+                    mBackgroundPaint.alpha = min(255, (castedData.opacity * 255 * alphaMultiplier).toInt())
+                    canvas.drawPath(mClipPath, mBackgroundPaint)
+                }
+                
+                // 绘制多边形边框
+                mStrokePaint.apply {
+                    color = strokeColorValue
+                    strokeWidth = if (hasUserStrokeColor) dpToPx(castedData.strokeWidth) else dpToPx(1f)
+                    alpha = if (hasUserStrokeColor) {
+                        min(255, (castedData.borderOpacity * 255 * alphaMultiplier).toInt())
+                    } else {
+                        min(255, (castedData.borderOpacity * 255 * 0.6f * alphaMultiplier).toInt())
+                    }
+                }
+                if (castedData.strokeWidth > 0 || !hasUserStrokeColor) {
+                    canvas.drawPath(mClipPath, mStrokePaint)
+                }
+            }
         }
 
         // 当有纹理背景时，隐藏文字
-        if (hasTexture) return
+        if (hasTexture) {
+            // 恢复旋转
+            if (castedData.rotation != 0f) {
+                canvas.restore()
+            }
+            return
+        }
 
-        // 为特殊按键显示特殊符号
-        val displayText = if (castedData.keycode == ControlData.KeyCode.SPECIAL_TOUCHPAD_RIGHT_BUTTON)
-            if (ControlsSharedState.isTouchPadRightButton) "◑" else "◐"
-        else
-            castedData.name
+        // 为特殊按键显示特殊符号，否则显示控件名称
+        val displayText = when {
+            castedData.keycode == ControlData.KeyCode.SPECIAL_TOUCHPAD_RIGHT_BUTTON ->
+                if (ControlsSharedState.isTouchPadRightButton) "◑" else "◐"
+            else -> castedData.name
+        }
 
         if (displayText.isNotEmpty()) {
             canvas.save()
@@ -402,6 +540,11 @@ class VirtualButton(
 
             val textY = height / 2f - ((mTextPaint.descent() + mTextPaint.ascent()) / 2)
             canvas.drawText(displayText, width / 2f, textY, mTextPaint)
+            canvas.restore()
+        }
+
+        // 恢复旋转
+        if (castedData.rotation != 0f) {
             canvas.restore()
         }
     }

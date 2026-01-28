@@ -1,7 +1,5 @@
 package com.app.ralaunch.shared.ui.navigation
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -110,7 +108,7 @@ fun rememberNavState(
 
 /**
  * 应用导航宿主
- * 基于状态驱动的导航容器，支持平滑的位移动画
+ * 基于状态驱动的导航容器，无动画切换（更流畅）
  */
 @Composable
 fun AppNavHost(
@@ -119,24 +117,7 @@ fun AppNavHost(
     content: @Composable (Screen) -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = navState.currentScreen,
-            transitionSpec = {
-                if (navState.isForwardNavigation) {
-                    (slideInVertically(animationSpec = tween(300)) { it / 10 } + fadeIn(animationSpec = tween(300)))
-                        .togetherWith(slideOutVertically(animationSpec = tween(300)) { -it / 10 } + fadeOut(animationSpec = tween(150)))
-                } else {
-                    (slideInVertically(animationSpec = tween(300)) { -it / 10 } + fadeIn(animationSpec = tween(300)))
-                        .togetherWith(slideOutVertically(animationSpec = tween(300)) { it / 10 } + fadeOut(animationSpec = tween(150)))
-                }.using(SizeTransform(clip = false))
-            },
-            modifier = Modifier.fillMaxSize(),
-            label = "NavHostContent"
-        ) { screen ->
-            Box(modifier = Modifier.fillMaxSize()) {
-                content(screen)
-            }
-        }
+        content(navState.currentScreen)
     }
 }
 

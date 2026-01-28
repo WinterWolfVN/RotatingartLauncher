@@ -79,6 +79,7 @@ fun GameControlsOverlay(
     var showKeySelector by remember { mutableStateOf<ControlData.Button?>(null) }
     var showJoystickKeyMapping by remember { mutableStateOf<ControlData.Joystick?>(null) }
     var showTextureSelector by remember { mutableStateOf<Pair<ControlData, String>?>(null) }
+    var showPolygonEditor by remember { mutableStateOf<ControlData.Button?>(null) }
     
     // 属性面板偏移量（可拖动）
     var propertyPanelOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
@@ -277,9 +278,9 @@ fun GameControlsOverlay(
             PropertyPanel(
                 control = selectedControl,
                 onUpdate = { updatedControl ->
-                    // 更新控件数据 - 使用 name 作为标识
+                    // 更新控件数据 - 使用 id 作为标识
                     val layout = controlLayoutView.currentLayout ?: return@PropertyPanel
-                    val index = layout.controls.indexOfFirst { it.name == updatedControl.name }
+                    val index = layout.controls.indexOfFirst { it.id == updatedControl.id }
                     if (index >= 0) {
                         layout.controls[index] = updatedControl
                         controlLayoutView.loadLayout(layout)
@@ -292,11 +293,37 @@ fun GameControlsOverlay(
                 onOpenKeySelector = { button -> showKeySelector = button },
                 onOpenJoystickKeyMapping = { joystick -> showJoystickKeyMapping = joystick },
                 onOpenTextureSelector = { control, type -> showTextureSelector = control to type },
+                onOpenPolygonEditor = { button -> showPolygonEditor = button },
                 onDrag = { delta -> 
                     propertyPanelOffset = androidx.compose.ui.geometry.Offset(
                         propertyPanelOffset.x + delta.x,
                         propertyPanelOffset.y + delta.y
                     )
+                },
+                onDuplicate = {
+                    val layout = controlLayoutView.currentLayout ?: return@PropertyPanel
+                    val controlToDuplicate = selectedControl ?: return@PropertyPanel
+                    // 深拷贝控件并生成新的 ID 和名称
+                    val duplicated = controlToDuplicate.deepCopy().apply {
+                        id = java.util.UUID.randomUUID().toString()
+                        name = "${controlToDuplicate.name}_副本"
+                        x = (x + 0.05f).coerceAtMost(0.95f)
+                        y = (y + 0.05f).coerceAtMost(0.95f)
+                    }
+                    layout.controls.add(duplicated)
+                    controlLayoutView.loadLayout(layout)
+                    currentLayout = layout
+                    hasUnsavedChanges = true
+                    selectedControl = duplicated
+                },
+                onDelete = {
+                    val layout = controlLayoutView.currentLayout ?: return@PropertyPanel
+                    val controlToDelete = selectedControl ?: return@PropertyPanel
+                    layout.controls.removeAll { it.id == controlToDelete.id }
+                    controlLayoutView.loadLayout(layout)
+                    currentLayout = layout
+                    hasUnsavedChanges = true
+                    selectedControl = null
                 }
             )
         }
@@ -313,7 +340,7 @@ fun GameControlsOverlay(
                     onClick = {
                         val layout = controlLayoutView.currentLayout ?: return@FloatingActionButton
                         val controlToDelete = selectedControl ?: return@FloatingActionButton
-                        layout.controls.removeAll { it.name == controlToDelete.name }
+                        layout.controls.removeAll { it.id == controlToDelete.id }
                         controlLayoutView.loadLayout(layout)
                         currentLayout = layout
                         hasUnsavedChanges = true
@@ -337,15 +364,15 @@ fun GameControlsOverlay(
             onKeySelected = { keyCode, _ ->
                 val updated = button.deepCopy() as ControlData.Button
                 updated.keycode = keyCode
-                // 更新到布局 - 使用 name 作为标识
+                // 更新到布局 - 使用 id 作为标识
                 val layout = controlLayoutView.currentLayout ?: return@KeyBindingDialog
-                val index = layout.controls.indexOfFirst { it.name == button.name }
+                val index = layout.controls.indexOfFirst { it.id == button.id }
                 if (index >= 0) {
                     layout.controls[index] = updated
                     controlLayoutView.loadLayout(layout)
                     hasUnsavedChanges = true
                 }
-                if (selectedControl?.name == button.name) {
+                if (selectedControl?.id == button.id) {
                     selectedControl = updated
                 }
                 showKeySelector = null
@@ -361,15 +388,15 @@ fun GameControlsOverlay(
             onUpdateKeys = { keys ->
                 val updated = joystick.deepCopy() as ControlData.Joystick
                 updated.joystickKeys = keys
-                // 更新到布局 - 使用 name 作为标识
+                // 更新到布局 - 使用 id 作为标识
                 val layout = controlLayoutView.currentLayout ?: return@JoystickKeyMappingDialog
-                val index = layout.controls.indexOfFirst { it.name == joystick.name }
+                val index = layout.controls.indexOfFirst { it.id == joystick.id }
                 if (index >= 0) {
                     layout.controls[index] = updated
                     controlLayoutView.loadLayout(layout)
                     hasUnsavedChanges = true
                 }
-                if (selectedControl?.name == joystick.name) {
+                if (selectedControl?.id == joystick.id) {
                     selectedControl = updated
                 }
                 showJoystickKeyMapping = null
@@ -402,14 +429,14 @@ fun GameControlsOverlay(
                 }
                 // 更新到布局
                 val layout = controlLayoutView.currentLayout ?: return@TextureSelectorDialog
-                val index = layout.controls.indexOfFirst { it.name == btn.name }
+                val index = layout.controls.indexOfFirst { it.id == btn.id }
                 if (index >= 0) {
                     layout.controls[index] = updated
                     controlLayoutView.loadLayout(layout)
                     controlLayoutView.invalidate()
                     hasUnsavedChanges = true
                 }
-                if (selectedControl?.name == btn.name) {
+                if (selectedControl?.id == btn.id) {
                     selectedControl = updated
                 }
                 showTextureSelector = null
@@ -434,20 +461,44 @@ fun GameControlsOverlay(
                 }
                 // 更新到布局
                 val layout = controlLayoutView.currentLayout ?: return@TextureSelectorDialog
-                val index = layout.controls.indexOfFirst { it.name == js.name }
+                val index = layout.controls.indexOfFirst { it.id == js.id }
                 if (index >= 0) {
                     layout.controls[index] = updated
                     controlLayoutView.loadLayout(layout)
                     controlLayoutView.invalidate()
                     hasUnsavedChanges = true
                 }
-                if (selectedControl?.name == js.name) {
+                if (selectedControl?.id == js.id) {
                     selectedControl = updated
                 }
                 showTextureSelector = null
             },
             onPickImage = { imagePickerLauncher.launch("image/*") },
             onDismiss = { showTextureSelector = null }
+        )
+    }
+    
+    // 多边形编辑器对话框
+    showPolygonEditor?.let { button ->
+        PolygonEditorDialog(
+            currentPoints = button.polygonPoints,
+            onConfirm = { points ->
+                val updated = button.deepCopy() as ControlData.Button
+                updated.polygonPoints = points
+                // 更新到布局
+                val layout = controlLayoutView.currentLayout ?: return@PolygonEditorDialog
+                val index = layout.controls.indexOfFirst { it.id == button.id }
+                if (index >= 0) {
+                    layout.controls[index] = updated
+                    controlLayoutView.loadLayout(layout)
+                    hasUnsavedChanges = true
+                }
+                if (selectedControl?.id == button.id) {
+                    selectedControl = updated
+                }
+                showPolygonEditor = null
+            },
+            onDismiss = { showPolygonEditor = null }
         )
     }
 }
@@ -537,7 +588,7 @@ private fun handleImagePicked(
         }
         
         // 更新到布局并重新加载（会触发所有控件重新初始化）
-        val index = layout.controls.indexOfFirst { it.name == control.name }
+        val index = layout.controls.indexOfFirst { it.id == control.id }
         if (index >= 0) {
             layout.controls[index] = updated
             // 确保 assets 目录已设置

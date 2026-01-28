@@ -229,40 +229,87 @@ class GamePresenter : GameContract.Presenter {
 
     private fun getRecentLogcatLogs(): String? {
         return try {
-            val process = Runtime.getRuntime().exec(
-                arrayOf("logcat", "-d", "-v", "time", "*:E", "*:W", 
-                    "NetCoreHost:E", "GameLauncher:E", "SDL:E", "FNA3D:E")
+            // 关键日志标签列表 - 用于捕获所有重要的运行时信息
+            val importantTags = listOf(
+                // 核心组件
+                "GameLauncher", "GamePresenter", "Box64Helper", "Box64Launcher",
+                "RuntimeLibLoader", "RuntimeLibraryLoader", "NativeBridge", "GlibcBridgeJNI",
+                // 渲染器
+                "RendererConfig", "RendererLoader", "TurnipLoader", "DXVK",
+                // .NET 运行时
+                "NetCoreHost", "DotNetLauncher", "CoreCLR", "MonoGame",
+                // SDL 和音频
+                "SDL", "SDL_android", "SDLSurface", "FNA3D", "OpenAL", "FMOD",
+                // 系统层
+                "libc", "linker", "art", "dalvikvm",
+                // 错误相关
+                "FATAL", "AndroidRuntime", "System.err"
             )
-
+            
+            // 构建 logcat 过滤器
+            val tagFilters = importantTags.flatMap { listOf("$it:V") }.toTypedArray()
+            val cmd = arrayOf("logcat", "-d", "-v", "threadtime", "-t", "500", "*:S") + tagFilters
+            
+            val process = Runtime.getRuntime().exec(cmd)
             val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val logs = StringBuilder()
-            var lineCount = 0
-
-            reader.useLines { lines ->
-                lines.takeWhile { lineCount < MAX_LOG_LINES }
-                    .filter { line ->
-                        line.contains("ERROR") || line.contains("FATAL") ||
-                        line.contains("Exception") || line.contains("Error") ||
-                        line.contains("NetCoreHost") || line.contains("GameLauncher") ||
-                        line.contains("SDL") || line.contains("FNA3D")
-                    }
-                    .forEach { line ->
-                        logs.append(line).append("\n")
-                        lineCount++
-                    }
-            }
-
+            val allLogs = reader.readLines()
             process.destroy()
 
-            var result = logs.toString()
+            // 过滤和整理日志
+            val filteredLogs = allLogs
+                .filter { line ->
+                    // 过滤掉空行和无关的系统日志
+                    line.isNotBlank() && 
+                    !line.contains("GC_") && 
+                    !line.contains("Choreographer") &&
+                    !line.contains("ViewRootImpl")
+                }
+                .takeLast(MAX_LOG_LINES)
+                .joinToString("\n")
+
+            // 如果没有找到有用的日志，尝试获取所有错误级别的日志
+            if (filteredLogs.isEmpty()) {
+                return getErrorLevelLogs()
+            }
+
+            var result = filteredLogs
             if (result.length > MAX_LOG_LENGTH) {
-                result = "...[日志已截断，仅显示最后部分]...\n" + 
-                    result.substring(result.length - MAX_LOG_LENGTH)
+                result = "...[日志已截断]...\n" + result.takeLast(MAX_LOG_LENGTH)
             }
 
             result.takeIf { it.isNotEmpty() }
         } catch (e: Exception) {
             AppLogger.warn(TAG, "Failed to get logcat logs", e)
+            getErrorLevelLogs()
+        }
+    }
+
+    /**
+     * 获取错误级别的日志（备用方案）
+     */
+    private fun getErrorLevelLogs(): String? {
+        return try {
+            val process = Runtime.getRuntime().exec(
+                arrayOf("logcat", "-d", "-v", "threadtime", "-t", "300", "*:E")
+            )
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val logs = reader.readLines()
+                .filter { line ->
+                    line.isNotBlank() &&
+                    (line.contains("ralaunch", ignoreCase = true) ||
+                     line.contains("box64", ignoreCase = true) ||
+                     line.contains("sdl", ignoreCase = true) ||
+                     line.contains("runtime", ignoreCase = true) ||
+                     line.contains("Error") ||
+                     line.contains("Exception") ||
+                     line.contains("FATAL"))
+                }
+                .takeLast(100)
+                .joinToString("\n")
+            
+            process.destroy()
+            logs.takeIf { it.isNotEmpty() }
+        } catch (e: Exception) {
             null
         }
     }

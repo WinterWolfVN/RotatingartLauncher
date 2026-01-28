@@ -271,10 +271,24 @@ class VirtualTouchPad(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        val centerX = width / 2f
+        val centerY = height / 2f
+
+        // 应用旋转
+        if (castedData.rotation != 0f) {
+            canvas.save()
+            canvas.rotate(castedData.rotation, centerX, centerY)
+        }
+
         // 绘制矩形（圆角矩形）
         val cornerRadius = dpToPx(castedData.cornerRadius)
         canvas.drawRoundRect(paintRect, cornerRadius, cornerRadius, backgroundPaint)
         canvas.drawRoundRect(paintRect, cornerRadius, cornerRadius, strokePaint)
+
+        // 恢复旋转
+        if (castedData.rotation != 0f) {
+            canvas.restore()
+        }
     }
 
 

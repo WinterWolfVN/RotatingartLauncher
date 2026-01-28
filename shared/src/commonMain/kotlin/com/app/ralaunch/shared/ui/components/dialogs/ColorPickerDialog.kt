@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
 /**
- * 颜色选择器对话框 - Compose Multiplatform 版本（横屏双栏布局）
+ * 颜色选择器对话框 - Compose Multiplatform 版本（横屏双栏布局，支持透明度）
  */
 @Composable
 fun ColorPickerDialog(
@@ -35,6 +35,8 @@ fun ColorPickerDialog(
     onDismiss: () -> Unit
 ) {
     var hsvColor by remember { mutableStateOf(HsvColor.fromArgb(currentColor)) }
+    // 提取当前颜色的 alpha 值
+    var alpha by remember { mutableFloatStateOf(((currentColor shr 24) and 0xFF) / 255f) }
 
     val presetColors = listOf(
         0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFF393E46.toInt(), 0xFF00ADB5.toInt(),
@@ -67,34 +69,47 @@ fun ColorPickerDialog(
                     modifier = Modifier
                         .width(90.dp)
                         .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // 颜色预览方块
+                    // 颜色预览方块（带透明度）
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(hsvColor.toArgb() or 0xFF000000.toInt()))
-                            .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                    )
+                            .background(
+                                // 棋盘格背景显示透明度
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xFF404040), Color(0xFF606060))
+                                )
+                            )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color(hsvColor.toArgb()).copy(alpha = alpha))
+                                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                        )
+                    }
                     
-                    // HEX 值
-                    val hexValue = "#${Integer.toHexString(hsvColor.toArgb() and 0x00FFFFFF).uppercase().padStart(6, '0')}"
+                    // HEX 值（含透明度）
+                    val alphaHex = (alpha * 255).roundToInt().toString(16).uppercase().padStart(2, '0')
+                    val colorHex = Integer.toHexString(hsvColor.toArgb() and 0x00FFFFFF).uppercase().padStart(6, '0')
                     Text(
-                        text = hexValue,
+                        text = "#$alphaHex$colorHex",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = Color.White
                     )
                     
-                    // RGB 值
+                    // RGBA 值
                     val color = hsvColor.toArgb()
                     val r = (color shr 16) and 0xFF
                     val g = (color shr 8) and 0xFF
                     val b = color and 0xFF
+                    val a = (alpha * 255).roundToInt()
                     Text(
-                        text = "RGB($r,$g,$b)",
+                        text = "RGBA($r,$g,$b,$a)",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.5f)
                     )
@@ -128,7 +143,7 @@ fun ColorPickerDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(20.dp)
+                            .height(16.dp)
                             .clip(RoundedCornerShape(6.dp))
                     ) {
                         HueSelector(
@@ -136,6 +151,39 @@ fun ColorPickerDialog(
                             onHueChange = { h ->
                                 hsvColor = hsvColor.copy(hue = h)
                             }
+                        )
+                    }
+                    
+                    // 透明度选择条
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "透明度",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                        ) {
+                            AlphaSelector(
+                                hue = hsvColor.hue,
+                                saturation = hsvColor.saturation,
+                                value = hsvColor.value,
+                                alpha = alpha,
+                                onAlphaChange = { a -> alpha = a }
+                            )
+                        }
+                        Text(
+                            text = "${(alpha * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.width(32.dp)
                         )
                     }
                 }
@@ -181,7 +229,10 @@ fun ColorPickerDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSelect(hsvColor.toArgb())
+                    // 返回带有 alpha 的完整颜色值
+                    val alphaInt = (alpha * 255).roundToInt().coerceIn(0, 255)
+                    val colorWithAlpha = (alphaInt shl 24) or (hsvColor.toArgb() and 0x00FFFFFF)
+                    onSelect(colorWithAlpha)
                     onDismiss()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B4BB9))
@@ -303,6 +354,68 @@ private fun HueSelector(
             Box(
                 modifier = Modifier
                     .offset(x = ((hue / 360f * size.width - 3) / 2.625f).dp)
+                    .fillMaxHeight()
+                    .width(6.dp)
+                    .background(Color.White, RoundedCornerShape(3.dp))
+                    .border(1.dp, Color.Gray, RoundedCornerShape(3.dp))
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaSelector(
+    hue: Float,
+    saturation: Float,
+    value: Float,
+    alpha: Float,
+    onAlphaChange: (Float) -> Unit
+) {
+    var size by remember { mutableStateOf(IntSize.Zero) }
+
+    val currentColor = Color.hsv(hue, saturation, value)
+    val alphaGradient = Brush.horizontalGradient(
+        colors = listOf(Color.Transparent, currentColor)
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size = it }
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val a = (offset.x / size.width).coerceIn(0f, 1f)
+                    onAlphaChange(a)
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures { change, _ ->
+                    val a = (change.position.x / size.width).coerceIn(0f, 1f)
+                    onAlphaChange(a)
+                }
+            }
+    ) {
+        // 棋盘格背景
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(Color(0xFF404040), Color(0xFF606060))
+                    )
+                )
+        )
+        // Alpha 渐变
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(alphaGradient)
+        )
+        // 选择指示器
+        if (size.width > 0) {
+            Box(
+                modifier = Modifier
+                    .offset(x = ((alpha * size.width - 3) / 2.625f).dp)
                     .fillMaxHeight()
                     .width(6.dp)
                     .background(Color.White, RoundedCornerShape(3.dp))
