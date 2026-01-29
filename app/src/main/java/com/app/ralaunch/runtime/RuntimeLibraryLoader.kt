@@ -57,6 +57,15 @@ object RuntimeLibraryLoader {
     }
     
     /**
+     * 必须存在的关键库文件列表
+     */
+    private val REQUIRED_LIBS = listOf(
+        "libGL_gl4es.so",
+        "libEGL_gl4es.so",
+        "libbox64.so"
+    )
+    
+    /**
      * 检查运行时库是否已解压
      */
     fun isExtracted(context: Context): Boolean {
@@ -64,28 +73,57 @@ object RuntimeLibraryLoader {
         val versionFile = File(runtimeDir, VERSION_FILE)
         
         if (!runtimeDir.exists() || !versionFile.exists()) {
+            AppLogger.info(TAG, "Runtime libs not extracted: directory or version file missing")
             return false
+        }
+        
+        // 检查关键库文件是否存在
+        for (libName in REQUIRED_LIBS) {
+            val libFile = File(runtimeDir, libName)
+            if (!libFile.exists() || libFile.length() == 0L) {
+                AppLogger.warn(TAG, "Required library missing or empty: $libName")
+                return false
+            }
         }
         
         // 检查版本是否匹配
         val currentVersion = getAssetVersion(context)
         val extractedVersion = versionFile.readText().trim()
         
-        return currentVersion == extractedVersion
+        if (currentVersion != extractedVersion) {
+            AppLogger.info(TAG, "Version mismatch: current=$currentVersion, extracted=$extractedVersion")
+            return false
+        }
+        
+        return true
     }
     
     /**
-     * 获取 assets 中压缩包的版本（使用文件大小作为简单版本标识）
+     * 获取 assets 中压缩包的版本
+     * 使用 AssetFileDescriptor 获取真实文件大小
      */
     private fun getAssetVersion(context: Context): String {
         return try {
-            context.assets.open(RUNTIME_LIBS_ARCHIVE).use { stream ->
-                // 计算简单的校验值
-                val size = stream.available()
-                "v1_$size"
+            context.assets.openFd(RUNTIME_LIBS_ARCHIVE).use { afd ->
+                val size = afd.length
+                "v2_$size"  // v2 表示新的版本计算方式
             }
         } catch (e: Exception) {
-            "unknown"
+            // openFd 可能对压缩的 assets 失败，回退到读取方式
+            try {
+                context.assets.open(RUNTIME_LIBS_ARCHIVE).use { stream ->
+                    var size = 0L
+                    val buffer = ByteArray(8192)
+                    var read: Int
+                    while (stream.read(buffer).also { read = it } != -1) {
+                        size += read
+                    }
+                    "v2_$size"
+                }
+            } catch (e2: Exception) {
+                AppLogger.error(TAG, "Failed to get asset version: ${e2.message}")
+                "unknown"
+            }
         }
     }
     
@@ -154,9 +192,11 @@ object RuntimeLibraryLoader {
                             tarStream.copyTo(fos)
                         }
                         
-                        // 设置可执行权限
+                        // 设置库文件权限（可读 + 可执行）
                         if (entry.name.endsWith(".so")) {
-                            outputFile.setExecutable(true)
+                            outputFile.setReadable(true, false)  // 所有用户可读
+                            outputFile.setExecutable(true, false) // 所有用户可执行
+                            AppLogger.debug(TAG, "Set permissions for: ${entry.name}")
                         }
                         
                         extractedCount++
@@ -170,9 +210,25 @@ object RuntimeLibraryLoader {
                 }
             }
             
-            // 写入版本标记
+            // 验证关键库是否都已解压
+            val missingLibs = REQUIRED_LIBS.filter { libName ->
+                val libFile = File(runtimeDir, libName)
+                !libFile.exists() || libFile.length() == 0L
+            }
+            
+            if (missingLibs.isNotEmpty()) {
+                AppLogger.error(TAG, "Missing required libraries after extraction: $missingLibs")
+                progressCallback?.invoke(-1, "解压不完整，缺少: ${missingLibs.joinToString()}")
+                return@withContext false
+            }
+            
+            // 验证成功后写入版本标记
             val versionFile = File(runtimeDir, VERSION_FILE)
             versionFile.writeText(getAssetVersion(context))
+            
+            // 列出所有已解压的库
+            val extractedLibs = listExtractedLibraries(context)
+            AppLogger.info(TAG, "Runtime libraries extracted: ${extractedLibs.joinToString()}")
             
             progressCallback?.invoke(100, "解压完成")
             AppLogger.info(TAG, "Runtime libraries extracted to: ${runtimeDir.absolutePath}")
@@ -181,8 +237,30 @@ object RuntimeLibraryLoader {
         } catch (e: Exception) {
             AppLogger.error(TAG, "Failed to extract runtime libs", e)
             progressCallback?.invoke(-1, "解压失败: ${e.message}")
+            // 清理可能的不完整解压
+            try {
+                runtimeDir.deleteRecursively()
+            } catch (_: Exception) {}
             false
         }
+    }
+    
+    /**
+     * 强制重新解压运行时库
+     * 删除版本文件后重新解压
+     */
+    suspend fun forceReExtract(
+        context: Context,
+        progressCallback: ((Int, String) -> Unit)? = null
+    ): Boolean {
+        val runtimeDir = File(context.filesDir, RUNTIME_LIBS_DIR)
+        
+        // 删除整个目录强制重新解压
+        if (runtimeDir.exists()) {
+            runtimeDir.deleteRecursively()
+        }
+        
+        return extractRuntimeLibs(context, progressCallback)
     }
     
     /**

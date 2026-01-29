@@ -67,6 +67,11 @@ android {
         compose true
     }
 
+    // 禁止 AAPT 压缩这些文件类型，确保 AssetManager 能正确读取
+    androidResources {
+        noCompress += ['tar.gz', 'tar.xz', 'xz']
+    }
+
     packagingOptions {
         jniLibs {
             useLegacyPackaging = true

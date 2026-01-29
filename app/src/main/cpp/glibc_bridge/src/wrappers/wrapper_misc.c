@@ -14,6 +14,7 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <wchar.h>
+#include <unistd.h>
 
 #include "../include/wrappers.h"
 #include "../include/private.h"
@@ -123,14 +124,197 @@ int getopt_long_only_wrapper(int argc, char* const argv[], const char* optstring
 
 /* ============================================================================
  * getline / getdelim 包装
+ * 
+ * 关键问题：glibc FILE 结构 (_IO_FILE) 与 bionic FILE 结构 (__sFILE) 完全不同！
+ * 
+ * glibc _IO_FILE (64位, 参考 glibc/libio/bits/types/struct_FILE.h):
+ *   偏移 0:   _flags (int) - 高位包含魔数 0xFBAD0000
+ *   偏移 4:   padding (4 bytes)
+ *   偏移 8:   _IO_read_ptr (char*)
+ *   偏移 16:  _IO_read_end (char*)
+ *   偏移 24:  _IO_read_base (char*)
+ *   偏移 32:  _IO_write_base (char*)
+ *   偏移 40:  _IO_write_ptr (char*)
+ *   偏移 48:  _IO_write_end (char*)
+ *   偏移 56:  _IO_buf_base (char*)
+ *   偏移 64:  _IO_buf_end (char*)
+ *   偏移 72:  _IO_save_base (char*)
+ *   偏移 80:  _IO_backup_base (char*)
+ *   偏移 88:  _IO_save_end (char*)
+ *   偏移 96:  _markers (void*)
+ *   偏移 104: _chain (void*)
+ *   偏移 112: _fileno (int)
+ * 
+ * bionic __sFILE (64位, 参考 bionic/libc/stdio/local.h):
+ *   偏移 0:   _p (unsigned char*)
+ *   偏移 8:   _r (int)
+ *   偏移 12:  _w (int)
+ *   偏移 16:  _flags (int)
+ *   偏移 20:  _file (int) <- 文件描述符
+ * 
+ * 策略：始终使用基于 fd 的实现，避免调用 bionic getdelim
  * ============================================================================ */
 
+/* glibc _IO_FILE 魔数 */
+#define GLIBC_IO_MAGIC 0xFBAD0000
+#define GLIBC_IO_MAGIC_MASK 0xFFFF0000
+
+/* 从 glibc FILE 提取文件描述符 (偏移 112) */
+static int get_fd_from_glibc_file(void* stream) {
+    /* _fileno 在偏移 112 字节处 */
+    int* fileno_ptr = (int*)((char*)stream + 112);
+    return *fileno_ptr;
+}
+
+/* 从 bionic FILE 提取文件描述符 (偏移 20) */
+static int get_fd_from_bionic_file(void* stream) {
+    /* _file 在偏移 20 字节处 (64位) */
+    int* file_ptr = (int*)((char*)stream + 20);
+    return *file_ptr;
+}
+
+/* 检测 FILE* 是否是 glibc 格式 */
+static int is_glibc_file(void* stream) {
+    if (stream == NULL) return 0;
+    
+    /* 读取第一个 int，检查是否包含 glibc 魔数 */
+    int flags = *((int*)stream);
+    int result = (flags & GLIBC_IO_MAGIC_MASK) == GLIBC_IO_MAGIC;
+    LOG_DEBUG("is_glibc_file: stream=%p, flags=0x%08x, is_glibc=%d", stream, flags, result);
+    return result;
+}
+
+/* 安全地从任意 FILE* 获取文件描述符 */
+static int safe_get_fd(void* stream) {
+    if (stream == NULL) return -1;
+    
+    /* 检查标准流 */
+    if (stream == stdin) return STDIN_FILENO;
+    if (stream == stdout) return STDOUT_FILENO;
+    if (stream == stderr) return STDERR_FILENO;
+    
+    /* 读取第一个字段来判断类型 */
+    int first_int = *((int*)stream);
+    
+    /* glibc: 第一个 int 的高位是魔数 0xFBAD */
+    if ((first_int & GLIBC_IO_MAGIC_MASK) == GLIBC_IO_MAGIC) {
+        int fd = get_fd_from_glibc_file(stream);
+        LOG_DEBUG("safe_get_fd: glibc FILE* detected at %p, fd=%d", stream, fd);
+        return fd;
+    }
+    
+    /* bionic: 第一个字段是指针 _p
+     * 在 64 位系统上，指针的高位通常是 0x0000007f 或类似值
+     * 我们检查第一个 int 是否看起来像指针的低 32 位
+     */
+    
+    /* 尝试从 bionic 偏移提取 fd */
+    int bionic_fd = get_fd_from_bionic_file(stream);
+    
+    /* 验证 fd 是否合理 (0-65535) */
+    if (bionic_fd >= 0 && bionic_fd < 65536) {
+        LOG_DEBUG("safe_get_fd: bionic FILE* detected at %p, fd=%d", stream, bionic_fd);
+        return bionic_fd;
+    }
+    
+    /* 无法确定类型，尝试 glibc 偏移作为后备 */
+    int glibc_fd = get_fd_from_glibc_file(stream);
+    if (glibc_fd >= 0 && glibc_fd < 65536) {
+        LOG_DEBUG("safe_get_fd: fallback to glibc offset at %p, fd=%d", stream, glibc_fd);
+        return glibc_fd;
+    }
+    
+    LOG_DEBUG("safe_get_fd: unable to determine fd from stream %p", stream);
+    return -1;
+}
+
+/* 基于文件描述符的 getdelim 实现 - 不依赖任何 FILE* 结构 */
+static ssize_t fd_getdelim(char** lineptr, size_t* n, int delim, int fd) {
+    if (fd < 0) {
+        errno = EBADF;
+        return -1;
+    }
+    
+    /* 初始化缓冲区 */
+    if (*lineptr == NULL || *n == 0) {
+        *n = 128;
+        *lineptr = (char*)malloc(*n);
+        if (*lineptr == NULL) {
+            errno = ENOMEM;
+            return -1;
+        }
+    }
+    
+    size_t pos = 0;
+    char c;
+    ssize_t nread;
+    
+    while (1) {
+        nread = read(fd, &c, 1);
+        if (nread < 0) {
+            if (pos > 0) {
+                /* 已读取部分数据，返回它 */
+                break;
+            }
+            return -1;  /* 错误 */
+        }
+        if (nread == 0) {
+            /* EOF */
+            if (pos == 0) {
+                return -1;
+            }
+            break;
+        }
+        
+        /* 确保有足够空间 */
+        if (pos + 2 > *n) {
+            size_t new_size = *n * 2;
+            char* new_buf = (char*)realloc(*lineptr, new_size);
+            if (new_buf == NULL) {
+                errno = ENOMEM;
+                return -1;
+            }
+            *lineptr = new_buf;
+            *n = new_size;
+        }
+        
+        (*lineptr)[pos++] = c;
+        
+        if ((unsigned char)c == (unsigned char)delim) {
+            break;
+        }
+    }
+    
+    (*lineptr)[pos] = '\0';
+    return (ssize_t)pos;
+}
+
 ssize_t getdelim_wrapper(char** lineptr, size_t* n, int delim, FILE* stream) {
-    return getdelim(lineptr, n, delim, stream);
+    if (stream == NULL) {
+        LOG_DEBUG("getdelim_wrapper: stream is NULL");
+        errno = EINVAL;
+        return -1;
+    }
+    if (lineptr == NULL || n == NULL) {
+        LOG_DEBUG("getdelim_wrapper: lineptr or n is NULL");
+        errno = EINVAL;
+        return -1;
+    }
+    
+    /* 始终使用基于 fd 的实现，避免 FILE* 结构兼容性问题 */
+    int fd = safe_get_fd(stream);
+    if (fd < 0) {
+        LOG_DEBUG("getdelim_wrapper: failed to get fd from stream %p", stream);
+        errno = EBADF;
+        return -1;
+    }
+    
+    LOG_DEBUG("getdelim_wrapper: using fd=%d for stream %p", fd, stream);
+    return fd_getdelim(lineptr, n, delim, fd);
 }
 
 ssize_t getline_wrapper(char** lineptr, size_t* n, FILE* stream) {
-    return getline(lineptr, n, stream);
+    return getdelim_wrapper(lineptr, n, '\n', stream);
 }
 
 /* ============================================================================

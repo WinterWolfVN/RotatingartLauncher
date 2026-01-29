@@ -25,6 +25,7 @@
 
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <android/log.h>
 
 #define LOG_TAG "SDL_Renderer"
@@ -202,28 +203,87 @@ SDL_bool Android_LoadRenderer(const char *renderer_name)
     /* 使用 dlopen 加载渲染器库 (RTLD_GLOBAL 很关键!) */
     LOGI("  Loading with dlopen(RTLD_NOW | RTLD_GLOBAL)...");
 
-    /* 首先尝试直接加载（如果库在 LD_LIBRARY_PATH 中） */
-    renderer_handle = dlopen(backend->egl_library, RTLD_NOW | RTLD_GLOBAL);
+    const char *runtime_dir = getenv("RALCORE_RUNTIMEDIR");
+    const char *native_dir = getenv("RALCORE_NATIVEDIR");
     
-    /* 如果失败，尝试从 runtime_libs 目录加载 */
-    if (!renderer_handle) {
-        const char *runtime_dir = getenv("RALCORE_RUNTIMEDIR");
-        if (runtime_dir) {
-            char full_path[512];
-            SDL_snprintf(full_path, sizeof(full_path), "%s/%s", runtime_dir, backend->egl_library);
+    /* 
+     * 重要：先加载 GLES 库（如 libGL_gl4es.so），再加载 EGL 库
+     * 因为 EGL 库通常依赖 GLES 库
+     */
+    if (backend->gles_library && backend->gles_library != backend->egl_library) {
+        void *gles_handle = NULL;
+        char gles_path[512];
+        
+        LOGI("  Loading GLES library first: %s", backend->gles_library);
+        
+        /* 尝试从 runtime_libs 目录加载 GLES 库 */
+        if (!gles_handle && runtime_dir) {
+            SDL_snprintf(gles_path, sizeof(gles_path), "%s/%s", runtime_dir, backend->gles_library);
+            if (access(gles_path, F_OK) == 0) {
+                LOGI("  Trying runtime_libs path: %s", gles_path);
+                gles_handle = dlopen(gles_path, RTLD_NOW | RTLD_GLOBAL);
+                if (!gles_handle) {
+                    LOGE("  ✗ GLES dlopen failed: %s", dlerror());
+                } else {
+                    LOGI("  ✓ GLES library loaded from runtime_libs");
+                }
+            }
+        }
+        
+        /* 尝试从 native lib 目录加载 GLES 库 */
+        if (!gles_handle && native_dir) {
+            SDL_snprintf(gles_path, sizeof(gles_path), "%s/%s", native_dir, backend->gles_library);
+            if (access(gles_path, F_OK) == 0) {
+                LOGI("  Trying native lib path: %s", gles_path);
+                gles_handle = dlopen(gles_path, RTLD_NOW | RTLD_GLOBAL);
+                if (!gles_handle) {
+                    LOGE("  ✗ GLES dlopen failed: %s", dlerror());
+                } else {
+                    LOGI("  ✓ GLES library loaded from native lib");
+                }
+            }
+        }
+        
+        if (!gles_handle) {
+            LOGE("  ✗ Failed to load GLES library: %s", backend->gles_library);
+            LOGE("  Falling back to native renderer");
+            current_renderer = &RENDERER_BACKENDS[0];
+            return SDL_FALSE;
+        }
+    }
+
+    /* 现在加载 EGL 库 */
+    LOGI("  Loading EGL library: %s", backend->egl_library);
+    
+    /* 尝试从 runtime_libs 目录加载 EGL 库 */
+    if (!renderer_handle && runtime_dir) {
+        char full_path[512];
+        SDL_snprintf(full_path, sizeof(full_path), "%s/%s", runtime_dir, backend->egl_library);
+        if (access(full_path, F_OK) == 0) {
             LOGI("  Trying runtime_libs path: %s", full_path);
             renderer_handle = dlopen(full_path, RTLD_NOW | RTLD_GLOBAL);
+            if (!renderer_handle) {
+                LOGE("  ✗ EGL dlopen failed: %s", dlerror());
+            } else {
+                LOGI("  ✓ EGL library loaded from runtime_libs");
+            }
+        } else {
+            LOGE("  ✗ File does not exist: %s", full_path);
         }
     }
     
-    /* 如果还是失败，尝试从 native lib 目录加载 */
-    if (!renderer_handle) {
-        const char *native_dir = getenv("RALCORE_NATIVEDIR");
-        if (native_dir) {
-            char full_path[512];
-            SDL_snprintf(full_path, sizeof(full_path), "%s/%s", native_dir, backend->egl_library);
+    /* 尝试从 native lib 目录加载 EGL 库 */
+    if (!renderer_handle && native_dir) {
+        char full_path[512];
+        SDL_snprintf(full_path, sizeof(full_path), "%s/%s", native_dir, backend->egl_library);
+        if (access(full_path, F_OK) == 0) {
             LOGI("  Trying native lib path: %s", full_path);
             renderer_handle = dlopen(full_path, RTLD_NOW | RTLD_GLOBAL);
+            if (!renderer_handle) {
+                LOGE("  ✗ EGL dlopen failed: %s", dlerror());
+            } else {
+                LOGI("  ✓ EGL library loaded from native lib");
+            }
         }
     }
     

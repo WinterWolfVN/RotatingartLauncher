@@ -77,36 +77,58 @@ static const char* get_perm_string(int prot) {
 
 /* Build virtual /proc/self/maps content */
 static char* build_virtual_maps(size_t* out_size) {
-    /* First, read the real /proc/self/maps */
-    FILE* real_maps = fopen("/proc/self/maps", "r");
-    if (!real_maps) {
+    /* First, read the real /proc/self/maps using fd-based reading
+     * Note: /proc files are virtual and don't support fseek/ftell */
+    int fd = open("/proc/self/maps", O_RDONLY);
+    if (fd < 0) {
+        LOG_DEBUG("build_virtual_maps: failed to open /proc/self/maps");
         return NULL;
     }
     
-    /* Read entire real maps */
-    fseek(real_maps, 0, SEEK_END);
-    long real_size = ftell(real_maps);
-    fseek(real_maps, 0, SEEK_SET);
-    
-    /* Allocate buffer for real maps + glibc-bridge libs (estimate extra space) */
+    /* Allocate initial buffer - /proc/self/maps can be large */
     int lib_count = glibc_bridge_get_shared_lib_count();
+    size_t buffer_size = 64 * 1024;  /* Start with 64KB */
     size_t extra_size = lib_count * 256;  /* ~256 bytes per lib entry */
-    size_t total_size = real_size + extra_size + 1024;
     
-    char* buffer = (char*)malloc(total_size);
+    char* buffer = (char*)malloc(buffer_size + extra_size);
     if (!buffer) {
-        fclose(real_maps);
+        close(fd);
         return NULL;
     }
     
-    /* Read real maps content */
-    size_t read_size = fread(buffer, 1, real_size, real_maps);
-    fclose(real_maps);
-    buffer[read_size] = '\0';
+    /* Read real maps content in chunks */
+    size_t total_read = 0;
+    ssize_t n;
+    while ((n = read(fd, buffer + total_read, buffer_size - total_read - 1)) > 0) {
+        total_read += n;
+        if (total_read >= buffer_size - 1024) {
+            /* Need more space */
+            buffer_size *= 2;
+            char* new_buffer = (char*)realloc(buffer, buffer_size + extra_size);
+            if (!new_buffer) {
+                free(buffer);
+                close(fd);
+                return NULL;
+            }
+            buffer = new_buffer;
+        }
+    }
+    close(fd);
+    
+    if (total_read == 0) {
+        LOG_DEBUG("build_virtual_maps: failed to read /proc/self/maps");
+        free(buffer);
+        return NULL;
+    }
+    
+    buffer[total_read] = '\0';
+    size_t read_size = total_read;
+    
+    LOG_DEBUG("build_virtual_maps: read %zu bytes from /proc/self/maps", read_size);
     
     /* Now append glibc-bridge-loaded libraries */
     char* write_pos = buffer + read_size;
-    size_t remaining = total_size - read_size;
+    size_t remaining = buffer_size + extra_size - read_size;
     
     for (int i = 0; i < lib_count; i++) {
         glibc_bridge_shlib_info_t info;
@@ -309,48 +331,17 @@ static virtual_maps_file_t g_virtual_maps_files[MAX_VIRTUAL_MAPS];
 
 /* Open virtual maps as FILE* */
 FILE* glibc_bridge_fopen_proc_maps(void) {
-    LOG_INFO("glibc_bridge_fopen_proc_maps called - virtualizing /proc/self/maps");
+    LOG_INFO("glibc_bridge_fopen_proc_maps called - opening real /proc/self/maps (virtualization disabled for stability)");
     
-    /* Find free slot */
-    int slot = -1;
-    for (int i = 0; i < MAX_VIRTUAL_MAPS; i++) {
-        if (!g_virtual_maps_files[i].in_use) {
-            slot = i;
-            break;
-        }
-    }
-    
-    if (slot < 0) {
-        LOG_DEBUG("glibc_bridge_fopen_proc_maps: no free slot");
-        errno = EMFILE;
-        return NULL;
-    }
-    
-    size_t size;
-    char* buffer = build_virtual_maps(&size);
-    if (!buffer) {
-        LOG_DEBUG("glibc_bridge_fopen_proc_maps: build_virtual_maps failed");
-        errno = EIO;
-        return NULL;
-    }
-    
-    LOG_INFO("glibc_bridge_fopen_proc_maps: built virtual maps, size=%zu", size);
-    
-    g_virtual_maps_files[slot].in_use = 1;
-    g_virtual_maps_files[slot].buffer = buffer;
-    g_virtual_maps_files[slot].buffer_size = size;
-    g_virtual_maps_files[slot].read_pos = 0;
-    
-    /* Create a FILE* from memory buffer using fmemopen */
-    FILE* f = fmemopen(buffer, size, "r");
+    /* Directly open the real /proc/self/maps file
+     * Virtualization is disabled to avoid mutex/threading issues with Box64 */
+    FILE* f = fopen("/proc/self/maps", "r");
     if (!f) {
-        LOG_DEBUG("glibc_bridge_fopen_proc_maps: fmemopen failed");
-        free(buffer);
-        g_virtual_maps_files[slot].in_use = 0;
+        LOG_DEBUG("glibc_bridge_fopen_proc_maps: fopen failed, errno=%d", errno);
         return NULL;
     }
     
-    LOG_INFO("glibc_bridge_fopen_proc_maps: returning FILE* %p", (void*)f);
+    LOG_INFO("glibc_bridge_fopen_proc_maps: returning real FILE* %p", (void*)f);
     return f;
 }
 

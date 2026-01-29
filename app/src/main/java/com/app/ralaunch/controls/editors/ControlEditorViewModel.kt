@@ -192,6 +192,13 @@ class ControlEditorViewModel : ViewModel() {
      */
     fun addNewControl(type: String) {
         val layout = _layoutState.value ?: return
+        
+        // 十字键特殊处理：一次添加四个方向键按钮
+        if (type == "dpad") {
+            addDpadControls(layout)
+            return
+        }
+        
         val newControl = when (type) {
             "button" -> ControlData.Button().apply {
                 name = "New Button ${layout.controls.size + 1}"
@@ -221,6 +228,68 @@ class ControlEditorViewModel : ViewModel() {
         newControls.add(newControl)
         _layoutState.value = layout.copy(controls = newControls)
         selectControl(newControl)
+        saveLayout()
+    }
+    
+    /**
+     * 添加十字键（D-Pad）控件组
+     * 创建上、下、左、右四个方向键按钮
+     */
+    private fun addDpadControls(layout: ControlLayout) {
+        val buttonSize = 0.08f
+        val centerX = 0.15f  // 十字键中心X位置
+        val centerY = 0.65f  // 十字键中心Y位置
+        val spacing = 0.09f  // 按钮间距
+        
+        val dpadButtons = listOf(
+            // 上
+            ControlData.Button().apply {
+                name = "D-Pad ↑"
+                x = centerX
+                y = centerY - spacing
+                width = buttonSize
+                height = buttonSize
+                keycode = ControlData.KeyCode.KEYBOARD_W
+                shape = ControlData.Button.Shape.RECTANGLE
+            },
+            // 下
+            ControlData.Button().apply {
+                name = "D-Pad ↓"
+                x = centerX
+                y = centerY + spacing
+                width = buttonSize
+                height = buttonSize
+                keycode = ControlData.KeyCode.KEYBOARD_S
+                shape = ControlData.Button.Shape.RECTANGLE
+            },
+            // 左
+            ControlData.Button().apply {
+                name = "D-Pad ←"
+                x = centerX - spacing
+                y = centerY
+                width = buttonSize
+                height = buttonSize
+                keycode = ControlData.KeyCode.KEYBOARD_A
+                shape = ControlData.Button.Shape.RECTANGLE
+            },
+            // 右
+            ControlData.Button().apply {
+                name = "D-Pad →"
+                x = centerX + spacing
+                y = centerY
+                width = buttonSize
+                height = buttonSize
+                keycode = ControlData.KeyCode.KEYBOARD_D
+                shape = ControlData.Button.Shape.RECTANGLE
+            }
+        )
+        
+        val newControls = layout.controls.toMutableList()
+        newControls.addAll(dpadButtons)
+        _layoutState.value = layout.copy(controls = newControls)
+        
+        // 选中第一个按钮（上）
+        selectControl(dpadButtons.first())
         saveLayout()
     }
 

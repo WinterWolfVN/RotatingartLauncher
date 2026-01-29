@@ -242,6 +242,114 @@ Java_com_app_ralaunch_box64_NativeBridge_runWithEnv(JNIEnv *env, jclass clazz,
     return result;
 }
 
+ /* ============================================================================
+ * JNI: NativeBridge.runForked - 使用 fork 模式隔离执行
+ * ============================================================================ */
+
+JNIEXPORT jint JNICALL
+Java_com_app_ralaunch_box64_NativeBridge_runForked(JNIEnv *env, jclass clazz,
+                                                    jstring programPath, jobjectArray args,
+                                                    jobjectArray envp, jstring rootfsPath) {
+    if (!programPath) {
+        LOGE("programPath is null");
+        return -1;
+    }
+
+    const char *program_path_str = (*env)->GetStringUTFChars(env, programPath, NULL);
+    if (!program_path_str) {
+        LOGE("Failed to get programPath string");
+        return -1;
+    }
+
+    /* Get rootfs path */
+    const char *rootfs_str = NULL;
+    if (rootfsPath) {
+        rootfs_str = (*env)->GetStringUTFChars(env, rootfsPath, NULL);
+    }
+    const char *effective_rootfs = rootfs_str ? rootfs_str : g_rootfs_path;
+
+    /* Build argv array */
+    int argc = 1;
+    char **argv = NULL;
+    
+    if (args) {
+        int args_len = (*env)->GetArrayLength(env, args);
+        argc = args_len + 1;
+        argv = (char**)malloc(sizeof(char*) * (argc + 1));
+        if (!argv) {
+            LOGE("Failed to allocate argv");
+            (*env)->ReleaseStringUTFChars(env, programPath, program_path_str);
+            if (rootfs_str) (*env)->ReleaseStringUTFChars(env, rootfsPath, rootfs_str);
+            return -1;
+        }
+        
+        argv[0] = strdup(program_path_str);
+        for (int i = 0; i < args_len; i++) {
+            jstring arg = (jstring)(*env)->GetObjectArrayElement(env, args, i);
+            const char *arg_str = (*env)->GetStringUTFChars(env, arg, NULL);
+            argv[i + 1] = strdup(arg_str);
+            (*env)->ReleaseStringUTFChars(env, arg, arg_str);
+        }
+        argv[argc] = NULL;
+    } else {
+        argv = (char**)malloc(sizeof(char*) * 2);
+        argv[0] = strdup(program_path_str);
+        argv[1] = NULL;
+    }
+
+    /* Build envp array */
+    char **envp_arr = NULL;
+    int envp_len = 0;
+    
+    if (envp) {
+        envp_len = (*env)->GetArrayLength(env, envp);
+        envp_arr = (char**)malloc(sizeof(char*) * (envp_len + 1));
+        if (!envp_arr) {
+            LOGE("Failed to allocate envp");
+            for (int i = 0; i < argc; i++) free(argv[i]);
+            free(argv);
+            (*env)->ReleaseStringUTFChars(env, programPath, program_path_str);
+            if (rootfs_str) (*env)->ReleaseStringUTFChars(env, rootfsPath, rootfs_str);
+            return -1;
+        }
+        
+        for (int i = 0; i < envp_len; i++) {
+            jstring env_var = (jstring)(*env)->GetObjectArrayElement(env, envp, i);
+            const char *env_str = (*env)->GetStringUTFChars(env, env_var, NULL);
+            envp_arr[i] = strdup(env_str);
+            LOGD("ENV[%d]: %s", i, env_str);
+            (*env)->ReleaseStringUTFChars(env, env_var, env_str);
+        }
+        envp_arr[envp_len] = NULL;
+    }
+
+    LOGI("Running FORKED: %s with %d args, %d env vars", program_path_str, argc - 1, envp_len);
+    LOGI("  Rootfs: %s", effective_rootfs);
+
+    /* Execute with fork mode */
+    int result = glibc_bridge_execute_forked(program_path_str, argc, argv, envp_arr, effective_rootfs);
+
+    /* Cleanup argv */
+    for (int i = 0; i < argc; i++) {
+        free(argv[i]);
+    }
+    free(argv);
+
+    /* Cleanup envp */
+    if (envp_arr) {
+        for (int i = 0; i < envp_len; i++) {
+            free(envp_arr[i]);
+        }
+        free(envp_arr);
+    }
+
+    (*env)->ReleaseStringUTFChars(env, programPath, program_path_str);
+    if (rootfs_str) (*env)->ReleaseStringUTFChars(env, rootfsPath, rootfs_str);
+
+    LOGI("Forked execution completed with code: %d", result);
+    return result;
+}
+
 /* ============================================================================
  * JNI_OnLoad - Register natives
  * ============================================================================ */

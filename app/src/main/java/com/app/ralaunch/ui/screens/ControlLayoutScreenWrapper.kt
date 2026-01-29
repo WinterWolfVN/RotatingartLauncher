@@ -87,7 +87,7 @@ fun ControlLayoutScreenWrapper(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { 
-            importLayoutFromUri(context, packManager, it) { loadLayouts() }
+            importPackFromUri(context, packManager, it) { loadLayouts() }
         }
     }
 
@@ -194,7 +194,7 @@ fun ControlLayoutScreenWrapper(
             exportLauncher.launch("${pack.name}.json")
             showMoreMenu = null
         },
-        onImportClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+        onImportClick = { importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
         onPreviewClick = { showPreviewDialog = it }
     )
     
@@ -231,23 +231,35 @@ private fun exportLayoutToFile(
     }
 }
 
-private fun importLayoutFromUri(
+private fun importPackFromUri(
     context: android.content.Context,
     packManager: ControlPackManager,
     uri: Uri,
     onSuccess: () -> Unit
 ) {
     try {
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            val json = stream.bufferedReader().readText()
-            val result = packManager.importFromJsonString(json)
-            result.onSuccess {
-                onSuccess()
-                Toast.makeText(context, "导入成功", Toast.LENGTH_SHORT).show()
-            }.onFailure {
-                Toast.makeText(context, "导入失败: ${it.message}", Toast.LENGTH_SHORT).show()
+        // 创建临时文件来存储控件包
+        val tempFile = File(context.cacheDir, "import_temp.ralpack")
+        
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            tempFile.outputStream().use { outputStream ->
+                inputStream.copyTo(outputStream)
             }
         }
+        
+        // 使用 ControlPackManager 安装控件包
+        val result = packManager.installFromFile(tempFile)
+        
+        result.onSuccess { packInfo ->
+            onSuccess()
+            Toast.makeText(context, "导入成功: ${packInfo.name}", Toast.LENGTH_SHORT).show()
+        }.onFailure { error ->
+            Toast.makeText(context, "导入失败: ${error.message}", Toast.LENGTH_SHORT).show()
+        }
+        
+        // 清理临时文件
+        tempFile.delete()
+        
     } catch (e: Exception) {
         Toast.makeText(context, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
     }

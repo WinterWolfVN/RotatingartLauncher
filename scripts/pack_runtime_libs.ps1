@@ -27,11 +27,26 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $JniLibsDir = "$ProjectRoot\app\src\main\jniLibs\arm64-v8a"
 $MergedLibDir = "$ProjectRoot\app\build\intermediates\merged_native_libs\$($BuildType.ToLower())\merge$($BuildType)NativeLibs\out\lib\arm64-v8a"
 $StrippedLibDir = "$ProjectRoot\app\build\intermediates\stripped_native_libs\$($BuildType.ToLower())\strip$($BuildType)DebugSymbols\out\lib\arm64-v8a"
+$MergedJniDir = "$ProjectRoot\app\build\intermediates\merged_jni_libs\$($BuildType.ToLower())\merge$($BuildType)JniLibFolders\out\arm64-v8a"
 $AssetsDir = "$ProjectRoot\app\src\main\assets"
 $OutputFile = "$AssetsDir\runtime_libs.tar.xz"
 
-# 库查找优先级：stripped > merged > jniLibs
-$SearchDirs = @($StrippedLibDir, $MergedLibDir, $JniLibsDir)
+# 查找 CMake 编译输出目录（cxx 目录下的动态哈希子目录）
+$CxxLibDir = $null
+$CxxBaseDir = "$ProjectRoot\app\build\intermediates\cxx\$BuildType"
+if (Test-Path $CxxBaseDir) {
+    $CxxSubDirs = Get-ChildItem -Path $CxxBaseDir -Directory | Select-Object -First 1
+    if ($CxxSubDirs) {
+        $CxxLibDir = "$($CxxSubDirs.FullName)\obj\arm64-v8a"
+    }
+}
+
+# 库查找优先级：stripped > merged > merged_jni > cxx > jniLibs
+$SearchDirs = @($StrippedLibDir, $MergedLibDir, $MergedJniDir)
+if ($CxxLibDir -and (Test-Path $CxxLibDir)) {
+    $SearchDirs += $CxxLibDir
+}
+$SearchDirs += $JniLibsDir
 
 # 要打包的大型库（按需动态加载）
 # 总计约 90+ MB，压缩后约 30-40 MB

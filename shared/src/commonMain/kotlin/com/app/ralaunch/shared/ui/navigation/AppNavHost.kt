@@ -70,7 +70,7 @@ class NavState(
     fun goBack(): Boolean {
         return if (backStack.isNotEmpty()) {
             isForwardNavigation = false
-            currentScreen = backStack.removeLast()
+            currentScreen = backStack.removeAt(backStack.lastIndex)
             true
         } else {
             false

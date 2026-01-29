@@ -1,5 +1,6 @@
 package com.app.ralaunch.installer.plugins
 
+import android.os.Environment
 import android.util.Log
 import com.app.ralaunch.installer.*
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +16,24 @@ import java.util.zip.ZipInputStream
  * Stardew Valley / SMAPI 安装插件
  */
 class SmapiInstallPlugin : BaseInstallPlugin() {
+    
+    companion object {
+        private const val TAG = "SmapiInstallPlugin"
+        
+        /** RALauncher 外部存储目录名 */
+        private const val RALAUNCHER_DIR = "RALauncher"
+        
+        /** SMAPI 模组子目录 */
+        private const val SMAPI_MODS_SUBDIR = "Stardew Valley/Mods"
+        
+        /**
+         * 获取 SMAPI 模组目录（外部存储）
+         * @return /storage/emulated/0/RALauncher/Stardew/Mods
+         */
+        fun getSmapiModsDirectory(): File {
+            return File(Environment.getExternalStorageDirectory(), "$RALAUNCHER_DIR/$SMAPI_MODS_SUBDIR")
+        }
+    }
     
     override val pluginId = "smapi"
     override val displayName = "Stardew Valley / SMAPI"
@@ -103,7 +122,17 @@ class SmapiInstallPlugin : BaseInstallPlugin() {
                     }
                     
                     definition = GameDefinition.SMAPI
-                    File(actualGameDir, "Mods").mkdirs()
+                    
+                    // 在外部存储 RALauncher 目录创建模组文件夹
+                    // Create mods folder in external storage RALauncher directory
+                    val externalModsDir = getSmapiModsDirectory()
+                    if (externalModsDir.mkdirs() || externalModsDir.exists()) {
+                        Log.i(TAG, "SMAPI 模组目录已创建 / SMAPI mods directory created: ${externalModsDir.absolutePath}")
+                    } else {
+                        Log.w(TAG, "无法创建 SMAPI 模组目录 / Failed to create SMAPI mods directory: ${externalModsDir.absolutePath}")
+                        // 回退到游戏目录下的 Mods 文件夹
+                        File(actualGameDir, "Mods").mkdirs()
+                    }
                 }
                 
                 if (isCancelled) {

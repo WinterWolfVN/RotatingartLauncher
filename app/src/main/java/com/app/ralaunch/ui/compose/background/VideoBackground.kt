@@ -3,7 +3,6 @@ package com.app.ralaunch.ui.compose.background
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.viewinterop.AndroidView
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.app.ralaunch.view.VideoBackgroundView
 import java.io.File
 
@@ -102,8 +101,8 @@ fun ImageBackground(
     val file = remember(imagePath) { File(imagePath) }
     
     if (file.exists()) {
-        Image(
-            painter = rememberAsyncImagePainter(file),
+        AsyncImage(
+            model = file,
             contentDescription = null,
             modifier = modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,

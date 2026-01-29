@@ -170,6 +170,9 @@ void glibc_bridge_result_free(glibc_bridge_result_t* result);
 /* 执行 glibc 程序 - 主入口点（自动初始化）*/
 int glibc_bridge_execute(const char* path, int argc, char** argv, char** envp, const char* rootfs_path);
 
+/* 执行 glibc 程序 - fork 模式（隔离执行，避免影响 Android 线程）*/
+int glibc_bridge_execute_forked(const char* path, int argc, char** argv, char** envp, const char* rootfs_path);
+
 /* ============================================================================
  * 工具函数
  * ============================================================================ */

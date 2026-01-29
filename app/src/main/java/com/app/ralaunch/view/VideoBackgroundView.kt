@@ -195,24 +195,27 @@ class VideoBackgroundView @JvmOverloads constructor(
         val videoAspect = videoWidth.toFloat() / videoHeight
         val screenAspect = surfaceWidth.toFloat() / surfaceHeight
 
-        val (newWidth, newHeight) = if (videoAspect > screenAspect) {
-            (surfaceHeight * videoAspect).toInt() to surfaceHeight
+        // 使用 scale 实现 centerCrop 效果，保持 layoutParams 为 MATCH_PARENT
+        // 这样视频可以覆盖整个屏幕包括系统导航栏区域
+        val scale = if (videoAspect > screenAspect) {
+            // 视频更宽，按高度适配，宽度会超出
+            surfaceHeight.toFloat() / videoHeight
         } else {
-            surfaceWidth to (surfaceWidth / videoAspect).toInt()
+            // 视频更高，按宽度适配，高度会超出
+            surfaceWidth.toFloat() / videoWidth
         }
 
-        layoutParams?.let { params ->
-            params.width = newWidth
-            params.height = newHeight
-            layoutParams = params
-        }
+        val scaledWidth = videoWidth * scale
+        val scaledHeight = videoHeight * scale
 
-        val xOffset = (surfaceWidth - newWidth) / 2
-        val yOffset = (surfaceHeight - newHeight) / 2
-        translationX = xOffset.toFloat()
-        translationY = yOffset.toFloat()
+        scaleX = scaledWidth / surfaceWidth
+        scaleY = scaledHeight / surfaceHeight
 
-        AppLogger.info("VideoBackgroundView", "视频缩放（centerCrop）- 原始: ${videoWidth}x$videoHeight, 屏幕: ${surfaceWidth}x$surfaceHeight, 缩放后: ${newWidth}x$newHeight")
+        // 居中 - 使用 pivot 点默认就是中心，无需额外偏移
+        translationX = 0f
+        translationY = 0f
+
+        AppLogger.info("VideoBackgroundView", "视频缩放（centerCrop）- 原始: ${videoWidth}x$videoHeight, 屏幕: ${surfaceWidth}x$surfaceHeight, scale: $scale, scaleX: $scaleX, scaleY: $scaleY")
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {

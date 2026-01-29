@@ -329,6 +329,7 @@ static int glibc_bridge_ensure_initialized(const char* rootfs_path) {
     config.redirect_output = 1;
     config.use_tls = 1;
     config.stack_size = 8 * 1024 * 1024;  // 8MB
+    /* direct_execution = 1 (默认) */
     
     if (rootfs_path) {
         config.lib_path = rootfs_path;
@@ -401,6 +402,67 @@ int glibc_bridge_execute(const char* path, int argc, char** argv, char** envp, c
     }
     
     glibc_bridge_result_free(&result);
+    return ret;
+}
+
+/**
+ * Execute glibc program with fork mode (isolated execution)
+ * Uses fork to run in a separate process, avoiding mutex conflicts with Android threads
+ */
+int glibc_bridge_execute_forked(const char* path, int argc, char** argv, char** envp, const char* rootfs_path) {
+    if (!path) {
+        return GLIBC_BRIDGE_ERROR_INVALID_ARG;
+    }
+
+    /* Create a temporary bridge with fork mode */
+    glibc_bridge_config_t config = GLIBC_BRIDGE_CONFIG_DEFAULT;
+    config.log_level = GLIBC_BRIDGE_LOG_INFO;
+    config.redirect_output = 1;
+    config.use_tls = 1;
+    config.stack_size = 8 * 1024 * 1024;  // 8MB
+    config.direct_execution = 0;  // 使用 fork 模式
+    
+    if (rootfs_path) {
+        config.lib_path = rootfs_path;
+        strncpy(g_glibc_root, rootfs_path, sizeof(g_glibc_root) - 1);
+        g_glibc_root[sizeof(g_glibc_root) - 1] = '\0';
+    }
+    
+    glibc_bridge_t bridge = glibc_bridge_init(&config);
+    if (!bridge) {
+        LOG_ERROR("Failed to initialize glibc-bridge for forked execution");
+        return GLIBC_BRIDGE_ERROR_OUT_OF_MEMORY;
+    }
+    
+    LOG_INFO("Running in FORKED mode: %s", path);
+
+    /* Set environment variables */
+    if (envp) {
+        for (int i = 0; envp[i] != NULL; i++) {
+            char* eq = strchr(envp[i], '=');
+            if (eq) {
+                *eq = '\0';
+                const char* name = envp[i];
+                const char* value = eq + 1;
+                setenv(name, value, 1);
+                LOG_DEBUG("setenv: %s=%s", name, value);
+                *eq = '=';
+            }
+        }
+    }
+
+    /* Execute program */
+    glibc_bridge_result_t result = {0};
+    int ret = glibc_bridge_exec(bridge, path, argc, argv, envp, &result);
+    
+    if (result.exited) {
+        ret = result.exit_code;
+    }
+    
+    glibc_bridge_result_free(&result);
+    glibc_bridge_cleanup(bridge);
+    
+    LOG_INFO("Forked execution completed with code: %d", ret);
     return ret;
 }
 

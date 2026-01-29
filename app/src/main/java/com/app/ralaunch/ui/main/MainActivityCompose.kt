@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -85,6 +86,9 @@ class MainActivityCompose : BaseActivity() {
     // ==================== Lifecycle ====================
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 启用 Edge-to-Edge 沉浸式，让视频背景覆盖系统导航栏区域
+        enableEdgeToEdge()
+        
         DensityAdapter.adapt(this, true)
 
         themeManager = ThemeManager(this)
@@ -541,10 +545,11 @@ private fun MainActivityContent(
                 )
         )
 
-        // 主内容
+        // 主内容 - 内容区域需要避开系统导航栏
         MainApp(
             modifier = Modifier
                 .fillMaxSize()
+                .systemBarsPadding()
                 .graphicsLayer { alpha = pageAlpha },
             navState = navState,
             appLogo = {

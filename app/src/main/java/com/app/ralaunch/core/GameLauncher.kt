@@ -30,6 +30,7 @@ import com.app.ralaunch.renderer.RendererConfig
 import com.app.ralaunch.patch.Patch
 import com.app.ralaunch.patch.PatchManager
 import com.app.ralaunch.box64.Box64Helper
+import com.app.ralaunch.box64.GlibcBox64Helper
 import com.app.ralaunch.box64.NativeBridge
 import com.app.ralaunch.runtime.RuntimeLibraryLoader
 import com.app.ralaunch.service.ProcessLauncherService
@@ -279,6 +280,87 @@ object GameLauncher {
         } catch (e: Exception) {
             AppLogger.error(TAG, "启动 Box64 游戏失败 / Failed to launch Box64 game: $gamePath", e)
             setBox64Error("启动异常: ${e.message}\n${e.stackTraceToString().take(500)}")
+            return -3
+        }
+    }
+
+    /**
+     * 通过 glibc_bridge 启动 Box64 游戏（glibc 版本）
+     * Launch a Box64 game via glibc_bridge (glibc version)
+     *
+     * 使用 glibc 编译的 Box64，通过 glibc_bridge 执行。
+     * 与 launchBox64Game() 的区别：
+     * - launchBox64Game: 使用 bionic 编译的 Box64 共享库，通过 dlopen 加载
+     * - launchBox64ViaGlibc: 使用 glibc 编译的 Box64 可执行文件，通过 glibc_bridge 执行
+     *
+     * @param context Android 上下文
+     * @param gamePath 游戏可执行文件的完整路径
+     * @return 游戏退出代码
+     */
+    fun launchBox64ViaGlibc(context: Context, gamePath: String): Int {
+        clearBox64Error()
+        
+        try {
+            AppLogger.info(TAG, "=== 开始启动 Box64 游戏 (glibc 模式) ===")
+            AppLogger.info(TAG, "游戏路径: $gamePath")
+            
+            // 步骤1：确保 glibc Box64 已解压
+            if (!GlibcBox64Helper.isExtracted(context)) {
+                AppLogger.info(TAG, "正在解压 Box64 glibc...")
+                val extracted = runBlocking { GlibcBox64Helper.extractBox64(context) }
+                if (!extracted) {
+                    setBox64Error("Box64 glibc 解压失败")
+                    return -1
+                }
+            }
+            
+            // 步骤2：确保 rootfs 已解压（包含 glibc 运行时库）
+            val rootfsPath = "${context.filesDir.absolutePath}/rootfs"
+            if (!File(rootfsPath).exists()) {
+                // 初始化 glibc_bridge（会处理 rootfs）
+                NativeBridge.loadLibrary()
+                val initResult = NativeBridge.init(context, context.filesDir.absolutePath)
+                if (initResult != 0) {
+                    setBox64Error("glibc_bridge 初始化失败: $initResult")
+                    return -1
+                }
+            }
+            
+            // 步骤3：配置渲染器环境变量
+            AppLogger.debug(TAG, "配置渲染器环境...")
+            RendererConfig.applyRendererEnvironment(context)
+            
+            // 步骤4：初始化 SDL JNI 环境
+            initializeSDLJNI(context)
+            
+            val gameDir = File(gamePath).parent
+            if (gameDir == null) {
+                setBox64Error("无法获取游戏目录: $gamePath")
+                return -2
+            }
+            
+            AppLogger.info(TAG, "通过 glibc_bridge 启动 Box64...")
+            AppLogger.info(TAG, "  Box64 路径: ${GlibcBox64Helper.getBox64Path(context)}")
+            AppLogger.info(TAG, "  工作目录: $gameDir")
+            
+            // 步骤5：通过 glibc_bridge 执行
+            val result = GlibcBox64Helper.runBox64(
+                context = context,
+                args = arrayOf(gamePath),
+                workDir = gameDir
+            )
+            
+            AppLogger.info(TAG, "=== Box64 游戏启动完成 (glibc 模式) ===")
+            AppLogger.info(TAG, "退出代码: $result")
+            
+            if (result != 0) {
+                setBox64Error(getBox64ExitCodeDescription(result))
+            }
+            
+            return result
+        } catch (e: Exception) {
+            AppLogger.error(TAG, "启动 Box64 游戏失败 (glibc 模式)", e)
+            setBox64Error("启动异常: ${e.message}")
             return -3
         }
     }
@@ -556,6 +638,26 @@ object GameLauncher {
             val monoModPath = AssemblyPatcher.getMonoModInstallPath().toString()
             AppLogger.info(TAG, "MonoMod 路径 / path: $monoModPath")
 
+            // 模组路径配置（外部存储 RALauncher 目录）
+            // Mod paths configuration (RALauncher directory in external storage)
+            val smapiModsPath = Path(dataDir).resolve("Stardew Valley").resolve("Mods")
+            val everestModsPath = Path(dataDir).resolve("Everest").resolve("Mods")
+            
+            // 创建模组目录（如果不存在）
+            // Create mod directories if they don't exist
+            try {
+                if (!smapiModsPath.exists()) {
+                    smapiModsPath.createDirectories()
+                    AppLogger.debug(TAG, "创建 SMAPI 模组目录 / Created SMAPI mods directory: $smapiModsPath")
+                }
+                if (!everestModsPath.exists()) {
+                    everestModsPath.createDirectories()
+                    AppLogger.debug(TAG, "创建 Everest 模组目录 / Created Everest mods directory: $everestModsPath")
+                }
+            } catch (e: Exception) {
+                AppLogger.warn(TAG, "无法创建模组目录 / Failed to create mod directories: ${e.message}")
+            }
+            
             EnvVarsManager.quickSetEnvVars(
                 // 启动钩子配置
                 // Startup hooks configuration
@@ -564,6 +666,15 @@ object GameLauncher {
                 // MonoMod 路径，供补丁的 AssemblyResolve 使用
                 // MonoMod path, used by patch's AssemblyResolve
                 "MONOMOD_PATH" to monoModPath,
+
+                // SMAPI 模组路径（星露谷物语）
+                // SMAPI mods path (Stardew Valley)
+                "SMAPI_MODS_PATH" to smapiModsPath.toString(),
+                
+                // Everest 模组路径（蔚蓝）- 通过 XDG_DATA_HOME 自动设置
+                // Everest 使用 XDG_DATA_HOME/Everest/Mods，已在上方设置 XDG_DATA_HOME
+                // Everest mods path (Celeste) - auto-configured via XDG_DATA_HOME
+                // Everest uses XDG_DATA_HOME/Everest/Mods, XDG_DATA_HOME is set above
 
                 // 触摸输入配置
                 // Touch input configuration
@@ -575,6 +686,8 @@ object GameLauncher {
                 // Audio configuration
                 "SDL_AAUDIO_LOW_LATENCY" to if (settings.isSdlAaudioLowLatency) "1" else "0",
             )
+            AppLogger.info(TAG, "SMAPI 模组路径 / SMAPI mods path: $smapiModsPath")
+            AppLogger.info(TAG, "Everest 模组路径 / Everest mods path: $everestModsPath")
             AppLogger.debug(TAG, "游戏设置环境变量配置完成 / Game settings environment variables set: OK")
 
             // 步骤8：配置渲染器

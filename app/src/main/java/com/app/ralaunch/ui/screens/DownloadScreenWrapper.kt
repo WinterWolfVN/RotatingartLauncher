@@ -4,9 +4,27 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.app.ralaunch.R
 import com.app.ralaunch.gog.api.GogAuthClient
 import com.app.ralaunch.gog.api.GogWebsiteApi
@@ -19,19 +37,244 @@ import com.app.ralaunch.shared.ui.model.GogUiState
 import com.app.ralaunch.ui.compose.gog.GogScreen
 import com.app.ralaunch.ui.compose.gog.components.DownloadStatus
 import com.app.ralaunch.ui.compose.gog.components.GogDownloadDialog
+import com.app.ralaunch.ui.compose.workshop.WorkshopScreen
 import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.error.ErrorHandler
 import kotlinx.coroutines.*
 import java.io.File
 
 /**
- * GOG 下载页面 Wrapper
- * 处理 Android 特定逻辑，将纯 UI 委托给 GogScreen
+ * 下载页面当前视图
  */
+private sealed class DownloadView {
+    data object Selector : DownloadView()
+    data object Gog : DownloadView()
+    data object Workshop : DownloadView()
+}
+
+/**
+ * 下载页面 Wrapper
+ * 横屏适配：左右分栏选择 GOG 或 创意工坊，点击后进入详情页
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadScreenWrapper(
     onBack: () -> Unit,
     onNavigateToImport: (gamePath: String?, modLoaderPath: String?, gameName: String?) -> Unit = { _, _, _ -> },
+    modifier: Modifier = Modifier
+) {
+    var currentView by remember { mutableStateOf<DownloadView>(DownloadView.Selector) }
+    
+    AnimatedContent(
+        targetState = currentView,
+        transitionSpec = {
+            when {
+                targetState is DownloadView.Selector -> {
+                    slideInHorizontally { -it } + fadeIn() togetherWith
+                    slideOutHorizontally { it } + fadeOut()
+                }
+                else -> {
+                    slideInHorizontally { it } + fadeIn() togetherWith
+                    slideOutHorizontally { -it } + fadeOut()
+                }
+            }
+        },
+        label = "download_view_transition",
+        modifier = modifier.fillMaxSize()
+    ) { view ->
+        when (view) {
+            is DownloadView.Selector -> DownloadSelectorScreen(
+                onGogClick = { currentView = DownloadView.Gog },
+                onWorkshopClick = { currentView = DownloadView.Workshop }
+            )
+            is DownloadView.Gog -> GogTabContent(
+                onBack = { currentView = DownloadView.Selector },
+                onNavigateToImport = onNavigateToImport,
+                modifier = Modifier.fillMaxSize()
+            )
+            is DownloadView.Workshop -> WorkshopScreenWithBack(
+                onBack = { currentView = DownloadView.Selector },
+                onNavigateToImport = onNavigateToImport
+            )
+        }
+    }
+}
+
+/**
+ * 下载选择页面 - 横屏左右分栏
+ */
+@Composable
+private fun DownloadSelectorScreen(
+    onGogClick: () -> Unit,
+    onWorkshopClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        // 左侧 - GOG 卡片
+        DownloadOptionCard(
+            title = "GOG",
+            subtitle = "DRM-Free 游戏商店",
+            description = "下载您在 GOG 购买的游戏",
+            icon = Icons.Filled.RocketLaunch,
+            gradientColors = listOf(
+                Color(0xFF6B3FA0),
+                Color(0xFF9B59B6)
+            ),
+            onClick = onGogClick,
+            modifier = Modifier.weight(1f)
+        )
+        
+        // 右侧 - 创意工坊 卡片
+        DownloadOptionCard(
+            title = "创意工坊",
+            subtitle = "Steam Workshop",
+            description = "下载 TModLoader 模组等内容",
+            icon = Icons.Filled.Storefront,
+            gradientColors = listOf(
+                Color(0xFF1B2838),
+                Color(0xFF2A475E)
+            ),
+            onClick = onWorkshopClick,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+/**
+ * 下载选项卡片
+ */
+@Composable
+private fun DownloadOptionCard(
+    title: String,
+    subtitle: String,
+    description: String,
+    icon: ImageVector,
+    gradientColors: List<Color>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(gradientColors)
+                )
+                .padding(32.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 图标
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    modifier = Modifier.size(80.dp),
+                    tint = Color.White
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // 标题
+                Text(
+                    text = title,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // 副标题
+                Text(
+                    text = subtitle,
+                    fontSize = 16.sp,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // 描述
+                Text(
+                    text = description,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.6f)
+                )
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                // 进入按钮
+                FilledTonalButton(
+                    onClick = onClick,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Color.White.copy(alpha = 0.2f),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("进入", fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 带返回按钮的创意工坊页面
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WorkshopScreenWithBack(
+    onBack: () -> Unit,
+    onNavigateToImport: (gamePath: String?, modLoaderPath: String?, gameName: String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        // 顶部栏
+        TopAppBar(
+            title = { Text("创意工坊") },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent
+            )
+        )
+        
+        WorkshopScreen(
+            onItemDownloaded = { file ->
+                AppLogger.info("DownloadScreen", "Workshop item downloaded: ${file.absolutePath}")
+                onNavigateToImport(file.absolutePath, null, "创意工坊物品")
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+/**
+ * GOG Tab 内容
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GogTabContent(
+    onBack: () -> Unit,
+    onNavigateToImport: (gamePath: String?, modLoaderPath: String?, gameName: String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -74,7 +317,21 @@ fun DownloadScreenWrapper(
         }
     }
     
-    GogScreen(
+    Column(modifier = modifier.fillMaxSize()) {
+        // 顶部栏
+        TopAppBar(
+            title = { Text("GOG") },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent
+            )
+        )
+        
+        GogScreen(
         uiState = uiState,
         onWebLogin = { authCode ->
             handleWebLogin(
@@ -129,8 +386,9 @@ fun DownloadScreenWrapper(
         onLoginError = { error ->
             Toast.makeText(context, "登录失败: $error", Toast.LENGTH_SHORT).show()
         },
-        modifier = modifier
+        modifier = Modifier.fillMaxSize()
     )
+    }
     
     // 下载对话框
     if (showDownloadDialog && currentGame != null) {

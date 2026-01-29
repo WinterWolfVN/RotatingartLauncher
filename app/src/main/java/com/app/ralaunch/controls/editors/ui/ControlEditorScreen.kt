@@ -45,6 +45,7 @@ import com.app.ralaunch.controls.views.ControlLayout as ControlLayoutView
 import com.app.ralaunch.controls.views.GridOverlayView
 import com.app.ralaunch.controls.bridges.DummyInputBridge
 import com.app.ralaunch.ui.compose.dialogs.KeyBindingDialog
+import com.app.ralaunch.data.SettingsManager
 import kotlin.math.roundToInt
 
 @Composable
@@ -539,6 +540,13 @@ fun ComponentPalette(
                 PaletteItem(Icons.Default.Games, "摇杆", "joystick", onAddControl)
                 PaletteItem(Icons.Default.TouchApp, "触控", "touchpad", onAddControl)
             }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                PaletteItem(Icons.Default.Gamepad, "十字键", "dpad", onAddControl)
+            }
         }
     }
 }
@@ -1014,6 +1022,14 @@ fun PropertyPanel(
                                     label = { Text("鼠标") }
                                 )
                             }
+                            
+                            // 鼠标模式下显示速度和范围设置
+                            if (control.mode == ControlData.Joystick.Mode.MOUSE) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                HorizontalDivider()
+                                Spacer(modifier = Modifier.height(8.dp))
+                                MouseModeSettings()
+                            }
                         }
 
                         // 摇杆纹理设置
@@ -1051,6 +1067,13 @@ fun PropertyPanel(
                                     }
                                 )
                             }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // 触控板鼠标速度和范围设置
+                            MouseModeSettings()
                         }
                         
                         // 触控板纹理设置
@@ -1327,6 +1350,154 @@ fun PropertySlider(
             onValueChange = onValueChange,
             valueRange = valueRange
         )
+    }
+}
+
+/**
+ * 鼠标模式设置组件 - 用于摇杆和触控板的鼠标速度和范围设置
+ */
+@Composable
+fun MouseModeSettings() {
+    val settingsManager = remember { SettingsManager.getInstance() }
+    
+    // 速度设置 (60-200，默认200)
+    var mouseSpeed by remember { mutableStateOf(settingsManager.mouseRightStickSpeed) }
+    // 范围设置 (0.0-1.0)
+    var rangeLeft by remember { mutableStateOf(settingsManager.mouseRightStickRangeLeft) }
+    var rangeTop by remember { mutableStateOf(settingsManager.mouseRightStickRangeTop) }
+    var rangeRight by remember { mutableStateOf(settingsManager.mouseRightStickRangeRight) }
+    var rangeBottom by remember { mutableStateOf(settingsManager.mouseRightStickRangeBottom) }
+    
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // 速度设置
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("移动速度", style = MaterialTheme.typography.labelMedium)
+                Text("$mouseSpeed", style = MaterialTheme.typography.labelSmall)
+            }
+            Slider(
+                value = (mouseSpeed - 60f) / 140f, // 60-200 映射到 0-1
+                onValueChange = { 
+                    mouseSpeed = (60 + (it * 140)).toInt()
+                    settingsManager.mouseRightStickSpeed = mouseSpeed
+                },
+                valueRange = 0f..1f
+            )
+        }
+        
+        // 范围设置标题
+        Text("移动范围", style = MaterialTheme.typography.labelMedium)
+        Text(
+            "控制鼠标可移动的屏幕区域（从中心向各方向扩展的比例）",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        
+        // 左侧范围
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("左", style = MaterialTheme.typography.labelSmall)
+                Text("${(rangeLeft * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+            }
+            Slider(
+                value = rangeLeft,
+                onValueChange = { 
+                    rangeLeft = it
+                    settingsManager.mouseRightStickRangeLeft = it
+                },
+                valueRange = 0f..1f
+            )
+        }
+        
+        // 上方范围
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("上", style = MaterialTheme.typography.labelSmall)
+                Text("${(rangeTop * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+            }
+            Slider(
+                value = rangeTop,
+                onValueChange = { 
+                    rangeTop = it
+                    settingsManager.mouseRightStickRangeTop = it
+                },
+                valueRange = 0f..1f
+            )
+        }
+        
+        // 右侧范围
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("右", style = MaterialTheme.typography.labelSmall)
+                Text("${(rangeRight * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+            }
+            Slider(
+                value = rangeRight,
+                onValueChange = { 
+                    rangeRight = it
+                    settingsManager.mouseRightStickRangeRight = it
+                },
+                valueRange = 0f..1f
+            )
+        }
+        
+        // 下方范围
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("下", style = MaterialTheme.typography.labelSmall)
+                Text("${(rangeBottom * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+            }
+            Slider(
+                value = rangeBottom,
+                onValueChange = { 
+                    rangeBottom = it
+                    settingsManager.mouseRightStickRangeBottom = it
+                },
+                valueRange = 0f..1f
+            )
+        }
+        
+        // 快捷设置按钮
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SuggestionChip(
+                onClick = {
+                    rangeLeft = 1f; rangeTop = 1f; rangeRight = 1f; rangeBottom = 1f
+                    settingsManager.mouseRightStickRangeLeft = 1f
+                    settingsManager.mouseRightStickRangeTop = 1f
+                    settingsManager.mouseRightStickRangeRight = 1f
+                    settingsManager.mouseRightStickRangeBottom = 1f
+                },
+                label = { Text("全屏") }
+            )
+            SuggestionChip(
+                onClick = {
+                    rangeLeft = 0.5f; rangeTop = 0.5f; rangeRight = 0.5f; rangeBottom = 0.5f
+                    settingsManager.mouseRightStickRangeLeft = 0.5f
+                    settingsManager.mouseRightStickRangeTop = 0.5f
+                    settingsManager.mouseRightStickRangeRight = 0.5f
+                    settingsManager.mouseRightStickRangeBottom = 0.5f
+                },
+                label = { Text("半屏") }
+            )
+        }
     }
 }
 
