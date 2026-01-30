@@ -3,7 +3,9 @@ package com.app.ralaunch.controls.editors.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,6 +33,16 @@ enum class FloatingMenuMode {
 }
 
 /**
+ * 联机状态
+ */
+enum class MultiplayerState {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+    ERROR
+}
+
+/**
  * 悬浮菜单状态
  */
 @Stable
@@ -45,7 +57,7 @@ class FloatingMenuState(
     var isGridVisible by mutableStateOf(true)
     var isInEditMode by mutableStateOf(false)
     
-    // 悬浮球可见性 (可通过音量键切换)
+    // 悬浮球可见性 (可通过返回键切换)
     var isFloatingBallVisible by mutableStateOf(true)
     
     // 控件正在使用中 (自动进入幽灵模式)
@@ -55,6 +67,13 @@ class FloatingMenuState(
     var isFpsDisplayEnabled by mutableStateOf(false)
     var isTouchEventEnabled by mutableStateOf(true)
     var isControlsVisible by mutableStateOf(true)
+    
+    // 联机相关状态
+    var isMultiplayerPanelVisible by mutableStateOf(false)
+    var multiplayerConnectionState by mutableStateOf(MultiplayerState.DISCONNECTED)
+    var multiplayerVirtualIp by mutableStateOf<String?>(null)
+    var multiplayerPeerCount by mutableStateOf(0)
+    var multiplayerIsHost by mutableStateOf(false)  // 是否是房主
     
     // 菜单面板偏移量（可拖动）
     var menuPanelOffset by mutableStateOf(androidx.compose.ui.geometry.Offset.Zero)
@@ -134,6 +153,33 @@ interface FloatingMenuCallbacks {
     fun onFpsDisplayChanged(enabled: Boolean) {}
     fun onTouchEventChanged(enabled: Boolean) {}
     fun onExitGame() {}
+    
+    // 联机相关回调
+    fun onMultiplayerConnect(roomName: String, roomPassword: String, isHost: Boolean) {}
+    fun onMultiplayerDisconnect() {}
+    fun isMultiplayerAvailable(): Boolean = false
+    fun getMultiplayerUnavailableReason(): String = ""
+    
+    /** 检查联机功能是否在设置中启用 */
+    fun isMultiplayerFeatureEnabled(): Boolean = false
+    
+    /** 检查 VPN 权限并请求（如需要） */
+    fun prepareVpnPermission(onGranted: () -> Unit, onDenied: () -> Unit) {
+        // 默认直接调用 onGranted，实际实现在 GameControlsOverlay 中
+        onGranted()
+    }
+    
+    /** 检查是否有 VPN 权限 */
+    fun hasVpnPermission(): Boolean = true
+    
+    /**
+     * 初始化 VPN 服务（创建 TUN 接口）
+     * 在创建房间前调用，VPN 就绪后回调
+     */
+    fun initVpnService(onReady: () -> Unit, onError: (String) -> Unit) {
+        // 默认直接调用 onReady，实际实现在 GameControlsOverlay 中
+        onReady()
+    }
 }
 
 /**
@@ -153,7 +199,7 @@ fun FloatingControlMenu(
             .padding(12.dp)
             .graphicsLayer { alpha = if (state.effectiveGhostMode) 0.25f else 1.0f }
     ) {
-        // 悬浮球 (可通过音量键切换可见性)
+        // 悬浮球 (可通过返回键切换可见性)
         AnimatedVisibility(
             visible = state.isFloatingBallVisible,
             enter = fadeIn() + scaleIn(),
@@ -224,6 +270,15 @@ fun FloatingControlMenu(
                 )
             }
         }
+    }
+    
+    // 联机弹窗 (独立显示)
+    if (state.isMultiplayerPanelVisible) {
+        MultiplayerDialog(
+            state = state,
+            callbacks = callbacks,
+            onDismiss = { state.isMultiplayerPanelVisible = false }
+        )
     }
 }
 
@@ -310,9 +365,12 @@ private fun InGameMenu(
     state: FloatingMenuState,
     callbacks: FloatingMenuCallbacks
 ) {
+    val scrollState = rememberScrollState()
+    
     Surface(
         modifier = Modifier
             .width(260.dp)
+            .heightIn(max = 450.dp) // 限制最大高度，超出时滚动
             .offset { IntOffset(state.menuPanelOffset.x.roundToInt(), state.menuPanelOffset.y.roundToInt()) },
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
@@ -320,7 +378,9 @@ private fun InGameMenu(
         shadowElevation = 8.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .verticalScroll(scrollState), // 添加滚动支持
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // 可拖动的标题栏
@@ -413,16 +473,42 @@ private fun InGameMenu(
                 }
             }
 
+            // 联机功能 - 仅在设置中启用时显示
+            if (callbacks.isMultiplayerFeatureEnabled()) {
+                MenuRowItem(
+                    icon = Icons.Default.Wifi,
+                    label = when (state.multiplayerConnectionState) {
+                        MultiplayerState.CONNECTED -> when {
+                            state.multiplayerPeerCount > 0 -> "联机中 (${state.multiplayerPeerCount + 1}人)"
+                            state.multiplayerIsHost -> "已连接 (等待加入)"
+                            else -> "已连接 (寻找房主)"
+                        }
+                        MultiplayerState.CONNECTING -> "连接中..."
+                        else -> "联机"
+                    },
+                    isActive = state.multiplayerConnectionState == MultiplayerState.CONNECTED,
+                    onClick = { state.isMultiplayerPanelVisible = true },
+                    tint = when (state.multiplayerConnectionState) {
+                        MultiplayerState.CONNECTED -> Color(0xFF4CAF50)
+                        MultiplayerState.CONNECTING -> Color(0xFFFFC107)
+                        MultiplayerState.ERROR -> MaterialTheme.colorScheme.error
+                        else -> Color.Unspecified
+                    }
+                )
+
+                HorizontalDivider()
+            }
+
             // 隐藏悬浮球
             MenuRowItem(
                 icon = Icons.Default.VisibilityOff,
-                label = "隐藏悬浮球(音量键打开)",
+                label = "隐藏悬浮球(返回键打开)",
                 isActive = false,
                 onClick = { state.toggleFloatingBallVisibility() }
             )
             
             Text(
-                text = "按音量键可重新显示",
+                text = "按返回键可重新显示",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp)
@@ -548,3 +634,4 @@ fun MenuSwitchItem(
         }
     }
 }
+

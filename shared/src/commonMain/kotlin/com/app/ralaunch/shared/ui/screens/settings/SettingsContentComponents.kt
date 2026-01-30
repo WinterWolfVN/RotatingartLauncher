@@ -302,13 +302,30 @@ fun GameSettingsContent(
 fun LauncherSettingsContent(
     onPatchManagementClick: () -> Unit,
     onForceReinstallPatchesClick: () -> Unit,
+    // 联机设置
+    multiplayerEnabled: Boolean = false,
+    onMultiplayerToggle: (Boolean) -> Unit = {},
+    // 资产完整性检查
+    onCheckIntegrityClick: () -> Unit = {},
+    onReExtractRuntimeLibsClick: () -> Unit = {},
+    assetStatusSummary: String = "",
     modifier: Modifier = Modifier,
     // 可本地化文本
     patchTitle: String = "补丁管理",
     managePatchesTitle: String = "管理补丁",
     managePatchesSubtitle: String = "查看、导入或删除游戏补丁",
     forceReinstallTitle: String = "强制重装补丁",
-    forceReinstallSubtitle: String = "下次启动游戏时重新安装所有补丁"
+    forceReinstallSubtitle: String = "下次启动游戏时重新安装所有补丁",
+    // 联机设置文本
+    multiplayerTitle: String = "联机功能",
+    multiplayerToggleTitle: String = "启用联机功能",
+    multiplayerToggleSubtitle: String = "开启后可在游戏内使用 P2P 联机功能",
+    // 资产检查文本
+    assetTitle: String = "资产管理",
+    checkIntegrityTitle: String = "检查资产完整性",
+    checkIntegritySubtitle: String = "检查库文件和资源是否完整",
+    reExtractTitle: String = "重新解压运行时库",
+    reExtractSubtitle: String = "如果游戏启动失败，尝试重新解压"
 ) {
     LazyColumn(
         modifier = modifier
@@ -316,6 +333,59 @@ fun LauncherSettingsContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // 资产管理
+        item {
+            SettingsSection(title = assetTitle) {
+                // 资产状态摘要
+                if (assetStatusSummary.isNotEmpty()) {
+                    androidx.compose.material3.Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                        shape = androidx.compose.material3.MaterialTheme.shapes.small
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = assetStatusSummary,
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(12.dp),
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                    }
+                }
+
+                ClickableSettingItem(
+                    title = checkIntegrityTitle,
+                    subtitle = checkIntegritySubtitle,
+                    icon = Icons.Default.VerifiedUser,
+                    onClick = onCheckIntegrityClick
+                )
+
+                SettingsDivider()
+
+                ClickableSettingItem(
+                    title = reExtractTitle,
+                    subtitle = reExtractSubtitle,
+                    icon = Icons.Default.RestartAlt,
+                    onClick = onReExtractRuntimeLibsClick
+                )
+            }
+        }
+
+        // 联机设置
+        item {
+            SettingsSection(title = multiplayerTitle) {
+                SwitchSettingItem(
+                    title = multiplayerToggleTitle,
+                    subtitle = multiplayerToggleSubtitle,
+                    icon = Icons.Default.Wifi,
+                    checked = multiplayerEnabled,
+                    onCheckedChange = onMultiplayerToggle
+                )
+            }
+        }
+
+        // 补丁管理
         item {
             SettingsSection(title = patchTitle) {
                 ClickableSettingItem(

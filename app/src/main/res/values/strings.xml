@@ -1115,7 +1115,34 @@
     <string name="nav_control">控制</string>
     <string name="nav_download">下载</string>
     <string name="nav_add_game">添加游戏</string>
+    <string name="nav_multiplayer">联机</string>
     <string name="nav_settings">设置</string>
+    
+    <!-- Multiplayer -->
+    <string name="multiplayer_title">联机</string>
+    <string name="multiplayer_settings">联机设置</string>
+    <string name="multiplayer_network_name">网络名称</string>
+    <string name="multiplayer_network_name_hint">输入房间名称</string>
+    <string name="multiplayer_network_secret">网络密钥</string>
+    <string name="multiplayer_network_secret_hint">输入房间密码</string>
+    <string name="multiplayer_status_disconnected">未连接</string>
+    <string name="multiplayer_status_connecting">正在连接...</string>
+    <string name="multiplayer_status_connected">已连接</string>
+    <string name="multiplayer_join_network">加入网络</string>
+    <string name="multiplayer_disconnect">断开连接</string>
+    <string name="multiplayer_network_nodes">网络节点</string>
+    <string name="multiplayer_local_node">本机</string>
+    <string name="multiplayer_online">在线</string>
+    <string name="multiplayer_waiting_players">等待其他玩家...</string>
+    <string name="multiplayer_share_hint">分享网络名称和密钥给好友\n让他们加入同一个网络</string>
+    <string name="multiplayer_not_connected">未连接网络</string>
+    <string name="multiplayer_connect_hint">输入网络名称和密钥后点击\"加入网络\"开始联机</string>
+    <string name="multiplayer_powered_by">基于 EasyTier P2P 组网\n支持 NAT 穿透，无需公网 IP</string>
+    <string name="multiplayer_connection_error">连接错误</string>
+    <string name="multiplayer_connect_failed">连接失败: %s</string>
+    <string name="multiplayer_disconnect_failed">断开失败: %s</string>
+    <string name="multiplayer_nodes_count">%d 个节点</string>
+    <string name="multiplayer_unknown_host">未知主机</string>
     
     <!-- Control Layout Menu -->
     <string name="action_edit_layout">编辑布局</string>

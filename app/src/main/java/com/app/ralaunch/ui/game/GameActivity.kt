@@ -228,43 +228,15 @@ class GameActivity : SDLActivity(), GameContract.View {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // 返回键处理
+        // 返回键处理：切换悬浮球可见性
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_DOWN) {
-                @Suppress("DEPRECATION")
-                onBackPressed()
+                virtualControlsManager.toggleFloatingBall()
             }
-            return false
-        }
-        
-        // 音量键在 onKeyDown/onKeyUp 中处理，这里直接拦截防止传递给系统
-        if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            return true
+            return true  // 拦截返回键，不退出游戏
         }
         
         return super.dispatchKeyEvent(event)
-    }
-
-    /**
-     * 拦截音量键按下，阻止系统音量弹窗显示
-     */
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            // 音量键按下时切换悬浮球可见性
-            virtualControlsManager.toggleFloatingBall()
-            return true  // 返回 true 阻止系统处理，不会显示音量弹窗
-        }
-        return super.onKeyDown(keyCode, event)
-    }
-
-    /**
-     * 拦截音量键抬起，阻止系统音量弹窗显示
-     */
-    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            return true  // 返回 true 阻止系统处理
-        }
-        return super.onKeyUp(keyCode, event)
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {

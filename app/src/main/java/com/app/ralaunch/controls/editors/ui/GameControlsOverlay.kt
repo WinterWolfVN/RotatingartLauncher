@@ -1,14 +1,20 @@
 package com.app.ralaunch.controls.editors.ui
 
+import android.app.Activity
+import android.content.Intent
 import android.net.Uri
+import android.net.VpnService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -25,6 +31,8 @@ import com.app.ralaunch.controls.textures.TextureLoader
 import com.app.ralaunch.controls.views.ControlLayout as ControlLayoutView
 import com.app.ralaunch.controls.views.GridOverlayView
 import com.app.ralaunch.data.SettingsManager
+import com.app.ralaunch.easytier.EasyTierConnectionState
+import com.app.ralaunch.easytier.EasyTierManager
 import com.app.ralaunch.ui.compose.dialogs.KeyBindingDialog
 import kotlinx.coroutines.flow.SharedFlow
 import java.io.File
@@ -47,6 +55,45 @@ fun GameControlsOverlay(
 ) {
     // 菜单状态
     val menuState = rememberFloatingMenuState()
+    val context = LocalContext.current
+    
+    // EasyTier 管理器
+    val easyTierManager = remember { EasyTierManager.getInstance() }
+    val connectionState by easyTierManager.connectionState.collectAsState()
+    val virtualIp by easyTierManager.virtualIp.collectAsState()
+    val peers by easyTierManager.peers.collectAsState()
+    val scope = rememberCoroutineScope()
+    
+    // VPN 权限请求相关
+    var pendingVpnCallback by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingVpnDeniedCallback by remember { mutableStateOf<(() -> Unit)?>(null) }
+    
+    val vpnPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // VPN 权限已授予
+            pendingVpnCallback?.invoke()
+        } else {
+            // 用户拒绝了 VPN 权限
+            pendingVpnDeniedCallback?.invoke()
+        }
+        pendingVpnCallback = null
+        pendingVpnDeniedCallback = null
+    }
+    
+    // 同步联机状态到菜单
+    LaunchedEffect(connectionState, virtualIp, peers) {
+        menuState.multiplayerConnectionState = when (connectionState) {
+            EasyTierConnectionState.DISCONNECTED -> MultiplayerState.DISCONNECTED
+            EasyTierConnectionState.CONNECTING -> MultiplayerState.CONNECTING
+            EasyTierConnectionState.FINDING_HOST -> MultiplayerState.CONNECTING  // 寻找房主也显示为连接中
+            EasyTierConnectionState.CONNECTED -> MultiplayerState.CONNECTED
+            EasyTierConnectionState.ERROR -> MultiplayerState.ERROR
+        }
+        menuState.multiplayerVirtualIp = virtualIp
+        menuState.multiplayerPeerCount = peers.size
+    }
     
     // 初始化菜单状态
     LaunchedEffect(Unit) {
@@ -54,7 +101,7 @@ fun GameControlsOverlay(
         menuState.isTouchEventEnabled = settingsManager.isTouchEventEnabled
     }
     
-    // 监听音量键切换悬浮球可见性
+    // 监听返回键切换悬浮球可见性
     LaunchedEffect(toggleFloatingBallEvent) {
         toggleFloatingBallEvent.collect {
             menuState.toggleFloatingBallVisibility()
@@ -85,7 +132,6 @@ fun GameControlsOverlay(
     var propertyPanelOffset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     
     // 图片选择器
-    val context = LocalContext.current
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -220,6 +266,60 @@ fun GameControlsOverlay(
             override fun onExitGame() {
                 onExitGame()
             }
+            
+            // 联机相关回调
+            override fun onMultiplayerConnect(roomName: String, roomPassword: String, isHost: Boolean) {
+                menuState.multiplayerIsHost = isHost  // 记录是否是房主
+                scope.launch {
+                    easyTierManager.connect(roomName, roomPassword, isHost = isHost)
+                }
+            }
+            
+            override fun onMultiplayerDisconnect() {
+                menuState.multiplayerIsHost = false  // 重置房主标记
+                easyTierManager.disconnect(context)
+            }
+            
+            override fun isMultiplayerAvailable(): Boolean {
+                return easyTierManager.isAvailable()
+            }
+            
+            override fun getMultiplayerUnavailableReason(): String {
+                return easyTierManager.getUnavailableReason()
+            }
+            
+            override fun isMultiplayerFeatureEnabled(): Boolean {
+                return settingsManager.isMultiplayerEnabled
+            }
+            
+            override fun prepareVpnPermission(onGranted: () -> Unit, onDenied: () -> Unit) {
+                // 检查 VPN 权限
+                val prepareIntent = VpnService.prepare(context)
+                if (prepareIntent == null) {
+                    // 已有权限，直接回调
+                    onGranted()
+                } else {
+                    // 需要请求权限
+                    pendingVpnCallback = onGranted
+                    pendingVpnDeniedCallback = onDenied
+                    vpnPermissionLauncher.launch(prepareIntent)
+                }
+            }
+            
+            override fun hasVpnPermission(): Boolean {
+                return VpnService.prepare(context) == null
+            }
+            
+            override fun initVpnService(onReady: () -> Unit, onError: (String) -> Unit) {
+                // 先检查 VPN 权限
+                val prepareIntent = VpnService.prepare(context)
+                if (prepareIntent != null) {
+                    onError("需要先授予 VPN 权限")
+                    return
+                }
+                // 初始化 VPN 服务
+                easyTierManager.initVpnService(context, onReady, onError)
+            }
         }
     }
     
@@ -245,6 +345,21 @@ fun GameControlsOverlay(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+        // 点击空白区域关闭菜单和属性面板
+        if (menuState.isExpanded || (menuState.isInEditMode && selectedControl != null)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        menuState.isExpanded = false
+                        selectedControl = null
+                    }
+            )
+        }
+        
         // 网格辅助线 (仅编辑模式，不拦截触摸事件)
         if (menuState.isGridVisible && menuState.isInEditMode) {
             AndroidView(

@@ -46,6 +46,7 @@ import com.app.ralaunch.controls.views.GridOverlayView
 import com.app.ralaunch.controls.bridges.DummyInputBridge
 import com.app.ralaunch.ui.compose.dialogs.KeyBindingDialog
 import com.app.ralaunch.data.SettingsManager
+import com.app.ralaunch.controls.KeyMapper
 import kotlin.math.roundToInt
 
 @Composable
@@ -132,6 +133,21 @@ fun ControlEditorScreen(
                 .padding(16.dp)
                 .graphicsLayer { alpha = if (isGhostMode) 0.3f else 1.0f }
         ) {
+            // 点击空白区域关闭菜单和属性面板
+            if (isMenuExpanded || isPropertyPanelVisible) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            viewModel.toggleMenu(false)
+                            viewModel.selectControl(null)
+                        }
+                )
+            }
+            
             // 1. 悬浮球 (独立位置，可自由拖拽)
             FloatingBall(
                 isExpanded = isMenuExpanded,
@@ -540,13 +556,6 @@ fun ComponentPalette(
                 PaletteItem(Icons.Default.Games, "摇杆", "joystick", onAddControl)
                 PaletteItem(Icons.Default.TouchApp, "触控", "touchpad", onAddControl)
             }
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                PaletteItem(Icons.Default.Gamepad, "十字键", "dpad", onAddControl)
-            }
         }
     }
 }
@@ -648,16 +657,6 @@ fun PropertyPanel(
                     if (onDuplicate != null) {
                         IconButton(onClick = onDuplicate) {
                             Icon(Icons.Default.ContentCopy, contentDescription = "复制控件")
-                        }
-                    }
-                    // 删除按钮
-                    if (onDelete != null) {
-                        IconButton(onClick = onDelete) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "删除控件",
-                                tint = MaterialTheme.colorScheme.error
-                            )
                         }
                     }
                     // 关闭按钮
@@ -1307,7 +1306,7 @@ fun PropertyPanel(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -1603,10 +1602,13 @@ fun JoystickKeyMappingDialog(
     onUpdateKeys: (Array<ControlData.KeyCode>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val directions = listOf("上", "右", "下", "左")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val directions = listOf("↑ 上", "→ 右", "↓ 下", "← 左")
     
     // 初始化可变状态
     var keys by remember { mutableStateOf(currentKeys.clone()) }
+    // 当前正在设置的方向索引
+    var selectingDirectionIndex by remember { mutableStateOf<Int?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -1646,7 +1648,7 @@ fun JoystickKeyMappingDialog(
                                 ControlData.KeyCode.KEYBOARD_LEFT
                             )
                         },
-                        label = { Text("方向键") }
+                        label = { Text("方向键 ↑←↓→") }
                     )
                 }
 
@@ -1662,9 +1664,18 @@ fun JoystickKeyMappingDialog(
                         Text(direction, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                         
                         val keyCode = keys.getOrNull(index)
-                        val displayName = keyCode?.name?.removePrefix("KEYBOARD_") ?: "未设置"
+                        val displayName = keyCode?.let { KeyMapper.getKeyName(context, it) } ?: "未设置"
                         
-                        OutlinedButton(onClick = { /* TODO: 打开按键选择器 */ }) {
+                        OutlinedButton(
+                            onClick = { selectingDirectionIndex = index },
+                            colors = if (selectingDirectionIndex == index) {
+                                ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            } else {
+                                ButtonDefaults.outlinedButtonColors()
+                            }
+                        ) {
                             Text(displayName)
                         }
                     }
@@ -1687,6 +1698,20 @@ fun JoystickKeyMappingDialog(
                 }
             }
         }
+    }
+    
+    // 按键选择器对话框
+    selectingDirectionIndex?.let { dirIndex ->
+        KeyBindingDialog(
+            initialGamepadMode = false,
+            onKeySelected = { keyCode, _ ->
+                val newKeys = keys.clone()
+                newKeys[dirIndex] = keyCode
+                keys = newKeys
+                selectingDirectionIndex = null
+            },
+            onDismiss = { selectingDirectionIndex = null }
+        )
     }
 }
 

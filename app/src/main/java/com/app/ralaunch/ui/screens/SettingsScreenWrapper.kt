@@ -10,6 +10,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,8 +36,10 @@ import com.app.ralaunch.ui.compose.dialogs.PatchManagementDialogCompose
 import com.app.ralaunch.ui.compose.settings.SettingsViewModel as AppSettingsViewModel
 import com.app.ralaunch.ui.main.MainActivityCompose
 import com.app.ralaunch.utils.AppLogger
+import com.app.ralaunch.utils.AssetIntegrityChecker
 import com.app.ralaunch.utils.LocaleManager
 import com.app.ralaunch.utils.LogcatReader
+import com.app.ralaunch.runtime.RuntimeLibraryLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -65,7 +76,24 @@ fun SettingsScreenWrapper(
     var showLogViewerDialog by remember { mutableStateOf(false) }
     var showLicenseDialog by remember { mutableStateOf(false) }
     var showPatchManagementDialog by remember { mutableStateOf(false) }
+    var showMultiplayerDisclaimerDialog by remember { mutableStateOf(false) }
     var logs by remember { mutableStateOf<List<String>>(emptyList()) }
+    
+    // 联机设置状态
+    var multiplayerEnabled by remember { mutableStateOf(SettingsManager.getInstance().isMultiplayerEnabled) }
+
+    // 资产完整性检查状态
+    var showAssetCheckDialog by remember { mutableStateOf(false) }
+    var assetCheckResult by remember { mutableStateOf<AssetIntegrityChecker.CheckResult?>(null) }
+    var isCheckingAssets by remember { mutableStateOf(false) }
+    var assetStatusSummary by remember { mutableStateOf("") }
+    var showReExtractConfirmDialog by remember { mutableStateOf(false) }
+    var isReExtracting by remember { mutableStateOf(false) }
+
+    // 加载资产状态摘要
+    LaunchedEffect(Unit) {
+        assetStatusSummary = AssetIntegrityChecker.getStatusSummary(context)
+    }
 
     // 文件选择器
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -186,7 +214,37 @@ fun SettingsScreenWrapper(
             SettingsCategory.LAUNCHER -> {
                 LauncherSettingsContent(
                     onPatchManagementClick = { viewModel.onEvent(SettingsEvent.OpenPatchManagement) },
-                    onForceReinstallPatchesClick = { viewModel.onEvent(SettingsEvent.ForceReinstallPatches) }
+                    onForceReinstallPatchesClick = { viewModel.onEvent(SettingsEvent.ForceReinstallPatches) },
+                    multiplayerEnabled = multiplayerEnabled,
+                    onMultiplayerToggle = { enabled ->
+                        if (enabled) {
+                            // 首次启用需要先显示声明对话框
+                            if (!SettingsManager.getInstance().hasMultiplayerDisclaimerAccepted) {
+                                showMultiplayerDisclaimerDialog = true
+                            } else {
+                                multiplayerEnabled = true
+                                SettingsManager.getInstance().isMultiplayerEnabled = true
+                            }
+                        } else {
+                            multiplayerEnabled = false
+                            SettingsManager.getInstance().isMultiplayerEnabled = false
+                        }
+                    },
+                    // 资产完整性检查
+                    onCheckIntegrityClick = {
+                        scope.launch {
+                            isCheckingAssets = true
+                            showAssetCheckDialog = true
+                            assetCheckResult = AssetIntegrityChecker.checkIntegrity(context)
+                            isCheckingAssets = false
+                            // 刷新状态摘要
+                            assetStatusSummary = AssetIntegrityChecker.getStatusSummary(context)
+                        }
+                    },
+                    onReExtractRuntimeLibsClick = {
+                        showReExtractConfirmDialog = true
+                    },
+                    assetStatusSummary = assetStatusSummary
                 )
             }
             SettingsCategory.DEVELOPER -> {
@@ -310,6 +368,289 @@ fun SettingsScreenWrapper(
             onDismiss = { showPatchManagementDialog = false }
         )
     }
+
+    // 联机功能声明对话框
+    if (showMultiplayerDisclaimerDialog) {
+        MultiplayerDisclaimerDialog(
+            onConfirm = {
+                SettingsManager.getInstance().hasMultiplayerDisclaimerAccepted = true
+                SettingsManager.getInstance().isMultiplayerEnabled = true
+                multiplayerEnabled = true
+                showMultiplayerDisclaimerDialog = false
+                Toast.makeText(context, "联机功能已启用", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = {
+                showMultiplayerDisclaimerDialog = false
+            }
+        )
+    }
+
+    // 资产完整性检查结果对话框
+    if (showAssetCheckDialog) {
+        AssetCheckResultDialog(
+            isChecking = isCheckingAssets,
+            result = assetCheckResult,
+            onAutoFix = {
+                assetCheckResult?.let { result ->
+                    scope.launch {
+                        isCheckingAssets = true
+                        val fixResult = AssetIntegrityChecker.autoFix(context, result.issues) { _, msg ->
+                            // 可以添加进度显示
+                        }
+                        isCheckingAssets = false
+                        
+                        if (fixResult.success) {
+                            Toast.makeText(context, fixResult.message, Toast.LENGTH_LONG).show()
+                            if (fixResult.needsRestart) {
+                                // 提示需要重启
+                                Toast.makeText(context, "请重启应用以完成修复", Toast.LENGTH_LONG).show()
+                            }
+                            showAssetCheckDialog = false
+                            // 重新检查
+                            assetCheckResult = AssetIntegrityChecker.checkIntegrity(context)
+                            assetStatusSummary = AssetIntegrityChecker.getStatusSummary(context)
+                        } else {
+                            Toast.makeText(context, "修复失败: ${fixResult.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            },
+            onDismiss = {
+                showAssetCheckDialog = false
+            }
+        )
+    }
+
+    // 重新解压确认对话框
+    if (showReExtractConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showReExtractConfirmDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("重新解压运行时库") },
+            text = {
+                Column {
+                    Text("此操作将删除现有运行时库并重新解压。")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "如果游戏启动失败或提示库文件缺失，可以尝试此操作。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (isReExtracting) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        androidx.compose.material3.LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            "正在解压...",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            isReExtracting = true
+                            try {
+                                val result = RuntimeLibraryLoader.forceReExtract(context) { progress, msg ->
+                                    // 进度回调
+                                }
+                                isReExtracting = false
+                                showReExtractConfirmDialog = false
+                                
+                                if (result) {
+                                    Toast.makeText(context, "运行时库重新解压成功", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "运行时库重新解压失败", Toast.LENGTH_LONG).show()
+                                }
+                                // 刷新状态
+                                assetStatusSummary = AssetIntegrityChecker.getStatusSummary(context)
+                            } catch (e: Exception) {
+                                isReExtracting = false
+                                Toast.makeText(context, "解压失败: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    enabled = !isReExtracting
+                ) {
+                    Text("确认解压")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showReExtractConfirmDialog = false },
+                    enabled = !isReExtracting
+                ) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+/**
+ * 资产完整性检查结果对话框
+ */
+@Composable
+private fun AssetCheckResultDialog(
+    isChecking: Boolean,
+    result: AssetIntegrityChecker.CheckResult?,
+    onAutoFix: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isChecking) onDismiss() },
+        icon = {
+            Icon(
+                imageVector = if (result?.isValid == true) Icons.Default.CheckCircle else Icons.Default.Warning,
+                contentDescription = null,
+                tint = if (result?.isValid == true) 
+                    androidx.compose.ui.graphics.Color(0xFF4CAF50) 
+                else 
+                    MaterialTheme.colorScheme.error
+            )
+        },
+        title = {
+            Text(
+                if (isChecking) "正在检查..." 
+                else if (result?.isValid == true) "检查通过" 
+                else "发现问题"
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                if (isChecking) {
+                    androidx.compose.material3.LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("正在检查资产完整性...")
+                } else if (result != null) {
+                    Text(
+                        result.summary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    
+                    if (result.issues.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        result.issues.forEach { issue ->
+                            Row(
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = when (issue.type) {
+                                        AssetIntegrityChecker.CheckResult.IssueType.MISSING_FILE -> "⚠"
+                                        AssetIntegrityChecker.CheckResult.IssueType.EMPTY_FILE -> "⚠"
+                                        AssetIntegrityChecker.CheckResult.IssueType.DIRECTORY_MISSING -> "❌"
+                                        AssetIntegrityChecker.CheckResult.IssueType.VERSION_MISMATCH -> "ℹ"
+                                        AssetIntegrityChecker.CheckResult.IssueType.CORRUPTED_FILE -> "⚠"
+                                        AssetIntegrityChecker.CheckResult.IssueType.PERMISSION_ERROR -> "🔒"
+                                    },
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = issue.description,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                        
+                        val canFix = result.issues.any { it.canAutoFix }
+                        if (canFix) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "点击「自动修复」可尝试修复上述问题。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (!isChecking && result?.issues?.any { it.canAutoFix } == true) {
+                TextButton(onClick = onAutoFix) {
+                    Text("自动修复")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isChecking
+            ) {
+                Text("关闭")
+            }
+        }
+    )
+}
+
+/**
+ * 联机功能声明对话框
+ */
+@Composable
+private fun MultiplayerDisclaimerDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                text = "联机功能声明",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "联机功能使用 EasyTier (LGPL-3.0) 第三方开源组件，在使用过程中所遇到的问题请通过相关渠道进行反馈。",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "联机功能使用 P2P 技术，联机成功后房间内用户之间将直接连接。不会使用第三方服务器对您的流量进行转发。最终联机体验和参与联机者的网络情况有较大关系。",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "在多人联机全过程中，您必须严格遵守您所在国家与地区的全部法律法规。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("确认")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 // ==================== 辅助函数 ====================

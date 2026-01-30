@@ -63,25 +63,27 @@ fun AppNavigationRail(
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Spacer(modifier = Modifier.height(12.dp)) // 减小顶部边距
-                
-                // 导航项列表 (排除设置)
-                NavDestination.entries.filter { it != NavDestination.SETTINGS }.forEach { destination ->
-                    val isSelected = currentDestination == destination
-                    
-                    CustomRailItem(
-                        selected = isSelected,
-                        icon = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
-                        label = destination.label,
-                        onClick = { onNavigate(destination) }
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp)) // 减小项之间间距
+                // 上部导航项
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // 导航项列表 (排除设置)
+                    NavDestination.entries.filter { it != NavDestination.SETTINGS }.forEach { destination ->
+                        val isSelected = currentDestination == destination
+                        
+                        CustomRailItem(
+                            selected = isSelected,
+                            icon = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
+                            label = destination.label,
+                            onClick = { onNavigate(destination) }
+                        )
+                    }
                 }
-                
-                Spacer(modifier = Modifier.weight(1f))
 
                 // 设置项固定在底部
                 val isSettingsSelected = currentDestination == NavDestination.SETTINGS
@@ -92,7 +94,7 @@ fun AppNavigationRail(
                     onClick = { onNavigate(NavDestination.SETTINGS) }
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp)) // 减小底部边距
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -133,13 +135,13 @@ private fun CustomRailItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(68.dp) // 从 76.dp 压缩到 68.dp
             .scale(scale)
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(bounded = false, radius = 36.dp),
+                indication = ripple(bounded = false, radius = 32.dp),
                 onClick = onClick
-            ),
+            )
+            .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         // 左侧选中指示条 - 弹性高度

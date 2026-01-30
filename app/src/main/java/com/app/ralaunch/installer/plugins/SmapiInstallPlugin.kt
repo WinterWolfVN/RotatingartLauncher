@@ -28,7 +28,7 @@ class SmapiInstallPlugin : BaseInstallPlugin() {
         
         /**
          * 获取 SMAPI 模组目录（外部存储）
-         * @return /storage/emulated/0/RALauncher/Stardew/Mods
+         * @return /storage/emulated/0/RALauncher/Stardew Valley/Mods
          */
         fun getSmapiModsDirectory(): File {
             return File(Environment.getExternalStorageDirectory(), "$RALAUNCHER_DIR/$SMAPI_MODS_SUBDIR")

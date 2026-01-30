@@ -44,7 +44,7 @@ class GameVirtualControlsManager {
     val toggleFloatingBallEvent = _toggleFloatingBallEvent.asSharedFlow()
     
     /**
-     * 切换悬浮球可见性 (通过音量键触发)
+     * 切换悬浮球可见性 (通过返回键触发)
      */
     fun toggleFloatingBall() {
         _toggleFloatingBallEvent.tryEmit(Unit)
