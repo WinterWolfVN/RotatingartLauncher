@@ -208,7 +208,12 @@ fun SettingsScreenWrapper(
                     onRendererClick = { viewModel.onEvent(SettingsEvent.OpenRendererSelector) },
                     vulkanTurnipEnabled = uiState.vulkanTurnipEnabled,
                     onVulkanTurnipChange = { viewModel.onEvent(SettingsEvent.SetVulkanTurnip(it)) },
-                    isAdrenoGpu = uiState.isAdrenoGpu
+                    isAdrenoGpu = uiState.isAdrenoGpu,
+                    // 画质设置
+                    qualityLevel = uiState.qualityLevel,
+                    onQualityLevelChange = { viewModel.onEvent(SettingsEvent.SetQualityLevel(it)) },
+                    shaderLowPrecision = uiState.shaderLowPrecision,
+                    onShaderLowPrecisionChange = { viewModel.onEvent(SettingsEvent.SetShaderLowPrecision(it)) }
                 )
             }
             SettingsCategory.LAUNCHER -> {

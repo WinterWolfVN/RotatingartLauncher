@@ -40,8 +40,107 @@
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <time.h>
 #include "../../SDL_internal.h"  // SDL_bool is defined here
 #include "SDL_androidwindow.h"  // For SDL_WindowData
+
+/* FPS 计算相关 - 使用滑动窗口平均实现精准稳定的检测 */
+#define FPS_SAMPLE_COUNT 60  /* 滑动窗口大小（帧数） */
+#define FPS_UPDATE_INTERVAL_NS 250000000LL  /* 更新间隔 250ms（纳秒） */
+
+static Uint64 g_frame_times[FPS_SAMPLE_COUNT] = {0};  /* 帧时间戳环形缓冲 */
+static int g_frame_index = 0;                          /* 当前帧索引 */
+static int g_frame_count = 0;                          /* 有效帧计数 */
+static Uint64 g_last_update_ns = 0;                    /* 上次更新时间 */
+static float g_fps_current = 0.0f;                     /* 当前 FPS */
+static float g_fps_smoothed = 0.0f;                    /* 平滑后的 FPS */
+static float g_frame_time_ms = 0.0f;                   /* 平均帧时间 */
+static char g_fps_env_buffer[64] = {0};
+static SDL_bool g_fps_initialized = SDL_FALSE;
+
+/* 获取当前时间（纳秒级精度） */
+static Uint64 GetTimeNS(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (Uint64)ts.tv_sec * 1000000000ULL + (Uint64)ts.tv_nsec;
+}
+
+/* 初始化 FPS 追踪 */
+static void InitFPSTracking(void)
+{
+    if (g_fps_initialized) return;
+    g_fps_initialized = SDL_TRUE;
+    
+    SDL_memset(g_frame_times, 0, sizeof(g_frame_times));
+    g_frame_index = 0;
+    g_frame_count = 0;
+    g_last_update_ns = GetTimeNS();
+    g_fps_current = 0.0f;
+    g_fps_smoothed = 0.0f;
+    
+    setenv("RAL_FPS", "0", 1);
+    setenv("RAL_FRAME_TIME", "0", 1);
+    
+    __android_log_print(ANDROID_LOG_INFO, "SDL_FPS", 
+        "FPS tracking initialized (sample window: %d frames)", FPS_SAMPLE_COUNT);
+}
+
+/* 更新 FPS - 使用滑动窗口平均 */
+static void UpdateFPS(void)
+{
+    Uint64 current_ns = GetTimeNS();
+    
+    /* 记录帧时间到环形缓冲 */
+    g_frame_times[g_frame_index] = current_ns;
+    g_frame_index = (g_frame_index + 1) % FPS_SAMPLE_COUNT;
+    if (g_frame_count < FPS_SAMPLE_COUNT) {
+        g_frame_count++;
+    }
+    
+    /* 检查是否需要更新 FPS 显示 */
+    Uint64 elapsed_ns = current_ns - g_last_update_ns;
+    if (elapsed_ns < FPS_UPDATE_INTERVAL_NS) {
+        return;
+    }
+    g_last_update_ns = current_ns;
+    
+    /* 计算滑动窗口内的平均 FPS */
+    if (g_frame_count >= 2) {
+        /* 找到窗口内最老的帧 */
+        int oldest_index = (g_frame_index - g_frame_count + FPS_SAMPLE_COUNT) % FPS_SAMPLE_COUNT;
+        int newest_index = (g_frame_index - 1 + FPS_SAMPLE_COUNT) % FPS_SAMPLE_COUNT;
+        
+        Uint64 oldest_time = g_frame_times[oldest_index];
+        Uint64 newest_time = g_frame_times[newest_index];
+        
+        if (newest_time > oldest_time) {
+            Uint64 window_duration_ns = newest_time - oldest_time;
+            int frame_intervals = g_frame_count - 1;
+            
+            /* 计算 FPS: (帧数-1) / 时间窗口 */
+            g_fps_current = (float)frame_intervals * 1000000000.0f / (float)window_duration_ns;
+            
+            /* 计算平均帧时间 (ms) */
+            g_frame_time_ms = (float)window_duration_ns / (float)frame_intervals / 1000000.0f;
+            
+            /* 指数移动平均平滑 (EMA)，alpha = 0.3 */
+            if (g_fps_smoothed <= 0.0f) {
+                g_fps_smoothed = g_fps_current;
+            } else {
+                g_fps_smoothed = g_fps_smoothed * 0.7f + g_fps_current * 0.3f;
+            }
+        }
+    }
+    
+    /* 通过环境变量传递给 Java */
+    SDL_snprintf(g_fps_env_buffer, sizeof(g_fps_env_buffer), "%.1f", g_fps_smoothed);
+    setenv("RAL_FPS", g_fps_env_buffer, 1);
+    
+    SDL_snprintf(g_fps_env_buffer, sizeof(g_fps_env_buffer), "%.2f", g_frame_time_ms);
+    setenv("RAL_FRAME_TIME", g_fps_env_buffer, 1);
+}
 
 int Android_GLES_MakeCurrent(_THIS, SDL_Window *window, SDL_GLContext context)
 {
@@ -185,6 +284,10 @@ SDL_GLContext Android_GLES_CreateContext(_THIS, SDL_Window *window)
 int Android_GLES_SwapWindow(_THIS, SDL_Window *window)
 {
     int retval;
+
+    /* 初始化并更新 FPS（滑动窗口平均算法） */
+    InitFPSTracking();
+    UpdateFPS();
 
     SDL_LockMutex(Android_ActivityMutex);
 

@@ -82,6 +82,11 @@ class SettingsViewModel(
             is SettingsEvent.SetConcurrentGC -> setConcurrentGC(event.enabled)
             is SettingsEvent.SetTieredCompilation -> setTieredCompilation(event.enabled)
             is SettingsEvent.SetFnaMapBufferRangeOpt -> setFnaMapBufferRangeOpt(event.enabled)
+            
+            // 画质
+            is SettingsEvent.SetQualityLevel -> setQualityLevel(event.level)
+            is SettingsEvent.SetShaderLowPrecision -> setShaderLowPrecision(event.enabled)
+            
             is SettingsEvent.ViewLogs -> sendEffect(SettingsEffect.ViewLogsPage)
             is SettingsEvent.ClearCache -> sendEffect(SettingsEffect.ClearCacheComplete)
             is SettingsEvent.ExportLogs -> sendEffect(SettingsEffect.ExportLogsToFile)
@@ -148,6 +153,10 @@ class SettingsViewModel(
                     concurrentGCEnabled = settingsManager.isConcurrentGC,
                     tieredCompilationEnabled = settingsManager.isTieredCompilation,
                     fnaMapBufferRangeOptEnabled = settingsManager.isFnaEnableMapBufferRangeOptimization,
+                    
+                    // 画质
+                    qualityLevel = settingsManager.fnaQualityLevel,
+                    shaderLowPrecision = settingsManager.isFnaShaderLowPrecision,
 
                     // 关于
                     appVersion = packageInfo?.versionName ?: "Unknown",
@@ -316,6 +325,26 @@ class SettingsViewModel(
     private fun setFnaMapBufferRangeOpt(enabled: Boolean) {
         settingsManager.isFnaEnableMapBufferRangeOptimization = enabled
         _uiState.update { it.copy(fnaMapBufferRangeOptEnabled = enabled) }
+    }
+
+    // ==================== 画质设置 ====================
+
+    private fun setQualityLevel(level: Int) {
+        settingsManager.fnaQualityLevel = level
+        _uiState.update { it.copy(qualityLevel = level) }
+        val qualityName = when (level) {
+            0 -> "高画质"
+            1 -> "中画质"
+            2 -> "低画质"
+            else -> "高画质"
+        }
+        sendEffect(SettingsEffect.ShowToast("已设置为${qualityName}，重启游戏后生效"))
+    }
+
+    private fun setShaderLowPrecision(enabled: Boolean) {
+        settingsManager.isFnaShaderLowPrecision = enabled
+        _uiState.update { it.copy(shaderLowPrecision = enabled) }
+        sendEffect(SettingsEffect.ShowToast("重启游戏后生效"))
     }
 
     // ==================== 工具方法 ====================

@@ -255,6 +255,27 @@ class SettingsManager private constructor() {
         get() = getBoolean(Keys.FNA_ENABLE_MAP_BUFFER_RANGE_OPTIMIZATION_IF_AVAILABLE, Defaults.FNA_ENABLE_MAP_BUFFER_RANGE_OPTIMIZATION_IF_AVAILABLE)
         set(value) = putBoolean(Keys.FNA_ENABLE_MAP_BUFFER_RANGE_OPTIMIZATION_IF_AVAILABLE, value)
 
+    // 画质优化设置
+    var fnaQualityLevel: Int
+        get() = getInt(Keys.FNA_QUALITY_LEVEL, Defaults.FNA_QUALITY_LEVEL)
+        set(value) = putInt(Keys.FNA_QUALITY_LEVEL, value)
+
+    var fnaTextureLodBias: Float
+        get() = getFloat(Keys.FNA_TEXTURE_LOD_BIAS, Defaults.FNA_TEXTURE_LOD_BIAS)
+        set(value) = putFloat(Keys.FNA_TEXTURE_LOD_BIAS, value)
+
+    var fnaMaxAnisotropy: Int
+        get() = getInt(Keys.FNA_MAX_ANISOTROPY, Defaults.FNA_MAX_ANISOTROPY)
+        set(value) = putInt(Keys.FNA_MAX_ANISOTROPY, value)
+
+    var fnaRenderScale: Float
+        get() = getFloat(Keys.FNA_RENDER_SCALE, Defaults.FNA_RENDER_SCALE)
+        set(value) = putFloat(Keys.FNA_RENDER_SCALE, value)
+
+    var isFnaShaderLowPrecision: Boolean
+        get() = getBoolean(Keys.FNA_SHADER_LOW_PRECISION, Defaults.FNA_SHADER_LOW_PRECISION)
+        set(value) = putBoolean(Keys.FNA_SHADER_LOW_PRECISION, value)
+
     var isVulkanDriverTurnip: Boolean
         get() = getBoolean(Keys.VULKAN_DRIVER_TURNIP, Defaults.VULKAN_DRIVER_TURNIP)
         set(value) = putBoolean(Keys.VULKAN_DRIVER_TURNIP, value)
@@ -372,6 +393,13 @@ class SettingsManager private constructor() {
 
         const val FNA_RENDERER = "fna_renderer"
         const val FNA_ENABLE_MAP_BUFFER_RANGE_OPTIMIZATION_IF_AVAILABLE = "fna_enable_map_buffer_range_optimization_if_available"
+        
+        // 画质优化设置
+        const val FNA_QUALITY_LEVEL = "fna_quality_level" // 0=高, 1=中, 2=低
+        const val FNA_TEXTURE_LOD_BIAS = "fna_texture_lod_bias" // 纹理 LOD 偏移 (0-4)
+        const val FNA_MAX_ANISOTROPY = "fna_max_anisotropy" // 各向异性过滤 (1, 2, 4, 8, 16)
+        const val FNA_RENDER_SCALE = "fna_render_scale" // 渲染分辨率缩放 (0.5, 0.75, 1.0)
+        const val FNA_SHADER_LOW_PRECISION = "fna_shader_low_precision" // 低精度 shader
 
         const val VULKAN_DRIVER_TURNIP = "vulkan_driver_turnip"
 
@@ -407,10 +435,18 @@ class SettingsManager private constructor() {
 
         const val ENABLE_LOG_SYSTEM = true
         const val VERBOSE_LOGGING = false
-        const val SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED = true
+        // 默认禁用，因为某些设备（如小米）可能有安全限制
+        const val SET_THREAD_AFFINITY_TO_BIG_CORE_ENABLED = false
 
         const val FNA_RENDERER = "auto"
         const val FNA_ENABLE_MAP_BUFFER_RANGE_OPTIMIZATION_IF_AVAILABLE = true
+        
+        // 画质优化默认值
+        const val FNA_QUALITY_LEVEL = 0 // 高画质
+        const val FNA_TEXTURE_LOD_BIAS = 0f // 无偏移
+        const val FNA_MAX_ANISOTROPY = 4 // 中等各向异性
+        const val FNA_RENDER_SCALE = 1.0f // 原生分辨率
+        const val FNA_SHADER_LOW_PRECISION = false // 默认高精度 shader
 
         const val VULKAN_DRIVER_TURNIP = true
 

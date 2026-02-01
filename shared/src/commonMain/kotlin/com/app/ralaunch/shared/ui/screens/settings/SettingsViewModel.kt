@@ -35,6 +35,10 @@ data class SettingsUiState(
     val rendererType: String = "OpenGL ES",
     val vulkanTurnipEnabled: Boolean = false,
     val isAdrenoGpu: Boolean = false,
+    
+    // 画质设置
+    val qualityLevel: Int = 0, // 0=高, 1=中, 2=低
+    val shaderLowPrecision: Boolean = false,
 
     // 开发者设置
     val loggingEnabled: Boolean = false,
@@ -76,6 +80,10 @@ sealed class SettingsEvent {
     data class SetLowLatencyAudio(val enabled: Boolean) : SettingsEvent()
     data class SetRenderer(val renderer: String) : SettingsEvent()
     data class SetVulkanTurnip(val enabled: Boolean) : SettingsEvent()
+    
+    // 画质
+    data class SetQualityLevel(val level: Int) : SettingsEvent()
+    data class SetShaderLowPrecision(val enabled: Boolean) : SettingsEvent()
 
     // 启动器
     data object OpenPatchManagement : SettingsEvent()
@@ -178,6 +186,10 @@ class SettingsViewModel(
             is SettingsEvent.SetRenderer -> setRenderer(event.renderer)
             is SettingsEvent.OpenRendererSelector -> sendEffect(SettingsEffect.OpenRendererDialog)
             is SettingsEvent.SetVulkanTurnip -> setVulkanTurnip(event.enabled)
+            
+            // 画质
+            is SettingsEvent.SetQualityLevel -> setQualityLevel(event.level)
+            is SettingsEvent.SetShaderLowPrecision -> setShaderLowPrecision(event.enabled)
 
             // 启动器
             is SettingsEvent.OpenPatchManagement -> sendEffect(SettingsEffect.OpenPatchManagementDialog)
@@ -375,6 +387,30 @@ class SettingsViewModel(
             _uiState.update { it.copy(vulkanTurnipEnabled = enabled) }
             val message = if (enabled) "已启用 Turnip 驱动" else "已禁用 Turnip 驱动（使用系统驱动）"
             sendEffect(SettingsEffect.ShowToast(message))
+        }
+    }
+
+    // ==================== 画质设置 ====================
+
+    private fun setQualityLevel(level: Int) {
+        viewModelScope.launch {
+            settingsRepository.setQualityLevel(level)
+            _uiState.update { it.copy(qualityLevel = level) }
+            val qualityName = when (level) {
+                0 -> "高画质"
+                1 -> "中画质"
+                2 -> "低画质"
+                else -> "高画质"
+            }
+            sendEffect(SettingsEffect.ShowToast("已设置为${qualityName}，重启游戏后生效"))
+        }
+    }
+
+    private fun setShaderLowPrecision(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShaderLowPrecision(enabled)
+            _uiState.update { it.copy(shaderLowPrecision = enabled) }
+            sendEffect(SettingsEffect.ShowToast("重启游戏后生效"))
         }
     }
 

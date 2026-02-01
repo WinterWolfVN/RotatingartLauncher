@@ -383,6 +383,24 @@ class SettingsRepositoryImpl(
         dataStore.edit { it[PreferencesKeys.FNA_MAP_BUFFER_RANGE_OPTIMIZATION] = enabled }
     }
 
+    // ==================== 画质设置 ====================
+
+    override suspend fun getQualityLevel(): Int {
+        return dataStore.data.first()[PreferencesKeys.FNA_QUALITY_LEVEL] ?: 0
+    }
+
+    override suspend fun setQualityLevel(level: Int) {
+        dataStore.edit { it[PreferencesKeys.FNA_QUALITY_LEVEL] = level }
+    }
+
+    override suspend fun isShaderLowPrecision(): Boolean {
+        return dataStore.data.first()[PreferencesKeys.FNA_SHADER_LOW_PRECISION] ?: false
+    }
+
+    override suspend fun setShaderLowPrecision(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.FNA_SHADER_LOW_PRECISION] = enabled }
+    }
+
     // ==================== 内存优化 ====================
 
     override fun isKillLauncherUIAfterLaunch(): Flow<Boolean> = dataStore.data.map { prefs ->

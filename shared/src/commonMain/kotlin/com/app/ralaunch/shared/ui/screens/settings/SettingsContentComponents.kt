@@ -222,6 +222,11 @@ fun GameSettingsContent(
     vulkanTurnipEnabled: Boolean = false,
     onVulkanTurnipChange: (Boolean) -> Unit = {},
     isAdrenoGpu: Boolean = false,
+    // 画质设置
+    qualityLevel: Int = 0,
+    onQualityLevelChange: (Int) -> Unit = {},
+    shaderLowPrecision: Boolean = false,
+    onShaderLowPrecisionChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     // 可本地化文本
     performanceTitle: String = "性能",
@@ -234,7 +239,13 @@ fun GameSettingsContent(
     rendererSubtitle: String = "选择图形渲染后端",
     vulkanDriverTitle: String = "Vulkan 驱动",
     turnipDriverTitle: String = "Turnip 驱动",
-    turnipDriverSubtitle: String = "使用开源 Turnip 驱动（仅 Adreno GPU）"
+    turnipDriverSubtitle: String = "使用开源 Turnip 驱动（仅 Adreno GPU）",
+    // 画质设置文本
+    qualityTitle: String = "画质",
+    qualityLevelTitle: String = "画质预设",
+    qualityLevelSubtitle: String = "选择画质等级，低画质可提高性能",
+    shaderPrecisionTitle: String = "低精度着色器",
+    shaderPrecisionSubtitle: String = "降低 Shader 精度以提升性能"
 ) {
     LazyColumn(
         modifier = modifier
@@ -290,6 +301,33 @@ fun GameSettingsContent(
                         onCheckedChange = onVulkanTurnipChange
                     )
                 }
+            }
+        }
+
+        // 画质设置
+        item {
+            val qualityNames = listOf("高画质", "中画质", "低画质")
+            SettingsSection(title = qualityTitle) {
+                ClickableSettingItem(
+                    title = qualityLevelTitle,
+                    subtitle = qualityLevelSubtitle,
+                    value = qualityNames.getOrElse(qualityLevel) { qualityNames[0] },
+                    icon = Icons.Default.Tune,
+                    onClick = {
+                        val nextLevel = (qualityLevel + 1) % 3
+                        onQualityLevelChange(nextLevel)
+                    }
+                )
+
+                SettingsDivider()
+
+                SwitchSettingItem(
+                    title = shaderPrecisionTitle,
+                    subtitle = shaderPrecisionSubtitle,
+                    icon = Icons.Default.FilterAlt,
+                    checked = shaderLowPrecision,
+                    onCheckedChange = onShaderLowPrecisionChange
+                )
             }
         }
     }

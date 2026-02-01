@@ -405,8 +405,57 @@ object RendererConfig {
         val mapBufferRangeValue = getMapBufferRangeValue(context, rendererId)
         envVars["FNA3D_OPENGL_USE_MAP_BUFFER_RANGE"] = mapBufferRangeValue
 
+        // 画质优化设置
+        val qualityConfig = getQualityConfig()
+        envVars.putAll(qualityConfig)
+
         // Force VSync
         envVars["FORCE_VSYNC"] = "true"
+
+        return envVars
+    }
+
+    /**
+     * 获取画质优化配置
+     */
+    private fun getQualityConfig(): Map<String, String?> {
+        val settings = SettingsManager.getInstance()
+        val envVars = mutableMapOf<String, String?>()
+
+        // 画质预设
+        val qualityLevel = settings.fnaQualityLevel
+        when (qualityLevel) {
+            1 -> { // 中画质
+                envVars["FNA3D_TEXTURE_LOD_BIAS"] = "1.0"
+                envVars["FNA3D_MAX_ANISOTROPY"] = "2"
+                envVars["FNA3D_RENDER_SCALE"] = "0.85"
+            }
+            2 -> { // 低画质
+                envVars["FNA3D_TEXTURE_LOD_BIAS"] = "2.0"
+                envVars["FNA3D_MAX_ANISOTROPY"] = "1"
+                envVars["FNA3D_RENDER_SCALE"] = "0.7"
+                envVars["FNA3D_SHADER_LOW_PRECISION"] = "1" // 低画质自动启用低精度 shader
+            }
+            else -> { // 高画质 (0) - 使用自定义设置
+                val lodBias = settings.fnaTextureLodBias
+                val maxAnisotropy = settings.fnaMaxAnisotropy
+                val renderScale = settings.fnaRenderScale
+                val shaderLowPrecision = settings.isFnaShaderLowPrecision
+                
+                if (lodBias > 0f) {
+                    envVars["FNA3D_TEXTURE_LOD_BIAS"] = lodBias.toString()
+                }
+                if (maxAnisotropy < 16) {
+                    envVars["FNA3D_MAX_ANISOTROPY"] = maxAnisotropy.toString()
+                }
+                if (renderScale < 1.0f) {
+                    envVars["FNA3D_RENDER_SCALE"] = renderScale.toString()
+                }
+                if (shaderLowPrecision) {
+                    envVars["FNA3D_SHADER_LOW_PRECISION"] = "1"
+                }
+            }
+        }
 
         return envVars
     }

@@ -128,6 +128,14 @@ interface SettingsRepository {
     suspend fun isFnaMapBufferRangeOptEnabled(): Boolean
     suspend fun setFnaMapBufferRangeOptEnabled(enabled: Boolean)
 
+    // ==================== 画质设置 ====================
+
+    suspend fun getQualityLevel(): Int
+    suspend fun setQualityLevel(level: Int)
+
+    suspend fun isShaderLowPrecision(): Boolean
+    suspend fun setShaderLowPrecision(enabled: Boolean)
+
     // ==================== 内存优化 ====================
 
     fun isKillLauncherUIAfterLaunch(): Flow<Boolean>
