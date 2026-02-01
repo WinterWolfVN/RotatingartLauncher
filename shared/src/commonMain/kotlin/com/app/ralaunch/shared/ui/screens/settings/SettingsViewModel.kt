@@ -35,7 +35,7 @@ data class SettingsUiState(
     val rendererType: String = "OpenGL ES",
     val vulkanTurnipEnabled: Boolean = false,
     val isAdrenoGpu: Boolean = false,
-    
+
     // 画质设置
     val qualityLevel: Int = 0, // 0=高, 1=中, 2=低
     val shaderLowPrecision: Boolean = false,

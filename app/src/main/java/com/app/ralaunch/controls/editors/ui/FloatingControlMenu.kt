@@ -143,6 +143,8 @@ interface FloatingMenuCallbacks {
     fun onAddTouchPad() {}
     fun onAddMouseWheel() {}
     fun onAddText() {}
+    fun onAddRadialMenu() {}
+    fun onAddDPad() {}
     fun onSave() {}
     fun onOpenSettings() {}
     fun onExit() {}
@@ -264,6 +266,8 @@ fun FloatingControlMenu(
                             "touchpad" -> callbacks.onAddTouchPad()
                             "mousewheel" -> callbacks.onAddMouseWheel()
                             "text" -> callbacks.onAddText()
+                            "radialmenu" -> callbacks.onAddRadialMenu()
+                            "dpad" -> callbacks.onAddDPad()
                         }
                     },
                     onClose = { state.isPaletteVisible = false }
@@ -489,8 +493,8 @@ private fun InGameMenu(
                     isActive = state.multiplayerConnectionState == MultiplayerState.CONNECTED,
                     onClick = { state.isMultiplayerPanelVisible = true },
                     tint = when (state.multiplayerConnectionState) {
-                        MultiplayerState.CONNECTED -> Color(0xFF4CAF50)
-                        MultiplayerState.CONNECTING -> Color(0xFFFFC107)
+                        MultiplayerState.CONNECTED -> MaterialTheme.colorScheme.tertiary
+                        MultiplayerState.CONNECTING -> MaterialTheme.colorScheme.secondary
                         MultiplayerState.ERROR -> MaterialTheme.colorScheme.error
                         else -> Color.Unspecified
                     }

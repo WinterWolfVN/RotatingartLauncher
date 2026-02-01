@@ -329,7 +329,8 @@ class VirtualButton(
         val userStrokeColor = castedData.strokeColor
         val hasUserStrokeColor = (userStrokeColor ushr 24) > 0 // alpha > 0
         val strokeColorValue = if (hasUserStrokeColor) userStrokeColor else (if (isDarkTheme) Color.WHITE else Color.BLACK)
-        val textColorValue = if (isDarkTheme) Color.WHITE else Color.BLACK
+        // 使用用户设置的文本颜色
+        val textColorValue = castedData.textColor
 
         // 更新裁剪路径
         mClipPath.reset()

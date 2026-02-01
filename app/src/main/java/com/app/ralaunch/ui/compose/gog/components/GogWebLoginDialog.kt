@@ -51,53 +51,13 @@ fun GogEmbeddedWebLogin(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A2E))
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // 顶部工具栏
-        Surface(
-            color = Color(0xFF252542),
-            tonalElevation = 4.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 标题和 URL
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "GOG 登录",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
-                    )
-                    Text(
-                        text = getDisplayUrl(currentUrl),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f),
-                        maxLines = 1
-                    )
-                }
-
-                // 刷新按钮
-                IconButton(
-                    onClick = { webView?.reload() },
-                    enabled = !isLoading
-                ) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = "刷新",
-                        tint = if (isLoading) Color.White.copy(alpha = 0.3f) else Color.White
-                    )
-                }
-            }
-        }
-
         // 加载指示器
         if (isLoading) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFF7B4BB9)
+                color = MaterialTheme.colorScheme.primary
             )
         }
 

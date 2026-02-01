@@ -519,7 +519,7 @@ private fun AssetCheckResultDialog(
                 imageVector = if (result?.isValid == true) Icons.Default.CheckCircle else Icons.Default.Warning,
                 contentDescription = null,
                 tint = if (result?.isValid == true) 
-                    androidx.compose.ui.graphics.Color(0xFF4CAF50) 
+                    MaterialTheme.colorScheme.primary
                 else 
                     MaterialTheme.colorScheme.error
             )

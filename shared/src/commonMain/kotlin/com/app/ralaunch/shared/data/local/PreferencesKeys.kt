@@ -49,7 +49,7 @@ object PreferencesKeys {
     // ==================== FNA 设置 ====================
     val FNA_RENDERER = stringPreferencesKey("fna_renderer")
     val FNA_MAP_BUFFER_RANGE_OPTIMIZATION = booleanPreferencesKey("fna_map_buffer_range_optimization")
-    
+
     // ==================== 画质设置 ====================
     val FNA_QUALITY_LEVEL = intPreferencesKey("fna_quality_level") // 0=高, 1=中, 2=低
     val FNA_SHADER_LOW_PRECISION = booleanPreferencesKey("fna_shader_low_precision")

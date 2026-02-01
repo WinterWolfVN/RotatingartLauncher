@@ -17,6 +17,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.app.ralaunch.controls.editors.ui.ControlEditorScreen
+import com.app.ralaunch.shared.ui.theme.AppThemeState
+import com.app.ralaunch.shared.ui.theme.RaLaunchTheme
 import com.app.ralaunch.controls.packs.ControlPackManager
 import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.data.SettingsManager
@@ -111,6 +113,10 @@ class ControlEditorActivity : AppCompatActivity() {
             val isPropertyPanelVisible by viewModel.isPropertyPanelVisible.collectAsState()
             val isPaletteVisible by viewModel.isPaletteVisible.collectAsState()
             val pickImageRequest by viewModel.pickImageRequest.collectAsState()
+            
+            // 获取主题状态
+            val themeMode by AppThemeState.themeMode.collectAsState()
+            val themeColor by AppThemeState.themeColor.collectAsState()
 
             // 监听图片选择请求
             LaunchedEffect(pickImageRequest) {
@@ -120,14 +126,19 @@ class ControlEditorActivity : AppCompatActivity() {
                 }
             }
 
-            ControlEditorScreen(
-                viewModel = viewModel,
-                layout = layout,
-                selectedControl = selectedControl,
-                isPropertyPanelVisible = isPropertyPanelVisible,
-                isPaletteVisible = isPaletteVisible,
-                onExit = { finish() }
-            )
+            RaLaunchTheme(
+                themeMode = themeMode,
+                themeColor = themeColor
+            ) {
+                ControlEditorScreen(
+                    viewModel = viewModel,
+                    layout = layout,
+                    selectedControl = selectedControl,
+                    isPropertyPanelVisible = isPropertyPanelVisible,
+                    isPaletteVisible = isPaletteVisible,
+                    onExit = { finish() }
+                )
+            }
         }
     }
 

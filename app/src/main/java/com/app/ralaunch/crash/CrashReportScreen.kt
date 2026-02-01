@@ -42,17 +42,7 @@ import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.*
 
-// 主题色彩定义
-private val ErrorRed = Color(0xFFEF5350)
-private val ErrorRedDark = Color(0xFFB71C1C)
-private val SurfaceDark = Color(0xFF1E1E1E)
-private val SurfaceDarker = Color(0xFF121212)
-private val CardBackground = Color(0xFF252525)
-private val BorderColor = Color(0xFF3D3D3D)
-private val CodeBackground = Color(0xFF1A1A1A)
-private val TextPrimary = Color(0xFFE0E0E0)
-private val TextSecondary = Color(0xFFB0B0B0)
-private val TextMuted = Color(0xFF808080)
+// 主题色彩现在使用 MaterialTheme.colorScheme
 
 /**
  * 崩溃报告页面 - Compose 版本
@@ -80,7 +70,7 @@ fun CrashReportScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(SurfaceDark, SurfaceDarker)
+                    colors = listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.background)
                 )
             )
     ) {
@@ -123,7 +113,7 @@ fun CrashReportScreen(
                 // 堆栈跟踪卡片
                 Card(
                     modifier = Modifier.fillMaxSize(),
-                    colors = CardDefaults.cardColors(containerColor = CardBackground),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -131,7 +121,7 @@ fun CrashReportScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF2A2A2A))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -139,7 +129,7 @@ fun CrashReportScreen(
                                 text = "详细日志",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -152,7 +142,7 @@ fun CrashReportScreen(
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowDown,
                                     contentDescription = if (stackTraceExpanded) "收起" else "展开",
-                                    tint = TextSecondary,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.rotate(rotationAngle)
                                 )
                             }
@@ -167,7 +157,7 @@ fun CrashReportScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(CodeBackground)
+                                    .background(MaterialTheme.colorScheme.background)
                                     .padding(1.dp)
                             ) {
                                 val scrollState = rememberScrollState()
@@ -189,7 +179,7 @@ fun CrashReportScreen(
                                                 parsedInfo.errorMessage?.let { append("信息: $it\n") }
                                                 parsedInfo.exitCode?.let { append("退出代码: $it") }
                                             },
-                                            color = ErrorRed
+                                            color = MaterialTheme.colorScheme.error
                                         )
                                         Spacer(modifier = Modifier.height(16.dp))
                                     }
@@ -199,12 +189,12 @@ fun CrashReportScreen(
                                         LogSection(
                                             title = "堆栈跟踪 / Logcat",
                                             content = stackTrace,
-                                            color = Color(0xFF64B5F6)
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     } else {
                                         Text(
                                             text = "无可用的堆栈跟踪信息",
-                                            color = TextMuted,
+                                            color = MaterialTheme.colorScheme.outline,
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 13.sp
                                         )
@@ -222,7 +212,7 @@ fun CrashReportScreen(
 @Composable
 private fun ErrorHeaderCard(info: ParsedErrorInfo) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -241,7 +231,7 @@ private fun ErrorHeaderCard(info: ParsedErrorInfo) {
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
-                                colors = listOf(ErrorRed.copy(alpha = 0.3f), Color.Transparent)
+                                colors = listOf(MaterialTheme.colorScheme.error.copy(alpha = 0.3f), Color.Transparent)
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -249,7 +239,7 @@ private fun ErrorHeaderCard(info: ParsedErrorInfo) {
                     Icon(
                         imageVector = Icons.Outlined.Warning,
                         contentDescription = null,
-                        tint = ErrorRed,
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -259,12 +249,12 @@ private fun ErrorHeaderCard(info: ParsedErrorInfo) {
                         text = "应用已停止运行",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = ErrorRed
+                        color = MaterialTheme.colorScheme.error
                     )
                     Text(
                         text = info.errorType ?: "游戏异常退出",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -277,15 +267,15 @@ private fun ErrorHeaderCard(info: ParsedErrorInfo) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(CodeBackground)
-                        .border(1.dp, BorderColor, RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.background)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                         .padding(12.dp)
                 ) {
                     Text(
                         text = info.errorMessage,
                         style = MaterialTheme.typography.bodyMedium,
                         fontFamily = FontFamily.Monospace,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 12.sp,
                         lineHeight = 18.sp
                     )
@@ -302,14 +292,14 @@ private fun ErrorHeaderCard(info: ParsedErrorInfo) {
                     Text(
                         text = "退出代码",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        color = MaterialTheme.colorScheme.outline
                     )
                     Text(
                         text = code,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = if (code != "0") ErrorRed else Color(0xFF81C784)
+                        color = if (code != "0") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
@@ -320,7 +310,7 @@ private fun ErrorHeaderCard(info: ParsedErrorInfo) {
 @Composable
 private fun DeviceInfoCard(info: ParsedErrorInfo) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -333,7 +323,7 @@ private fun DeviceInfoCard(info: ParsedErrorInfo) {
                 text = "环境信息",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -355,13 +345,13 @@ private fun InfoRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
+            color = MaterialTheme.colorScheme.outline
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 160.dp)
@@ -401,7 +391,7 @@ private fun LogSection(
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
             lineHeight = 16.sp,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -439,9 +429,9 @@ private fun ActionButtons(
         OutlinedButton(
             onClick = onRestart,
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
             border = ButtonDefaults.outlinedButtonBorder.copy(
-                brush = Brush.horizontalGradient(listOf(BorderColor, BorderColor))
+                brush = Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.outlineVariant, MaterialTheme.colorScheme.outlineVariant))
             ),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         ) {
@@ -458,9 +448,9 @@ private fun ActionButtons(
         OutlinedButton(
             onClick = onClose,
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
             border = ButtonDefaults.outlinedButtonBorder.copy(
-                brush = Brush.horizontalGradient(listOf(BorderColor, BorderColor))
+                brush = Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.outlineVariant, MaterialTheme.colorScheme.outlineVariant))
             ),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         ) {

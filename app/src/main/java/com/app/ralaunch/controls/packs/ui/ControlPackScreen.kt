@@ -28,6 +28,8 @@ import com.app.ralaunch.controls.packs.ControlPackItem
 import com.app.ralaunch.controls.packs.ControlPackStatus
 import java.io.File
 
+// 状态颜色现在使用 MaterialTheme.colorScheme
+
 /**
  * 控件包商店主界面
  * 不使用 Scaffold/TopAppBar 避免测量问题
@@ -84,39 +86,6 @@ fun ControlPackScreen(
                 .weight(1f)
                 .fillMaxHeight()
         ) {
-            // 自定义顶部栏
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.content_desc_back),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                
-                Text(
-                    text = stringResource(R.string.pack_download_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                IconButton(onClick = onRefresh) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.main_refresh),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
             // 搜索栏
             SearchBar(
                 query = searchQuery,
@@ -582,10 +551,10 @@ private fun PackItem(
 private fun StatusChip(status: ControlPackStatus) {
     val (text, color) = when (status) {
         ControlPackStatus.NOT_INSTALLED -> return // 不显示
-        ControlPackStatus.INSTALLED -> stringResource(R.string.pack_installed) to PackStatusColors.installed
-        ControlPackStatus.UPDATE_AVAILABLE -> stringResource(R.string.pack_update_available) to PackStatusColors.updateAvailable
-        ControlPackStatus.DOWNLOADING -> stringResource(R.string.pack_downloading) to PackStatusColors.downloading
-        ControlPackStatus.INSTALLING -> stringResource(R.string.pack_installing) to PackStatusColors.installing
+        ControlPackStatus.INSTALLED -> stringResource(R.string.pack_installed) to MaterialTheme.colorScheme.tertiary
+        ControlPackStatus.UPDATE_AVAILABLE -> stringResource(R.string.pack_update_available) to MaterialTheme.colorScheme.secondary
+        ControlPackStatus.DOWNLOADING -> stringResource(R.string.pack_downloading) to MaterialTheme.colorScheme.primary
+        ControlPackStatus.INSTALLING -> stringResource(R.string.pack_installing) to MaterialTheme.colorScheme.tertiary
     }
 
     Surface(

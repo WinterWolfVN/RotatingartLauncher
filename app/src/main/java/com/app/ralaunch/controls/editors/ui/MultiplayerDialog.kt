@@ -112,7 +112,7 @@ fun MultiplayerDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -131,7 +131,7 @@ fun MultiplayerDialog(
                     onClick = {} // 阻止点击穿透
                 ),
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF1A1A2E),
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 8.dp
         ) {
             // 检查是否可用
@@ -187,14 +187,14 @@ fun MultiplayerDialog(
                                 Icon(
                                     Icons.Default.Wifi,
                                     contentDescription = null,
-                                    tint = Color(0xFF6C63FF),
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Text(
                                     text = "联机菜单",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             
@@ -228,7 +228,7 @@ fun MultiplayerDialog(
                             TextButton(
                                 onClick = onDismiss,
                                 colors = ButtonDefaults.textButtonColors(
-                                    contentColor = Color.White.copy(alpha = 0.6f)
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             ) {
                                 Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -242,7 +242,7 @@ fun MultiplayerDialog(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .padding(horizontal = 16.dp),
-                            color = Color.White.copy(alpha = 0.1f)
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         
                         // 右侧：对应的输入界面
@@ -309,13 +309,13 @@ fun MultiplayerDialog(
                                             Icons.Default.TouchApp,
                                             contentDescription = null,
                                             modifier = Modifier.size(48.dp),
-                                            tint = Color.White.copy(alpha = 0.3f)
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                         )
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Text(
                                             text = "请选择联机方式",
                                             style = MaterialTheme.typography.bodyLarge,
-                                            color = Color.White.copy(alpha = 0.5f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -344,11 +344,11 @@ private fun MultiplayerOptionItem(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color(0xFF6C63FF).copy(alpha = 0.2f) else Color.Transparent,
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
         border = if (isSelected) {
-            BorderStroke(2.dp, Color(0xFF6C63FF))
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         } else {
-            BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         }
     ) {
         Row(
@@ -362,21 +362,21 @@ private fun MultiplayerOptionItem(
                 icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = if (isSelected) Color(0xFF6C63FF) 
-                       else if (enabled) Color.White.copy(alpha = 0.7f) 
-                       else Color.White.copy(alpha = 0.3f)
+                tint = if (isSelected) MaterialTheme.colorScheme.primary 
+                       else if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) 
+                       else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
             Column {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (enabled) Color.White else Color.White.copy(alpha = 0.5f)
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = if (enabled) 0.6f else 0.3f)
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
         }
@@ -409,13 +409,13 @@ private fun UnavailableContent(
             text = "联机功能不可用",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = reason,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onDismiss) {
@@ -446,19 +446,19 @@ private fun CreateRoomDialogContent(
             isCreating -> {
                 // 正在创建房间
                 CircularProgressIndicator(
-                    color = Color(0xFF6C63FF),
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(48.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "正在创建房间...",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "请在系统弹窗中允许 VPN 连接",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -480,7 +480,7 @@ private fun CreateRoomDialogContent(
                 Button(
                     onClick = onRetry,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF6C63FF)
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -495,21 +495,21 @@ private fun CreateRoomDialogContent(
                     Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = Color(0xFF4CAF50)
+                    tint = MaterialTheme.colorScheme.tertiary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "房间已创建",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // 邀请码显示区域
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color.White.copy(alpha = 0.1f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -519,14 +519,14 @@ private fun CreateRoomDialogContent(
                         Text(
                             text = "邀请码",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = generatedInviteCode,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF6C63FF)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -541,7 +541,7 @@ private fun CreateRoomDialogContent(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF6C63FF)
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(
@@ -560,7 +560,7 @@ private fun CreateRoomDialogContent(
                 Text(
                     text = "分享邀请码给好友加入房间",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -570,18 +570,18 @@ private fun CreateRoomDialogContent(
                     Icons.Default.TouchApp,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = Color.White.copy(alpha = 0.3f)
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "点击左侧「我想当房主」",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "自动创建房间并生成邀请码",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.4f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
         }
@@ -607,20 +607,20 @@ private fun JoinRoomDialogContent(
             text = "请输入房主提供的邀请码",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         )
         
         OutlinedTextField(
             value = inviteCode,
             onValueChange = onInviteCodeChange,
-            placeholder = { Text("U/XXXX-XXXX-XXXX", color = Color.White.copy(alpha = 0.4f)) },
+            placeholder = { Text("U/XXXX-XXXX-XXXX", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF6C63FF),
-                unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
             ),
             trailingIcon = {
                 IconButton(
@@ -629,7 +629,7 @@ private fun JoinRoomDialogContent(
                     Icon(
                         Icons.Default.ContentPaste,
                         contentDescription = "粘贴",
-                        tint = Color.White.copy(alpha = 0.7f)
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -651,7 +651,7 @@ private fun JoinRoomDialogContent(
                 onClick = { clipboardManager.getText()?.text?.let { onInviteCodeChange(it) } },
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
                 Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -664,7 +664,7 @@ private fun JoinRoomDialogContent(
                 modifier = Modifier.weight(1f),
                 enabled = inviteCode.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF6C63FF)
+                    containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Icon(Icons.Default.Login, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -689,18 +689,18 @@ private fun ConnectingDialogContent(onDismiss: () -> Unit) {
     ) {
         CircularProgressIndicator(
             modifier = Modifier.size(48.dp),
-            color = Color(0xFF6C63FF)
+            color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "正在连接房间...",
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(24.dp))
         TextButton(
             onClick = onDismiss,
-            colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.6f))
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
         ) {
             Text("取消")
         }
@@ -747,14 +747,14 @@ private fun ConnectedDialogContent(
                 Icon(
                     Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = Color(0xFF4CAF50),
+                    tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.size(28.dp)
                 )
                 Text(
                     text = "已连接",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50)
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
             
@@ -762,9 +762,9 @@ private fun ConnectedDialogContent(
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = if (state.multiplayerPeerCount > 0) 
-                    Color(0xFF4CAF50).copy(alpha = 0.1f) 
+                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f) 
                 else 
-                    Color(0xFFFF9800).copy(alpha = 0.1f)
+                    MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -773,7 +773,7 @@ private fun ConnectedDialogContent(
                     Icon(
                         Icons.Default.People,
                         contentDescription = null,
-                        tint = if (state.multiplayerPeerCount > 0) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                        tint = if (state.multiplayerPeerCount > 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -784,7 +784,7 @@ private fun ConnectedDialogContent(
                             else -> "正在寻找房主..."
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -807,7 +807,7 @@ private fun ConnectedDialogContent(
             TextButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.textButtonColors(contentColor = Color.White.copy(alpha = 0.6f))
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
             ) {
                 Text("返回游戏")
             }
@@ -818,7 +818,7 @@ private fun ConnectedDialogContent(
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(horizontal = 16.dp),
-            color = Color.White.copy(alpha = 0.1f)
+            color = MaterialTheme.colorScheme.outlineVariant
         )
         
         // 右侧：IP和邀请码
@@ -836,13 +836,13 @@ private fun ConnectedDialogContent(
             
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF2D2D44)
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = if (state.multiplayerIsHost) "游戏服务器地址" else "游戏连接地址",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
@@ -854,7 +854,7 @@ private fun ConnectedDialogContent(
                             text = gameAddress,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF6C63FF)
+                            color = MaterialTheme.colorScheme.primary
                         )
                         IconButton(
                             onClick = {
@@ -865,7 +865,7 @@ private fun ConnectedDialogContent(
                             Icon(
                                 Icons.Default.ContentCopy,
                                 contentDescription = "复制",
-                                tint = Color.White.copy(alpha = 0.7f)
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -875,7 +875,7 @@ private fun ConnectedDialogContent(
                             text = "游戏端口：泰拉瑞亚 7777 / 星露谷 24642",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF4CAF50)
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -884,7 +884,7 @@ private fun ConnectedDialogContent(
                             else 
                                 "在游戏「多人游戏」→「通过IP加入」输入 $gameAddress:端口",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -894,7 +894,7 @@ private fun ConnectedDialogContent(
             generatedInviteCode?.let { code ->
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFF2D2D44)
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -904,13 +904,13 @@ private fun ConnectedDialogContent(
                                 Icons.Default.Share,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = Color(0xFF6C63FF)
+                                tint = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "分享邀请码给好友",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -922,7 +922,7 @@ private fun ConnectedDialogContent(
                             Text(
                                 text = if (code.length > 24) code.take(24) + "..." else code,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Button(
                                 onClick = {
@@ -930,7 +930,7 @@ private fun ConnectedDialogContent(
                                     onShowCopied(true)
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF6C63FF)
+                                    containerColor = MaterialTheme.colorScheme.primary
                                 ),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
@@ -947,7 +947,7 @@ private fun ConnectedDialogContent(
             AnimatedVisibility(visible = showCopied) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF4CAF50).copy(alpha = 0.2f)
+                    color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -956,14 +956,14 @@ private fun ConnectedDialogContent(
                         Icon(
                             Icons.Default.Check,
                             contentDescription = null,
-                            tint = Color(0xFF4CAF50),
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "已复制到剪贴板",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF4CAF50)
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }

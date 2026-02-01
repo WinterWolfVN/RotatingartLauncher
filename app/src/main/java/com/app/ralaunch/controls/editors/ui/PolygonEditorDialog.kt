@@ -64,7 +64,7 @@ fun PolygonEditorDialog(
                 .fillMaxWidth(0.85f)
                 .fillMaxHeight(0.8f),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surfaceContainerHighest
         ) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // 左侧：形状预览区
@@ -80,7 +80,7 @@ fun PolygonEditorDialog(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
                                     RoundedCornerShape(16.dp)
                                 )
                                 .clickable { showDrawingCanvas = true }
@@ -125,7 +125,7 @@ fun PolygonEditorDialog(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
                                     RoundedCornerShape(16.dp)
                                 )
                                 .clickable { showDrawingCanvas = true },
@@ -156,7 +156,7 @@ fun PolygonEditorDialog(
                     modifier = Modifier
                         .width(180.dp)
                         .fillMaxHeight(),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 2.dp
                 ) {
                     Column(
@@ -250,8 +250,8 @@ fun PolygonEditorDialog(
 fun PolygonPreview(
     points: List<Offset>,
     modifier: Modifier = Modifier,
-    fillColor: Color = Color(0xFF6200EE).copy(alpha = 0.3f),
-    strokeColor: Color = Color(0xFF6200EE)
+    fillColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+    strokeColor: Color = MaterialTheme.colorScheme.primary
 ) {
     Canvas(modifier = modifier) {
         if (points.size < 3) return@Canvas
@@ -330,6 +330,12 @@ fun PolygonDrawingCanvas(
     var gridDivisions by remember { mutableStateOf(12) }
     val gridSize = 1f / gridDivisions
     
+    // 提取颜色供 Canvas DrawScope 使用
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val errorColor = MaterialTheme.colorScheme.error
+    
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -339,7 +345,7 @@ fun PolygonDrawingCanvas(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.88f),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surfaceContainerHighest
         ) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // 左侧：绘制画布
@@ -353,7 +359,7 @@ fun PolygonDrawingCanvas(
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
                             .pointerInput(snapToGridEnabled, gridDivisions) {
                                 detectDragGestures(
                                     onDragStart = { offset ->
@@ -448,7 +454,7 @@ fun PolygonDrawingCanvas(
                         else 
                             Color.Gray.copy(alpha = 0.1f)
                         val centerLineColor = if (snapToGridEnabled)
-                            Color(0xFF2196F3).copy(alpha = 0.4f)
+                            primaryColor.copy(alpha = 0.4f)
                         else
                             Color.Gray.copy(alpha = 0.15f)
                         
@@ -477,7 +483,7 @@ fun PolygonDrawingCanvas(
                                 }
                                 drawPath(
                                     path = fillPath,
-                                    color = Color(0xFF6200EE).copy(alpha = 0.2f)
+                                    color = primaryColor.copy(alpha = 0.2f)
                                 )
                             }
                             
@@ -490,7 +496,7 @@ fun PolygonDrawingCanvas(
                                 val isClosingEdge = i == vertices.size - 1
                                 
                                 drawLine(
-                                    color = if (isClosingEdge) Color(0xFF6200EE).copy(alpha = 0.5f) else Color(0xFF6200EE),
+                                    color = if (isClosingEdge) primaryColor.copy(alpha = 0.5f) else primaryColor,
                                     start = Offset(start.x * canvasWidth, start.y * canvasHeight),
                                     end = Offset(end.x * canvasWidth, end.y * canvasHeight),
                                     strokeWidth = if (isClosingEdge) 2f else 4f,
@@ -515,10 +521,10 @@ fun PolygonDrawingCanvas(
                                 )
                                 drawCircle(
                                     color = when {
-                                        isDragging -> Color(0xFFE91E63) // 粉色拖动中
-                                        isFirst -> Color(0xFF4CAF50) // 绿色起点
-                                        isLast -> Color(0xFFFF5722)  // 橙色终点
-                                        else -> Color(0xFF6200EE)
+                                        isDragging -> secondaryColor // 粉色拖动中
+                                        isFirst -> tertiaryColor // 绿色起点
+                                        isLast -> errorColor  // 橙色终点
+                                        else -> primaryColor
                                     },
                                     radius = innerRadius,
                                     center = Offset(point.x * canvasWidth, point.y * canvasHeight)
@@ -547,13 +553,13 @@ fun PolygonDrawingCanvas(
                             }
                             drawPath(
                                 path = strokePath,
-                                color = Color(0xFFFF5722).copy(alpha = 0.3f),
+                                color = errorColor.copy(alpha = 0.3f),
                                 style = Stroke(width = 2f, cap = StrokeCap.Round)
                             )
                             
                             // 显示将要生成的直线（从上一个顶点/起点到当前终点）
                             drawLine(
-                                color = Color(0xFFFF5722),
+                                color = errorColor,
                                 start = start,
                                 end = end,
                                 strokeWidth = 5f,
@@ -562,13 +568,13 @@ fun PolygonDrawingCanvas(
                             
                             // 绘制起点标记
                             drawCircle(
-                                color = Color(0xFF4CAF50),
+                                color = tertiaryColor,
                                 radius = 12f,
                                 center = start
                             )
                             // 绘制终点标记
                             drawCircle(
-                                color = Color(0xFFFF5722),
+                                color = errorColor,
                                 radius = 14f,
                                 center = end
                             )
@@ -652,7 +658,7 @@ fun PolygonDrawingCanvas(
                     modifier = Modifier
                         .width(160.dp)
                         .fillMaxHeight(),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 2.dp
                 ) {
                     Column(

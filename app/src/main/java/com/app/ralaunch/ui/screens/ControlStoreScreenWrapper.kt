@@ -13,7 +13,6 @@ import com.app.ralaunch.R
 import com.app.ralaunch.controls.packs.ControlPackItem
 import com.app.ralaunch.controls.packs.ControlPackRepositoryService
 import com.app.ralaunch.controls.packs.ui.ControlPackScreen
-import com.app.ralaunch.controls.packs.ui.ControlPackTheme
 import com.app.ralaunch.controls.packs.ui.ControlPackViewModel
 import com.app.ralaunch.controls.packs.ui.PackPreviewDialog
 
@@ -43,32 +42,30 @@ fun ControlStoreScreenWrapper(
     // 获取仓库 URL
     val repoUrl = remember { ControlPackRepositoryService.getDefaultRepoUrl(context) }
 
-    ControlPackTheme {
-        BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-            ControlPackScreen(
-                uiState = uiState,
-                onBackClick = onBack,
-                onRefresh = { viewModel.loadPacks(forceRefresh = true) },
-                onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
-                onPackClick = { selectedPack = it },
-                onDownloadClick = { viewModel.downloadPack(it) },
-                onUpdateClick = { viewModel.downloadPack(it) },
-                onApplyClick = { applyPack(context, viewModel, it) },
-                onDeleteClick = { confirmDeletePack(context, viewModel, it) }
-            )
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        ControlPackScreen(
+            uiState = uiState,
+            onBackClick = onBack,
+            onRefresh = { viewModel.loadPacks(forceRefresh = true) },
+            onSearchQueryChange = { viewModel.onSearchQueryChange(it) },
+            onPackClick = { selectedPack = it },
+            onDownloadClick = { viewModel.downloadPack(it) },
+            onUpdateClick = { viewModel.downloadPack(it) },
+            onApplyClick = { applyPack(context, viewModel, it) },
+            onDeleteClick = { confirmDeletePack(context, viewModel, it) }
+        )
 
-            // 预览对话框
-            selectedPack?.let { pack ->
-                PackPreviewDialog(
-                    pack = pack,
-                    repoUrl = repoUrl,
-                    onDismiss = { selectedPack = null },
-                    onDownloadClick = { viewModel.downloadPack(pack) },
-                    onUpdateClick = { viewModel.downloadPack(pack) },
-                    onApplyClick = { applyPack(context, viewModel, pack) },
-                    onDeleteClick = { confirmDeletePack(context, viewModel, pack) }
-                )
-            }
+        // 预览对话框
+        selectedPack?.let { pack ->
+            PackPreviewDialog(
+                pack = pack,
+                repoUrl = repoUrl,
+                onDismiss = { selectedPack = null },
+                onDownloadClick = { viewModel.downloadPack(pack) },
+                onUpdateClick = { viewModel.downloadPack(pack) },
+                onApplyClick = { applyPack(context, viewModel, pack) },
+                onDeleteClick = { confirmDeletePack(context, viewModel, pack) }
+            )
         }
     }
 }

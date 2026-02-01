@@ -235,6 +235,26 @@ fun GameControlsOverlay(
                 hasUnsavedChanges = true
             }
             
+            override fun onAddRadialMenu() {
+                val layout = controlLayoutView.currentLayout ?: ControlLayout().also {
+                    it.controls = mutableListOf()
+                }
+                InGameControlOperations.addRadialMenu(layout)
+                controlLayoutView.loadLayout(layout)
+                currentLayout = layout
+                hasUnsavedChanges = true
+            }
+            
+            override fun onAddDPad() {
+                val layout = controlLayoutView.currentLayout ?: ControlLayout().also {
+                    it.controls = mutableListOf()
+                }
+                InGameControlOperations.addDPad(layout)
+                controlLayoutView.loadLayout(layout)
+                currentLayout = layout
+                hasUnsavedChanges = true
+            }
+            
             override fun onSave() {
                 val layout = controlLayoutView.currentLayout ?: return
                 val packId = packManager.getSelectedPackId() ?: return
@@ -788,5 +808,27 @@ private object InGameControlOperations {
             displayText = "文本内容"
         }
         layout.controls.add(text)
+    }
+    
+    fun addRadialMenu(layout: ControlLayout) {
+        val radialMenu = ControlData.RadialMenu().apply {
+            name = "轮盘_${System.currentTimeMillis()}"
+            x = 0.5f  // 屏幕中心
+            y = 0.5f
+            width = 0.12f
+            height = 0.12f
+        }
+        layout.controls.add(radialMenu)
+    }
+    
+    fun addDPad(layout: ControlLayout) {
+        val dpad = ControlData.DPad().apply {
+            name = "十字键_${System.currentTimeMillis()}"
+            x = 0.15f
+            y = 0.65f
+            width = 0.25f
+            height = 0.25f
+        }
+        layout.controls.add(dpad)
     }
 }

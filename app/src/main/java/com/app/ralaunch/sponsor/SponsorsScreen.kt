@@ -246,7 +246,7 @@ private fun SponsorsTopBar(
             Icon(
                 imageVector = Icons.Default.Favorite,
                 contentDescription = stringResource(R.string.become_sponsor),
-                tint = Color(0xFFFF6B9D)
+                tint = MaterialTheme.colorScheme.error
             )
         }
     }

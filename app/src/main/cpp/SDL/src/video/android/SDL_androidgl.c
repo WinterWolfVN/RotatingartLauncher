@@ -46,8 +46,8 @@
 #include "SDL_androidwindow.h"  // For SDL_WindowData
 
 /* FPS 计算相关 - 使用滑动窗口平均实现精准稳定的检测 */
-#define FPS_SAMPLE_COUNT 60  /* 滑动窗口大小（帧数） */
-#define FPS_UPDATE_INTERVAL_NS 250000000LL  /* 更新间隔 250ms（纳秒） */
+#define FPS_SAMPLE_COUNT 30  /* 滑动窗口大小（帧数）- 减小以提高响应速度 */
+#define FPS_UPDATE_INTERVAL_NS 100000000LL  /* 更新间隔 100ms（纳秒）- 更频繁更新 */
 
 static Uint64 g_frame_times[FPS_SAMPLE_COUNT] = {0};  /* 帧时间戳环形缓冲 */
 static int g_frame_index = 0;                          /* 当前帧索引 */
@@ -125,11 +125,11 @@ static void UpdateFPS(void)
             /* 计算平均帧时间 (ms) */
             g_frame_time_ms = (float)window_duration_ns / (float)frame_intervals / 1000000.0f;
             
-            /* 指数移动平均平滑 (EMA)，alpha = 0.3 */
+            /* 指数移动平均平滑 (EMA)，alpha = 0.5 - 更快响应 */
             if (g_fps_smoothed <= 0.0f) {
                 g_fps_smoothed = g_fps_current;
             } else {
-                g_fps_smoothed = g_fps_smoothed * 0.7f + g_fps_current * 0.3f;
+                g_fps_smoothed = g_fps_smoothed * 0.5f + g_fps_current * 0.5f;
             }
         }
     }

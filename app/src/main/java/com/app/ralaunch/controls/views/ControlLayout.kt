@@ -368,6 +368,8 @@ class ControlLayout : FrameLayout {
         is ControlData.TouchPad -> VirtualTouchPad(context, data, inputBridge!!)
         is ControlData.MouseWheel -> VirtualMouseWheel(context, data, inputBridge!!)
         is ControlData.Text -> VirtualText(context, data, inputBridge!!)
+        is ControlData.RadialMenu -> VirtualRadialMenu(context, data, inputBridge!!)
+        is ControlData.DPad -> VirtualDPad(context, data, inputBridge!!)
         else -> {
             AppLogger.warn(TAG, "Unknown control type")
             null

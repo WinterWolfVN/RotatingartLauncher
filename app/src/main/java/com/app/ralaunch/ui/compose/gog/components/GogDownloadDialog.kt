@@ -85,7 +85,7 @@ fun GogDownloadDialog(
                 .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.9f),
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF1A1A2E),
+            color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -179,7 +179,7 @@ private fun DownloadDialogHeader(
     modLoaderName: String?,
     onClose: () -> Unit
 ) {
-    Surface(color = Color(0xFF252542), tonalElevation = 4.dp) {
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 4.dp) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -208,13 +208,13 @@ private fun DownloadDialogHeader(
             if (modLoaderName != null) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFF7B4BB9).copy(alpha = 0.2f)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                 ) {
                     Text(
                         text = modLoaderName,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF7B4BB9),
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -238,7 +238,7 @@ private fun GameVersionPanel(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFF252542).copy(alpha = 0.5f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -286,7 +286,7 @@ private fun RightPanel(
             Surface(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF252542).copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     ModLoaderVersionSelector(
@@ -312,9 +312,9 @@ private fun RightPanel(
                 .height(56.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF7B4BB9),
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
-                disabledContainerColor = Color(0xFF7B4BB9).copy(alpha = 0.3f)
+                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
             )
         ) {
             Icon(
@@ -345,10 +345,10 @@ private fun GameFileItem(
             .clip(RoundedCornerShape(10.dp))
             .clickable { onClick() }
             .then(
-                if (isSelected) Modifier.border(2.dp, Color(0xFF7B4BB9), RoundedCornerShape(10.dp))
+                if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
                 else Modifier
             ),
-        color = if (isSelected) Color(0xFF7B4BB9).copy(alpha = 0.2f) else Color(0xFF1A1A2E),
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(10.dp)
     ) {
         Row(
@@ -360,7 +360,7 @@ private fun GameFileItem(
                 onClick = onClick,
                 modifier = Modifier.size(20.dp),
                 colors = RadioButtonDefaults.colors(
-                    selectedColor = Color(0xFF7B4BB9),
+                    selectedColor = MaterialTheme.colorScheme.primary,
                     unselectedColor = Color.White.copy(alpha = 0.5f)
                 )
             )
@@ -409,14 +409,14 @@ private fun ModLoaderVersionSelector(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
                 .clickable { onToggle() },
-            color = Color(0xFF1A1A2E),
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(10.dp)
         ) {
             Row(
                 modifier = Modifier.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Extension, null, tint = Color(0xFF7B4BB9), modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Extension, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -425,7 +425,7 @@ private fun ModLoaderVersionSelector(
                         color = Color.White
                     )
                     if (selectedVersion?.stable == true) {
-                        Text("稳定版", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
+                        Text("稳定版", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
                     }
                 }
                 Icon(
@@ -470,7 +470,7 @@ private fun ModLoaderVersionItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() },
-        color = if (isSelected) Color(0xFF7B4BB9).copy(alpha = 0.3f) else Color(0xFF1A1A2E).copy(alpha = 0.5f),
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
@@ -478,15 +478,15 @@ private fun ModLoaderVersionItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isSelected) {
-                Icon(Icons.Default.Check, null, Modifier.size(16.dp), tint = Color(0xFF7B4BB9))
+                Icon(Icons.Default.Check, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             } else {
                 Spacer(modifier = Modifier.size(16.dp))
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(version.version, style = MaterialTheme.typography.bodyMedium, color = Color.White, modifier = Modifier.weight(1f))
             if (version.stable) {
-                Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFF4CAF50).copy(alpha = 0.2f)) {
-                    Text("稳定", Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = Color(0xFF4CAF50))
+                Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)) {
+                    Text("稳定", Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
                 }
             }
         }
@@ -515,14 +515,14 @@ private fun DownloadProgressContent(
                 progress = { status.progress },
                 modifier = Modifier.size(140.dp),
                 strokeWidth = 10.dp,
-                color = Color(0xFF7B4BB9),
-                trackColor = Color(0xFF252542)
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
             Text(
                 text = "${(status.progress * 100).toInt()}%",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF7B4BB9)
+                color = MaterialTheme.colorScheme.primary
             )
         }
 
@@ -556,8 +556,8 @@ private fun DownloadProgressContent(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp)),
-                color = Color(0xFF7B4BB9),
-                trackColor = Color(0xFF252542)
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -575,7 +575,7 @@ private fun DownloadProgressContent(
                     Text(
                         text = GogDownloader.formatSpeed(status.speed),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF7B4BB9)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -604,7 +604,7 @@ private fun DownloadCompletedContent(
                 Icons.Default.CheckCircle,
                 contentDescription = null,
                 modifier = Modifier.size(120.dp),
-                tint = Color(0xFF4CAF50)
+                tint = MaterialTheme.colorScheme.tertiary
             )
         }
 
@@ -624,7 +624,7 @@ private fun DownloadCompletedContent(
 
             if (gamePath != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = Color(0xFF4CAF50))
+                    Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("游戏已下载", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.8f))
                 }
@@ -632,7 +632,7 @@ private fun DownloadCompletedContent(
             if (modLoaderPath != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = Color(0xFF4CAF50))
+                    Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("ModLoader 已下载", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.8f))
                 }
@@ -645,7 +645,7 @@ private fun DownloadCompletedContent(
                     onClick = onInstall,
                     modifier = Modifier.height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
                 ) {
                     Icon(Icons.Default.InstallMobile, null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -680,7 +680,7 @@ private fun DownloadFailedContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.weight(0.4f), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.Error, null, Modifier.size(120.dp), tint = Color(0xFFF44336))
+            Icon(Icons.Default.Error, null, Modifier.size(120.dp), tint = MaterialTheme.colorScheme.error)
         }
 
         Column(modifier = Modifier.weight(0.6f), verticalArrangement = Arrangement.Center) {
@@ -693,7 +693,7 @@ private fun DownloadFailedContent(
                     onClick = onRetry,
                     modifier = Modifier.height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B4BB9))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Icon(Icons.Default.Refresh, null)
                     Spacer(modifier = Modifier.width(8.dp))

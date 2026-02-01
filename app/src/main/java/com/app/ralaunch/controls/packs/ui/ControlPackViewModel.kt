@@ -160,7 +160,8 @@ class ControlPackViewModel(
     fun deletePack(item: ControlPackItem): Boolean {
         val success = packManager.deletePack(item.info.id)
         if (success) {
-            loadPacks() // 刷新列表
+            // 立即更新 UI 状态为未安装
+            updatePackStatus(item.info.id, ControlPackStatus.NOT_INSTALLED)
         }
         return success
     }

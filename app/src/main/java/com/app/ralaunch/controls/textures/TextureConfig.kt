@@ -194,3 +194,29 @@ data class TextControlTextureConfig(
     }
 }
 
+/**
+ * 轮盘菜单纹理配置
+ */
+@Serializable
+data class RadialMenuTextureConfig(
+    /** 中心圆背景纹理 */
+    val centerBackground: TextureConfig = TextureConfig(),
+    
+    /** 展开后的背景纹理 */
+    val expandedBackground: TextureConfig = TextureConfig(),
+    
+    /** 扇区纹理（普通状态） */
+    val sector: TextureConfig = TextureConfig(),
+    
+    /** 扇区纹理（选中状态） */
+    val sectorSelected: TextureConfig = TextureConfig()
+) {
+    val hasAnyTexture: Boolean
+        get() = centerBackground.enabled || expandedBackground.enabled || 
+                sector.enabled || sectorSelected.enabled
+    
+    companion object {
+        fun empty() = RadialMenuTextureConfig()
+    }
+}
+

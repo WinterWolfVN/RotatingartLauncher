@@ -398,7 +398,7 @@ fun ActionWindowMenu(
     Surface(
         modifier = Modifier.width(240.dp),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
         tonalElevation = 8.dp,
         shadowElevation = 8.dp
     ) {
@@ -528,7 +528,7 @@ fun ComponentPalette(
             .width(240.dp) // 与菜单窗口宽度保持一致
             .wrapContentHeight(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
         tonalElevation = 12.dp,
         shadowElevation = 8.dp
     ) {
@@ -555,6 +555,22 @@ fun ComponentPalette(
                 PaletteItem(Icons.Default.RadioButtonChecked, "按钮", "button", onAddControl)
                 PaletteItem(Icons.Default.Games, "摇杆", "joystick", onAddControl)
                 PaletteItem(Icons.Default.TouchApp, "触控", "touchpad", onAddControl)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                PaletteItem(Icons.Default.Mouse, "滚轮", "mousewheel", onAddControl)
+                PaletteItem(Icons.Default.TextFields, "文本", "text", onAddControl)
+                PaletteItem(Icons.Default.DonutLarge, "轮盘", "radialmenu", onAddControl)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                PaletteItem(Icons.Default.Gamepad, "十字键", "dpad", onAddControl)
             }
         }
     }
@@ -586,6 +602,78 @@ fun PaletteItem(
     }
 }
 
+/**
+ * DPad 按键选择行
+ */
+@Composable
+fun DPadKeyRow(
+    label: String,
+    keycode: ControlData.KeyCode,
+    onKeycodeChange: (ControlData.KeyCode) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        
+        Box {
+            OutlinedButton(onClick = { expanded = true }) {
+                Text(
+                    keycode.name
+                        .removePrefix("KEYBOARD_")
+                        .removePrefix("XBOX_BUTTON_"),
+                    maxLines = 1
+                )
+            }
+            
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.heightIn(max = 300.dp)
+            ) {
+                // 常用方向键
+                val commonKeys = listOf<Pair<ControlData.KeyCode, String>>(
+                    ControlData.KeyCode.KEYBOARD_W to "W",
+                    ControlData.KeyCode.KEYBOARD_A to "A",
+                    ControlData.KeyCode.KEYBOARD_S to "S",
+                    ControlData.KeyCode.KEYBOARD_D to "D",
+                    ControlData.KeyCode.KEYBOARD_UP to "↑ 上",
+                    ControlData.KeyCode.KEYBOARD_DOWN to "↓ 下",
+                    ControlData.KeyCode.KEYBOARD_LEFT to "← 左",
+                    ControlData.KeyCode.KEYBOARD_RIGHT to "→ 右",
+                    ControlData.KeyCode.XBOX_BUTTON_DPAD_UP to "手柄 ↑",
+                    ControlData.KeyCode.XBOX_BUTTON_DPAD_DOWN to "手柄 ↓",
+                    ControlData.KeyCode.XBOX_BUTTON_DPAD_LEFT to "手柄 ←",
+                    ControlData.KeyCode.XBOX_BUTTON_DPAD_RIGHT to "手柄 →"
+                )
+                
+                commonKeys.forEach { pair ->
+                    val code = pair.first
+                    val name = pair.second
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = {
+                            onKeycodeChange(code)
+                            expanded = false
+                        },
+                        leadingIcon = {
+                            if (code == keycode) {
+                                Icon(Icons.Default.Check, contentDescription = null)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun PropertyPanel(
     control: ControlData?,
@@ -605,7 +693,7 @@ fun PropertyPanel(
             .width(320.dp)
             .padding(16.dp),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
         tonalElevation = 12.dp,
         shadowElevation = 8.dp
     ) {
@@ -1210,6 +1298,242 @@ fun PropertyPanel(
                             )
                         }
                     }
+                    
+                    is ControlData.RadialMenu -> {
+                        PropertySection(title = "轮盘设置") {
+                            // 扇区数量
+                            Text("扇区数量: ${control.sectorCount}", style = MaterialTheme.typography.labelMedium)
+                            Slider(
+                                value = control.sectorCount.toFloat(),
+                                onValueChange = {
+                                    val updated = control.deepCopy() as ControlData.RadialMenu
+                                    updated.sectorCount = it.toInt().coerceIn(4, 12)
+                                    // 确保 sectors 列表大小匹配
+                                    while (updated.sectors.size < updated.sectorCount) {
+                                        updated.sectors.add(ControlData.RadialMenu.Sector(
+                                            keycode = ControlData.KeyCode.UNKNOWN,
+                                            label = "${updated.sectors.size + 1}"
+                                        ))
+                                    }
+                                    onUpdate(updated)
+                                },
+                                valueRange = 4f..12f,
+                                steps = 7
+                            )
+                            
+                            // 展开倍数
+                            PropertySlider(
+                                label = "展开大小",
+                                value = control.expandedScale / 4f,
+                                onValueChange = { newValue ->
+                                    val updated = control.deepCopy() as ControlData.RadialMenu
+                                    updated.expandedScale = newValue * 4f
+                                    onUpdate(updated)
+                                }
+                            )
+                            
+                            // 死区比例
+                            PropertySlider(
+                                label = "中心死区",
+                                value = control.deadZoneRatio,
+                                onValueChange = { newValue ->
+                                    val updated = control.deepCopy() as ControlData.RadialMenu
+                                    updated.deadZoneRatio = newValue
+                                    onUpdate(updated)
+                                }
+                            )
+                            
+                            // 显示分隔线
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("显示分隔线", style = MaterialTheme.typography.bodyMedium)
+                                Switch(
+                                    checked = control.showDividers,
+                                    onCheckedChange = {
+                                        val updated = control.deepCopy() as ControlData.RadialMenu
+                                        updated.showDividers = it
+                                        onUpdate(updated)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    is ControlData.DPad -> {
+                        PropertySection(title = "十字键设置") {
+                            // 样式选择
+                            Text("样式", style = MaterialTheme.typography.labelMedium)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ControlData.DPad.Style.entries.forEach { style ->
+                                    FilterChip(
+                                        selected = control.style == style,
+                                        onClick = {
+                                            val updated = control.deepCopy() as ControlData.DPad
+                                            updated.style = style
+                                            onUpdate(updated)
+                                        },
+                                        label = {
+                                            Text(
+                                                when (style) {
+                                                    ControlData.DPad.Style.CROSS -> "十字"
+                                                    ControlData.DPad.Style.ROUND -> "圆形"
+                                                    ControlData.DPad.Style.SQUARE -> "方形"
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            // 按钮大小
+                            PropertySlider(
+                                label = "按钮大小",
+                                value = control.buttonSize,
+                                onValueChange = { newValue ->
+                                    val updated = control.deepCopy() as ControlData.DPad
+                                    updated.buttonSize = newValue
+                                    onUpdate(updated)
+                                }
+                            )
+                            
+                            // 按钮间距
+                            PropertySlider(
+                                label = "按钮间距",
+                                value = control.buttonSpacing / 0.2f,
+                                onValueChange = { newValue ->
+                                    val updated = control.deepCopy() as ControlData.DPad
+                                    updated.buttonSpacing = newValue * 0.2f
+                                    onUpdate(updated)
+                                }
+                            )
+                            
+                            // 死区（仅圆形模式）
+                            if (control.style == ControlData.DPad.Style.ROUND) {
+                                PropertySlider(
+                                    label = "中心死区",
+                                    value = control.deadZone / 0.5f,
+                                    onValueChange = { newValue ->
+                                        val updated = control.deepCopy() as ControlData.DPad
+                                        updated.deadZone = newValue * 0.5f
+                                        onUpdate(updated)
+                                    }
+                                )
+                            }
+                            
+                            // 允许斜向
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("允许斜向", style = MaterialTheme.typography.bodyMedium)
+                                Switch(
+                                    checked = control.allowDiagonal,
+                                    onCheckedChange = {
+                                        val updated = control.deepCopy() as ControlData.DPad
+                                        updated.allowDiagonal = it
+                                        onUpdate(updated)
+                                    }
+                                )
+                            }
+                            
+                            // 显示方向标签
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("显示方向标签", style = MaterialTheme.typography.bodyMedium)
+                                Switch(
+                                    checked = control.showLabels,
+                                    onCheckedChange = {
+                                        val updated = control.deepCopy() as ControlData.DPad
+                                        updated.showLabels = it
+                                        onUpdate(updated)
+                                    }
+                                )
+                            }
+                        }
+                        
+                        // 按键绑定
+                        PropertySection(title = "方向按键") {
+                            // 上
+                            DPadKeyRow(
+                                label = "↑ 上",
+                                keycode = control.upKeycode,
+                                onKeycodeChange = { keycode ->
+                                    val updated = control.deepCopy() as ControlData.DPad
+                                    updated.upKeycode = keycode
+                                    onUpdate(updated)
+                                }
+                            )
+                            
+                            // 下
+                            DPadKeyRow(
+                                label = "↓ 下",
+                                keycode = control.downKeycode,
+                                onKeycodeChange = { keycode ->
+                                    val updated = control.deepCopy() as ControlData.DPad
+                                    updated.downKeycode = keycode
+                                    onUpdate(updated)
+                                }
+                            )
+                            
+                            // 左
+                            DPadKeyRow(
+                                label = "← 左",
+                                keycode = control.leftKeycode,
+                                onKeycodeChange = { keycode ->
+                                    val updated = control.deepCopy() as ControlData.DPad
+                                    updated.leftKeycode = keycode
+                                    onUpdate(updated)
+                                }
+                            )
+                            
+                            // 右
+                            DPadKeyRow(
+                                label = "→ 右",
+                                keycode = control.rightKeycode,
+                                onKeycodeChange = { keycode ->
+                                    val updated = control.deepCopy() as ControlData.DPad
+                                    updated.rightKeycode = keycode
+                                    onUpdate(updated)
+                                }
+                            )
+                        }
+                        
+                        // 输入模式选择
+                        PropertySection(title = "输入模式") {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = control.mode == ControlData.Button.Mode.KEYBOARD,
+                                    onClick = {
+                                        val updated = control.deepCopy() as ControlData.DPad
+                                        updated.mode = ControlData.Button.Mode.KEYBOARD
+                                        onUpdate(updated)
+                                    },
+                                    label = { Text("键盘") }
+                                )
+                                FilterChip(
+                                    selected = control.mode == ControlData.Button.Mode.GAMEPAD,
+                                    onClick = {
+                                        val updated = control.deepCopy() as ControlData.DPad
+                                        updated.mode = ControlData.Button.Mode.GAMEPAD
+                                        onUpdate(updated)
+                                    },
+                                    label = { Text("手柄") }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // ===== 外观设置 =====
@@ -1230,6 +1554,16 @@ fun PropertyPanel(
                         color = Color(control.strokeColor),
                         onColorSelected = { color ->
                             val updated = control.deepCopy().apply { strokeColor = color.toArgb() }
+                            onUpdate(updated)
+                        }
+                    )
+                    
+                    // 文本颜色选择
+                    ColorPickerRow(
+                        label = "文本颜色",
+                        color = Color(control.textColor),
+                        onColorSelected = { color ->
+                            val updated = control.deepCopy().apply { textColor = color.toArgb() }
                             onUpdate(updated)
                         }
                     )
@@ -1614,7 +1948,7 @@ fun JoystickKeyMappingDialog(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -1728,7 +2062,7 @@ fun EditorSettingsDialog(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 8.dp
         ) {
             Column(
@@ -1803,7 +2137,7 @@ fun TextureSettingItem(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = if (hasTexture) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -1884,7 +2218,7 @@ fun TextureSelectorDialog(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 8.dp
         ) {
             Column(

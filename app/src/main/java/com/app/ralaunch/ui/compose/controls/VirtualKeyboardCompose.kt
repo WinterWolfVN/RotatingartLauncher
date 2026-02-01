@@ -44,7 +44,7 @@ fun VirtualKeyboardCompose(
             .wrapContentSize()
             .alpha(alpha)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFF0F0F0))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Column(
@@ -210,7 +210,7 @@ private fun VirtualKey(
             .height(26.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(
-                if (isPressed) Color(0xFFBDBDBD) else Color.White
+                if (isPressed) MaterialTheme.colorScheme.outline else Color.White
             )
             .pointerInput(keyCode) {
                 detectTapGestures(
@@ -235,7 +235,7 @@ private fun VirtualKey(
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
-            color = Color(0xFF333333),
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1
         )
     }
@@ -256,7 +256,7 @@ private fun VirtualMouseKey(
             .height(26.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(
-                if (isPressed) Color(0xFFBDBDBD) else Color.White
+                if (isPressed) MaterialTheme.colorScheme.outline else Color.White
             )
             .pointerInput(mouseButton) {
                 detectTapGestures(
@@ -284,7 +284,7 @@ private fun VirtualMouseKey(
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
-            color = Color(0xFF333333),
+            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1
         )
     }

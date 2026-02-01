@@ -93,9 +93,9 @@ fun InitializationScreen(
             .background(
                 Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF0D1117),
-                        Color(0xFF161B22),
-                        Color(0xFF21262D)
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surfaceVariant
                     )
                 )
             )
@@ -196,7 +196,7 @@ private fun DecorativeBackground() {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF238636).copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                             Color.Transparent
                         )
                     )
@@ -211,7 +211,7 @@ private fun DecorativeBackground() {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF1F6FEB).copy(alpha = 0.1f),
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
                             Color.Transparent
                         )
                     )
@@ -247,8 +247,8 @@ private fun LegalPage(
                 modifier = Modifier
                     .size(120.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFF21262D))
-                    .border(2.dp, Color(0xFF30363D), RoundedCornerShape(24.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -271,7 +271,7 @@ private fun LegalPage(
             Text(
                 text = "v1.0",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF8B949E)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
             Spacer(modifier = Modifier.height(48.dp))
@@ -286,7 +286,7 @@ private fun LegalPage(
                     modifier = Modifier
                         .width(40.dp)
                         .height(2.dp)
-                        .background(Color(0xFF30363D))
+                        .background(MaterialTheme.colorScheme.outline)
                 )
                 StepDot(isActive = false, isPassed = false, label = "2")
             }
@@ -296,7 +296,7 @@ private fun LegalPage(
             Text(
                 text = stringResource(R.string.init_legal_title),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF58A6FF)
+                color = MaterialTheme.colorScheme.tertiary
             )
         }
         
@@ -315,7 +315,7 @@ private fun LegalPage(
                 Icon(
                     imageVector = Icons.Default.Security,
                     contentDescription = null,
-                    tint = Color(0xFF58A6FF),
+                    tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.size(28.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -335,8 +335,8 @@ private fun LegalPage(
                     .weight(1f)
                     .fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xFF161B22),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF30363D))
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Column(
                     modifier = Modifier
@@ -346,7 +346,7 @@ private fun LegalPage(
                     Text(
                         text = stringResource(R.string.init_legal_terms),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFFC9D1D9),
+                        color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 24.sp
                     )
                     
@@ -365,13 +365,13 @@ private fun LegalPage(
                         Icon(
                             imageVector = Icons.Default.Link,
                             contentDescription = null,
-                            tint = Color(0xFF58A6FF),
+                            tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.init_legal_official_download),
-                            color = Color(0xFF58A6FF)
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                 }
@@ -387,9 +387,9 @@ private fun LegalPage(
                 OutlinedButton(
                     onClick = onDecline,
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF8B949E)
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF30363D))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Text(stringResource(R.string.init_exit))
                 }
@@ -399,7 +399,7 @@ private fun LegalPage(
                 Button(
                     onClick = onAccept,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF238636)
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text(stringResource(R.string.init_accept_and_continue))
@@ -456,8 +456,8 @@ private fun SetupPage(
                     .size(120.dp)
                     .scale(if (uiState.isExtracting) scale else 1f)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFF21262D))
-                    .border(2.dp, Color(0xFF30363D), RoundedCornerShape(24.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -481,7 +481,7 @@ private fun SetupPage(
                 text = if (uiState.isExtracting) stringResource(R.string.init_installing) 
                        else stringResource(R.string.init_click_to_start),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF8B949E)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
             Spacer(modifier = Modifier.height(48.dp))
@@ -496,7 +496,7 @@ private fun SetupPage(
                     modifier = Modifier
                         .width(40.dp)
                         .height(2.dp)
-                        .background(Color(0xFF238636))
+                        .background(MaterialTheme.colorScheme.primary)
                 )
                 StepDot(isActive = true, isPassed = false, label = "2")
             }
@@ -506,7 +506,7 @@ private fun SetupPage(
             Text(
                 text = if (uiState.isExtracting) stringResource(R.string.init_installing) else "组件安装",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF58A6FF)
+                color = MaterialTheme.colorScheme.tertiary
             )
             
             // 总进度
@@ -517,7 +517,7 @@ private fun SetupPage(
                     text = "${uiState.overallProgress}%",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF58A6FF)
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
         }
@@ -546,7 +546,7 @@ private fun SetupPage(
                 Icon(
                     imageVector = Icons.Default.Inventory,
                     contentDescription = null,
-                    tint = Color(0xFF58A6FF),
+                    tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -580,15 +580,15 @@ private fun SetupPage(
                 ) {
                     Text(
                         text = uiState.statusMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF8B949E),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
                         text = "${uiState.overallProgress}%",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF58A6FF)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -598,8 +598,8 @@ private fun SetupPage(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp)),
-                    color = Color(0xFF238636),
-                    trackColor = Color(0xFF21262D)
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
             
@@ -611,8 +611,8 @@ private fun SetupPage(
                 enabled = !uiState.isExtracting && uiState.hasPermissions,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF238636),
-                    disabledContainerColor = Color(0xFF21262D)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -658,14 +658,14 @@ private fun StepDot(
             .clip(CircleShape)
             .background(
                 when {
-                    isActive -> Color(0xFF238636)
-                    isPassed -> Color(0xFF238636).copy(alpha = 0.5f)
-                    else -> Color(0xFF21262D)
+                    isActive -> MaterialTheme.colorScheme.primary
+                    isPassed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    else -> MaterialTheme.colorScheme.surfaceVariant
                 }
             )
             .then(
                 if (!isActive && !isPassed) 
-                    Modifier.border(1.dp, Color(0xFF30363D), CircleShape)
+                    Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                 else Modifier
             ),
         contentAlignment = Alignment.Center
@@ -682,7 +682,7 @@ private fun StepDot(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isActive) Color.White else Color(0xFF8B949E)
+                color = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -699,10 +699,10 @@ private fun PermissionCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF161B22),
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(
             1.dp, 
-            if (hasPermissions) Color(0xFF238636) else Color(0xFFD29922)
+            if (hasPermissions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
         )
     ) {
         Row(
@@ -714,15 +714,15 @@ private fun PermissionCard(
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(
-                        if (hasPermissions) Color(0xFF238636).copy(alpha = 0.2f)
-                        else Color(0xFFD29922).copy(alpha = 0.2f)
+                        if (hasPermissions) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        else MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (hasPermissions) Icons.Default.CheckCircle else Icons.Default.FolderOpen,
                     contentDescription = null,
-                    tint = if (hasPermissions) Color(0xFF238636) else Color(0xFFD29922),
+                    tint = if (hasPermissions) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -739,7 +739,7 @@ private fun PermissionCard(
                 Text(
                     text = stringResource(R.string.init_permission_desc),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF8B949E)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -747,8 +747,8 @@ private fun PermissionCard(
                 FilledTonalButton(
                     onClick = onRequestPermissions,
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = Color(0xFFD29922).copy(alpha = 0.2f),
-                        contentColor = Color(0xFFD29922)
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.2f),
+                        contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
                     Text(stringResource(R.string.init_grant_permissions))
@@ -766,13 +766,13 @@ private fun ComponentCard(component: ComponentState) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF161B22),
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
             when {
-                component.isInstalled -> Color(0xFF238636).copy(alpha = 0.5f)
-                component.progress > 0 -> Color(0xFF58A6FF).copy(alpha = 0.3f)
-                else -> Color(0xFF30363D)
+                component.isInstalled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                component.progress > 0 -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)
+                else -> MaterialTheme.colorScheme.outline
             }
         )
     ) {
@@ -787,9 +787,9 @@ private fun ComponentCard(component: ComponentState) {
                     .clip(RoundedCornerShape(8.dp))
                     .background(
                         when {
-                            component.isInstalled -> Color(0xFF238636).copy(alpha = 0.2f)
-                            component.progress > 0 -> Color(0xFF58A6FF).copy(alpha = 0.2f)
-                            else -> Color(0xFF21262D)
+                            component.isInstalled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            component.progress > 0 -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                            else -> MaterialTheme.colorScheme.surfaceVariant
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -798,18 +798,18 @@ private fun ComponentCard(component: ComponentState) {
                     component.isInstalled -> Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = Color(0xFF238636),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     component.progress > 0 -> CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = Color(0xFF58A6FF)
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                     else -> Icon(
                         imageVector = Icons.Outlined.Inventory,
                         contentDescription = null,
-                        tint = Color(0xFF8B949E),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -827,7 +827,7 @@ private fun ComponentCard(component: ComponentState) {
                 Text(
                     text = component.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF8B949E),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
                 
@@ -840,8 +840,8 @@ private fun ComponentCard(component: ComponentState) {
                             .fillMaxWidth()
                             .height(3.dp)
                             .clip(RoundedCornerShape(2.dp)),
-                        color = Color(0xFF58A6FF),
-                        trackColor = Color(0xFF21262D)
+                        color = MaterialTheme.colorScheme.tertiary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             }
@@ -853,7 +853,7 @@ private fun ComponentCard(component: ComponentState) {
                     text = if (component.isInstalled) "✓" else "${component.progress}%",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (component.isInstalled) Color(0xFF238636) else Color(0xFF58A6FF)
+                    color = if (component.isInstalled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary
                 )
             }
         }

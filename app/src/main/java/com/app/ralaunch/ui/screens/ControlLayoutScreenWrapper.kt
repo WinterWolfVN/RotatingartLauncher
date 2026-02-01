@@ -36,7 +36,6 @@ import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.controls.packs.ControlPackInfo
 import com.app.ralaunch.controls.packs.ControlPackManager
 import java.io.File
-import java.nio.charset.StandardCharsets
 
 /**
  * 控制布局管理 Screen - 纯 Composable 版本
@@ -73,11 +72,11 @@ fun ControlLayoutScreenWrapper(
 
     // Activity Result Launchers
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         uri?.let { exportUri ->
             exportingPackId?.let { packId ->
-                exportLayoutToFile(context, packManager, exportUri, packId)
+                exportPackToZip(context, packManager, exportUri, packId)
             }
         }
         exportingPackId = null
@@ -191,10 +190,10 @@ fun ControlLayoutScreenWrapper(
         onDeleteDismiss = { showDeleteDialog = null },
         onExportClick = { pack ->
             exportingPackId = pack.id
-            exportLauncher.launch("${pack.name}.json")
+            exportLauncher.launch("${pack.name}.zip")
             showMoreMenu = null
         },
-        onImportClick = { importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
+        onImportClick = { importLauncher.launch(arrayOf("application/zip")) },
         onPreviewClick = { showPreviewDialog = it }
     )
     
@@ -212,20 +211,33 @@ fun ControlLayoutScreenWrapper(
     }
 }
 
-private fun exportLayoutToFile(
+private fun exportPackToZip(
     context: android.content.Context,
     packManager: ControlPackManager,
     uri: Uri,
     packId: String
 ) {
     try {
-        val layout = packManager.getPackLayout(packId) ?: return
-        val json = layout.toJson()
-
-        context.contentResolver.openOutputStream(uri)?.use { stream ->
-            stream.write(json.toByteArray(StandardCharsets.UTF_8))
+        // 创建临时文件
+        val tempFile = File(context.cacheDir, "export_temp.zip")
+        
+        // 使用 ControlPackManager 导出为 zip
+        val result = packManager.exportToFile(packId, tempFile)
+        
+        result.onSuccess { exportedFile ->
+            // 将临时文件写入目标 URI
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                exportedFile.inputStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Toast.makeText(context, "导出成功", Toast.LENGTH_SHORT).show()
+        }.onFailure { error ->
+            Toast.makeText(context, "导出失败: ${error.message}", Toast.LENGTH_SHORT).show()
         }
-        Toast.makeText(context, "导出成功", Toast.LENGTH_SHORT).show()
+        
+        // 清理临时文件
+        tempFile.delete()
     } catch (e: Exception) {
         Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
     }
@@ -239,7 +251,7 @@ private fun importPackFromUri(
 ) {
     try {
         // 创建临时文件来存储控件包
-        val tempFile = File(context.cacheDir, "import_temp.ralpack")
+        val tempFile = File(context.cacheDir, "import_temp.zip")
         
         context.contentResolver.openInputStream(uri)?.use { inputStream ->
             tempFile.outputStream().use { outputStream ->
@@ -310,36 +322,6 @@ private fun ControlLayoutScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // 顶部栏
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 3.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
-                }
-                Text(
-                    text = "控制布局",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onImportClick) {
-                    Icon(Icons.Default.FileDownload, "导入")
-                }
-                IconButton(onClick = onOpenStore) {
-                    Icon(Icons.Default.Store, "控件商店")
-                }
-            }
-        }
-
         // 双栏布局
         Row(modifier = Modifier.fillMaxSize()) {
             // 左侧：布局列表
@@ -357,6 +339,8 @@ private fun ControlLayoutScreen(
                 onDeleteClick = onDeleteClick,
                 onExportClick = onExportClick,
                 onCreateClick = onCreateClick,
+                onOpenStore = onOpenStore,
+                onImportClick = onImportClick,
                 modifier = Modifier
                     .width(320.dp)
                     .fillMaxHeight()
@@ -433,6 +417,8 @@ private fun LayoutListPanel(
     onDeleteClick: (ControlPackInfo) -> Unit,
     onExportClick: (ControlPackInfo) -> Unit,
     onCreateClick: () -> Unit,
+    onOpenStore: () -> Unit,
+    onImportClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
@@ -463,6 +449,18 @@ private fun LayoutListPanel(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("新建布局")
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(onClick = onImportClick) {
+                    Icon(Icons.Default.FileOpen, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("导入布局")
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(onClick = onOpenStore) {
+                    Icon(Icons.Default.Storefront, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("控件商店")
+                }
             }
         } else {
             LazyColumn(
@@ -488,16 +486,38 @@ private fun LayoutListPanel(
             }
         }
 
-        // FAB
-        if (layouts.isNotEmpty()) {
+        // FAB 区域 - 商店 + 导入 + 新建
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(12.dp),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // 商店按钮
             FloatingActionButton(
-                onClick = onCreateClick,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(12.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                onClick = onOpenStore,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
             ) {
-                Icon(Icons.Default.Add, "新建布局")
+                Icon(Icons.Default.Storefront, "控件商店")
+            }
+            
+            // 导入按钮
+            FloatingActionButton(
+                onClick = onImportClick,
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            ) {
+                Icon(Icons.Default.FileOpen, "导入布局")
+            }
+            
+            // 新建按钮
+            if (layouts.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = onCreateClick,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(Icons.Default.Add, "新建布局")
+                }
             }
         }
     }

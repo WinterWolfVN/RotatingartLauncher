@@ -55,7 +55,7 @@ class ControlPackManager(private val context: Context) {
         const val MANAGER_STATE_FILE = "pack_manager.json"
         
         /** 控件包文件扩展名 */
-        const val PACK_EXTENSION = ".ralpack"
+        const val PACK_EXTENSION = ".zip"
         
         private val json = Json {
             prettyPrint = true
@@ -484,7 +484,7 @@ class ControlPackManager(private val context: Context) {
     // ========== 导入导出 ==========
     
     /**
-     * 从 .ralpack 文件安装控件包
+     * 从 .zip 文件安装控件包
      * 支持两种包结构:
      * 1. manifest.json 在根目录
      * 2. manifest.json 在子目录中 (如 pack_id/manifest.json)
@@ -606,7 +606,7 @@ class ControlPackManager(private val context: Context) {
     }
     
     /**
-     * 导出控件包为 .ralpack 文件
+     * 导出控件包为 .zip 文件
      */
     fun exportToFile(packId: String, outputFile: File): Result<File> {
         return try {
@@ -630,24 +630,6 @@ class ControlPackManager(private val context: Context) {
             Result.success(outputFile)
         } catch (e: Exception) {
             AppLogger.error(TAG, "Failed to export pack", e)
-            Result.failure(e)
-        }
-    }
-    
-    /**
-     * 导出布局为 JSON 文件（兼容旧格式）
-     */
-    fun exportLayoutToJson(packId: String, outputFile: File): Result<File> {
-        return try {
-            val layout = getPackLayout(packId)
-                ?: return Result.failure(Exception("Pack not found: $packId"))
-            
-            layout.saveTo(outputFile)
-            
-            AppLogger.info(TAG, "Exported layout to JSON: $packId -> ${outputFile.path}")
-            Result.success(outputFile)
-        } catch (e: Exception) {
-            AppLogger.error(TAG, "Failed to export layout to JSON", e)
             Result.failure(e)
         }
     }

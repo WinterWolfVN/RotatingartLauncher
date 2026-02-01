@@ -80,16 +80,16 @@ class GamePresenter : GameContract.Presenter {
                 com.app.ralaunch.renderer.RendererConfig.setRenderer(appContext, defaultRenderer)
             }
 
-            val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
-            val patchManager: PatchManager? = try {
-                KoinJavaComponent.getOrNull(PatchManager::class.java)
-            } catch (e: Exception) { null }
-            val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
-                patchManager?.getPatchesByIds(it)
-            }
-            
+                    val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
+                    val patchManager: PatchManager? = try {
+                        KoinJavaComponent.getOrNull(PatchManager::class.java)
+                    } catch (e: Exception) { null }
+                    val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
+                        patchManager?.getPatchesByIds(it)
+                    }
+                    
             val exitCode = GameLauncher.launchDotNetAssembly(assemblyPath, emptyArray(), enabledPatches).also { code ->
-                onGameExit(code, GameLauncher.getLastErrorMessage())
+                        onGameExit(code, GameLauncher.getLastErrorMessage())
             }
 
             if (exitCode == 0) {

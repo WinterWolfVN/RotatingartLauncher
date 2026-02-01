@@ -20,7 +20,7 @@ import java.net.URL
  * - packs/
  *   - {pack_id}/
  *     - manifest.json        (控件包元数据)
- *     - {pack_id}.ralpack    (打包后的控件包)
+ *     - {pack_id}.zip        (打包后的控件包)
  *     - preview_1.png        (预览图)
  */
 class ControlPackRepositoryService(private val context: Context) {

@@ -199,19 +199,6 @@ private fun GogTabContent(
     }
     
     Column(modifier = modifier.fillMaxSize()) {
-        // 顶部栏
-        TopAppBar(
-            title = { Text("GOG") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
-            )
-        )
-        
         GogScreen(
         uiState = uiState,
         onWebLogin = { authCode ->

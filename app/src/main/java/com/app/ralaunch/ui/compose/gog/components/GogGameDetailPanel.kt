@@ -133,7 +133,7 @@ private fun GogGameDetailContent(
                 .height(56.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF7B4BB9)
+                containerColor = MaterialTheme.colorScheme.primary
             ),
             elevation = ButtonDefaults.buttonElevation(
                 defaultElevation = 6.dp,

@@ -3,6 +3,7 @@ package com.app.ralaunch.controls.data
 import com.app.ralaunch.controls.textures.ButtonTextureConfig
 import com.app.ralaunch.controls.textures.JoystickTextureConfig
 import com.app.ralaunch.controls.textures.MouseWheelTextureConfig
+import com.app.ralaunch.controls.textures.RadialMenuTextureConfig
 import com.app.ralaunch.controls.textures.TextControlTextureConfig
 import com.app.ralaunch.controls.textures.TouchPadTextureConfig
 import kotlinx.serialization.SerialName
@@ -442,6 +443,7 @@ sealed class ControlData {
     var opacity: Float = 0.5f // 0.0 - 1.0 (背景透明度)
     var borderOpacity: Float = 1.0f // 0.0 - 1.0 (边框透明度，默认1.0)
     var textOpacity: Float = 1.0f // 0.0 - 1.0 (文本透明度，默认1.0)
+    var textColor: Int = -0x1F1F20 // 文本颜色（默认柔和白 0xFFE0E0E0）
     var bgColor: Int = -0x7f7f80 // 灰色背景（更清晰可见）
     var strokeColor: Int = 0x00000000 // 透明边框（无边框）
     var strokeWidth: Float= 0f // dp单位 // 无边框宽度
@@ -568,5 +570,114 @@ sealed class ControlData {
         
         /** 文本控件纹理配置 */
         var texture: TextControlTextureConfig = TextControlTextureConfig()
+    }
+
+    /**
+     * D-Pad 十字键控件
+     * 
+     * 一个完整的十字键控件，支持上下左右四个方向和斜向输入
+     */
+    @Serializable
+    @SerialName("dpad")
+    class DPad : ControlData() {
+        
+        /** 十字键样式 */
+        enum class Style {
+            CROSS,      // 十字形（只有4个方向按钮）
+            ROUND,      // 圆形（支持8向）
+            SQUARE      // 方形（4个方向按钮排列成正方形）
+        }
+        
+        /** 按键模式 */
+        var mode: Button.Mode = Button.Mode.KEYBOARD
+        
+        /** 上方向按键码 */
+        var upKeycode: KeyCode = KeyCode.KEYBOARD_W
+        /** 下方向按键码 */
+        var downKeycode: KeyCode = KeyCode.KEYBOARD_S
+        /** 左方向按键码 */
+        var leftKeycode: KeyCode = KeyCode.KEYBOARD_A
+        /** 右方向按键码 */
+        var rightKeycode: KeyCode = KeyCode.KEYBOARD_D
+        
+        /** 十字键样式 */
+        var style: Style = Style.CROSS
+        
+        /** 方向键间距（相对于控件大小） */
+        var buttonSpacing: Float = 0.05f
+        
+        /** 单个方向键大小（相对于控件大小） */
+        var buttonSize: Float = 0.35f
+        
+        /** 中心死区大小（相对于控件大小），仅对圆形样式有效 */
+        var deadZone: Float = 0.2f
+        
+        /** 是否允许斜向（同时按两个方向） */
+        var allowDiagonal: Boolean = true
+        
+        /** 按钮激活颜色 */
+        var activeColor: Int = android.graphics.Color.WHITE
+        
+        /** 显示方向标签（↑↓←→） */
+        var showLabels: Boolean = false
+    }
+
+    /**
+     * 轮盘菜单控件
+     * 
+     * 点击后展开为圆形菜单，拖动选择方向触发对应按键
+     */
+    @Serializable
+    @SerialName("radialmenu")
+    class RadialMenu : ControlData() {
+        
+        /**
+         * 轮盘扇区配置
+         */
+        @Serializable
+        data class Sector(
+            /** 按键码 */
+            var keycode: KeyCode = KeyCode.UNKNOWN,
+            /** 显示文本（可选） */
+            var label: String = "",
+            /** 图标路径（可选，相对于 assets） */
+            var iconPath: String = ""
+        )
+        
+        /** 扇区数量 (4-12) */
+        var sectorCount: Int = 8
+        
+        /** 各扇区配置 */
+        var sectors: MutableList<Sector> = mutableListOf(
+            Sector(KeyCode.KEYBOARD_1, "1"),
+            Sector(KeyCode.KEYBOARD_2, "2"),
+            Sector(KeyCode.KEYBOARD_3, "3"),
+            Sector(KeyCode.KEYBOARD_4, "4"),
+            Sector(KeyCode.KEYBOARD_5, "5"),
+            Sector(KeyCode.KEYBOARD_6, "6"),
+            Sector(KeyCode.KEYBOARD_7, "7"),
+            Sector(KeyCode.KEYBOARD_8, "8")
+        )
+        
+        /** 展开后的半径倍数 (相对于收起时大小) */
+        var expandedScale: Float = 2.5f
+        
+        /** 中心死区半径比例 (0.0-1.0，相对于展开半径) */
+        var deadZoneRatio: Float = 0.3f
+        
+        /** 展开动画时长 (毫秒) */
+        var expandDuration: Int = 150
+        
+        /** 是否显示扇区分隔线 */
+        var showDividers: Boolean = true
+        
+        /** 扇区分隔线颜色 */
+        var dividerColor: Int = 0x40FFFFFF.toInt()
+        
+        /** 选中扇区高亮颜色 */
+        var selectedColor: Int = 0x80FFFFFF.toInt()
+        
+        /** 轮盘纹理配置 */
+        var texture: RadialMenuTextureConfig = RadialMenuTextureConfig()
     }
 }
