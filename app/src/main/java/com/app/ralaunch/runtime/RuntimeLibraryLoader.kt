@@ -16,8 +16,7 @@ import java.io.FileOutputStream
  * 负责从 assets 中解压大型 native 库到私有目录。
  * 这些库在编译时不链接到主程序，而是在运行时按需加载。
  * 
- * 支持的库（总计约 90 MB，压缩后约 35 MB）：
- * - libbox64.so (56 MB) - x86_64 模拟器
+ * 支持的库：
  * - libvulkan_freedreno.so (10 MB) - Turnip Vulkan 驱动
  * - libmobileglues.so (8 MB) - GLES 转换层
  * - libSkiaSharp.so (7 MB) - Skia 图形库
@@ -45,7 +44,6 @@ object RuntimeLibraryLoader {
      * 运行时库枚举
      */
     enum class RuntimeLib(val fileName: String, val description: String) {
-        BOX64("libbox64.so", "Box64 x86_64 模拟器"),
         TURNIP("libvulkan_freedreno.so", "Turnip Vulkan 驱动"),
         MOBILEGLUES("libmobileglues.so", "MobileGlues 翻译层"),
         SKIASHARP("libSkiaSharp.so", "Skia 图形库"),
@@ -61,8 +59,7 @@ object RuntimeLibraryLoader {
      */
     private val REQUIRED_LIBS = listOf(
         "libGL_gl4es.so",
-        "libEGL_gl4es.so",
-        "libbox64.so"
+        "libEGL_gl4es.so"
     )
     
     /**

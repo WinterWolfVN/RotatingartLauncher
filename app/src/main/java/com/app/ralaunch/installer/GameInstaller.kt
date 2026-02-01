@@ -49,15 +49,8 @@ class GameInstaller(private val context: Context) {
         // 检测游戏类型
         val detectResult = plugin.detectGame(gameFile)
         
-        // Box64 游戏需要安装到内部存储
-        val isBox64Game = detectResult?.definition?.runtime == "box64"
-        
         // 创建游戏目录
-        val gamesDir = if (isBox64Game) {
-            File(context.filesDir, GAMES_DIR)
-        } else {
-            File(context.getExternalFilesDir(null), GAMES_DIR)
-        }
+        val gamesDir = File(context.getExternalFilesDir(null), GAMES_DIR)
         if (!gamesDir.exists()) {
             gamesDir.mkdirs()
         }

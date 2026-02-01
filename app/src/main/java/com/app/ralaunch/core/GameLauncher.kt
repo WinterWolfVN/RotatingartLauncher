@@ -2,25 +2,21 @@
  * 游戏启动器模块
  * Game Launcher Module
  *
- * 本模块是应用的核心组件，负责启动和管理不同类型的游戏进程。
+ * 本模块是应用的核心组件，负责启动和管理 .NET/FNA 游戏进程。
  * This module is the core component of the application, responsible for launching
- * and managing different types of game processes.
+ * and managing .NET/FNA game processes.
  *
  * 支持的游戏类型：
  * Supported game types:
  * - .NET/FNA 游戏（通过 CoreCLR 运行时）
  *   .NET/FNA games (via CoreCLR runtime)
- * - Box64 x86_64 Linux 游戏（通过 Box64 仿真层）
- *   Box64 x86_64 Linux games (via Box64 emulation layer)
  *
  * @see DotNetLauncher .NET 运行时启动器 / .NET runtime launcher
- * @see Box64Helper Box64 仿真层辅助类 / Box64 emulation layer helper
  */
 package com.app.ralaunch.core
 
 import android.content.Context
 import android.os.Environment
-import android.system.Os
 import com.app.ralaunch.data.SettingsManager
 import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.dotnet.DotNetLauncher
@@ -29,14 +25,8 @@ import com.app.ralaunch.utils.NativeMethods
 import com.app.ralaunch.renderer.RendererConfig
 import com.app.ralaunch.patch.Patch
 import com.app.ralaunch.patch.PatchManager
-import com.app.ralaunch.box64.Box64Helper
-import com.app.ralaunch.box64.GlibcBox64Helper
-import com.app.ralaunch.box64.NativeBridge
-import com.app.ralaunch.runtime.RuntimeLibraryLoader
 import com.app.ralaunch.service.ProcessLauncherService
-import kotlinx.coroutines.runBlocking
 import org.libsdl.app.SDL
-import java.io.File
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
@@ -50,8 +40,6 @@ import kotlin.io.path.exists
  * Provides the following core features:
  * - 启动 .NET/FNA 游戏并配置运行时环境
  *   Launch .NET/FNA games with runtime environment configuration
- * - 启动 Box64 仿真的 x86_64 Linux 游戏
- *   Launch Box64-emulated x86_64 Linux games
  * - 管理游戏数据目录和环境变量
  *   Manage game data directories and environment variables
  * - 配置补丁和启动钩子
@@ -68,23 +56,10 @@ object GameLauncher {
     private const val DEFAULT_DATA_DIR_NAME = "RALauncher"
 
     /**
-     * Box64 环境是否已初始化
-     * Whether Box64 environment is initialized
-     */
-    private var isBox64Initialized = false
-
-    /**
      * SDL JNI 环境是否已初始化
      * Whether SDL JNI environment is initialized
      */
     private var isSDLJNIInitialized = false
-
-    /**
-     * 最后一次 Box64 错误消息
-     * Last Box64 error message
-     */
-    @Volatile
-    private var lastBox64ErrorMessage: String = ""
 
     /**
      * 重置初始化状态
@@ -94,7 +69,6 @@ object GameLauncher {
      * Called before launching a new game to ensure environment is properly re-initialized
      */
     fun resetInitializationState() {
-        isBox64Initialized = false
         isSDLJNIInitialized = false
         AppLogger.info(TAG, "初始化状态已重置 / Initialization state reset")
     }
@@ -129,16 +103,10 @@ object GameLauncher {
             System.loadLibrary("theorafile")
             System.loadLibrary("SDL2")
             System.loadLibrary("main")
-
-            // Box64 仿真层需要的 glibc 桥接库
-            // glibc bridge library required by Box64 emulation layer
-            System.loadLibrary("glibc_bridge")
-
             System.loadLibrary("openal32")
             
-           
-           
-            // - libbox64.so (56 MB) - 通过 Box64Helper.ensureBox64Loaded() 加载
+            // 大型运行时库按需加载:
+            // Large runtime libraries loaded on-demand:
             // - libSkiaSharp.so (7 MB) - 通过 RuntimeLibraryLoader.loadSkiaSharp() 加载
             // - libvulkan_freedreno.so (10 MB) - 通过 RuntimeLibraryLoader.loadRendererLibraries() 加载
             // - libGL_gl4es.so (4 MB) - 通过 RuntimeLibraryLoader.loadRendererLibraries() 加载
@@ -152,339 +120,11 @@ object GameLauncher {
      * 获取最后一次错误信息
      * Get the last error message
      *
-     * 目前仅返回 .NET 运行时的错误信息，未来可能扩展支持其他错误来源。
-     * Currently only returns .NET runtime error messages, may be extended
-     * to support other error sources in the future.
-     *
      * @return 错误信息字符串，如果没有错误则返回空字符串
      *         Error message string, or empty string if no error
      */
     fun getLastErrorMessage(): String {
-        // 优先返回 Box64 错误（如果有）
-        if (lastBox64ErrorMessage.isNotEmpty()) {
-            return lastBox64ErrorMessage
-        }
         return DotNetLauncher.hostfxrLastErrorMsg
-    }
-
-    /**
-     * 设置 Box64 错误消息
-     * Set Box64 error message
-     */
-    private fun setBox64Error(message: String) {
-        lastBox64ErrorMessage = message
-        AppLogger.error(TAG, "Box64 Error: $message")
-    }
-
-    /**
-     * 清除 Box64 错误消息
-     * Clear Box64 error message
-     */
-    private fun clearBox64Error() {
-        lastBox64ErrorMessage = ""
-    }
-
-    /**
-     * 启动 Box64 游戏
-     * Launch a Box64 game
-     *
-     * 用于运行 x86_64 Linux 游戏（如 Starbound）。
-     * Box64 会将 x86_64 指令翻译为 ARM64 指令执行。
-     *
-     * Used to run x86_64 Linux games (like Starbound).
-     * Box64 translates x86_64 instructions to ARM64 for execution.
-     *
-     * 启动流程：
-     * Launch process:
-     * 1. 初始化 Box64 环境（提取 rootfs）
-     *    Initialize Box64 environment (extract rootfs)
-     * 2. 配置渲染器环境变量
-     *    Configure renderer environment variables
-     * 3. 初始化 SDL JNI 环境
-     *    Initialize SDL JNI environment
-     * 4. 通过 Box64Helper 启动游戏
-     *    Launch game via Box64Helper
-     *
-     * @param context Android 上下文，用于访问应用资源
-     *                Android context for accessing app resources
-     * @param gamePath 游戏可执行文件的完整路径
-     *                 Full path to the game executable
-     * @return 游戏退出代码：
-     *         Game exit code:
-     *         - 0 或正数：正常退出码 / Normal exit code
-     *         - -1：Box64 初始化失败 / Box64 initialization failed
-     *         - -2：无法获取游戏目录 / Failed to get game directory
-     *         - -3：启动过程中发生异常 / Exception during launch
-     */
-    fun launchBox64Game(context: Context, gamePath: String): Int {
-        // 清除之前的错误信息
-        clearBox64Error()
-        
-        try {
-            AppLogger.info(TAG, "=== 开始启动 Box64 游戏 / Starting Box64 Game Launch ===")
-            AppLogger.info(TAG, "游戏路径 / Game path: $gamePath")
-
-            // 步骤1：初始化 Box64 环境
-            // Step 1: Initialize Box64 environment
-            if (!initializeBox64(context)) {
-                // 错误信息已在 initializeBox64 中设置
-                return -1
-            }
-
-            // 步骤2：配置渲染器环境变量（必须在 Box64 启动前设置）
-            // Step 2: Configure renderer environment (must be set before Box64 starts)
-            AppLogger.debug(TAG, "配置渲染器环境 / Applying renderer environment...")
-            RendererConfig.applyRendererEnvironment(context)
-            AppLogger.debug(TAG, "渲染器环境配置完成 / Renderer environment applied: OK")
-
-            // 步骤3：配置音频环境变量
-            // Step 3: Configure audio environment variables
-            val settings = SettingsManager.getInstance()
-            EnvVarsManager.quickSetEnvVars(
-                "SDL_AAUDIO_LOW_LATENCY" to if (settings.isSdlAaudioLowLatency) "1" else "0",
-            )
-
-            // 步骤4：初始化 SDL JNI 环境
-            // Step 4: Initialize SDL JNI environment
-            initializeSDLJNI(context)
-
-            val filesDir = context.filesDir.absolutePath
-            val rootfsPath = "$filesDir/rootfs"
-            val gameDir = File(gamePath).parent
-            if (gameDir == null) {
-                setBox64Error("无法获取游戏目录，游戏路径可能无效: $gamePath")
-                return -2
-            }
-
-            // 设置 Box64 的 rootfs 路径
-            // Set Box64 rootfs path
-            System.setProperty("BOX64_ROOTFS", rootfsPath)
-
-            AppLogger.info(TAG, "通过 Box64 启动游戏 / Launching via Box64...")
-            AppLogger.info(TAG, "  Rootfs 路径: $rootfsPath")
-            AppLogger.info(TAG, "  工作目录 / Work dir: $gameDir")
-
-            // 步骤5：执行游戏
-            // Step 5: Execute the game
-            val result = Box64Helper.runBox64InProcess(arrayOf(gamePath), gameDir)
-
-            AppLogger.info(TAG, "=== Box64 游戏启动完成 / Box64 Game Launch Completed ===")
-            AppLogger.info(TAG, "退出代码 / Exit code: $result")
-
-            // 根据退出码设置错误信息
-            if (result != 0) {
-                setBox64Error(getBox64ExitCodeDescription(result))
-            }
-
-            return result
-        } catch (e: Exception) {
-            AppLogger.error(TAG, "启动 Box64 游戏失败 / Failed to launch Box64 game: $gamePath", e)
-            setBox64Error("启动异常: ${e.message}\n${e.stackTraceToString().take(500)}")
-            return -3
-        }
-    }
-
-    /**
-     * 通过 glibc_bridge 启动 Box64 游戏（glibc 版本）
-     * Launch a Box64 game via glibc_bridge (glibc version)
-     *
-     * 使用 glibc 编译的 Box64，通过 glibc_bridge 执行。
-     * 与 launchBox64Game() 的区别：
-     * - launchBox64Game: 使用 bionic 编译的 Box64 共享库，通过 dlopen 加载
-     * - launchBox64ViaGlibc: 使用 glibc 编译的 Box64 可执行文件，通过 glibc_bridge 执行
-     *
-     * @param context Android 上下文
-     * @param gamePath 游戏可执行文件的完整路径
-     * @return 游戏退出代码
-     */
-    fun launchBox64ViaGlibc(context: Context, gamePath: String): Int {
-        clearBox64Error()
-        
-        try {
-            AppLogger.info(TAG, "=== 开始启动 Box64 游戏 (glibc 模式) ===")
-            AppLogger.info(TAG, "游戏路径: $gamePath")
-            
-            // 步骤1：确保 glibc Box64 已解压
-            if (!GlibcBox64Helper.isExtracted(context)) {
-                AppLogger.info(TAG, "正在解压 Box64 glibc...")
-                val extracted = runBlocking { GlibcBox64Helper.extractBox64(context) }
-                if (!extracted) {
-                    setBox64Error("Box64 glibc 解压失败")
-                    return -1
-                }
-            }
-            
-            // 步骤2：确保 rootfs 已解压（包含 glibc 运行时库）
-            val rootfsPath = "${context.filesDir.absolutePath}/rootfs"
-            if (!File(rootfsPath).exists()) {
-                // 初始化 glibc_bridge（会处理 rootfs）
-                NativeBridge.loadLibrary()
-                val initResult = NativeBridge.init(context, context.filesDir.absolutePath)
-                if (initResult != 0) {
-                    setBox64Error("glibc_bridge 初始化失败: $initResult")
-                    return -1
-                }
-            }
-            
-            // 步骤3：配置渲染器环境变量
-            AppLogger.debug(TAG, "配置渲染器环境...")
-            RendererConfig.applyRendererEnvironment(context)
-            
-            // 步骤4：初始化 SDL JNI 环境
-            initializeSDLJNI(context)
-            
-            val gameDir = File(gamePath).parent
-            if (gameDir == null) {
-                setBox64Error("无法获取游戏目录: $gamePath")
-                return -2
-            }
-            
-            AppLogger.info(TAG, "通过 glibc_bridge 启动 Box64...")
-            AppLogger.info(TAG, "  Box64 路径: ${GlibcBox64Helper.getBox64Path(context)}")
-            AppLogger.info(TAG, "  工作目录: $gameDir")
-            
-            // 步骤5：通过 glibc_bridge 执行
-            val result = GlibcBox64Helper.runBox64(
-                context = context,
-                args = arrayOf(gamePath),
-                workDir = gameDir
-            )
-            
-            AppLogger.info(TAG, "=== Box64 游戏启动完成 (glibc 模式) ===")
-            AppLogger.info(TAG, "退出代码: $result")
-            
-            if (result != 0) {
-                setBox64Error(getBox64ExitCodeDescription(result))
-            }
-            
-            return result
-        } catch (e: Exception) {
-            AppLogger.error(TAG, "启动 Box64 游戏失败 (glibc 模式)", e)
-            setBox64Error("启动异常: ${e.message}")
-            return -3
-        }
-    }
-
-    /**
-     * 获取 Box64 退出码的描述
-     */
-    private fun getBox64ExitCodeDescription(exitCode: Int): String {
-        return when (exitCode) {
-            -1 -> "Box64 初始化失败（运行时库未就绪或加载失败）"
-            -2 -> "Box64 库未加载，请确保 runtime_libs 已正确解压"
-            -3 -> "Box64 启动过程中发生异常"
-            1 -> "游戏异常退出（通用错误）"
-            127 -> "找不到游戏可执行文件或缺少依赖库"
-            134 -> "游戏崩溃 (SIGABRT)"
-            136 -> "浮点异常 (SIGFPE)"
-            137 -> "进程被杀死 (SIGKILL)"
-            139 -> "段错误 (SIGSEGV) - 内存访问错误"
-            else -> "游戏退出，代码: $exitCode"
-        }
-    }
-
-    /**
-     * 初始化 Box64 仿真环境
-     * Initialize Box64 emulation environment
-     *
-     * 此方法会提取 rootfs 并初始化 Box64 运行时环境。
-     * 可在游戏安装时预先调用，避免首次启动时的延迟。
-     *
-     * This method extracts rootfs and initializes Box64 runtime environment.
-     * Can be called during game installation to avoid delay on first launch.
-     *
-     * @param context Android 上下文，用于访问应用私有目录
-     *                Android context for accessing app private directory
-     * @return 初始化是否成功
-     *         Whether initialization succeeded
-     */
-    fun initializeBox64(context: Context): Boolean {
-        // 避免重复初始化
-        // Avoid repeated initialization
-        if (isBox64Initialized) return true
-
-        try {
-            AppLogger.info(TAG, "正在初始化 Box64 环境 / Initializing Box64 environment...")
-
-            // 检查 assets 中是否存在 runtime_libs.tar.xz
-            val hasRuntimeLibsAsset = try {
-                context.assets.list("")?.contains("runtime_libs.tar.xz") == true
-            } catch (e: Exception) {
-                false
-            }
-
-            // 确保运行时库已解压
-            // Ensure runtime libraries are extracted
-            if (!RuntimeLibraryLoader.isExtracted(context)) {
-                if (!hasRuntimeLibsAsset) {
-                    val runtimeDir = RuntimeLibraryLoader.getRuntimeLibsDir(context)
-                    setBox64Error(buildString {
-                        append("运行时库未找到\n")
-                        append("- assets 中不存在 runtime_libs.tar.xz\n")
-                        append("- 运行时目录: ${runtimeDir.absolutePath}\n")
-                        append("- 目录存在: ${runtimeDir.exists()}\n")
-                        if (runtimeDir.exists()) {
-                            val files = runtimeDir.listFiles()?.map { it.name } ?: emptyList()
-                            append("- 目录内容: ${files.take(10).joinToString(", ")}")
-                            if (files.size > 10) append("... (共${files.size}个文件)")
-                        }
-                    })
-                    return false
-                }
-                
-                AppLogger.info(TAG, "运行时库未解压，正在解压... / Runtime libs not extracted, extracting...")
-                val extracted = runBlocking {
-                    RuntimeLibraryLoader.extractRuntimeLibs(context) { progress, message ->
-                        AppLogger.debug(TAG, "解压进度 / Extract progress: $progress% - $message")
-                    }
-                }
-                if (!extracted) {
-                    setBox64Error("运行时库解压失败，请检查存储空间是否充足")
-                    return false
-                }
-                AppLogger.info(TAG, "运行时库解压完成 / Runtime libraries extracted successfully")
-            }
-
-            val filesDir = context.filesDir.absolutePath
-            val result = NativeBridge.init(context, filesDir)
-
-            if (result != 0) {
-                setBox64Error("glibc_bridge 初始化失败，错误码: $result\n可能原因：rootfs 不完整或权限问题")
-                return false
-            }
-            AppLogger.info(TAG, "glibc_bridge 初始化成功 / glibc_bridge initialized successfully")
-
-            // 加载 Box64 库
-            // Load Box64 library
-            val box64Path = Box64Helper.getBox64LibPath(context)
-            val box64File = File(box64Path)
-            if (!box64File.exists()) {
-                setBox64Error(buildString {
-                    append("Box64 库文件不存在\n")
-                    append("- 期望路径: $box64Path\n")
-                    append("- 请确保 runtime_libs.tar.xz 中包含 libbox64.so")
-                })
-                return false
-            }
-            
-            if (!Box64Helper.ensureBox64Loaded(context)) {
-                setBox64Error(buildString {
-                    append("Box64 库加载失败\n")
-                    append("- 库路径: $box64Path\n")
-                    append("- 文件大小: ${box64File.length() / 1024 / 1024} MB\n")
-                    append("- 可能原因: 库文件损坏、ABI 不兼容或内存不足")
-                })
-                return false
-            }
-
-            isBox64Initialized = true
-            AppLogger.info(TAG, "Box64 初始化成功 / Box64 initialized successfully")
-            return true
-        } catch (e: Exception) {
-            AppLogger.error(TAG, "Box64 初始化异常 / Failed to initialize Box64", e)
-            setBox64Error("Box64 初始化异常: ${e.message}")
-            return false
-        }
     }
 
     /**
@@ -497,13 +137,11 @@ object GameLauncher {
      *
      * 原因：当从 GameActivity（继承自 SDLActivity）启动时，
      * SDLActivity.onCreate() 已经初始化了 SDL。
-     * 再次调用 SDL.initialize() 会重置 mSingleton 和 mSurface 为 null，
-     * 导致 Box64 的 SDL_CreateWindow() 无法获取 native window。
+     * 再次调用 SDL.initialize() 会重置 mSingleton 和 mSurface 为 null。
      *
      * Reason: When launched from GameActivity (extends SDLActivity),
      * SDLActivity.onCreate() has already initialized SDL.
-     * Calling SDL.initialize() again would reset mSingleton and mSurface to null,
-     * causing Box64's SDL_CreateWindow() to fail to get native window.
+     * Calling SDL.initialize() again would reset mSingleton and mSurface to null.
      *
      * @param context Android 上下文，供 SDL 音频系统使用
      *                Android context for SDL audio system

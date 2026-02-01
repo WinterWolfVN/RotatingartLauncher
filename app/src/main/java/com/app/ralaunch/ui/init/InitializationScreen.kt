@@ -71,8 +71,6 @@ fun InitializationScreen(
     // 初始化组件列表（仅显示核心组件，runtime_libs 在后台处理）
     LaunchedEffect(Unit) {
         val components = mutableListOf(
-            ComponentState("rootfs", context.getString(R.string.init_component_rootfs_desc), "rootfs.tar.xz", true),
-            ComponentState("x64lib", context.getString(R.string.init_component_x64lib_desc), "x64lib.tar.xz", true),
             ComponentState("dotnet", context.getString(R.string.init_component_dotnet_desc), "dotnet.tar.xz", true)
         )
         

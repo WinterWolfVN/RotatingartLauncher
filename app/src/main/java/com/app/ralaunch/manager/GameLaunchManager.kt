@@ -44,8 +44,7 @@ class GameLaunchManager(private val context: Context) {
             return false
         }
 
-        val runtime = detectRuntime(assemblyFile)
-        AppLogger.info(TAG, "Game runtime: $runtime")
+        AppLogger.info(TAG, "Game runtime: dotnet")
 
         val patchManager: PatchManager? = try {
             KoinJavaComponent.getOrNull(PatchManager::class.java)
@@ -65,10 +64,9 @@ class GameLaunchManager(private val context: Context) {
             putExtra("ASSEMBLY_PATH", assemblyPath)
             putExtra("GAME_ID", game.gamePath)
             putExtra("GAME_PATH", game.gamePath)
-            putExtra("RUNTIME", runtime)
             putExtra("DEFAULT_RENDERER", defaultRenderer)
 
-            if (runtime != "box64" && enabledPatches.isNotEmpty()) {
+            if (enabledPatches.isNotEmpty()) {
                 putStringArrayListExtra(
                     "ENABLED_PATCH_IDS",
                     ArrayList(enabledPatches.map { it.manifest.id })
@@ -111,34 +109,6 @@ class GameLaunchManager(private val context: Context) {
         return null
     }
 
-    private fun detectRuntime(assemblyFile: File): String {
-        try {
-            val json = readGameInfoJson(assemblyFile)
-            if (json != null) {
-                if (json.has("runtime")) {
-                    return json.getString("runtime")
-                }
-
-                if (json.has("game_type")) {
-                    val gameType = json.getString("game_type")
-                    if (gameType == "starbound") {
-                        return "box64"
-                    }
-                }
-            }
-
-            val fileName = assemblyFile.name.lowercase()
-            return when {
-                fileName.endsWith(".dll") || fileName.endsWith(".exe") -> "dotnet"
-                !fileName.contains(".") -> "box64"
-                else -> "dotnet"
-            }
-        } catch (e: Exception) {
-            AppLogger.warn(TAG, "Failed to detect runtime: ${e.message}")
-        }
-        return "dotnet"
-    }
-    
     /**
      * 从 game_info.json 检测默认渲染器
      */

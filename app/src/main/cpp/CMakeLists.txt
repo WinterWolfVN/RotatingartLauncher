@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.22.1)
 project("main")
 
-# 设置路径
+# ===== FNA3D .NET 游戏启动器 =====
+# 此分支专注于运行 .NET FNA 游戏（如 Terraria、Celeste 等）
+
 set(SDL_SOURCE_DIR ${CMAKE_SOURCE_DIR}/SDL)
 set(FNA3D_SOURCE_DIR ${CMAKE_SOURCE_DIR}/FNA3D)
 set(FAUDIO_SOURCE_DIR ${CMAKE_SOURCE_DIR}/FAudio)
-
 
 # 添加 gl4es 子项目
 set(ANDROID ON CACHE BOOL "Targeting an Android device" FORCE)
@@ -16,116 +17,70 @@ set(GLX_STUBS ON CACHE BOOL "Enable GLX function stubs for GLEW compatibility" F
 set(STATICLIB OFF CACHE BOOL "Build shared library" FORCE)
 set(GL4ES_SOURCE_DIR ${CMAKE_SOURCE_DIR}/gl4es)
 
-# 找到 Android log 库供 gl4es 使用
 find_library(log-lib log)
-
-# 添加编译标志以允许 gl4es 的 GLX stubs 编译通过（NDK 28+ 更严格的类型检查）
 add_compile_options(-Wno-return-mismatch -Wno-int-conversion)
-
 add_subdirectory(${GL4ES_SOURCE_DIR})
-
-# 恢复编译标志（只对 gl4es 应用宽松的类型检查）
 remove_definitions(-Wno-return-mismatch -Wno-int-conversion)
 
-
-# 配置SDL：同时支持原生GLES和gl4es两种渲染器
+# 配置 SDL
 set(SDL_VIDEO_OPENGL ON CACHE BOOL "Enable OpenGL support (for gl4es)" FORCE)
 set(SDL_VIDEO_OPENGL_ES ON CACHE BOOL "Enable OpenGL ES (native renderer)" FORCE)
 set(SDL_VIDEO_OPENGL_EGL ON CACHE BOOL "Enable EGL" FORCE)
 set(SDL_OPENGLES ON CACHE BOOL "Enable OpenGL ES" FORCE)
-# 注意：SDL_DYNAMIC_API 在 Android 上自动关闭（SDL_dynapi.h 第48-49行）
-
-# 添加gl4es编译定义，让SDL知道我们支持gl4es渲染器
 add_compile_definitions(SDL_VIDEO_OPENGL_GL4ES)
 
 find_library(CXX_SHARED_LIB c++_shared REQUIRED)
 message(STATUS "Using libc++ shared: ${CXX_SHARED_LIB}")
 set(CMAKE_ANDROID_STL_TYPE c++_shared)
 
-# 添加SDL子项目
 add_subdirectory(${SDL_SOURCE_DIR})
 
-# 添加 FAudio 子项目
-# 配置 FAudio 使用 SDL2
+# FAudio 音频库
 set(BUILD_SDL3 OFF CACHE BOOL "Build against SDL 2.0" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library" FORCE)
 set(BUILD_UTILS OFF CACHE BOOL "Don't build utils" FORCE)
 set(BUILD_TESTS OFF CACHE BOOL "Don't build tests" FORCE)
 set(XNASONG ON CACHE BOOL "Enable XNA_Song" FORCE)
-
-# 设置 SDL2 变量供 FAudio 使用
 set(SDL2_INCLUDE_DIRS ${SDL_SOURCE_DIR}/include)
 set(SDL2_LIBRARIES SDL2)
-
 add_subdirectory(${FAUDIO_SOURCE_DIR})
 
-# 添加 netcorehost 子项目（.NET Core Hosting）
+# netcorehost (.NET Core Hosting)
 set(NETCOREHOST_SOURCE_DIR ${CMAKE_SOURCE_DIR}/netcorehost)
 add_subdirectory(${NETCOREHOST_SOURCE_DIR})
 
-# 添加 liblinkernsbypass 子项目（用于绕过 Android 命名空间限制）
+# liblinkernsbypass（绕过 Android 命名空间限制）
 add_subdirectory(${CMAKE_SOURCE_DIR}/liblinkernsbypass)
 add_subdirectory(${CMAKE_SOURCE_DIR}/linkerhook)
 
-# 添加 FNA3D 子项目
-# 配置 FNA3D 使用 SDL2 而不是 SDL3
+# FNA3D 图形库
 set(BUILD_SDL3 OFF CACHE BOOL "Build against SDL 2.0" FORCE)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library" FORCE)
 set(TRACING_SUPPORT OFF CACHE BOOL "Disable tracing" FORCE)
-# 启用原生 Vulkan 驱动
 set(BUILD_NATIVE_VULKAN ON CACHE BOOL "Enable native Vulkan driver" FORCE)
-# 启用 DXVK Native 支持 - 允许 FNA3D 使用 D3D11 -> DXVK -> Vulkan 渲染路径
 set(BUILD_DXVK_NATIVE ON CACHE BOOL "Enable DXVK Native for D3D11 support" FORCE)
-# 设置 DXVK Native 头文件路径 (需要包含 directx/ 和 windows/ 子目录)
 set(DXVK_NATIVE_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/dxvk/include/native/directx
     ${CMAKE_SOURCE_DIR}/dxvk/include/native/windows
     ${CMAKE_SOURCE_DIR}/dxvk/include/native/wsi
     ${CMAKE_SOURCE_DIR}/dxvk/include/native
 )
-# 设置 SDL2 变量供 FNA3D 使用
 set(SDL2_INCLUDE_DIRS ${SDL_SOURCE_DIR}/include)
 set(SDL2_LIBRARIES SDL2)
-# 暂存当前的 CMAKE_INSTALL_PREFIX
 set(_OLD_CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-# 设置为不安装（跳过安装规则）
 set(CMAKE_SKIP_INSTALL_RULES ON)
 add_subdirectory(${FNA3D_SOURCE_DIR})
-# 恢复设置
 set(CMAKE_SKIP_INSTALL_RULES OFF)
 set(CMAKE_INSTALL_PREFIX ${_OLD_CMAKE_INSTALL_PREFIX})
 
-# 设置 C++ 版本
 set(CMAKE_CXX_STANDARD 20)
 
-# ===== Box64 配置 =====
-# Box64 位于项目根目录的 box64 文件夹
-# CMAKE_SOURCE_DIR = D:\RotatingartLauncher\app\src\main\cpp
-# box64 位置 = D:\RotatingartLauncher\box64
-set(BOX64_ROOT ${CMAKE_SOURCE_DIR}/box64)
-get_filename_component(BOX64_ROOT ${BOX64_ROOT} ABSOLUTE)
-message(STATUS "Box64 root: ${BOX64_ROOT}")
-
-# 配置 Box64 选项 - 必须在 add_subdirectory 之前设置
-set(ARM64 ON CACHE BOOL "Target ARM64" FORCE)
-set(ANDROID ON CACHE BOOL "Build for Android" FORCE)
-set(BOX64_AS_LIBRARY ON CACHE BOOL "Build Box64 as a shared library" FORCE)
-set(NO_LIB_INSTALL ON CACHE BOOL "Don't install x86_64 libs" FORCE)
-set(NO_CONF_INSTALL ON CACHE BOOL "Don't install config files" FORCE)
-
-# 添加 Box64 子项目
-add_subdirectory(${BOX64_ROOT} ${CMAKE_BINARY_DIR}/box64)
-
-# 添加 FMOD_SDL 子项目 (SDL Audio Output Plugin for FMOD)
+# FMOD_SDL 音频插件
 add_subdirectory(FMOD_SDL_BUILD_DEPS)
 
-# 添加主程序子目录
+# 主程序
 add_subdirectory(main)
 
-# 添加 glibc_bridge 子目录 (用于Box64运行x86_64 Linux游戏)
-add_subdirectory(glibc_bridge)
-
-install(TARGETS main SDL2 FAudio-shared FNA3D netcorehost glibc_bridge fmod_SDL DESTINATION ${CMAKE_INSTALL_LIBDIR})
+# 安装目标
+install(TARGETS main SDL2 FAudio-shared FNA3D netcorehost fmod_SDL DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(TARGETS GL_gl4es EGL_gl4es DESTINATION ${CMAKE_INSTALL_LIBDIR})
-# Box64 库单独安装（编译为共享库模式）
-install(TARGETS box64 DESTINATION ${CMAKE_INSTALL_LIBDIR})

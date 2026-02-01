@@ -694,15 +694,15 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
 
         // Try a transition to resumed state
         if (mNextNativeState == NativeState.RESUMED) {
-            // Box64 fix: 添加 mSurface null 检查防止 NullPointerException
-            // 当 SDL_Init 从 Box64 线程调用时，mSurface 可能还未初始化
+            // 添加 mSurface null 检查防止 NullPointerException
+            // 当 SDL_Init 从其他线程调用时，mSurface 可能还未初始化
             if (mSurface != null && mSurface.mIsSurfaceReady && mHasFocus && mIsResumedCalled) {
                 if (mSDLThread == null) {
                     // This is the entry point to the C app.
                     // Start up the C app thread and enable sensor input for the first time
 
                     // [WARN] 关键：为 SDL 主线程设置 16MB 栈大小（防止栈溢出）
-                    // Box64 dynarec + SDL JNI回调 需要更大的栈空间
+                    // 复杂游戏 + SDL JNI回调 需要更大的栈空间
                     mSDLThread = new Thread(null, new SDLMain(), "SDLThread", 8 * 1024 * 1024); // 16MB stack
                     mSDLThread.setPriority(Thread.MAX_PRIORITY);
                     
@@ -861,7 +861,7 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
                     DisplayMetrics realMetrics = new DisplayMetrics();
                     display.getRealMetrics(realMetrics);
 
-                    // Box64 fix: 添加 mSurface null 检查
+                    // 添加 mSurface null 检查
                     boolean bFullscreenLayout = (mSurface != null) &&
                             ((realMetrics.widthPixels == mSurface.getWidth()) &&
                             (realMetrics.heightPixels == mSurface.getHeight()));
@@ -1728,7 +1728,7 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
 
         if (Build.VERSION.SDK_INT >= 24 /* Android 7.0 (N) */) {
             try {
-                // Box64 fix: 添加 mSurface null 检查
+                // 添加 mSurface null 检查
                 if (mSurface == null) {
                     return false;
                 }

@@ -1,6 +1,6 @@
 # Main library CMakeLists.txt
+# FNA3D .NET 游戏启动器 - 主 JNI 桥接库
 
-# 主程序源码
 set(MAIN_SOURCES
         sdl_entry.c
         jni_bridge.c
@@ -19,43 +19,31 @@ set(MAIN_SOURCES
         dotnet/dotnet_launcher.cpp
         dotnet/corehost_trace_redirect.cpp
         utils/native_methods.cpp
-        box64_launcher.cpp
         core/game_launcher.cpp
 )
 
 add_library(${CMAKE_PROJECT_NAME} SHARED ${MAIN_SOURCES})
 
-# 基础链接库
-# 注意：box64 改为运行时动态加载 (dlopen)，不再编译时链接
-# 这样可以将 libbox64.so 压缩存储，减小 APK 体积约 50MB
+# 链接库 - FNA3D .NET 游戏所需
 target_link_libraries(${CMAKE_PROJECT_NAME}
         android
         log
-        SDL2            # SDL2使用EGL后端
-        dl              # 用于dlopen/dlsym（动态加载 Box64 等库）
-        FAudio-shared   # FAudio音频库
-        FNA3D           # FNA3D图形库
-        mojoshader      # MojoShader着色器库（FNA3D需要）
-        netcorehost     # .NET Core Hosting库
-        linkernsbypass  # Android命名空间绕过库
-        # box64         # Box64 改为运行时 dlopen 加载
-        glibc_bridge    # glibc-bridge 库（Box64 使用）
+        SDL2
+        dl
+        FAudio-shared
+        FNA3D
+        mojoshader
+        netcorehost
+        linkernsbypass
         c++_shared
         ${CXX_SHARED_LIB}
 )
 
-# Box64 头文件路径
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-        ${BOX64_ROOT}/src/include
-        ${BOX64_ROOT}/src
-)
-
-# 包含 SDL、FNA3D、netcorehost 头文件
+# 包含头文件
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${SDL_SOURCE_DIR}/include
         ${FNA3D_SOURCE_DIR}/include
         ${NETCOREHOST_SOURCE_DIR}/include
-        ${LGOG_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/liblinkernsbypass
-        ${CMAKE_CURRENT_SOURCE_DIR}  # For local main headers
+        ${CMAKE_CURRENT_SOURCE_DIR}
 )

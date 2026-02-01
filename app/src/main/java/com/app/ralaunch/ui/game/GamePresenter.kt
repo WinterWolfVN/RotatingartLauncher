@@ -48,7 +48,6 @@ class GamePresenter : GameContract.Presenter {
             val intent = view.getActivityIntent()
 
             val assemblyPath = intent.getStringExtra("ASSEMBLY_PATH")
-            val runtime = intent.getStringExtra("RUNTIME") // "dotnet" or "box64"
 
             if (assemblyPath.isNullOrEmpty()) {
                 AppLogger.error(TAG, "Assembly path is null or empty")
@@ -81,30 +80,16 @@ class GamePresenter : GameContract.Presenter {
                 com.app.ralaunch.renderer.RendererConfig.setRenderer(appContext, defaultRenderer)
             }
 
-            val exitCode = when (runtime) {
-                "box64" -> {
-                    AppLogger.info(TAG, "Launching with Box64: $assemblyPath")
-                    val appContext: Context = KoinJavaComponent.get(Context::class.java)
-                    GameLauncher.launchBox64Game(
-                        appContext,
-                        assemblyPath
-                    ).also { code ->
-                        onGameExit(code, if (code != 0) "Box64 启动失败" else null)
-                    }
-                }
-                else -> {
-                    val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
-                    val patchManager: PatchManager? = try {
-                        KoinJavaComponent.getOrNull(PatchManager::class.java)
-                    } catch (e: Exception) { null }
-                    val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
-                        patchManager?.getPatchesByIds(it)
-                    }
-                    
-                    GameLauncher.launchDotNetAssembly(assemblyPath, emptyArray(), enabledPatches).also { code ->
-                        onGameExit(code, GameLauncher.getLastErrorMessage())
-                    }
-                }
+            val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
+            val patchManager: PatchManager? = try {
+                KoinJavaComponent.getOrNull(PatchManager::class.java)
+            } catch (e: Exception) { null }
+            val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
+                patchManager?.getPatchesByIds(it)
+            }
+            
+            val exitCode = GameLauncher.launchDotNetAssembly(assemblyPath, emptyArray(), enabledPatches).also { code ->
+                onGameExit(code, GameLauncher.getLastErrorMessage())
             }
 
             if (exitCode == 0) {
@@ -232,8 +217,7 @@ class GamePresenter : GameContract.Presenter {
             // 关键日志标签列表 - 用于捕获所有重要的运行时信息
             val importantTags = listOf(
                 // 核心组件
-                "GameLauncher", "GamePresenter", "Box64Helper", "Box64Launcher",
-                "RuntimeLibLoader", "RuntimeLibraryLoader", "NativeBridge", "GlibcBridgeJNI",
+                "GameLauncher", "GamePresenter", "RuntimeLibLoader", "RuntimeLibraryLoader",
                 // 渲染器
                 "RendererConfig", "RendererLoader", "TurnipLoader", "DXVK",
                 // .NET 运行时
@@ -297,9 +281,9 @@ class GamePresenter : GameContract.Presenter {
                 .filter { line ->
                     line.isNotBlank() &&
                     (line.contains("ralaunch", ignoreCase = true) ||
-                     line.contains("box64", ignoreCase = true) ||
                      line.contains("sdl", ignoreCase = true) ||
                      line.contains("runtime", ignoreCase = true) ||
+                     line.contains("dotnet", ignoreCase = true) ||
                      line.contains("Error") ||
                      line.contains("Exception") ||
                      line.contains("FATAL"))

@@ -75,8 +75,7 @@ object AssetIntegrityChecker {
      */
     private val RUNTIME_LIBS_CRITICAL = listOf(
         "libGL_gl4es.so" to 1_000_000L,      // GL4ES ~4.7MB
-        "libEGL_gl4es.so" to 50_000L,        // GL4ES EGL ~79KB (实际约 79,480 bytes)
-        "libbox64.so" to 10_000_000L         // Box64 ~65MB
+        "libEGL_gl4es.so" to 50_000L         // GL4ES EGL ~79KB
     )
 
     /**
@@ -137,25 +136,6 @@ object AssetIntegrityChecker {
                     type = CheckResult.IssueType.VERSION_MISMATCH,
                     description = "运行时库版本文件缺失",
                     filePath = versionFile.absolutePath,
-                    canAutoFix = true
-                ))
-            }
-        }
-
-        // 3. 检查 rootfs（Box64 需要）
-        val rootfsDir = File(filesDir, "rootfs")
-        if (!rootfsDir.exists()) {
-            // rootfs 是可选的，仅当使用 Box64 时需要
-            AppLogger.debug(TAG, "rootfs 目录不存在（Box64 可选）")
-        } else {
-            // 检查 rootfs 关键文件
-            // 注意：动态链接器在 usr/lib/ 目录下，不是 lib/
-            val ldLinux = File(rootfsDir, "usr/lib/ld-linux-aarch64.so.1")
-            if (!ldLinux.exists()) {
-                issues.add(CheckResult.Issue(
-                    type = CheckResult.IssueType.MISSING_FILE,
-                    description = "rootfs 动态链接器缺失",
-                    filePath = ldLinux.absolutePath,
                     canAutoFix = true
                 ))
             }
@@ -372,20 +352,6 @@ object AssetIntegrityChecker {
             "✗ 运行时库未解压"
         }
         sb.appendLine(runtimeStatus)
-
-        // rootfs 状态
-        val rootfsDir = File(filesDir, "rootfs")
-        val rootfsStatus = if (rootfsDir.exists()) {
-            val ldLinux = File(rootfsDir, "usr/lib/ld-linux-aarch64.so.1")
-            if (ldLinux.exists()) {
-                "✓ Box64 rootfs 已安装"
-            } else {
-                "⚠ Box64 rootfs 不完整"
-            }
-        } else {
-            "○ Box64 rootfs 未安装 (可选)"
-        }
-        sb.append(rootfsStatus)
 
         sb.toString()
     }

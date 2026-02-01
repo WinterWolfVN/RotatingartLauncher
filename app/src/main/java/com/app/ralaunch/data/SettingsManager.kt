@@ -333,14 +333,6 @@ class SettingsManager private constructor() {
         get() = getBoolean(Keys.SDL_AAUDIO_LOW_LATENCY, Defaults.SDL_AAUDIO_LOW_LATENCY)
         set(value) = putBoolean(Keys.SDL_AAUDIO_LOW_LATENCY, value)
 
-    var isBox64Enabled: Boolean
-        get() = getBoolean(Keys.BOX64_ENABLED, Defaults.BOX64_ENABLED)
-        set(value) = putBoolean(Keys.BOX64_ENABLED, value)
-
-    var box64GamePath: String
-        get() = getString(Keys.BOX64_GAME_PATH, Defaults.BOX64_GAME_PATH)
-        set(value) = putString(Keys.BOX64_GAME_PATH, value)
-
     // 联机设置
     var isMultiplayerEnabled: Boolean
         get() = getBoolean(Keys.MULTIPLAYER_ENABLED, Defaults.MULTIPLAYER_ENABLED)
@@ -415,9 +407,6 @@ class SettingsManager private constructor() {
 
         const val SDL_AAUDIO_LOW_LATENCY = "sdl_aaudio_low_latency"
 
-        const val BOX64_ENABLED = "box64_enabled"
-        const val BOX64_GAME_PATH = "box64_game_path"
-
         const val MULTIPLAYER_ENABLED = "multiplayer_enabled"
         const val MULTIPLAYER_DISCLAIMER_ACCEPTED = "multiplayer_disclaimer_accepted"
     }
@@ -482,9 +471,6 @@ class SettingsManager private constructor() {
         const val KILL_LAUNCHER_UI_AFTER_LAUNCH = false
 
         const val SDL_AAUDIO_LOW_LATENCY = false
-
-        const val BOX64_ENABLED = false
-        const val BOX64_GAME_PATH = ""
 
         const val MULTIPLAYER_ENABLED = false
         const val MULTIPLAYER_DISCLAIMER_ACCEPTED = false
