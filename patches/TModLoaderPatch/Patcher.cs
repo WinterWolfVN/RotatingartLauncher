@@ -110,6 +110,7 @@ public static class Patcher
     private static void ApplyPatchesInternal(Assembly assembly)
     {
         InstallVerifierBugMitigation(assembly);
+        CheckGoGHarmonyPatch(assembly);
         LoggingHooksHarmonyPatch(assembly);
         TMLContentManagerPatch(assembly);
         SetResolveNativeLibraryHandler(assembly);
@@ -283,6 +284,106 @@ public static class Patcher
         IsSteamUnsupported?.SetValue(null, false);
         
         Console.WriteLine("[TModLoaderPatch] InstallVerifier class mitigations applied successfully!");
+    }
+    
+    // 支持多个 GOG 哈希值的列表
+    private static readonly byte[][] _gogHashes = {
+        Convert.FromHexString("9db40ef7cd4b37794cfe29e8866bb6b4"),
+        Convert.FromHexString("c60b2ab7b63114be09765227e12875b0")
+    };
+    
+    private static readonly byte[][] _steamHashes = {
+        Convert.FromHexString("2ff21c600897a9485ca5ae645a06202d")
+    };
+    
+    /// <summary>
+    /// 应用 CheckGoG 的 Harmony 补丁，支持多个哈希值
+    /// </summary>
+    public static void CheckGoGHarmonyPatch(Assembly assembly)
+    {
+        Type? installVerifierType = assembly.GetType("Terraria.ModLoader.Engine.InstallVerifier");
+        
+        if (installVerifierType == null)
+        {
+            Console.WriteLine("[TModLoaderPatch] InstallVerifier class not found for CheckGoG patch.");
+            return;
+        }
+        
+        MethodInfo? originalMethod = installVerifierType.GetMethod("CheckGoG", BindingFlags.Static | BindingFlags.NonPublic);
+        
+        if (originalMethod == null)
+        {
+            Console.WriteLine("[TModLoaderPatch] CheckGoG method not found");
+            return;
+        }
+        
+        // 保存 InstallVerifier 类型的引用供 Prefix 使用
+        _installVerifierType = installVerifierType;
+        
+        Harmony harmony = _harmony!;
+        HarmonyMethod prefix = new HarmonyMethod(typeof(Patcher), nameof(CheckGoG_Prefix));
+        harmony.Patch(originalMethod, prefix: prefix);
+        
+        Console.WriteLine("[TModLoaderPatch] CheckGoG patch applied successfully! (supports multiple GOG hashes)");
+    }
+    
+    private static Type? _installVerifierType;
+    
+    /// <summary>
+    /// CheckGoG 的前缀补丁，支持多个 GOG 和 Steam 哈希值
+    /// </summary>
+    public static bool CheckGoG_Prefix()
+    {
+        try
+        {
+            // 获取 vanillaExePath 字段值
+            var vanillaExePathField = _installVerifierType?.GetField("vanillaExePath", BindingFlags.Static | BindingFlags.NonPublic);
+            string? vanillaExePath = vanillaExePathField?.GetValue(null) as string;
+            
+            if (string.IsNullOrEmpty(vanillaExePath) || !File.Exists(vanillaExePath))
+            {
+                Console.WriteLine($"[TModLoaderPatch] CheckGoG: vanillaExePath is invalid: {vanillaExePath}");
+                return true; // 继续执行原方法
+            }
+            
+            // 计算文件哈希
+            byte[] fileHash;
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            using (var stream = File.OpenRead(vanillaExePath))
+            {
+                fileHash = md5.ComputeHash(stream);
+            }
+            
+            // 检查是否匹配任何已知的 GOG 哈希
+            foreach (var gogHash in _gogHashes)
+            {
+                if (fileHash.SequenceEqual(gogHash))
+                {
+                    Console.WriteLine($"[TModLoaderPatch] CheckGoG: GOG hash matched! ({BitConverter.ToString(gogHash).Replace("-", "").ToLower()})");
+                    return false; // 跳过原方法
+                }
+            }
+            
+            // 检查是否匹配任何已知的 Steam 哈希
+            foreach (var steamHash in _steamHashes)
+            {
+                if (fileHash.SequenceEqual(steamHash))
+                {
+                    Console.WriteLine($"[TModLoaderPatch] CheckGoG: Steam hash matched! ({BitConverter.ToString(steamHash).Replace("-", "").ToLower()})");
+                    return false; // 跳过原方法
+                }
+            }
+            
+            // 没有匹配，输出实际哈希值以便调试
+            Console.WriteLine($"[TModLoaderPatch] CheckGoG: No hash matched. File hash: {BitConverter.ToString(fileHash).Replace("-", "").ToLower()}");
+            Console.WriteLine("[TModLoaderPatch] CheckGoG: Falling back to original method...");
+            return true; // 继续执行原方法
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TModLoaderPatch] CheckGoG_Prefix error: {ex.Message}");
+            return true; // 出错时继续执行原方法
+        }
     }
     
     public static void SetResolveNativeLibraryHandler(Assembly assembly)
