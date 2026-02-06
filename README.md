@@ -1,4 +1,4 @@
-<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:6C3483,50:2874A6,100:1ABC9C&height=220&section=header&text=Rotating%20Art%20Launcher&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=在%20Android%20上运行%20.NET%20桌面游戏&descSize=18&descAlignY=55&descAlign=50"/>
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:6C3483,50:2874A6,100:1ABC9C&height=220&section=header&text=Rotating%20Art%20Launcher&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Run%20.NET%20Desktop%20Games%20on%20Android&descSize=18&descAlignY=55&descAlign=50"/>
 
 <div align="center">
 
@@ -6,7 +6,7 @@
 
 <br/>
 
-<a href="README.md">中文</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="README_EN.md">English</a>
+<a href="README.md">English</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="README_ZH.md">中文</a>
 
 <br/><br/>
 
@@ -15,71 +15,71 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin_2.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 
-[![License](https://img.shields.io/badge/License-LGPL_3.0-2ea44f?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL_3.0-2ea44f?style=for-the-badge)](LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/FireworkSky/RotatingartLauncher?style=for-the-badge&logo=github&color=yellow)](https://github.com/FireworkSky/RotatingartLauncher/stargazers)
 [![Discord](https://img.shields.io/discord/724163890803638273?style=for-the-badge&logo=discord&logoColor=white&label=Discord&color=5865F2)](https://discord.gg/cVkrRdffGp)
-[![Patreon](https://img.shields.io/badge/Patreon-支持我们-FF424D?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/RotatingArtLauncher)
+[![Patreon](https://img.shields.io/badge/Patreon-Support_Us-FF424D?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/RotatingArtLauncher)
 
 <br/>
 
-**Rotating Art Launcher** 是一款 Android 应用，让你在移动设备上运行基于 .NET 的桌面游戏。<br/>
-支持 FNA/XNA 框架游戏、tModLoader、SMAPI、Everest 等模组加载器。
+**Rotating Art Launcher** is an Android application that lets you run .NET-based desktop games on mobile devices.<br/>
+Supports FNA/XNA framework games and mod loaders like tModLoader, SMAPI, and Everest.
 
 </div>
 
 ---
 
 <details>
-<summary><h2>📖 目录</h2></summary>
+<summary><h2>📖 Table of Contents</h2></summary>
 
-- [支持的游戏](#-支持的游戏)
-- [特性一览](#-特性一览)
-- [快速开始](#-快速开始)
-- [从源码构建](#-从源码构建)
-- [项目架构](#-项目架构)
-- [贡献指南](#-贡献指南)
-- [许可证](#-许可证)
-- [致谢](#-致谢)
-- [联系我们](#-联系我们)
+- [Supported Games](#-supported-games)
+- [Features](#-features)
+- [Getting Started](#-getting-started)
+- [Building from Source](#-building-from-source)
+- [Project Architecture](#-project-architecture)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
+- [Contact](#-contact)
 
 </details>
 
 ---
 
-## 🎮 支持的游戏
+## 🎮 Supported Games
 
 <div align="center">
 
-| 游戏 | 模组加载器 | 状态 |
-|:----:|:----------:|:----:|
-| **Terraria** (泰拉瑞亚) | tModLoader | ✅ 支持 |
-| **Stardew Valley** (星露谷物语) | SMAPI | ✅ 支持 |
-| **Celeste** (蔚蓝) | Everest | ✅ 支持 |
-| 其他 FNA/XNA .NET 游戏 | — | ✅ 支持 |
+| Game | Mod Loader | Status |
+|:----:|:----------:|:------:|
+| **Terraria** | tModLoader | ✅ Supported |
+| **Stardew Valley** | SMAPI | ✅ Supported |
+| **Celeste** | Everest | ✅ Supported |
+| Other FNA/XNA .NET Games | — | ✅ Supported |
 
 </div>
 
-## ✨ 特性一览
+## ✨ Features
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-### 🧩 .NET 运行时
-- 集成完整的 **.NET 10.0 Runtime**
-- 原生运行 .NET 程序集
-- 支持 **FNA / XNA** 游戏框架
-- 内置 **MonoMod 补丁系统**
+### 🧩 .NET Runtime
+- Full **.NET 10.0 Runtime** integrated
+- Native .NET assembly execution
+- **FNA / XNA** game framework support
+- Built-in **MonoMod patch system**
 
 </td>
 <td width="50%" valign="top">
 
-### 🖥️ 多渲染后端
-| 渲染器 | 说明 |
-|:------:|:----:|
-| Native OpenGL ES 3 | 最快，GPU 直接加速 |
-| GL4ES | 兼容性最佳 |
-| GL4ES + ANGLE | Vulkan 转译，推荐骁龙 |
+### 🖥️ Multiple Renderers
+| Renderer | Description |
+|:--------:|:-----------:|
+| Native OpenGL ES 3 | Fastest, direct GPU |
+| GL4ES | Best compatibility |
+| GL4ES + ANGLE | Vulkan, for Snapdragon |
 | MobileGlues | GL 4.6 → GLES 3.2 |
 
 </td>
@@ -87,159 +87,159 @@
 <tr>
 <td width="50%" valign="top">
 
-### 🎛️ 控制系统
-- **虚拟摇杆** — 自定义触摸摇杆
-- **虚拟按钮** — 支持不规则形状
-- **虚拟键盘** — 拖动 & 透明度调整
-- **Xbox 手柄** — 蓝牙 / USB
-- **鼠标键盘模拟** — 触控映射
-- **控件布局编辑器** — 可视化编辑
-- **控件包** — 可分享的布局包
+### 🎛️ Control System
+- **Virtual Joysticks** — Custom touch controls
+- **Virtual Buttons** — Irregular shapes
+- **Virtual Keyboard** — Drag & transparency
+- **Xbox Controller** — Bluetooth / USB
+- **Mouse + Keyboard** — Touch mapping
+- **Layout Editor** — Visual customization
+- **Control Packs** — Shareable layouts
 
 </td>
 <td width="50%" valign="top">
 
-### 🌐 更多特性
-- **GOG 集成** — 登录 GOG 下载已购游戏
-- **EasyTier 联机** — P2P VPN 多人组网
-- **补丁系统** — 自动游戏兼容性修复
-- **多进程隔离** — 游戏独立进程运行
-- **动态库加载** — 按需解压原生库
-- **Compose UI** — Material 3 现代界面
+### 🌐 More Features
+- **GOG Integration** — Download purchased games
+- **EasyTier Multiplayer** — P2P VPN networking
+- **Patch System** — Auto game compatibility
+- **Multi-Process** — Isolated game process
+- **Dynamic Loading** — On-demand native libs
+- **Compose UI** — Material 3 modern design
 
 </td>
 </tr>
 </table>
 
-## 🚀 快速开始
+## 🚀 Getting Started
 
-### 系统要求
+### Requirements
 
-> - 📱 Android 9.0 (API 28) 或更高
-> - 🏗️ ARM64-v8a 架构设备
-> - 💾 至少 2GB 可用存储
+> - 📱 Android 9.0 (API 28) or higher
+> - 🏗️ ARM64-v8a architecture device
+> - 💾 At least 2GB free storage
 
-### 安装
+### Installation
 
 ```
-1. 从 Releases 页面下载最新 APK
-2. 启用「允许安装未知来源应用」
-3. 安装并启动应用
-4. 按照引导完成初始化
+1. Download the latest APK from the Releases page
+2. Enable "Install from Unknown Sources"
+3. Install the APK and launch the app
+4. Follow the setup wizard
 ```
 
 <div align="center">
 
-[![Download](https://img.shields.io/badge/⬇_下载最新版本-28a745?style=for-the-badge)](https://github.com/FireworkSky/RotatingartLauncher/releases)
+[![Download](https://img.shields.io/badge/⬇_Download_Latest-28a745?style=for-the-badge)](https://github.com/FireworkSky/RotatingartLauncher/releases)
 
 </div>
 
-### 使用方法
+### Usage
 
-1. 打开 Rotating Art Launcher
-2. 点击 **「+」** 添加游戏（或通过 GOG 下载）
-3. 选择游戏可执行文件
-4. 配置渲染器和控件布局
-5. 启动游戏 🎮
+1. Open Rotating Art Launcher
+2. Tap **"+"** to add a game (or download via GOG)
+3. Select the game executable
+4. Configure renderer and controls
+5. Launch and enjoy 🎮
 
-## 🛠️ 从源码构建
+## 🛠️ Building from Source
 
 <details>
-<summary><b>展开查看构建指南</b></summary>
+<summary><b>Click to expand build guide</b></summary>
 
-### 前置条件
+### Prerequisites
 
-| 工具 | 版本 |
-|:----:|:----:|
-| Android Studio | 最新稳定版 |
+| Tool | Version |
+|:----:|:-------:|
+| Android Studio | Latest stable |
 | Android NDK | r28 |
 | CMake | 3.22.1+ |
 | JDK | 21 |
-| Git | 含 LFS 支持 |
+| Git | With LFS support |
 
-### 构建步骤
+### Build Steps
 
 ```bash
-# 克隆仓库
+# Clone the repository
 git clone --recursive https://github.com/FireworkSky/RotatingartLauncher.git
 cd RotatingartLauncher
 
-# 构建 Debug APK
+# Build the Debug APK
 ./gradlew assembleDebug
 ```
 
-APK 输出路径：`app/build/outputs/apk/debug/`
+Output: `app/build/outputs/apk/debug/`
 
 </details>
 
-## 📁 项目架构
+## 📁 Project Architecture
 
 <details>
-<summary><b>展开查看目录结构</b></summary>
+<summary><b>Click to expand directory structure</b></summary>
 
 ```
 RotatingartLauncher/
-├── app/                          # Android 应用主模块
+├── app/                          # Main Android application module
 │   └── src/main/
-│       ├── java/.../ralaunch/    # Kotlin/Java 源码
-│       │   ├── core/             #   游戏启动核心逻辑
-│       │   ├── dotnet/           #   .NET 运行时集成
-│       │   ├── renderer/         #   渲染器配置与加载
-│       │   ├── controls/         #   虚拟控件系统
-│       │   ├── gog/              #   GOG Galaxy 集成
-│       │   ├── easytier/         #   EasyTier 联机服务
-│       │   ├── patch/            #   补丁管理系统
-│       │   └── ui/               #   Compose UI 界面
-│       ├── cpp/                  #   原生 C/C++ (SDL2, GL4ES ...)
-│       └── assets/               #   运行时资源
-├── shared/                       # Kotlin Multiplatform 共享模块
+│       ├── java/.../ralaunch/    # Kotlin/Java source code
+│       │   ├── core/             #   Game launch core logic
+│       │   ├── dotnet/           #   .NET runtime integration
+│       │   ├── renderer/         #   Renderer config & loading
+│       │   ├── controls/         #   Virtual control system
+│       │   ├── gog/              #   GOG Galaxy integration
+│       │   ├── easytier/         #   EasyTier multiplayer service
+│       │   ├── patch/            #   Patch management system
+│       │   └── ui/               #   Compose UI screens
+│       ├── cpp/                  #   Native C/C++ (SDL2, GL4ES ...)
+│       └── assets/               #   Runtime resources
+├── shared/                       # Kotlin Multiplatform shared module
 │   └── src/
-│       ├── commonMain/           #   通用 UI、领域模型、数据层
-│       └── androidMain/          #   Android 平台实现
-└── patches/                      # C# 游戏补丁文件
+│       ├── commonMain/           #   Shared UI, domain, data layer
+│       └── androidMain/          #   Android-specific implementations
+└── patches/                      # C# game patch files
 ```
 
 </details>
 
-## 🤝 贡献指南
+## 🤝 Contributing
 
-欢迎提交 Issue 和 Pull Request！
+Contributions are welcome! Feel free to submit Issues and Pull Requests.
 
 <details>
-<summary><b>展开查看贡献步骤</b></summary>
+<summary><b>Click to expand contributing guide</b></summary>
 
-1. Fork 本仓库
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+1. Fork this repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-### 代码规范
+### Code Style
 
-- 遵循 Android Kotlin 编码规范
-- 使用有意义的变量和函数命名
-- 为复杂逻辑添加注释
+- Follow Android Kotlin coding guidelines
+- Use meaningful variable and function names
+- Add comments for complex logic
 
-### 报告问题
+### Reporting Issues
 
-1. 先查看已有 [Issues](https://github.com/FireworkSky/RotatingartLauncher/issues) 避免重复
-2. 创建新 Issue 时请提供：
-   - 问题的清晰描述
-   - 复现步骤
-   - 设备信息（型号、Android 版本）
-   - 日志（如有）
+1. Check existing [Issues](https://github.com/FireworkSky/RotatingartLauncher/issues) to avoid duplicates
+2. Create a new issue with:
+   - Clear description of the problem
+   - Steps to reproduce
+   - Device info (model, Android version)
+   - Logs (if applicable)
 
 </details>
 
-## 📄 许可证
+## 📄 License
 
-本项目基于 **GNU Lesser General Public License v3.0 (LGPLv3)** 开源。详见 [LICENSE](LICENSE) 文件。
+This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE](LICENSE) file for details.
 
 <details>
-<summary><b>第三方库许可</b></summary>
+<summary><b>Third-Party Licenses</b></summary>
 
-| 库 | 许可证 |
-|:--:|:------:|
+| Library | License |
+|:-------:|:-------:|
 | [SDL2](https://www.libsdl.org/) | [Zlib License](https://www.libsdl.org/license.php) |
 | [GL4ES](https://github.com/ptitSeb/gl4es) | [MIT License](https://github.com/ptitSeb/gl4es/blob/master/LICENSE) |
 | [.NET Runtime](https://github.com/dotnet/runtime) | [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) |
@@ -247,38 +247,38 @@ RotatingartLauncher/
 
 </details>
 
-## 🙏 致谢
+## 🙏 Acknowledgments
 
 <div align="center">
 
-感谢以下开源项目和社区
+Special thanks to the following open-source projects and communities
 
 </div>
 
-| 项目 | 说明 |
-|:----:|:----:|
-| [SDL Project](https://www.libsdl.org/) | 跨平台媒体库 |
-| [GL4ES](https://github.com/ptitSeb/gl4es) | OpenGL 兼容层 |
-| [.NET Runtime](https://github.com/dotnet/runtime) | .NET 运行时 |
-| [FNA](https://github.com/FNA-XNA/FNA) | XNA 兼容框架 |
+| Project | Description |
+|:-------:|:-----------:|
+| [SDL Project](https://www.libsdl.org/) | Cross-platform media library |
+| [GL4ES](https://github.com/ptitSeb/gl4es) | OpenGL compatibility layer |
+| [.NET Runtime](https://github.com/dotnet/runtime) | .NET runtime |
+| [FNA](https://github.com/FNA-XNA/FNA) | XNA compatibility framework |
 | [ANGLE](https://chromium.googlesource.com/angle/angle) | OpenGL ES over Vulkan |
-| [EasyTier](https://github.com/EasyTier/EasyTier) | P2P 组网 |
-| [PojavLauncher](https://github.com/PojavLauncherTeam/PojavLauncher) | 启动器灵感来源 |
+| [EasyTier](https://github.com/EasyTier/EasyTier) | P2P networking |
+| [PojavLauncher](https://github.com/PojavLauncherTeam/PojavLauncher) | Launcher inspiration |
 
 <div align="center">
 
-感谢所有贡献者和 [Patreon 支持者](https://www.patreon.com/c/RotatingArtLauncher) ！
+Thanks to all contributors and [Patreon supporters](https://www.patreon.com/c/RotatingArtLauncher)!
 
 </div>
 
-## 📬 联系我们
+## 📬 Contact
 
 <div align="center">
 
-[![Issue](https://img.shields.io/badge/提交_Issue-171515?style=for-the-badge&logo=github&logoColor=white)](https://github.com/FireworkSky/RotatingartLauncher/issues)
-[![Discussions](https://img.shields.io/badge/参与讨论-171515?style=for-the-badge&logo=github&logoColor=white)](https://github.com/FireworkSky/RotatingartLauncher/discussions)
-[![Discord](https://img.shields.io/badge/加入_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/cVkrRdffGp)
-[![Patreon](https://img.shields.io/badge/支持我们-FF424D?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/RotatingArtLauncher)
+[![Issue](https://img.shields.io/badge/Submit_Issue-171515?style=for-the-badge&logo=github&logoColor=white)](https://github.com/FireworkSky/RotatingartLauncher/issues)
+[![Discussions](https://img.shields.io/badge/Discussions-171515?style=for-the-badge&logo=github&logoColor=white)](https://github.com/FireworkSky/RotatingartLauncher/discussions)
+[![Discord](https://img.shields.io/badge/Join_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/cVkrRdffGp)
+[![Patreon](https://img.shields.io/badge/Support_Us-FF424D?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/RotatingArtLauncher)
 
 </div>
 
