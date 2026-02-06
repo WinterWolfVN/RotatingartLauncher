@@ -1,116 +1,212 @@
-<h1 align="center">Rotating Art Launcher</h1>
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:6C3483,50:2874A6,100:1ABC9C&height=220&section=header&text=Rotating%20Art%20Launcher&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Run%20.NET%20Desktop%20Games%20on%20Android&descSize=18&descAlignY=55&descAlign=50"/>
 
 <div align="center">
-  <a href="README.md">中文</a> | <a href="README_EN.md">English</a>
+
+<img src="icons/ral_app.svg" alt="Logo" width="100" height="100">
+
+<br/>
+
+<a href="README.md">中文</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a href="README_EN.md">English</a>
+
+<br/><br/>
+
+[![Android](https://img.shields.io/badge/Android_9.0+-34A853?style=for-the-badge&logo=android&logoColor=white)](https://www.android.com)
+[![.NET](https://img.shields.io/badge/.NET_10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin_2.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose](https://img.shields.io/badge/Jetpack_Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+
+[![License](https://img.shields.io/badge/License-LGPL_3.0-2ea44f?style=for-the-badge)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/FireworkSky/RotatingartLauncher?style=for-the-badge&logo=github&color=yellow)](https://github.com/FireworkSky/RotatingartLauncher/stargazers)
+[![Discord](https://img.shields.io/discord/724163890803638273?style=for-the-badge&logo=discord&logoColor=white&label=Discord&color=5865F2)](https://discord.gg/cVkrRdffGp)
+[![Patreon](https://img.shields.io/badge/Patreon-Support_Us-FF424D?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/RotatingArtLauncher)
+
+<br/>
+
+**Rotating Art Launcher** is an Android application that lets you run .NET-based desktop games on mobile devices.<br/>
+Supports FNA/XNA framework games and mod loaders like tModLoader, SMAPI, and Everest.
+
 </div>
+
+---
+
+<details>
+<summary><h2>📖 Table of Contents</h2></summary>
+
+- [Supported Games](#-supported-games)
+- [Features](#-features)
+- [Getting Started](#-getting-started)
+- [Building from Source](#-building-from-source)
+- [Project Architecture](#-project-architecture)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Acknowledgments](#-acknowledgments)
+- [Contact](#-contact)
+
+</details>
+
+---
+
+## 🎮 Supported Games
 
 <div align="center">
-  <img src="icons/ral_app.svg" alt="Rotating Art Launcher Logo" width="128" height="128">
-  
-  
-  
-  [![Android](https://img.shields.io/badge/Android-7.0+-green?logo=android)](https://www.android.com)
-  [![.NET](https://img.shields.io/badge/.NET-8.0-blue?logo=dotnet)](https://dotnet.microsoft.com)
-  [![License](https://img.shields.io/badge/License-LGPL--3.0-green)](LICENSE)
-  [![Stars](https://img.shields.io/badge/Stars-Give%20us%20a%20star-yellow?style=social&logo=github)](https://github.com/Fireworkshh/Rotating-art-Launcher/stargazers)
-  [![Discord](https://img.shields.io/discord/724163890803638273.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/cVkrRdffGp)
-  [![Patreon](https://img.shields.io/badge/Patreon-Support%20Us-FF424D?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/RotatingArtLauncher)
-</div>
 
-Rotating Art Launcher is an Android application that allows you to run .NET Core-based games, tModLoader, SMAPI, and more on mobile devices.
+| Game | Mod Loader | Status |
+|:----:|:----------:|:------:|
+| **Terraria** | tModLoader | ✅ Supported |
+| **Stardew Valley** | SMAPI | ✅ Supported |
+| **Celeste** | Everest | ✅ Supported |
+| Other FNA/XNA .NET Games | — | ✅ Supported |
+
+</div>
 
 ## ✨ Features
 
-- **Native .NET Support** - Integrated full .NET 10.0 Runtime, supporting .NET assemblies
-- **FNA/XNA Framework Compatibility** - Support for FNA and XNA game frameworks
-- **Multiple Renderers** - Support for GL4ES, OSMesa + Zink, Angle, and other rendering solutions
-- **Customizable Controls** - Xbox controller mode, virtual joystick controller, mouse + keyboard controls, custom game control mapping
-- **Virtual Keyboard** - Built-in virtual keyboard with drag support and transparency adjustment
-- **Dynamic Renderer Selection** - Choose between Native OpenGL ES 3, GL4ES, and GL4ES + ANGLE renderers
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🧩 .NET Runtime
+- Full **.NET 10.0 Runtime** integrated
+- Native .NET assembly execution
+- **FNA / XNA** game framework support
+- Built-in **MonoMod patch system**
+
+</td>
+<td width="50%" valign="top">
+
+### 🖥️ Multiple Renderers
+| Renderer | Description |
+|:--------:|:-----------:|
+| Native OpenGL ES 3 | Fastest, direct GPU |
+| GL4ES | Best compatibility |
+| GL4ES + ANGLE | Vulkan, for Snapdragon |
+| MobileGlues | GL 4.6 → GLES 3.2 |
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+### 🎛️ Control System
+- **Virtual Joysticks** — Custom touch controls
+- **Virtual Buttons** — Irregular shapes
+- **Virtual Keyboard** — Drag & transparency
+- **Xbox Controller** — Bluetooth / USB
+- **Mouse + Keyboard** — Touch mapping
+- **Layout Editor** — Visual customization
+- **Control Packs** — Shareable layouts
+
+</td>
+<td width="50%" valign="top">
+
+### 🌐 More Features
+- **GOG Integration** — Download purchased games
+- **EasyTier Multiplayer** — P2P VPN networking
+- **Patch System** — Auto game compatibility
+- **Multi-Process** — Isolated game process
+- **Dynamic Loading** — On-demand native libs
+- **Compose UI** — Material 3 modern design
+
+</td>
+</tr>
+</table>
 
 ## 🚀 Getting Started
 
 ### Requirements
 
-- Android 7.0 (API level 24) or higher
-- ARM64-v8a architecture device
-- At least 2GB of free storage space
+> - 📱 Android 9.0 (API 28) or higher
+> - 🏗️ ARM64-v8a architecture device
+> - 💾 At least 2GB free storage
 
 ### Installation
 
-1. Download the latest APK from the [Releases](https://github.com/Fireworkshh/Rotating-art-Launcher/releases) page
-2. Enable "Install from Unknown Sources" in your Android settings
-3. Install the APK on your device
-4. Launch the app and follow the setup wizard
+```
+1. Download the latest APK from the Releases page
+2. Enable "Install from Unknown Sources"
+3. Install the APK and launch the app
+4. Follow the setup wizard
+```
 
-## 🎮 Usage
+<div align="center">
 
-### Adding Games
+[![Download](https://img.shields.io/badge/⬇_Download_Latest-28a745?style=for-the-badge)](https://github.com/FireworkSky/RotatingartLauncher/releases)
+
+</div>
+
+### Usage
 
 1. Open Rotating Art Launcher
-2. Tap the "+" button to add a new game
-3. Select your game's executable file
-4. Configure game settings (renderer, controls, etc.)
-5. Launch and enjoy!
-
-### Configuring Controls
-
-- **Virtual Joystick**: Tap and drag to move
-- **Virtual Buttons**: Tap to trigger actions
-- **Virtual Keyboard**: Toggle via the keyboard button in controls
-- **Xbox Controller**: Connect a compatible controller via Bluetooth or USB
-
-### Renderer Selection
-
-Choose the best renderer for your device:
-
-- **Native OpenGL ES 3**: Fastest with GPU acceleration, but may have rendering errors
-- **GL4ES**: Most compatible with games, slightly slower frame rate
-- **GL4ES + ANGLE**: Translated to Vulkan, best balance of speed and compatibility (recommended for Qualcomm Snapdragon)
+2. Tap **"+"** to add a game (or download via GOG)
+3. Select the game executable
+4. Configure renderer and controls
+5. Launch and enjoy 🎮
 
 ## 🛠️ Building from Source
 
+<details>
+<summary><b>Click to expand build guide</b></summary>
+
 ### Prerequisites
 
-- Android Studio Arctic Fox or later
-- Android NDK r21e or later
-- CMake 3.18 or later
-- Git with LFS support
+| Tool | Version |
+|:----:|:-------:|
+| Android Studio | Latest stable |
+| Android NDK | r28 |
+| CMake | 3.22.1+ |
+| JDK | 21 |
+| Git | With LFS support |
 
 ### Build Steps
 
-1. Clone the repository:
 ```bash
-git clone --recursive https://github.com/Fireworkshh/Rotating-art-Launcher.git
-cd Rotating-art-Launcher
-```
+# Clone the repository
+git clone --recursive https://github.com/FireworkSky/RotatingartLauncher.git
+cd RotatingartLauncher
 
-2. Open the project in Android Studio
-
-3. Sync Gradle dependencies
-
-4. Build the APK:
-```bash
+# Build the Debug APK
 ./gradlew assembleDebug
 ```
 
-The APK will be generated in `app/build/outputs/apk/debug/`
+Output: `app/build/outputs/apk/debug/`
 
-## 📚 Documentation
+</details>
 
-For detailed documentation, please refer to the [docs](docs/) directory:
+## 📁 Project Architecture
 
-- [Code Structure](docs/CODE_STRUCTURE.md)
-- [Renderer Usage Guide](docs/RENDERER_USAGE_GUIDE.md)
-- [Xbox Controller Architecture](docs/XBOX_CONTROLLER_ARCHITECTURE.md)
-- [Virtual Joystick SDL Mode](docs/VIRTUAL_JOYSTICK_SDL_MODE.md)
-- [Patch System](docs/PATCH_SYSTEM.md)
+<details>
+<summary><b>Click to expand directory structure</b></summary>
+
+```
+RotatingartLauncher/
+├── app/                          # Main Android application module
+│   └── src/main/
+│       ├── java/.../ralaunch/    # Kotlin/Java source code
+│       │   ├── core/             #   Game launch core logic
+│       │   ├── dotnet/           #   .NET runtime integration
+│       │   ├── renderer/         #   Renderer config & loading
+│       │   ├── controls/         #   Virtual control system
+│       │   ├── gog/              #   GOG Galaxy integration
+│       │   ├── easytier/         #   EasyTier multiplayer service
+│       │   ├── patch/            #   Patch management system
+│       │   └── ui/               #   Compose UI screens
+│       ├── cpp/                  #   Native C/C++ (SDL2, GL4ES ...)
+│       └── assets/               #   Runtime resources
+├── shared/                       # Kotlin Multiplatform shared module
+│   └── src/
+│       ├── commonMain/           #   Shared UI, domain, data layer
+│       └── androidMain/          #   Android-specific implementations
+└── patches/                      # C# game patch files
+```
+
+</details>
 
 ## 🤝 Contributing
 
-We welcome contributions! Please feel free to submit Issues and Pull Requests.
+Contributions are welcome! Feel free to submit Issues and Pull Requests.
 
-### How to Contribute
+<details>
+<summary><b>Click to expand contributing guide</b></summary>
 
 1. Fork this repository
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
@@ -120,63 +216,70 @@ We welcome contributions! Please feel free to submit Issues and Pull Requests.
 
 ### Code Style
 
-- Follow Android Kotlin/Java style guidelines
+- Follow Android Kotlin coding guidelines
 - Use meaningful variable and function names
 - Add comments for complex logic
-- Write unit tests for new features when possible
 
-## 🐛 Reporting Issues
+### Reporting Issues
 
-If you encounter any bugs or have feature requests, please:
-
-1. Check existing [Issues](https://github.com/Fireworkshh/Rotating-art-Launcher/issues) to avoid duplicates
+1. Check existing [Issues](https://github.com/FireworkSky/RotatingartLauncher/issues) to avoid duplicates
 2. Create a new issue with:
    - Clear description of the problem
    - Steps to reproduce
-   - Device information (model, Android version)
+   - Device info (model, Android version)
    - Logs (if applicable)
+
+</details>
 
 ## 📄 License
 
-This project is licensed under the **GNU Lesser General Public License v3.0 (LGPLv3)**.
+This project is licensed under the **GNU Lesser General Public License v3.0 (LGPLv3)**. See the [LICENSE](LICENSE) file for details.
 
-See the [LICENSE](LICENSE) file for details.
+<details>
+<summary><b>Third-Party Licenses</b></summary>
 
-### Third-Party Licenses
+| Library | License |
+|:-------:|:-------:|
+| [SDL2](https://www.libsdl.org/) | [Zlib License](https://www.libsdl.org/license.php) |
+| [GL4ES](https://github.com/ptitSeb/gl4es) | [MIT License](https://github.com/ptitSeb/gl4es/blob/master/LICENSE) |
+| [.NET Runtime](https://github.com/dotnet/runtime) | [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) |
+| [FNA3D](https://github.com/FNA-XNA/FNA3D) | [Microsoft Public License](https://github.com/FNA-XNA/FNA3D/blob/master/LICENSE) |
 
-- **SDL2** - [Zlib License](https://www.libsdl.org/license.php)
-- **GL4ES** - [MIT License](https://github.com/ptitSeb/gl4es/blob/master/LICENSE)
-- **.NET Runtime** - [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT)
-- **FNA3D** - [Microsoft Public License](https://github.com/FNA-XNA/FNA3D/blob/master/LICENSE)
+</details>
 
 ## 🙏 Acknowledgments
 
-Special thanks to the following open-source projects and communities:
-
-- [SDL Project](https://www.libsdl.org/) - Cross-platform media library
-- [GL4ES](https://github.com/ptitSeb/gl4es) - OpenGL compatibility layer
-- [.NET Runtime](https://github.com/dotnet/runtime) - .NET runtime
-- [FNA](https://github.com/FNA-XNA/FNA) - XNA compatibility framework
-- [PojavLauncher](https://github.com/PojavLauncherTeam/PojavLauncher) - Inspiration from Minecraft launcher
-- All contributors and users
-- Special thanks to all [Patreon supporters](https://www.patreon.com/c/RotatingArtLauncher)!
-
-## 📞 Contact
-
-For questions or suggestions, please:
-
-- 💬 Submit an [Issue](https://github.com/Fireworkshh/Rotating-art-Launcher/issues)
-- 🗣️ Visit [Discussions](https://github.com/Fireworkshh/Rotating-art-Launcher/discussions)
-- 💝 Support us on [Patreon](https://www.patreon.com/c/RotatingArtLauncher)
-- 💬 Join our [Discord](https://discord.gg/cVkrRdffGp)
-
----
-
 <div align="center">
-  
-**Made with ❤️ by the Rotating Art Launcher Team**
 
-⭐ If this project helps you, please give it a Star!
+Special thanks to the following open-source projects and communities
 
 </div>
 
+| Project | Description |
+|:-------:|:-----------:|
+| [SDL Project](https://www.libsdl.org/) | Cross-platform media library |
+| [GL4ES](https://github.com/ptitSeb/gl4es) | OpenGL compatibility layer |
+| [.NET Runtime](https://github.com/dotnet/runtime) | .NET runtime |
+| [FNA](https://github.com/FNA-XNA/FNA) | XNA compatibility framework |
+| [ANGLE](https://chromium.googlesource.com/angle/angle) | OpenGL ES over Vulkan |
+| [EasyTier](https://github.com/EasyTier/EasyTier) | P2P networking |
+| [PojavLauncher](https://github.com/PojavLauncherTeam/PojavLauncher) | Launcher inspiration |
+
+<div align="center">
+
+Thanks to all contributors and [Patreon supporters](https://www.patreon.com/c/RotatingArtLauncher)!
+
+</div>
+
+## 📬 Contact
+
+<div align="center">
+
+[![Issue](https://img.shields.io/badge/Submit_Issue-171515?style=for-the-badge&logo=github&logoColor=white)](https://github.com/FireworkSky/RotatingartLauncher/issues)
+[![Discussions](https://img.shields.io/badge/Discussions-171515?style=for-the-badge&logo=github&logoColor=white)](https://github.com/FireworkSky/RotatingartLauncher/discussions)
+[![Discord](https://img.shields.io/badge/Join_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/cVkrRdffGp)
+[![Patreon](https://img.shields.io/badge/Support_Us-FF424D?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/c/RotatingArtLauncher)
+
+</div>
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:6C3483,50:2874A6,100:1ABC9C&height=120&section=footer"/>
