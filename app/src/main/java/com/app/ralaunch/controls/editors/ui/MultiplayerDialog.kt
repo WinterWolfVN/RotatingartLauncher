@@ -65,8 +65,16 @@ fun MultiplayerDialog(
     var showError by remember { mutableStateOf<String?>(null) }
     var generatedInviteCode by remember { mutableStateOf<String?>(null) }
     var isCreatingRoom by remember { mutableStateOf(false) } // 正在创建房间
+    var showDiagnostics by remember { mutableStateOf(false) } // 显示诊断弹窗
     
     val clipboardManager = LocalClipboardManager.current
+    
+    // 诊断弹窗
+    if (showDiagnostics) {
+        MultiplayerDiagnosticsDialog(
+            onDismiss = { showDiagnostics = false }
+        )
+    }
     var showCopied by remember { mutableStateOf(false) }
     
     // 生成随机房间名和密码
@@ -78,34 +86,15 @@ fun MultiplayerDialog(
     }
     
     // 创建房间的函数
-    // 流程：请求 VPN 权限 → 初始化 VPN 服务（创建 TUN 接口） → 创建房间
+    // no_tun 模式：直接创建房间，无需 VPN 权限
     fun createRoom() {
         isCreatingRoom = true
         showError = null
         
-        // 第一步：请求 VPN 权限
-        callbacks.prepareVpnPermission(
-            onGranted = {
-                // 第二步：初始化 VPN 服务（创建 TUN 接口）
-                callbacks.initVpnService(
-                    onReady = {
-                        // 第三步：VPN 就绪，创建房间（作为房主）
-                        val (roomName, password) = generateRoomCredentials()
-                        generatedInviteCode = InviteCodeUtils.encode(roomName, password)
-                        callbacks.onMultiplayerConnect(roomName, password, isHost = true)
-                        isCreatingRoom = false
-                    },
-                    onError = { error ->
-                        showError = "VPN 初始化失败: $error"
-                        isCreatingRoom = false
-                    }
-                )
-            },
-            onDenied = {
-                showError = "需要 VPN 权限才能使用联机功能"
-                isCreatingRoom = false
-            }
-        )
+        val (roomName, password) = generateRoomCredentials()
+        generatedInviteCode = InviteCodeUtils.encode(roomName, password)
+        callbacks.onMultiplayerConnect(roomName, password, isHost = true)
+        isCreatingRoom = false
     }
     
     // 全屏半透明遮罩
@@ -224,6 +213,18 @@ fun MultiplayerDialog(
                             
                             Spacer(modifier = Modifier.weight(1f))
                             
+                            // 诊断按钮
+                            TextButton(
+                                onClick = { showDiagnostics = true },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            ) {
+                                Icon(Icons.Default.BugReport, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("诊断")
+                            }
+                            
                             // 关闭按钮
                             TextButton(
                                 onClick = onDismiss,
@@ -276,25 +277,8 @@ fun MultiplayerDialog(
                                                 return@JoinRoomDialogContent
                                             }
                                             showError = null
-                                            
-                                            // 第一步：请求 VPN 权限
-                                            callbacks.prepareVpnPermission(
-                                                onGranted = {
-                                                    // 第二步：初始化 VPN 服务
-                                                    callbacks.initVpnService(
-                                                        onReady = {
-                                                            // 第三步：连接房间（作为加入者）
-                                                            callbacks.onMultiplayerConnect(decoded.first, decoded.second, isHost = false)
-                                                        },
-                                                        onError = { error ->
-                                                            showError = "VPN 初始化失败: $error"
-                                                        }
-                                                    )
-                                                },
-                                                onDenied = {
-                                                    showError = "需要 VPN 权限才能使用联机功能"
-                                                }
-                                            )
+                                            // no_tun 模式：直接连接，无需 VPN
+                                            callbacks.onMultiplayerConnect(decoded.first, decoded.second, isHost = false)
                                         }
                                     )
                                 }
@@ -456,7 +440,7 @@ private fun CreateRoomDialogContent(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "请在系统弹窗中允许 VPN 连接",
+                    text = "正在连接公共服务器...",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

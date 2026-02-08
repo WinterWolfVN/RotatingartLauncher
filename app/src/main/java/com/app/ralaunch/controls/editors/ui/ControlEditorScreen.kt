@@ -58,8 +58,9 @@ fun ControlEditorScreen(
         }
     }
 
-    // 适配主题背景色
-    val backgroundColor = MaterialTheme.colorScheme.background
+    // 编辑器背景固定用深灰色，模拟游戏中的深色背景
+    // 不受浅色/深色主题影响，确保控件（通常为浅色边框/文字）始终清晰可见
+    val backgroundColor = androidx.compose.ui.graphics.Color(0xFF2D2D2D)
 
     Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
         // Layer 0: 游戏预览层 (AndroidView)

@@ -25,6 +25,7 @@ import com.app.ralaunch.ui.main.MainActivityCompose
 import com.app.ralaunch.utils.AssetIntegrityChecker
 import com.app.ralaunch.R
 import com.app.ralaunch.runtime.RuntimeLibraryLoader
+import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.utils.LocaleManager
 import kotlinx.coroutines.launch
 

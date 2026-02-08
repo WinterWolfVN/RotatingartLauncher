@@ -249,12 +249,14 @@ fun RaLaunchTheme(
         else -> darkTheme // 跟随系统
     }
     
-    // 根据种子颜色动态生成颜色方案（不使用 remember，确保每次 themeColor 变化都重新计算）
-    val seedColor = Color(themeColor)
-    val colorScheme = if (useDarkTheme) {
-        generateDarkColorScheme(seedColor)
-    } else {
-        generateLightColorScheme(seedColor)
+    // 根据种子颜色动态生成颜色方案（使用 remember 缓存，仅当 themeColor 或 useDarkTheme 变化时才重新计算）
+    val colorScheme = remember(themeColor, useDarkTheme) {
+        val seedColor = Color(themeColor)
+        if (useDarkTheme) {
+            generateDarkColorScheme(seedColor)
+        } else {
+            generateLightColorScheme(seedColor)
+        }
     }
     
     val extendedColors = if (useDarkTheme) DarkExtendedColors else LightExtendedColors

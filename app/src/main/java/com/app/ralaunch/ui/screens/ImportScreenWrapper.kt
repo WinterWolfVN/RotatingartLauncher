@@ -3,7 +3,9 @@ package com.app.ralaunch.ui.screens
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,11 +25,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.ralaunch.R
 import com.app.ralaunch.data.model.GameItem
 import com.app.ralaunch.data.repository.GameRepository
 import com.app.ralaunch.installer.GameInstaller
@@ -202,122 +207,120 @@ private fun ModernImportScreen(
                     .padding(end = 16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // 上部：标题和说明
-                Column {
-                    // 标题行
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            primaryColor,
-                                            primaryColor.copy(alpha = 0.7f)
-                                        )
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp),
-                                tint = Color.White
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "导入新游戏",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    
-                    // 说明
-                    Text(
-                        text = "支持 .sh 和 .zip 格式的游戏安装包",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                // 中部：检测结果（关键信息，居中显示）
-                // 优先显示模组加载器名称，否则显示游戏名称
+                // 上部：标题
+                Text(
+                    text = "导入新游戏",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                // 检测结果（选择文件后显示）
                 val displayName = modLoaderName ?: gameName
                 val displayLabel = if (modLoaderName != null) "检测到模组加载器" else "检测到游戏"
-                
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+
+                AnimatedVisibility(
+                    visible = displayName != null,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
                 ) {
-                    AnimatedVisibility(
-                        visible = displayName != null,
-                        enter = fadeIn() + scaleIn(),
-                        exit = fadeOut() + scaleOut()
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 2.dp
                     ) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            tonalElevation = 2.dp
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(28.dp)
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = displayLabel,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = displayLabel,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                    )
-                                    Text(
-                                        text = displayName ?: "",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
+                                Text(
+                                    text = displayName ?: "",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
                         }
                     }
-                    
-                    // 未选择时显示提示
-                    AnimatedVisibility(
-                        visible = displayName == null && !isImporting
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.SportsEsports,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "请先选择游戏文件",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
+                }
+
+                // 中部：引导教程（可滚动）
+                val guideScrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(guideScrollState),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Step 1: 购买游戏
+                    ImportGuideSection(
+                        title = "第一步：购买游戏",
+                        icon = Icons.Outlined.ShoppingCart,
+                        steps = listOf(
+                            "前往 GOG.com 注册并登录账号",
+                            "搜索并购买游戏（如 Terraria、Stardew Valley）",
+                            "如已拥有游戏，跳过此步骤"
+                        )
+                    )
+
+                    // Step 2: 下载游戏
+                    ImportGuideSection(
+                        title = "第二步：下载游戏安装包",
+                        icon = Icons.Outlined.CloudDownload,
+                        steps = listOf(
+                            "在 GOG.com 点击头像进入「我的游戏」",
+                            "找到游戏，点击进入下载页面",
+                            "System 选择「Linux」版本",
+                            "下载 .sh 安装包（如 terraria_v1_4_5_4_88511.sh）"
+                        ),
+                        imageResId = R.drawable.guide_gog_download
+                    )
+
+                    // Step 3: 模组加载器（可选）
+                    ImportGuideSection(
+                        title = "第三步：下载模组加载器（可选）",
+                        icon = Icons.Outlined.Build,
+                        steps = listOf(
+                            "tModLoader（Terraria 模组）：",
+                            "  前往 github.com/tModLoader/tModLoader/releases",
+                            "  下载最新 stable 版本的 tModLoader.zip",
+                            "",
+                            "SMAPI（Stardew Valley 模组）：",
+                            "  前往 smapi.io 点击 Download",
+                            "  下载 SMAPI Linux 版本安装包"
+                        ),
+                        imageResId = R.drawable.guide_tmodloader_download
+                    )
+
+                    // Step 4: 导入到启动器
+                    ImportGuideSection(
+                        title = "第四步：导入到启动器",
+                        icon = Icons.Outlined.InstallMobile,
+                        steps = listOf(
+                            "点击右侧「游戏文件」→ 选择下载的 .sh 或 .zip 文件",
+                            "如需模组加载器，点击「模组加载器」→ 选择对应文件",
+                            "确认上方识别结果无误",
+                            "点击「开始导入」等待安装完成",
+                            "返回游戏列表即可启动游戏"
+                        )
+                    )
                 }
                 
                 // 下部：进度显示
@@ -389,7 +392,7 @@ private fun ModernImportScreen(
                 ModernFileCard(
                     title = "模组加载器",
                     subtitle = if (modLoaderFilePath != null) File(modLoaderFilePath).name else "tModLoader / SMAPI 等（可选）",
-                    icon = Icons.Outlined.Extension,
+                    icon = Icons.Outlined.Build,
                     isSelected = modLoaderFilePath != null,
                     isPrimary = false,
                     badge = "可选",
@@ -631,6 +634,90 @@ private fun ModernFileCard(
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
+        }
+    }
+}
+
+/**
+ * 导入引导步骤区块（支持可选参考图片）
+ */
+@Composable
+private fun ImportGuideSection(
+    title: String,
+    icon: ImageVector,
+    steps: List<String>,
+    @DrawableRes imageResId: Int? = null
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 步骤列表（跳过空字符串，用于分组间隔）
+            var stepNumber = 1
+            steps.forEach { step ->
+                if (step.isBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                } else if (step.startsWith("  ")) {
+                    // 缩进子项（无编号）
+                    Text(
+                        text = step.trimStart(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(start = 22.dp, bottom = 2.dp)
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = "${stepNumber}.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.width(18.dp)
+                        )
+                        Text(
+                            text = step,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    stepNumber++
+                }
+            }
+
+            // 可选参考截图
+            if (imageResId != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Image(
+                    painter = painterResource(id = imageResId),
+                    contentDescription = "参考截图",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.FillWidth
+                )
+            }
         }
     }
 }

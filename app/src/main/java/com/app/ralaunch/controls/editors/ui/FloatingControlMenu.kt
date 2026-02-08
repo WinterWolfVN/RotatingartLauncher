@@ -68,6 +68,9 @@ class FloatingMenuState(
     var isTouchEventEnabled by mutableStateOf(true)
     var isControlsVisible by mutableStateOf(true)
     
+    // 调试日志状态
+    var isDebugLogEnabled by mutableStateOf(false)
+    
     // 联机相关状态
     var isMultiplayerPanelVisible by mutableStateOf(false)
     var multiplayerConnectionState by mutableStateOf(MultiplayerState.DISCONNECTED)
@@ -155,6 +158,9 @@ interface FloatingMenuCallbacks {
     fun onFpsDisplayChanged(enabled: Boolean) {}
     fun onTouchEventChanged(enabled: Boolean) {}
     fun onExitGame() {}
+    
+    // 调试日志回调
+    fun onToggleDebugLog() {}
     
     // 联机相关回调
     fun onMultiplayerConnect(roomName: String, roomPassword: String, isHost: Boolean) {}
@@ -473,6 +479,19 @@ private fun InGameMenu(
                         }
                     )
                     
+                    HorizontalDivider()
+
+                    // 调试日志
+                    MenuSwitchItem(
+                        icon = Icons.Default.BugReport,
+                        label = "调试日志",
+                        checked = state.isDebugLogEnabled,
+                        onCheckedChange = {
+                            state.isDebugLogEnabled = it
+                            callbacks.onToggleDebugLog()
+                        }
+                    )
+
                     HorizontalDivider()
                 }
             }

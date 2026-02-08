@@ -1,12 +1,6 @@
 package com.app.ralaunch.easytier
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -65,18 +59,10 @@ class EasyTierManager {
         const val HOST_IP = "10.126.126.1"
         const val HOST_IP_CIDR = "10.126.126.1/24"  // CIDR 格式，EasyTier 配置需要
         
-        // 多个公共服务器，提高连接成功率（参考 Terracotta）
+        // 公共服务器列表
+        // 注意：端口 11010 在部分 ISP 下被封，优先使用 54321 端口
         private val PUBLIC_SERVERS = listOf(
-            "tcp://public.easytier.cn:11010",
-            "tcp://public.easytier.top:11010",
-            "tcp://public2.easytier.cn:54321",
-            "tcp://ah.nkbpal.cn:11010",
-            "tcp://turn.hb.629957.xyz:11010",
-            "tcp://turn.js.629957.xyz:11012",
-            "tcp://sh.993555.xyz:11010",
-            "tcp://turn.bj.629957.xyz:11010",
-            "tcp://et.sh.suhoan.cn:11010",
-            "tcp://et-hk.clickor.click:11010"
+            "tcp://public2.easytier.cn:54321"
         )
         
         @Volatile
@@ -112,13 +98,6 @@ class EasyTierManager {
     private var isCurrentHost: Boolean = false
     private var hostFound: Boolean = false
     
-    // VPN 初始化状态
-    private val _vpnInitialized = MutableStateFlow(false)
-    val vpnInitialized: StateFlow<Boolean> = _vpnInitialized.asStateFlow()
-    
-    // TUN fd（从广播中获取，跨进程）
-    private var tunFd: Int = -1
-    
     /**
      * 检查 EasyTier 是否可用
      */
@@ -131,127 +110,10 @@ class EasyTierManager {
         return EasyTierJNI.getLoadError() ?: "EasyTier JNI 库未加载"
     }
     
-    // VPN 广播接收器
-    private var vpnReceiver: BroadcastReceiver? = null
-    private var pendingVpnReadyCallback: (() -> Unit)? = null
-    private var pendingVpnErrorCallback: ((String) -> Unit)? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
-    
-    /**
-     * 初始化 VPN 服务（创建 TUN 接口）
-     * 必须在创建房间之前调用
-     * @param context Android Context
-     * @param onReady VPN 就绪回调
-     * @param onError 错误回调
-     */
-    fun initVpnService(context: Context, onReady: () -> Unit, onError: (String) -> Unit) {
-        if (_vpnInitialized.value) {
-            Log.d(TAG, "VPN already initialized")
-            onReady()
-            return
-        }
-        
-        // 保存回调
-        pendingVpnReadyCallback = onReady
-        pendingVpnErrorCallback = onError
-        
-        // 注册广播接收器（跨进程通信）
-        registerVpnReceiver(context)
-        
-        // 启动 VPN 服务（仅初始化模式）
-        val intent = Intent(context, EasyTierVpnService::class.java).apply {
-            action = EasyTierVpnService.ACTION_INIT
-        }
-        context.startService(intent)
-        Log.d(TAG, "Starting VPN service initialization...")
-        
-        // 设置超时（10秒）
-        mainHandler.postDelayed({
-            if (!_vpnInitialized.value) {
-                Log.e(TAG, "VPN initialization timeout")
-                unregisterVpnReceiver(context)
-                pendingVpnErrorCallback?.invoke("VPN 初始化超时")
-                pendingVpnReadyCallback = null
-                pendingVpnErrorCallback = null
-            }
-        }, 10000)
-    }
-    
-    /**
-     * 注册 VPN 广播接收器
-     */
-    private fun registerVpnReceiver(context: Context) {
-        if (vpnReceiver != null) {
-            try {
-                context.unregisterReceiver(vpnReceiver)
-            } catch (_: Exception) {}
-        }
-        
-        vpnReceiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context?, intent: Intent?) {
-                when (intent?.action) {
-                    EasyTierVpnService.BROADCAST_VPN_READY -> {
-                        val fd = intent.getIntExtra(EasyTierVpnService.EXTRA_TUN_FD, -1)
-                        Log.i(TAG, "Received VPN ready broadcast, tunFd=$fd")
-                        tunFd = fd  // 保存 tunFd（跨进程传递）
-                        _vpnInitialized.value = true
-                        mainHandler.removeCallbacksAndMessages(null) // 取消超时
-                        mainHandler.post {
-                            pendingVpnReadyCallback?.invoke()
-                            pendingVpnReadyCallback = null
-                            pendingVpnErrorCallback = null
-                        }
-                    }
-                    EasyTierVpnService.BROADCAST_VPN_ERROR -> {
-                        val error = intent.getStringExtra(EasyTierVpnService.EXTRA_ERROR_MESSAGE) ?: "未知错误"
-                        Log.e(TAG, "Received VPN error broadcast: $error")
-                        _vpnInitialized.value = false
-                        mainHandler.removeCallbacksAndMessages(null) // 取消超时
-                        mainHandler.post {
-                            pendingVpnErrorCallback?.invoke(error)
-                            pendingVpnReadyCallback = null
-                            pendingVpnErrorCallback = null
-                        }
-                    }
-                }
-            }
-        }
-        
-        val filter = IntentFilter().apply {
-            addAction(EasyTierVpnService.BROADCAST_VPN_READY)
-            addAction(EasyTierVpnService.BROADCAST_VPN_ERROR)
-        }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(vpnReceiver, filter, Context.RECEIVER_EXPORTED)
-        } else {
-            context.registerReceiver(vpnReceiver, filter)
-        }
-        Log.d(TAG, "VPN broadcast receiver registered")
-    }
-    
-    /**
-     * 注销 VPN 广播接收器
-     */
-    private fun unregisterVpnReceiver(context: Context) {
-        vpnReceiver?.let {
-            try {
-                context.unregisterReceiver(it)
-                Log.d(TAG, "VPN broadcast receiver unregistered")
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to unregister VPN receiver", e)
-            }
-        }
-        vpnReceiver = null
-    }
-    
-    /**
-     * 检查 VPN 是否已初始化
-     */
-    fun isVpnInitialized(): Boolean = _vpnInitialized.value
-    
     /**
      * 连接到 EasyTier 网络
+     * no_tun 模式下不需要 VPN/TUN，直接通过端口转发连接
+     *
      * @param networkName 网络名称（房间名）
      * @param networkSecret 网络密钥（房间密码）
      * @param isHost 是否是房主（创建房间）
@@ -278,13 +140,14 @@ class EasyTierManager {
             isCurrentHost = isHost
             
             // 构建 TOML 配置
-            // 加入者：初始连接时不配置端口转发，等发现房主后再重启配置
+            // no_tun 模式：房主和加入者都在首次启动时完整配置
+            // 加入者直接配置端口转发，无需等待发现房主后再重启
             val config = buildConfig(
                 instanceName = instanceName,
                 networkName = networkName,
                 networkSecret = networkSecret,
                 isHost = isHost,
-                withPortForward = isHost  // 房主直接完整配置，加入者先不配置端口转发
+                withPortForward = true  // 加入者始终启用端口转发
             )
             
             Log.d(TAG, "Starting EasyTier with config:\n$config")
@@ -316,32 +179,17 @@ class EasyTierManager {
                 EasyTierConnectionState.FINDING_HOST
             }
             
-            // 如果 VPN 已初始化，设置 TUN fd
-            // #region agent log - 假设P: 检查 VPN/TUN 状态
-            Log.w("DEBUG_MULTIPLAYER", "VPN status: initialized=${_vpnInitialized.value}, tunFd=$tunFd, no_tun=true (NoTun mode)")
-            // #endregion
-            if (_vpnInitialized.value && tunFd >= 0) {
-                Log.d(TAG, "Setting TUN fd: $tunFd")
-                val fdResult = EasyTierJNI.setTunFd(instanceName, tunFd)
-                if (fdResult != 0) {
-                    Log.w(TAG, "Failed to set TUN fd: ${EasyTierJNI.getLastError()}")
-                    Log.w("DEBUG_MULTIPLAYER", "setTunFd FAILED: ${EasyTierJNI.getLastError()}")
-                } else {
-                    Log.i(TAG, "TUN fd set successfully: $tunFd")
-                    Log.w("DEBUG_MULTIPLAYER", "setTunFd SUCCESS: tunFd=$tunFd")
-                }
-            } else {
-                Log.w(TAG, "VPN not initialized or tunFd invalid: initialized=${_vpnInitialized.value}, tunFd=$tunFd")
-                Log.w("DEBUG_MULTIPLAYER", "VPN NOT READY - port forward may not work without TUN")
-            }
+            // no_tun 模式下不需要 VPN/TUN，跳过 setTunFd
+            // 端口转发由 EasyTier 内部通过应用层 socket 实现
+            Log.d(TAG, "Running in no_tun mode, skipping VPN/TUN setup")
             
             // 启动监控
             startMonitoring()
             
             if (isHost) {
-                Log.i(TAG, "EasyTier host connected successfully to network: $networkName")
+                Log.i(TAG, "EasyTier host connected to network: $networkName")
             } else {
-                Log.i(TAG, "EasyTier guest started, finding host in network: $networkName")
+                Log.i(TAG, "EasyTier guest connected to network: $networkName, port forwarding active")
             }
             Result.success(Unit)
             
@@ -354,11 +202,12 @@ class EasyTierManager {
     }
     
     /**
-     * 断开 EasyTier 网络并停止 VPN 服务
+     * 断开 EasyTier 网络
+     * no_tun 模式下不需要停止 VPN 服务
      */
     fun disconnect(context: Context) {
         scope.launch {
-            disconnectInternal(context)
+            disconnectInternal()
         }
     }
     
@@ -366,28 +215,16 @@ class EasyTierManager {
      * 断开 EasyTier 网络（挂起函数版本）
      */
     suspend fun disconnect(): Result<Unit> = withContext(Dispatchers.IO) {
-        disconnectInternalNoVpn()
+        disconnectInternal()
     }
     
-    private suspend fun disconnectInternal(context: Context): Result<Unit> = withContext(Dispatchers.IO) {
+    private suspend fun disconnectInternal(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             stopMonitoring()
-            
-            // 注销广播接收器
-            withContext(Dispatchers.Main) {
-                unregisterVpnReceiver(context)
-                mainHandler.removeCallbacksAndMessages(null)
-            }
             
             if (EasyTierJNI.isAvailable()) {
                 EasyTierJNI.stopAllInstances()
             }
-            
-            // 停止 VPN 服务
-            val intent = Intent(context, EasyTierVpnService::class.java).apply {
-                action = EasyTierVpnService.ACTION_STOP
-            }
-            context.startService(intent)
             
             currentInstanceName = null
             currentNetworkName = null
@@ -395,36 +232,6 @@ class EasyTierManager {
             currentConfig = null
             isCurrentHost = false
             hostFound = false
-            _connectionState.value = EasyTierConnectionState.DISCONNECTED
-            _virtualIp.value = null
-            _peers.value = emptyList()
-            _errorMessage.value = null
-            _vpnInitialized.value = false
-            tunFd = -1
-            pendingVpnReadyCallback = null
-            pendingVpnErrorCallback = null
-            
-            Log.i(TAG, "EasyTier disconnected and VPN stopped")
-            Result.success(Unit)
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to disconnect from EasyTier", e)
-            _errorMessage.value = e.message
-            Result.failure(e)
-        }
-    }
-    
-    private suspend fun disconnectInternalNoVpn(): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            stopMonitoring()
-            
-            if (EasyTierJNI.isAvailable()) {
-                EasyTierJNI.stopAllInstances()
-            }
-            
-            currentInstanceName = null
-            currentNetworkName = null
-            currentConfig = null
             _connectionState.value = EasyTierConnectionState.DISCONNECTED
             _virtualIp.value = null
             _peers.value = emptyList()
@@ -508,41 +315,21 @@ class EasyTierManager {
      * 更新网络状态
      */
     private fun updateNetworkStatus() {
-        if (!EasyTierJNI.isAvailable()) {
-            Log.w("DEBUG_MULTIPLAYER", "MonitorLoop: JNI not available")
-            return
-        }
+        if (!EasyTierJNI.isAvailable()) return
         
         try {
             val infosJson = EasyTierJNI.collectNetworkInfos()
-            if (infosJson.isNullOrEmpty() || infosJson.length < 50) {
-                Log.w("DEBUG_MULTIPLAYER", "MonitorLoop: empty/short (${infosJson?.length})")
-                return
-            }
-            
-            Log.d(TAG, "Network info JSON: $infosJson")
+            if (infosJson.isNullOrEmpty() || infosJson.length < 50) return
             
             val networkInfo = parseNetworkInfo(infosJson)
-            if (networkInfo.isNullOrEmpty()) {
-                Log.d(TAG, "No instances found in network info")
-                return
-            }
+            if (networkInfo.isNullOrEmpty()) return
             
             // EasyTier 返回的 map key 使用的是 network_name 而不是 instance_name
-            // 优先使用 networkName 查找，其次尝试 instanceName
-            var instanceInfo = networkInfo[currentNetworkName]
+            val instanceInfo = networkInfo[currentNetworkName]
                 ?: networkInfo[currentInstanceName]
                 ?: networkInfo.values.firstOrNull { it.running }
                 ?: networkInfo.values.firstOrNull()
-            
-            if (instanceInfo != null && instanceInfo.instanceName != currentInstanceName) {
-                Log.d(TAG, "Using instance: ${instanceInfo.instanceName} (network: $currentNetworkName)")
-            }
-            
-            if (instanceInfo == null) {
-                Log.d(TAG, "No instance found in network info. Available: ${networkInfo.keys}")
-                return
-            }
+                ?: return
             
             if (!instanceInfo.running) {
                 Log.w(TAG, "EasyTier instance not running: ${instanceInfo.errorMsg}")
@@ -561,10 +348,6 @@ class EasyTierManager {
             
             // 更新节点列表
             _peers.value = instanceInfo.peers
-            
-            // #region agent log - 精简：只在状态变化时记录
-            Log.w("DEBUG_MULTIPLAYER", "Status: ip=${instanceInfo.virtualIp}, peers=${instanceInfo.peers.size}, state=${_connectionState.value}")
-            // #endregion
             
             Log.d(TAG, "Network status: IP=${instanceInfo.virtualIp}, peers=${instanceInfo.peers.size}")
             
@@ -592,151 +375,12 @@ class EasyTierManager {
         
         if (hostPeer != null && !hostFound) {
             Log.i(TAG, "Host found! hostname=${hostPeer.hostname}, ip=${hostPeer.virtualIp}")
-            Log.w("DEBUG_MULTIPLAYER", "HostFound: ${hostPeer.hostname}, ip=${hostPeer.virtualIp}")
-            Log.w("DEBUG_MULTIPLAYER", "Game can now connect to: 127.0.0.1:$TERRARIA_PORT")
             hostFound = true
-            
-            // 切换到 CONNECTED 状态，端口转发已在启动时配置好
             _connectionState.value = EasyTierConnectionState.CONNECTED
         }
     }
     
-    /**
-     * 重启 EasyTier 带端口转发配置
-     */
-    private suspend fun restartWithPortForward() = withContext(Dispatchers.IO) {
-        val networkName = currentNetworkName ?: return@withContext
-        val networkSecret = currentNetworkSecret ?: return@withContext
-        
-        // #region agent log - 假设AK: 使用新的实例名称避免冲突
-        val newInstanceName = "ral_mp_${System.currentTimeMillis() % 100000}"
-        Log.w("DEBUG_MULTIPLAYER", "Restart: newInstance=$newInstanceName, portForward to $HOST_IP:$TERRARIA_PORT")
-        // #endregion
-        
-        Log.i(TAG, "Restarting EasyTier with port forwarding...")
-        
-        try {
-            // 停止当前实例（使用 retainNetworkInstance(emptyArray) 停止所有实例）
-            val oldInstanceName = currentInstanceName
-            Log.w("DEBUG_MULTIPLAYER", "Stopping old instance: $oldInstanceName")
-            EasyTierJNI.stopAllInstances()
-            delay(1000) // 等待 1 秒
-            
-            // 更新实例名称
-            currentInstanceName = newInstanceName
-            
-            // 构建带端口转发的配置
-            val config = buildConfig(
-                instanceName = newInstanceName,
-                networkName = networkName,
-                networkSecret = networkSecret,
-                isHost = false,
-                withPortForward = true  // 现在启用端口转发
-            )
-            
-            Log.d(TAG, "Restarting with config:\n$config")
-            // #region agent log - 假设AA: 显示完整 TOML 配置（检查端口转发是否正确生成）
-            Log.w("DEBUG_MULTIPLAYER", "=== FULL CONFIG ===\n${config.take(1500)}")
-            // #endregion
-            
-            // #region agent log - 假设AG: 检查配置解析和实例启动
-            Log.w("DEBUG_MULTIPLAYER", "=== RESTART: Parsing config...")
-            // #endregion
-            
-            // 解析配置
-            val parseResult = EasyTierJNI.parseConfig(config)
-            // #region agent log
-            Log.w("DEBUG_MULTIPLAYER", "parseConfig result=$parseResult, error=${EasyTierJNI.getLastError()}")
-            // #endregion
-            if (parseResult != 0) {
-                val error = EasyTierJNI.getLastError() ?: "配置解析失败"
-                Log.e(TAG, "Failed to parse config: $error")
-                Log.w("DEBUG_MULTIPLAYER", "RESTART ABORT: parseConfig failed: $error")
-                _errorMessage.value = error
-                return@withContext
-            }
-            
-            // #region agent log
-            Log.w("DEBUG_MULTIPLAYER", "=== RESTART: Running network instance...")
-            // #endregion
-            
-            // 启动网络实例
-            val runResult = EasyTierJNI.runNetworkInstance(config)
-            // #region agent log
-            Log.w("DEBUG_MULTIPLAYER", "runNetworkInstance result=$runResult, error=${EasyTierJNI.getLastError()}")
-            // #endregion
-            if (runResult != 0) {
-                val error = EasyTierJNI.getLastError() ?: "网络实例启动失败"
-                Log.e(TAG, "Failed to run network instance: $error")
-                Log.w("DEBUG_MULTIPLAYER", "RESTART ABORT: runNetworkInstance failed: $error")
-                _errorMessage.value = error
-                return@withContext
-            }
-            
-            currentConfig = config
-            
-            // #region agent log - 假设AH: 检查实例是否真的在运行
-            delay(500)
-            val checkInfo = EasyTierJNI.collectNetworkInfos()
-            Log.w("DEBUG_MULTIPLAYER", "Post-run check: networkInfo.length=${checkInfo?.length ?: 0}")
-            if ((checkInfo?.length ?: 0) < 50) {
-                Log.w("DEBUG_MULTIPLAYER", "WARNING: Instance may not be running! Info: $checkInfo")
-            }
-            // #endregion
-            
-            // 如果 VPN 已初始化，设置 TUN fd
-            if (_vpnInitialized.value && tunFd >= 0) {
-                val fdResult = EasyTierJNI.setTunFd(newInstanceName, tunFd)
-                // #region agent log
-                Log.w("DEBUG_MULTIPLAYER", "setTunFd($newInstanceName) result=$fdResult, error=${EasyTierJNI.getLastError()}")
-                // #endregion
-                if (fdResult != 0) {
-                    Log.w(TAG, "Failed to set TUN fd: ${EasyTierJNI.getLastError()}")
-                }
-            }
-            
-            // 切换到 CONNECTED 状态
-            _connectionState.value = EasyTierConnectionState.CONNECTED
-            Log.i(TAG, "EasyTier restarted with port forwarding, now CONNECTED")
-            
-            // #region agent log - 假设AD: 等待网络重新连接
-            Log.w("DEBUG_MULTIPLAYER", "=== RESTART COMPLETE ===")
-            Log.w("DEBUG_MULTIPLAYER", "Waiting for network to reconnect...")
-            
-            // 等待网络重新连接（最多 10 秒）
-            var networkReady = false
-            for (i in 1..10) {
-                delay(1000)
-                val info = EasyTierJNI.collectNetworkInfos()
-                val infoLen = info?.length ?: 0
-                Log.w("DEBUG_MULTIPLAYER", "Wait[$i/10]: networkInfo.length=$infoLen")
-                if (infoLen > 100) {  // 有效的网络信息通常大于 100 字节
-                    networkReady = true
-                    Log.w("DEBUG_MULTIPLAYER", "Network reconnected! Starting port forward...")
-                    break
-                }
-            }
-            
-            if (!networkReady) {
-                Log.w("DEBUG_MULTIPLAYER", "WARNING: Network not fully reconnected after 10s")
-            }
-            
-            Log.w("DEBUG_MULTIPLAYER", "Game should connect to: 127.0.0.1:$TERRARIA_PORT")
-            Log.w("DEBUG_MULTIPLAYER", "Port forward destination: $HOST_IP:$TERRARIA_PORT")
-            
-            // 重新启动监控
-            startMonitoring()
-            Log.w("DEBUG_MULTIPLAYER", "Monitoring restarted")
-            // #endregion
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to restart with port forwarding", e)
-            // #region agent log - 假设C: 记录重启失败
-            Log.w("DEBUG_MULTIPLAYER", "=== RESTART FAILED: ${e.message} ===")
-            // #endregion
-            _errorMessage.value = e.message
-        }
-    }
+    // restartWithPortForward 已不再需要 —— no_tun 模式下加入者首次启动即配置端口转发
     
     private fun parseNetworkInfo(jsonString: String): Map<String, NetworkInstanceInfo>? =
         EasyTierJsonParser.parseNetworkInfo(jsonString)

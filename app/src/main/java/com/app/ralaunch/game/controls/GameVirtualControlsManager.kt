@@ -234,6 +234,7 @@ class GameVirtualControlsManager {
 
     fun stop() {
         fpsDisplayView?.stop()
+        com.app.ralaunch.console.ConsoleManager.stop()
     }
 
     private fun disableClippingRecursive(view: View) {

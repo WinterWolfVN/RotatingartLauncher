@@ -2,6 +2,7 @@ package com.app.ralaunch.ui.main
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -78,9 +79,14 @@ fun MainApp(
                     .fillMaxSize()
                     .background(Color.Transparent)
             ) {
+                // 当前导航目的地（使用 derivedStateOf 确保状态变更被正确追踪）
+                val currentDest by remember {
+                    derivedStateOf { navState.currentDestination }
+                }
+
                 // 左侧导航栏（会自动从 LocalHazeState 获取模糊状态）
                 AppNavigationRail(
-                    currentDestination = navState.currentDestination,
+                    currentDestination = currentDest,
                     onNavigate = { navState.navigateTo(it) },
                     logo = appLogo
                 )
@@ -91,69 +97,101 @@ fun MainApp(
                         .weight(1f)
                         .fillMaxHeight()
                 ) {
+                    // 跟踪是否为首次加载（首次不播放动画，避免抖动）
+                    var isFirstComposition by remember { mutableStateOf(true) }
+
                     AnimatedContent(
                         targetState = navState.currentScreen,
                         transitionSpec = {
-                            // 入场：延迟启动，让退场先播放，减少同时渲染压力
-                            (scaleIn(
-                                initialScale = 0.92f,
-                                animationSpec = tween(
-                                    durationMillis = 400,
-                                    delayMillis = 80,
-                                    easing = EaseInOutCubic
-                                )
-                            ) + fadeIn(
-                                animationSpec = tween(
-                                    durationMillis = 350,
-                                    delayMillis = 80,
-                                    easing = EaseInOutCubic
-                                )
-                            ))
-                                .togetherWith(
-                                    // 退场：立即开始，稍快结束
-                                    scaleOut(
-                                        targetScale = 0.92f,
-                                        animationSpec = tween(
-                                            durationMillis = 300,
-                                            easing = EaseInOutCubic
-                                        )
-                                    ) + fadeOut(
-                                        animationSpec = tween(
-                                            durationMillis = 250,
-                                            easing = EaseInOutCubic
+                            if (isFirstComposition) {
+                                // 首次加载：无动画，直接显示
+                                (fadeIn(animationSpec = snap()))
+                                    .togetherWith(fadeOut(animationSpec = snap()))
+                                    .using(SizeTransform(clip = false))
+                            } else {
+                                // 后续切换：入场延迟启动，让退场先播放，减少同时渲染压力
+                                (scaleIn(
+                                    initialScale = 0.92f,
+                                    animationSpec = tween(
+                                        durationMillis = 400,
+                                        delayMillis = 80,
+                                        easing = EaseInOutCubic
+                                    )
+                                ) + fadeIn(
+                                    animationSpec = tween(
+                                        durationMillis = 350,
+                                        delayMillis = 80,
+                                        easing = EaseInOutCubic
+                                    )
+                                ))
+                                    .togetherWith(
+                                        // 退场：立即开始，稍快结束
+                                        scaleOut(
+                                            targetScale = 0.92f,
+                                            animationSpec = tween(
+                                                durationMillis = 300,
+                                                easing = EaseInOutCubic
+                                            )
+                                        ) + fadeOut(
+                                            animationSpec = tween(
+                                                durationMillis = 250,
+                                                easing = EaseInOutCubic
+                                            )
                                         )
                                     )
-                                )
-                                .using(SizeTransform(clip = false))
+                                    .using(SizeTransform(clip = false))
+                            }
                         },
                         contentKey = { it.route },
                         label = "pageTransition"
                     ) { targetScreen ->
-                        // 延迟渲染：让动画帧先跑起来，避免重页面组合阻塞动画
-                        DeferredPage {
-                            when (targetScreen) {
-                                is Screen.Games -> {
-                                    GamesPageContent(
-                                        games = games,
-                                        selectedGame = selectedGame,
-                                        isLoading = isLoading,
-                                        onGameClick = onGameClick,
-                                        onGameLongClick = onGameLongClick,
-                                        onLaunchClick = onLaunchClick,
-                                        onDeleteClick = onDeleteClick,
-                                        onAddClick = { navState.navigateTo(Screen.Import) },
-                                        iconLoader = iconLoader
-                                    )
-                                }
-                                is Screen.Controls -> controlsContent()
-                                is Screen.Download -> downloadContent()
-                                is Screen.Settings -> settingsContent()
-                                is Screen.Import -> importContent()
-                                is Screen.ControlStore -> controlStoreContent()
-                                is Screen.FileBrowser -> fileBrowserContent(targetScreen.initialPath, targetScreen.allowedExtensions, targetScreen.fileType)
-                                is Screen.GameDetail -> PlaceholderScreen("游戏详情: ${targetScreen.gameId}")
-                                is Screen.ControlEditor -> PlaceholderScreen("布局编辑器")
-                                is Screen.Initialization -> { /* 已移至独立 Activity */ }
+                        // 首次加载完成后标记
+                        LaunchedEffect(Unit) {
+                            if (isFirstComposition) {
+                                isFirstComposition = false
+                            }
+                        }
+
+                        // 首次加载直接渲染，后续切换延迟渲染以避免阻塞动画
+                        if (isFirstComposition) {
+                            PageContent(
+                                targetScreen = targetScreen,
+                                navState = navState,
+                                games = games,
+                                selectedGame = selectedGame,
+                                isLoading = isLoading,
+                                onGameClick = onGameClick,
+                                onGameLongClick = onGameLongClick,
+                                onLaunchClick = onLaunchClick,
+                                onDeleteClick = onDeleteClick,
+                                iconLoader = iconLoader,
+                                controlsContent = controlsContent,
+                                downloadContent = downloadContent,
+                                settingsContent = settingsContent,
+                                importContent = importContent,
+                                controlStoreContent = controlStoreContent,
+                                fileBrowserContent = fileBrowserContent
+                            )
+                        } else {
+                            DeferredPage {
+                                PageContent(
+                                    targetScreen = targetScreen,
+                                    navState = navState,
+                                    games = games,
+                                    selectedGame = selectedGame,
+                                    isLoading = isLoading,
+                                    onGameClick = onGameClick,
+                                    onGameLongClick = onGameLongClick,
+                                    onLaunchClick = onLaunchClick,
+                                    onDeleteClick = onDeleteClick,
+                                    iconLoader = iconLoader,
+                                    controlsContent = controlsContent,
+                                    downloadContent = downloadContent,
+                                    settingsContent = settingsContent,
+                                    importContent = importContent,
+                                    controlStoreContent = controlStoreContent,
+                                    fileBrowserContent = fileBrowserContent
+                                )
                             }
                         }
                     }
@@ -191,6 +229,54 @@ private fun DeferredPage(
         if (ready) {
             content()
         }
+    }
+}
+
+/**
+ * 页面内容路由 - 根据当前 Screen 渲染对应页面
+ */
+@Composable
+private fun PageContent(
+    targetScreen: Screen,
+    navState: NavState,
+    games: List<GameItemUi>,
+    selectedGame: GameItemUi?,
+    isLoading: Boolean,
+    onGameClick: (GameItemUi) -> Unit,
+    onGameLongClick: (GameItemUi) -> Unit,
+    onLaunchClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    iconLoader: @Composable (String?, Modifier) -> Unit,
+    controlsContent: @Composable () -> Unit,
+    downloadContent: @Composable () -> Unit,
+    settingsContent: @Composable () -> Unit,
+    importContent: @Composable () -> Unit,
+    controlStoreContent: @Composable () -> Unit,
+    fileBrowserContent: @Composable (String, List<String>, String) -> Unit
+) {
+    when (targetScreen) {
+        is Screen.Games -> {
+            GamesPageContent(
+                games = games,
+                selectedGame = selectedGame,
+                isLoading = isLoading,
+                onGameClick = onGameClick,
+                onGameLongClick = onGameLongClick,
+                onLaunchClick = onLaunchClick,
+                onDeleteClick = onDeleteClick,
+                onAddClick = { navState.navigateTo(Screen.Import) },
+                iconLoader = iconLoader
+            )
+        }
+        is Screen.Controls -> controlsContent()
+        is Screen.Download -> downloadContent()
+        is Screen.Settings -> settingsContent()
+        is Screen.Import -> importContent()
+        is Screen.ControlStore -> controlStoreContent()
+        is Screen.FileBrowser -> fileBrowserContent(targetScreen.initialPath, targetScreen.allowedExtensions, targetScreen.fileType)
+        is Screen.GameDetail -> PlaceholderScreen("游戏详情: ${targetScreen.gameId}")
+        is Screen.ControlEditor -> PlaceholderScreen("布局编辑器")
+        is Screen.Initialization -> { /* 已移至独立 Activity */ }
     }
 }
 

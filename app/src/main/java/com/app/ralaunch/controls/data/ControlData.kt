@@ -440,14 +440,14 @@ sealed class ControlData {
     var width: Float = 0.2f // 控件宽度 (0-1相对值，相对于屏幕高度) **高度!!!!!!**
     var height: Float = 0.2f // 控件高度 (0-1相对值，相对于屏幕高度)
     var rotation: Float = 0.0f // 旋转角度（度）
-    var opacity: Float = 0.5f // 0.0 - 1.0 (背景透明度)
-    var borderOpacity: Float = 1.0f // 0.0 - 1.0 (边框透明度，默认1.0)
-    var textOpacity: Float = 1.0f // 0.0 - 1.0 (文本透明度，默认1.0)
-    var textColor: Int = -0x1F1F20 // 文本颜色（默认柔和白 0xFFE0E0E0）
-    var bgColor: Int = -0x7f7f80 // 灰色背景（更清晰可见）
-    var strokeColor: Int = 0x66FFFFFF // 半透明白色边框（40%不透明度）
-    var strokeWidth: Float= 1f // dp单位 // 默认1dp边框
-    var cornerRadius: Float = 2f // dp单位 // 矩形只有一点点圆角
+    var opacity: Float = 0.35f // 0.0 - 1.0 (背景透明度，默认35%半透明)
+    var borderOpacity: Float = 0.5f // 0.0 - 1.0 (边框透明度，默认50%)
+    var textOpacity: Float = 0.9f // 0.0 - 1.0 (文本透明度，默认90%)
+    var textColor: Int = 0xFFFFFFFF.toInt() // 纯白文字，最佳可读性
+    var bgColor: Int = 0xFF2A2A2A.toInt() // 深灰背景，在游戏画面上对比度好
+    var strokeColor: Int = 0xFFAAAAAA.toInt() // 浅灰边框
+    var strokeWidth: Float = 1.5f // dp单位
+    var cornerRadius: Float = 8f // dp单位，适度圆角
     var isVisible: Boolean = true
     var isPassThrough: Boolean = false // 触摸穿透：是否将触摸传递给游戏（默认 false）
     var isSizeRatioLocked: Boolean = true // 锁定1:1宽高比（默认 true）
@@ -515,7 +515,7 @@ sealed class ControlData {
         }
 
         var stickKnobSize: Float = 0.4f // 摇杆圆心大小比例 (0.0-1.0)，默认0.4，不同风格可以设置不同值
-        var stickOpacity: Float = 1.0f // 摇杆圆心透明度 0.0 - 1.0（与背景透明度独立）
+        var stickOpacity: Float = 0.7f // 摇杆圆心透明度 0.0 - 1.0（与背景透明度独立）
         var joystickKeys: Array<KeyCode> = arrayOf(
             KeyCode.KEYBOARD_W,
             KeyCode.KEYBOARD_D,
@@ -616,7 +616,7 @@ sealed class ControlData {
         var allowDiagonal: Boolean = true
         
         /** 按钮激活颜色 */
-        var activeColor: Int = android.graphics.Color.WHITE
+        var activeColor: Int = 0xCCFFFFFF.toInt()
         
         /** 显示方向标签（↑↓←→） */
         var showLabels: Boolean = false
@@ -672,10 +672,10 @@ sealed class ControlData {
         var showDividers: Boolean = true
         
         /** 扇区分隔线颜色 */
-        var dividerColor: Int = 0x40FFFFFF.toInt()
+        var dividerColor: Int = 0x66FFFFFF.toInt()
         
         /** 选中扇区高亮颜色 */
-        var selectedColor: Int = 0x80FFFFFF.toInt()
+        var selectedColor: Int = 0x99FFFFFF.toInt()
         
         /** 轮盘纹理配置 */
         var texture: RadialMenuTextureConfig = RadialMenuTextureConfig()

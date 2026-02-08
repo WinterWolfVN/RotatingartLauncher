@@ -278,29 +278,40 @@ class PatchManager @JvmOverloads constructor(
                     }
                 ).extract()
 
-                // 获取已安装补丁的 ID 列表
-                val installedPatchIds = patchManager.installedPatches
-                    .map { it.manifest.id }
-                    .toSet()
+                // 获取已安装补丁的 ID -> 清单映射（用于版本比较）
+                val installedPatchMap = patchManager.installedPatches
+                    .associateBy { it.manifest.id }
 
-                // 安装缺失的内置补丁
+                // 安装缺失或版本更新的内置补丁
                 try {
                     Files.list(extractedPatches).use { pathsStream ->
                         pathsStream
                             .filter { Files.isRegularFile(it) && it.toString().endsWith(".zip") }
                             .forEach { patchZip ->
                                 val manifest = PatchManifest.fromZip(patchZip)
+                                if (manifest == null) return@forEach
+
+                                val installedPatch = installedPatchMap[manifest.id]
+
                                 when {
-                                    manifest != null && forceReinstall -> {
+                                    forceReinstall -> {
                                         Log.i(TAG, "正在强制重新安装内置补丁: ${patchZip.fileName} (id: ${manifest.id})")
                                         patchManager.installPatch(patchZip)
                                     }
-                                    manifest != null && !installedPatchIds.contains(manifest.id) -> {
-                                        Log.i(TAG, "正在安装内置补丁: ${patchZip.fileName} (id: ${manifest.id})")
+                                    installedPatch == null -> {
+                                        Log.i(TAG, "正在安装内置补丁: ${patchZip.fileName} (id: ${manifest.id}, version: ${manifest.version})")
                                         patchManager.installPatch(patchZip)
                                     }
-                                    manifest != null -> {
-                                        Log.d(TAG, "补丁已安装，跳过: ${manifest.id}")
+                                    else -> {
+                                        val installedVersion = installedPatch.manifest.version
+                                        val bundledVersion = manifest.version
+                                        val cmp = PatchManifest.compareVersions(bundledVersion, installedVersion)
+                                        if (cmp > 0) {
+                                            Log.i(TAG, "检测到补丁更新: ${manifest.id} (${installedVersion} -> ${bundledVersion})，正在自动更新...")
+                                            patchManager.installPatch(patchZip)
+                                        } else {
+                                            Log.d(TAG, "补丁已是最新版本，跳过: ${manifest.id} (installed: ${installedVersion}, bundled: ${bundledVersion})")
+                                        }
                                     }
                                 }
                             }

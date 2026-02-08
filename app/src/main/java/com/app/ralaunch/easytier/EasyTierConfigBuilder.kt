@@ -31,85 +31,88 @@ internal object EasyTierConfigBuilder {
     ): String {
         val hostname = if (isHost) "host" else "guest_${System.currentTimeMillis() % 1000}"
 
-        val peersConfig = publicServers.joinToString("\n") { server ->
-            """
-[[peer]]
-uri = "$server"
-            """.trim()
-        }
+        Log.d(TAG, "buildConfig: isHost=$isHost, withPortForward=$withPortForward, hostname=$hostname")
 
-        val portConfig = if (isHost) {
-            "# 房主配置：ipv4=${EasyTierManager.HOST_IP_CIDR} (顶层字段)"
-        } else if (withPortForward) {
-            "# 加入者配置：端口转发到 ${EasyTierManager.HOST_IP}"
-        } else {
-            "# 加入者配置：等待发现房主"
-        }
+        val sb = StringBuilder()
 
-        Log.w("DEBUG_MULTIPLAYER", "=== buildConfig: isHost=$isHost, withPortForward=$withPortForward ===")
-        Log.w("DEBUG_MULTIPLAYER", "portConfig:\n$portConfig")
+        // 基本配置
+        sb.appendLine("instance_name = \"$instanceName\"")
+        sb.appendLine("hostname = \"$hostname\"")
 
-        val topLevelConfig = if (isHost) {
+        // IP 配置 - 房主和加入者都需要虚拟 IP
+        if (isHost) {
+            sb.appendLine("ipv4 = \"${EasyTierManager.HOST_IP_CIDR}\"")
+            sb.appendLine("dhcp = false")
+
+            // tcp/udp whitelist - 允许哪些端口被代理
             val tcpWhitelist = gamePorts.joinToString(", ") { "\"$it\"" }
             val udpWhitelist = gamePorts.joinToString(", ") { "\"$it\"" }
-            """
-ipv4 = "${EasyTierManager.HOST_IP_CIDR}"
-dhcp = false
-proxy_network = [{ cidr = "10.126.126.0/24" }]
-tcp_whitelist = [$tcpWhitelist]
-udp_whitelist = [$udpWhitelist]
-            """.trim()
+            sb.appendLine("tcp_whitelist = [$tcpWhitelist]")
+            sb.appendLine("udp_whitelist = [$udpWhitelist]")
         } else {
-            ""
+            // 加入者也需要虚拟 IP，port_forward 需要源地址来建立虚拟网络连接
+            // 使用随机后缀 (2-254) 避免与房主 (.1) 冲突
+            val guestIpSuffix = (System.currentTimeMillis() % 253 + 2).toInt()
+            sb.appendLine("ipv4 = \"10.126.126.$guestIpSuffix/24\"")
+            sb.appendLine("dhcp = false")
         }
 
-        val whitelistConfig = ""
+        sb.appendLine()
 
-        val portForwardConfig = if (!isHost) {
-            val portForwards = gamePorts.joinToString("\n") { port ->
-                """
-[[port_forward]]
-bind_addr = "127.0.0.1:$port"
-dst_addr = "${EasyTierManager.HOST_IP}:$port"
-proto = "tcp"
+        // 网络身份
+        sb.appendLine("[network_identity]")
+        sb.appendLine("network_name = \"$networkName\"")
+        sb.appendLine("network_secret = \"$networkSecret\"")
+        sb.appendLine()
 
-[[port_forward]]
-bind_addr = "127.0.0.1:$port"
-dst_addr = "${EasyTierManager.HOST_IP}:$port"
-proto = "udp"
-                """.trim()
+        // 房主：proxy_network 配置（使用标准 [[proxy_network]] 格式 + allow 字段）
+        if (isHost) {
+            sb.appendLine("[[proxy_network]]")
+            sb.appendLine("cidr = \"10.126.126.0/24\"")
+            sb.appendLine("allow = [\"tcp\", \"udp\", \"icmp\"]")
+            sb.appendLine()
+        }
+
+        // 加入者：端口转发配置
+        if (!isHost && withPortForward) {
+            for (port in gamePorts) {
+                sb.appendLine("[[port_forward]]")
+                sb.appendLine("bind_addr = \"127.0.0.1:$port\"")
+                sb.appendLine("dst_addr = \"${EasyTierManager.HOST_IP}:$port\"")
+                sb.appendLine("proto = \"tcp\"")
+                sb.appendLine()
+
+                sb.appendLine("[[port_forward]]")
+                sb.appendLine("bind_addr = \"127.0.0.1:$port\"")
+                sb.appendLine("dst_addr = \"${EasyTierManager.HOST_IP}:$port\"")
+                sb.appendLine("proto = \"udp\"")
+                sb.appendLine()
             }
-            portForwards
-        } else {
-            ""
         }
 
-        return """
-instance_name = "$instanceName"
-hostname = "$hostname"
-$topLevelConfig
+        // 监听器
+        sb.appendLine("listeners = [\"tcp://0.0.0.0:0\", \"udp://0.0.0.0:0\"]")
+        sb.appendLine()
 
-[network_identity]
-network_name = "$networkName"
-network_secret = "$networkSecret"
+        // 公共服务器
+        for (server in publicServers) {
+            sb.appendLine("[[peer]]")
+            sb.appendLine("uri = \"$server\"")
+            sb.appendLine()
+        }
 
-$whitelistConfig
+        // Flags
+        sb.appendLine("[flags]")
+        sb.appendLine("no_tun = true")
+        sb.appendLine("enable_encryption = true")
+        sb.appendLine("enable_kcp_proxy = true")
+        sb.appendLine("latency_first = true")
+        sb.appendLine("multi_thread = true")
+        sb.appendLine("data_compress_algo = 2")
+        sb.appendLine("mtu = 1380")
 
-$portForwardConfig
-
-# TCP/UDP listener - 允许其他玩家直接连接（参考 Terracotta）
-listeners = ["tcp://0.0.0.0:0", "udp://0.0.0.0:0"]
-
-$peersConfig
-
-[flags]
-no_tun = true
-enable_encryption = true
-enable_kcp_proxy = true
-latency_first = true
-multi_thread = true
-data_compress_algo = 2
-mtu = 1380
-        """.trim()
+        val config = sb.toString().trim()
+        Log.d(TAG, "Generated config (${config.length} chars):\n$config")
+        return config
     }
 }

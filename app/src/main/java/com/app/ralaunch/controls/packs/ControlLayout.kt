@@ -65,10 +65,85 @@ data class ControlLayout(
 
         fun loadFromJson(jsonString: String): ControlLayout? {
             return try {
-                json.decodeFromString<ControlLayout>(jsonString)
+                val layout = json.decodeFromString<ControlLayout>(jsonString)
+                sanitizeControls(layout)
+                layout
             } catch (e: Exception) {
                 AppLogger.error("ControlLayout", "Failed to parse layout JSON", e)
                 null
+            }
+        }
+
+        /**
+         * 修复控件可见性问题 (兼容旧版布局)
+         * 
+         * 旧版布局使用颜色自带的 alpha 通道控制透明度 (如 #4D000000 = 30% 黑色),
+         * 新版代码新增了独立的 opacity 属性, 渲染时 paint.alpha = (opacity * 255)
+         * 会完全覆盖颜色的 alpha。
+         * 
+         * 仅当 opacity / borderOpacity / textOpacity **全部**接近 0 时才执行修复,
+         * 这表示是旧格式迁移问题。如果其中任意一个有意义的值 (>0.02),
+         * 说明用户已经有意设置了各自的透明度 (例如 opacity=0 + borderOpacity=1
+         * 表示"无背景只有边框"), 不应被篡改。
+         */
+        private fun sanitizeControls(layout: ControlLayout) {
+            val minThreshold = 0.02f
+            var fixedCount = 0
+
+            for (control in layout.controls) {
+                // 仅当所有三个透明度都接近 0 时才认为是旧格式需要迁移
+                // 如果任意一个 > threshold，说明用户已有意设置，跳过
+                val bgNearZero = control.opacity < minThreshold
+                val borderNearZero = control.borderOpacity < minThreshold
+                val textNearZero = control.textOpacity < minThreshold
+
+                if (!bgNearZero && !borderNearZero && !textNearZero) {
+                    continue // 所有值都正常，跳过
+                }
+
+                // 如果有任何一个值是有意义的，说明用户主动设置了透明度，不应修改
+                if (!bgNearZero || !borderNearZero || !textNearZero) {
+                    continue // 部分有值，说明是用户有意设计（如透明背景+可见边框），跳过
+                }
+
+                // 到这里: 三个透明度全部接近 0，属于旧格式迁移
+                var fixed = false
+
+                // 修复背景透明度: opacity ≈ 0 → 从 bgColor alpha 提取
+                val bgAlpha = (control.bgColor ushr 24) / 255f
+                if (bgAlpha > minThreshold) {
+                    control.opacity = bgAlpha
+                    AppLogger.debug("ControlLayout",
+                        "  '${control.name}': opacity 0 → ${bgAlpha} (from bgColor alpha #${Integer.toHexString(control.bgColor ushr 24).uppercase()})")
+                } else {
+                    control.opacity = 0.35f
+                    AppLogger.debug("ControlLayout",
+                        "  '${control.name}': opacity 0 → 0.35 (default, bgColor alpha also 0)")
+                }
+                fixed = true
+
+                // 修复边框透明度: borderOpacity ≈ 0 → 从 strokeColor alpha 提取
+                val borderAlpha = (control.strokeColor ushr 24) / 255f
+                if (borderAlpha > minThreshold) {
+                    control.borderOpacity = borderAlpha
+                } else {
+                    control.borderOpacity = 0.5f
+                }
+
+                // 修复文本透明度: textOpacity ≈ 0 → 从 textColor alpha 提取
+                val textAlpha = (control.textColor ushr 24) / 255f
+                if (textAlpha > minThreshold) {
+                    control.textOpacity = textAlpha
+                } else {
+                    control.textOpacity = 0.9f
+                }
+
+                if (fixed) fixedCount++
+            }
+
+            if (fixedCount > 0) {
+                AppLogger.info("ControlLayout",
+                    "Fixed $fixedCount controls with invisible opacity (in-memory only) in layout '${layout.name}'")
             }
         }
     }

@@ -18,12 +18,9 @@ class GridOverlayView(context: Context?) : View(context) {
     }
 
     private fun init() {
-        val isDarkTheme = (context.resources.configuration.uiMode and 
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
-
-        val gridColor = if (isDarkTheme) 0x33FFFFFF else 0x22000000.toInt()
-        val axisColor = if (isDarkTheme) 0x55FFFFFF else 0x44000000.toInt()
+        // 编辑器背景固定为深色，网格线始终使用浅色
+        val gridColor = 0x33FFFFFF
+        val axisColor = 0x55FFFFFF
 
         // 网格线画笔
         mGridPaint = Paint()

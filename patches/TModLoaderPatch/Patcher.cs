@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
 
 namespace TModLoaderPatch;
 
@@ -253,9 +254,17 @@ public static class Patcher
 		}
     }
     
+    // GOG Linux 已知的多个版本哈希 (不同 GOG 安装包/版本的 Terraria 二进制文件)
+    private static readonly string[] GogLinuxHashes = {
+        "9db40ef7cd4b37794cfe29e8866bb6b4",
+        "c60b2ab7b63114be09765227e12875b0",
+        "64bb377414ecb61fc44b85ccc5de5de8",
+        "2e07a044a8f16a508c5360b37dffe893",
+        "c35b269396a5f83722bd94d45163a735"
+    };
+
     public static void InstallVerifierBugMitigation(Assembly assembly)
     {
-        // Get the type for InstallVerifier from the external assembly
         Type? installVerifierType = assembly.GetType("Terraria.ModLoader.Engine.InstallVerifier");
 
         if (installVerifierType == null)
@@ -272,48 +281,118 @@ public static class Patcher
         var steamHashField = installVerifierType.GetField("steamHash", BindingFlags.Static | BindingFlags.NonPublic);
         var isSteamUnsupportedField = installVerifierType.GetField("IsSteamUnsupported", BindingFlags.Static | BindingFlags.NonPublic);
 
-        // Debug: print field info
         Console.WriteLine($"[TModLoaderPatch] Found fields: steamAPIPath={steamAPIPathField != null}, steamAPIHash={steamAPIHashField != null}, " +
                           $"vanillaSteamAPI={vanillaSteamAPIField != null}, gogHash={gogHashField != null}, steamHash={steamHashField != null}, " +
                           $"IsSteamUnsupported={isSteamUnsupportedField != null}");
 
-        // Debug: print current values before modification
-        var gogHashBefore = gogHashField?.GetValue(null) as byte[];
-        var steamHashBefore = steamHashField?.GetValue(null) as byte[];
-        var isSteamUnsupportedBefore = isSteamUnsupportedField?.GetValue(null);
-        Console.WriteLine($"[TModLoaderPatch] Before: gogHash={gogHashBefore?.Length ?? -1} bytes, steamHash={steamHashBefore?.Length ?? -1} bytes, IsSteamUnsupported={isSteamUnsupportedBefore}");
-
-        // Set the correct hash values for GOG Terraria 1.4.4.9
-        // These are the same hashes used for Linux x86-64 GOG version
-        byte[] gogHashValue = Convert.FromHexString("9db40ef7cd4b37794cfe29e8866bb6b4");
+        // Set basic field values for Android/ARM64
         byte[] steamHashValue = Convert.FromHexString("2ff21c600897a9485ca5ae645a06202d");
         byte[] steamAPIHashValue = Convert.FromHexString("4b7a8cabaa354fcd25743aabfb4b1366");
 
         steamAPIPathField?.SetValue(null, "libsteam_api.so");
         steamAPIHashField?.SetValue(null, steamAPIHashValue);
         vanillaSteamAPIField?.SetValue(null, "libsteam_api.so");
-        gogHashField?.SetValue(null, gogHashValue);
+        gogHashField?.SetValue(null, Convert.FromHexString(GogLinuxHashes[0])); // 默认设第一个
         steamHashField?.SetValue(null, steamHashValue);
         isSteamUnsupportedField?.SetValue(null, false);
 
-        // Debug: verify values after modification
-        var gogHashAfter = gogHashField?.GetValue(null) as byte[];
-        var steamHashAfter = steamHashField?.GetValue(null) as byte[];
-        var isSteamUnsupportedAfter = isSteamUnsupportedField?.GetValue(null);
-        
-        string gogHashHex = gogHashAfter != null ? Convert.ToHexString(gogHashAfter).ToLower() : "null";
-        string steamHashHex = steamHashAfter != null ? Convert.ToHexString(steamHashAfter).ToLower() : "null";
-        
-        Console.WriteLine($"[TModLoaderPatch] After: gogHash={gogHashHex}, steamHash={steamHashHex}, IsSteamUnsupported={isSteamUnsupportedAfter}");
-        Console.WriteLine($"[TModLoaderPatch] Expected gogHash=9db40ef7cd4b37794cfe29e8866bb6b4");
-        
-        if (gogHashHex == "9db40ef7cd4b37794cfe29e8866bb6b4")
+        Console.WriteLine($"[TModLoaderPatch] Set default gogHash={GogLinuxHashes[0]}");
+        Console.WriteLine($"[TModLoaderPatch] Known GOG Linux hashes ({GogLinuxHashes.Length}):");
+        foreach (var h in GogLinuxHashes)
+            Console.WriteLine($"  - {h}");
+
+        // Harmony patch CheckGoG 方法, 使其支持多个 GOG 哈希
+        var checkGoGMethod = installVerifierType.GetMethod("CheckGoG",
+            BindingFlags.Static | BindingFlags.NonPublic);
+
+        if (checkGoGMethod != null)
         {
-            Console.WriteLine("[TModLoaderPatch] InstallVerifier class mitigations applied successfully!");
+            _harmony!.Patch(checkGoGMethod,
+                prefix: new HarmonyMethod(typeof(Patcher), nameof(CheckGoG_Prefix)));
+            Console.WriteLine("[TModLoaderPatch] CheckGoG patched for multi-hash support!");
         }
         else
         {
-            Console.WriteLine("[TModLoaderPatch] WARNING: gogHash was not set correctly!");
+            Console.WriteLine("[TModLoaderPatch] WARNING: CheckGoG method not found, falling back to single hash");
+        }
+
+        Console.WriteLine("[TModLoaderPatch] InstallVerifier mitigations applied!");
+    }
+
+    /// <summary>
+    /// CheckGoG 前缀补丁 - 替换原始的单哈希检查为多哈希检查
+    /// 原始逻辑: if (!HashMatchesFile(vanillaExePath, gogHash) &amp;&amp; !HashMatchesFile(vanillaExePath, steamHash)) → FatalExit
+    /// 补丁逻辑: 检查文件哈希是否匹配任意一个已知的 GOG 哈希或 Steam 哈希
+    /// </summary>
+    public static bool CheckGoG_Prefix()
+    {
+        try
+        {
+            Console.WriteLine("[TModLoaderPatch] CheckGoG: Multi-hash verification...");
+
+            // 通过反射获取 vanillaExePath 和 steamHash
+            var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var tModLoaderAssembly = loadedAssemblies.FirstOrDefault(a => a.GetName().Name == "tModLoader");
+            var installVerifierType = tModLoaderAssembly?.GetType("Terraria.ModLoader.Engine.InstallVerifier");
+
+            var vanillaExePathField = installVerifierType?.GetField("vanillaExePath",
+                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            var steamHashField = installVerifierType?.GetField("steamHash",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            var gogHashField = installVerifierType?.GetField("gogHash",
+                BindingFlags.Static | BindingFlags.NonPublic);
+
+            string? vanillaExePath = vanillaExePathField?.GetValue(null) as string;
+            byte[]? steamHash = steamHashField?.GetValue(null) as byte[];
+
+            if (string.IsNullOrEmpty(vanillaExePath))
+            {
+                Console.WriteLine("[TModLoaderPatch] CheckGoG: vanillaExePath is null/empty, skipping check");
+                return false; // 跳过原始方法
+            }
+
+            if (!File.Exists(vanillaExePath))
+            {
+                Console.WriteLine($"[TModLoaderPatch] CheckGoG: File not found: {vanillaExePath}, skipping check");
+                return false;
+            }
+
+            // 计算文件的 MD5 哈希
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            using var stream = File.OpenRead(vanillaExePath);
+            byte[] fileHash = md5.ComputeHash(stream);
+            string fileHashHex = Convert.ToHexString(fileHash).ToLower();
+
+            Console.WriteLine($"[TModLoaderPatch] CheckGoG: File={Path.GetFileName(vanillaExePath)}, Hash={fileHashHex}");
+
+            // 检查是否匹配任意一个已知 GOG 哈希
+            foreach (var knownHash in GogLinuxHashes)
+            {
+                if (fileHashHex == knownHash)
+                {
+                    Console.WriteLine($"[TModLoaderPatch] CheckGoG: Matched GOG hash: {knownHash}");
+                    // 同步更新 gogHash 字段为匹配到的哈希值
+                    gogHashField?.SetValue(null, Convert.FromHexString(knownHash));
+                    return false; // 验证通过，跳过原始方法
+                }
+            }
+
+            // 检查是否匹配 Steam 哈希
+            if (steamHash != null && fileHash.SequenceEqual(steamHash))
+            {
+                Console.WriteLine($"[TModLoaderPatch] CheckGoG: Matched Steam hash");
+                return false; // 验证通过
+            }
+
+            // 都不匹配 - 打印警告但不阻止启动 (Android 上可能是重打包的版本)
+            Console.WriteLine($"[TModLoaderPatch] CheckGoG WARNING: Hash {fileHashHex} does not match any known GOG or Steam hash!");
+            Console.WriteLine("[TModLoaderPatch] CheckGoG: Allowing launch anyway (Android compatibility)");
+            return false; // 仍然跳过原始方法，不 FatalExit
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TModLoaderPatch] CheckGoG error: {ex.Message}");
+            return false; // 出错也不阻止启动
         }
     }
     

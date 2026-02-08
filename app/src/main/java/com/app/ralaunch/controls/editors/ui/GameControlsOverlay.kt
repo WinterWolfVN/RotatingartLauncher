@@ -1,9 +1,7 @@
 package com.app.ralaunch.controls.editors.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.net.VpnService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -23,6 +21,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.roundToInt
+import com.app.ralaunch.console.ConsoleManager
+import com.app.ralaunch.console.DebugLogOverlay
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.packs.ControlLayout
 import com.app.ralaunch.controls.packs.ControlPackManager
@@ -63,24 +63,6 @@ fun GameControlsOverlay(
     val peers by easyTierManager.peers.collectAsState()
     val scope = rememberCoroutineScope()
     
-    // VPN 权限请求相关
-    var pendingVpnCallback by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var pendingVpnDeniedCallback by remember { mutableStateOf<(() -> Unit)?>(null) }
-    
-    val vpnPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            // VPN 权限已授予
-            pendingVpnCallback?.invoke()
-        } else {
-            // 用户拒绝了 VPN 权限
-            pendingVpnDeniedCallback?.invoke()
-        }
-        pendingVpnCallback = null
-        pendingVpnDeniedCallback = null
-    }
-    
     // 同步联机状态到菜单
     LaunchedEffect(connectionState, virtualIp, peers) {
         menuState.multiplayerConnectionState = when (connectionState) {
@@ -94,10 +76,19 @@ fun GameControlsOverlay(
         menuState.multiplayerPeerCount = peers.size
     }
     
-    // 初始化菜单状态
+    // 调试日志状态
+    val debugLogVisible by ConsoleManager.debugLogVisible.collectAsState()
+    
+    // 初始化菜单状态 & 启动日志收集
     LaunchedEffect(Unit) {
         menuState.isFpsDisplayEnabled = settingsManager.isFPSDisplayEnabled
         menuState.isTouchEventEnabled = settingsManager.isTouchEventEnabled
+        ConsoleManager.start()
+    }
+    
+    // 同步调试日志状态到菜单
+    LaunchedEffect(debugLogVisible) {
+        menuState.isDebugLogEnabled = debugLogVisible
     }
     
     // 监听返回键切换悬浮球可见性
@@ -286,6 +277,11 @@ fun GameControlsOverlay(
                 onExitGame()
             }
             
+            // 调试日志回调
+            override fun onToggleDebugLog() {
+                ConsoleManager.toggleDebugLog()
+            }
+            
             // 联机相关回调
             override fun onMultiplayerConnect(roomName: String, roomPassword: String, isHost: Boolean) {
                 menuState.multiplayerIsHost = isHost  // 记录是否是房主
@@ -311,33 +307,15 @@ fun GameControlsOverlay(
                 return settingsManager.isMultiplayerEnabled
             }
             
+            // no_tun 模式下 VPN 权限不再需要，保留接口兼容
             override fun prepareVpnPermission(onGranted: () -> Unit, onDenied: () -> Unit) {
-                // 检查 VPN 权限
-                val prepareIntent = VpnService.prepare(context)
-                if (prepareIntent == null) {
-                    // 已有权限，直接回调
-                    onGranted()
-                } else {
-                    // 需要请求权限
-                    pendingVpnCallback = onGranted
-                    pendingVpnDeniedCallback = onDenied
-                    vpnPermissionLauncher.launch(prepareIntent)
-                }
+                onGranted()
             }
             
-            override fun hasVpnPermission(): Boolean {
-                return VpnService.prepare(context) == null
-            }
+            override fun hasVpnPermission(): Boolean = true
             
             override fun initVpnService(onReady: () -> Unit, onError: (String) -> Unit) {
-                // 先检查 VPN 权限
-                val prepareIntent = VpnService.prepare(context)
-                if (prepareIntent != null) {
-                    onError("需要先授予 VPN 权限")
-                    return
-                }
-                // 初始化 VPN 服务
-                easyTierManager.initVpnService(context, onReady, onError)
+                onReady()
             }
         }
     }
@@ -461,6 +439,9 @@ fun GameControlsOverlay(
                 }
             )
         }
+
+        // 调试日志覆盖层（不拦截触摸）
+        DebugLogOverlay(visible = debugLogVisible)
 
         // 删除按钮 (仅编辑模式下选中控件时显示)
         if (menuState.isInEditMode && selectedControl != null) {

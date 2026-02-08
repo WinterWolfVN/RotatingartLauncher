@@ -9,6 +9,12 @@ import com.app.ralaunch.data.repository.GameRepository
 import com.app.ralaunch.manager.GameLaunchManager
 import com.app.ralaunch.manager.GameDeletionManager
 import com.app.ralaunch.ui.base.BasePresenter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent.get
 
 /**
@@ -35,6 +41,8 @@ class MainPresenter(
     private val gameLaunchManager: GameLaunchManager = GameLaunchManager(context)
     private val gameDeletionManager: GameDeletionManager = GameDeletionManager(context)
     
+    private val presenterScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    
     private var gameList: MutableList<GameItem> = mutableListOf()
     private var selectedGame: GameItem? = null
     private var currentPage: NavPage = NavPage.GAME
@@ -57,14 +65,20 @@ class MainPresenter(
     }
 
     override fun onDestroy() {
+        presenterScope.cancel()
         detach()
     }
 
     // ==================== 游戏列表 ====================
 
     override fun loadGameList() {
-        gameList = gameRepository.loadGameList().toMutableList()
-        withView { showGameList(gameList) }
+        presenterScope.launch {
+            val games = withContext(Dispatchers.IO) {
+                gameRepository.loadGameList()
+            }
+            gameList = games.toMutableList()
+            withView { showGameList(gameList) }
+        }
     }
 
     override fun selectGame(game: GameItem) {

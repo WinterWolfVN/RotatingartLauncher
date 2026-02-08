@@ -393,26 +393,49 @@ public static class ConsolePatcher
     }
     
     /// <summary>
-    /// Prefix for Console.ReadLine - block indefinitely instead of throwing (SMAPI runs this in a background thread)
+    /// Prefix for Console.ReadLine - read from stdin (pipe) on Android
+    /// 启动器通过 native pipe 重定向了 stdin，所以这里直接从 stdin stream 读取。
+    /// 如果 stdin 不可用则回退到无限等待。
     /// </summary>
     public static bool Console_ReadLine_Prefix(ref string? __result)
     {
-        // Block indefinitely - SMAPI's console input loop runs in a background thread
-        // We can't throw an exception here because it would crash the app
-        // Instead, we just wait forever (the thread will be abandoned when the app exits)
         try
         {
-            // Use a long sleep in a loop - this keeps the thread alive but idle
-            while (true)
+            // 尝试从 stdin (fd 0) 直接读取 — 启动器已通过 native pipe + dup2 重定向 stdin
+            using var stream = Console.OpenStandardInput();
+            if (stream == null || !stream.CanRead)
             {
-                System.Threading.Thread.Sleep(int.MaxValue);
+                // stdin 不可用，回退到无限等待
+                while (true)
+                {
+                    System.Threading.Thread.Sleep(int.MaxValue);
+                }
             }
+
+            using var reader = new System.IO.StreamReader(stream, Encoding.UTF8, false, 1024, leaveOpen: true);
+            __result = reader.ReadLine();
+            return false; // Skip original method
         }
         catch (System.Threading.ThreadInterruptedException)
         {
-            // Thread was interrupted, return null
             __result = null;
             return false;
+        }
+        catch (Exception)
+        {
+            // 读取失败，回退到无限等待
+            try
+            {
+                while (true)
+                {
+                    System.Threading.Thread.Sleep(int.MaxValue);
+                }
+            }
+            catch (System.Threading.ThreadInterruptedException)
+            {
+                __result = null;
+                return false;
+            }
         }
     }
     

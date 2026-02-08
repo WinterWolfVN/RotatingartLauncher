@@ -89,7 +89,8 @@ fun AppNavigationRail(
 
     // 记住上次的主导航目的地（子页面时保持指示器位置）
     var lastMainDest by remember { mutableStateOf(NavDestination.GAMES) }
-    LaunchedEffect(currentDestination) {
+    // 使用 SideEffect 同步更新（比 LaunchedEffect 更即时，避免异步延迟导致指示器不跟随）
+    SideEffect {
         if (currentDestination != null) {
             lastMainDest = currentDestination
         }

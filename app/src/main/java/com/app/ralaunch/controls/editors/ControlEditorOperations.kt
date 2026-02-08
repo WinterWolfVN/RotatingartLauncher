@@ -39,7 +39,6 @@ object ControlEditorOperations {
         button.y = 0.5f
         button.width = 0.15f
         button.height = 0.15f
-        button.opacity = 0.5f
         button.isVisible = true
         button.keycode = KeyCode.KEYBOARD_SPACE
 
@@ -69,12 +68,12 @@ object ControlEditorOperations {
         // 设置尺寸和样式
         joystick.width = 0.45f
         joystick.height = 0.45f
-        joystick.opacity = 0.5f
-        joystick.bgColor = -0xb5b5b6
-        joystick.strokeColor = 0x66FFFFFF
-        joystick.strokeWidth = 2f
+        joystick.opacity = 0.25f
+        joystick.bgColor = 0xFF1A1A1A.toInt()
+        joystick.strokeColor = 0xFF888888.toInt()
+        joystick.strokeWidth = 1.5f
         joystick.cornerRadius = 225f
-        joystick.stickOpacity = 0.8f
+        joystick.stickOpacity = 0.7f
         joystick.stickKnobSize = 0.35f
 
         // 设置按键映射（仅键盘模式需要）
@@ -98,8 +97,8 @@ object ControlEditorOperations {
         touchpad.y = 0.5f
         touchpad.width = 0.45f
         touchpad.height = 0.45f
-        touchpad.opacity = 0.5f
-        touchpad.cornerRadius = 22.0f
+        touchpad.opacity = 0.15f
+        touchpad.cornerRadius = 12f
         touchpad.isVisible = true
 
         layout.controls.add(touchpad)
@@ -117,8 +116,7 @@ object ControlEditorOperations {
         mouseWheel.width = 0.2f
         mouseWheel.height = 0.3f
         mouseWheel.isSizeRatioLocked = false
-        mouseWheel.opacity = 0.5f
-        mouseWheel.cornerRadius = 15.0f
+        mouseWheel.cornerRadius = 12f
         mouseWheel.isVisible = true
 
         layout.controls.add(mouseWheel)
@@ -136,8 +134,6 @@ object ControlEditorOperations {
         text.y = 0.5f
         text.width = 0.15f
         text.height = 0.15f
-        text.opacity = 0.5f
-        text.bgColor = -0x7f7f80
         text.isVisible = true
         text.shape = ControlData.Text.Shape.RECTANGLE
         text.displayText = defaultTextName

@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import com.app.ralaunch.R
 import com.app.ralaunch.core.GameLauncher
 import com.app.ralaunch.patch.PatchManager
+import com.app.ralaunch.utils.NativeMethods
 import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.utils.AppLogger
 import java.nio.file.Paths
@@ -30,6 +31,12 @@ class ProcessLauncherService : Service() {
         const val EXTRA_ARGS = "args"
         const val EXTRA_TITLE = "title"
         const val EXTRA_GAME_ID = "game_id"
+        const val EXTRA_STDIN_INPUT = "stdin_input"
+        const val ACTION_SEND_INPUT = "com.app.ralaunch.SEND_STDIN"
+
+        /** stdin 管道是否已建立 */
+        @Volatile
+        private var stdinPipeReady = false
 
         @JvmStatic
         fun launch(assemblyPath: String, args: Array<String>?, title: String?, gameId: String?) {
@@ -46,6 +53,18 @@ class ProcessLauncherService : Service() {
             } else {
                 context.startService(intent)
             }
+        }
+
+        /**
+         * 向服务器进程的 stdin 发送输入
+         */
+        @JvmStatic
+        fun sendInput(context: Context, input: String) {
+            val intent = Intent(context, ProcessLauncherService::class.java).apply {
+                action = ACTION_SEND_INPUT
+                putExtra(EXTRA_STDIN_INPUT, input)
+            }
+            context.startService(intent)
         }
 
         @JvmStatic
@@ -66,6 +85,13 @@ class ProcessLauncherService : Service() {
         if (intent == null) {
             AppLogger.error(TAG, "Intent is null")
             stopSelf()
+            return START_NOT_STICKY
+        }
+
+        // 处理 stdin 输入
+        if (intent.action == ACTION_SEND_INPUT) {
+            val input = intent.getStringExtra(EXTRA_STDIN_INPUT) ?: return START_NOT_STICKY
+            writeToStdin(input)
             return START_NOT_STICKY
         }
 
@@ -105,6 +131,9 @@ class ProcessLauncherService : Service() {
 
     private fun doLaunch(assemblyPath: String, args: Array<String>?, title: String, gameId: String?): Int {
         return try {
+            // 设置 stdin 管道：让 .NET Console.ReadLine() 可以读取我们写入的内容
+            setupStdinPipe()
+
             val patchManager: PatchManager? = try {
                 KoinJavaComponent.getOrNull(PatchManager::class.java)
             } catch (e: Exception) { null }
@@ -115,6 +144,44 @@ class ProcessLauncherService : Service() {
             AppLogger.error(TAG, "Launch failed: ${e.message}", e)
             AppLogger.error(TAG, "Last Error Msg: ${GameLauncher.getLastErrorMessage()}")
             -1
+        } finally {
+            cleanupStdinPipe()
+        }
+    }
+
+    /**
+     * 设置 stdin 管道（通过 native 层 pipe + dup2，确保 fd 0 在 .NET 初始化前就已重定向）
+     */
+    private fun setupStdinPipe() {
+        val writeFd = NativeMethods.setupStdinPipe()
+        if (writeFd >= 0) {
+            stdinPipeReady = true
+            AppLogger.info(TAG, "stdin 管道已建立 (native write_fd=$writeFd)")
+        } else {
+            AppLogger.warn(TAG, "建立 stdin 管道失败")
+        }
+    }
+
+    private fun cleanupStdinPipe() {
+        if (stdinPipeReady) {
+            NativeMethods.closeStdinPipe()
+            stdinPipeReady = false
+        }
+    }
+
+    /**
+     * 写入内容到 stdin 管道（通过 native write()）
+     */
+    private fun writeToStdin(input: String) {
+        if (!stdinPipeReady) {
+            AppLogger.warn(TAG, "stdin 管道未就绪，忽略输入: $input")
+            return
+        }
+        val result = NativeMethods.writeStdin(input)
+        if (result >= 0) {
+            AppLogger.info(TAG, "stdin << $input ($result bytes)")
+        } else {
+            AppLogger.error(TAG, "写入 stdin 失败: $input")
         }
     }
 

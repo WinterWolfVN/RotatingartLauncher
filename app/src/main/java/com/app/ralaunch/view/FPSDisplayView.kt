@@ -6,7 +6,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.system.Os
@@ -51,13 +50,26 @@ class FPSDisplayView @JvmOverloads constructor(
 
     private var currentFPS = 0f
     private var frameTimeMs = 0f
-    private var cpuUsage = 0f
-    private var gpuUsage = 0f
+    private var cpuUsage = -1f   // -1 表示无数据
+    private var gpuUsage = -1f   // -1 表示无数据
     private var ramUsage = ""
     
-    // CPU 使用率计算
-    private var lastCpuTotal = 0L
-    private var lastCpuIdle = 0L
+    // CPU 频率估算（兼容 Android 8+，无需 root）
+    private val numCpuCores = Runtime.getRuntime().availableProcessors()
+    private val cpuMinFreqs = IntArray(numCpuCores)
+    private val cpuMaxFreqs = IntArray(numCpuCores)
+    private var cpuFreqInited = false
+    
+    // GPU 频率估算 fallback
+    private var gpuFreqPath: String? = null       // 缓存找到的 GPU 频率路径
+    private var gpuMinFreq = 0L
+    private var gpuMaxFreq = 0L
+    private var gpuFreqInited = false
+    
+    // 直接读取 GPU 利用率的已知可用路径（缓存，避免每次扫描）
+    private var knownGpuUtilPath: String? = null
+    private var knownGpuUtilParser: ((String) -> Float)? = null
+    private var gpuPathScanned = false
 
     private val handler = Handler(Looper.getMainLooper())
     private var inputBridge: SDLInputBridge? = null
@@ -134,116 +146,114 @@ class FPSDisplayView @JvmOverloads constructor(
         updateVisibility()
     }
 
-    /** 更新 CPU 使用率 (从 /proc/stat 读取) */
+    /** 
+     * 更新 CPU 使用率（基于核心频率估算，和 Winlator/AndroidCPU 相同方案）
+     * 原理：读取每个核心的当前频率，相对于最小/最大频率估算负载
+     * 兼容 Android 8+ (Oreo)，无需 root 权限
+     */
     private fun updateCpuUsage() {
         try {
-            BufferedReader(FileReader("/proc/stat")).use { reader ->
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    if (line!!.startsWith("cpu ")) {
-                        val parts = line!!.split("\\s+".toRegex())
-                        if (parts.size >= 5) {
-                            // user + nice + system + idle + iowait + irq + softirq + steal + guest + guest_nice
-                            val user = parts[1].toLongOrNull() ?: 0L
-                            val nice = parts[2].toLongOrNull() ?: 0L
-                            val system = parts[3].toLongOrNull() ?: 0L
-                            val idle = parts[4].toLongOrNull() ?: 0L
-                            val iowait = if (parts.size > 5) parts[5].toLongOrNull() ?: 0L else 0L
-                            val irq = if (parts.size > 6) parts[6].toLongOrNull() ?: 0L else 0L
-                            val softirq = if (parts.size > 7) parts[7].toLongOrNull() ?: 0L else 0L
-                            val steal = if (parts.size > 8) parts[8].toLongOrNull() ?: 0L else 0L
-                            
-                            val total = user + nice + system + idle + iowait + irq + softirq + steal
-                            val idleTime = idle + iowait
-                            
-                            if (lastCpuTotal > 0 && total > lastCpuTotal) {
-                                val totalDiff = total - lastCpuTotal
-                                val idleDiff = idleTime - lastCpuIdle
-                                if (totalDiff > 0) {
-                                    cpuUsage = ((totalDiff - idleDiff).toFloat() / totalDiff.toFloat()) * 100f
-                                    cpuUsage = cpuUsage.coerceIn(0f, 100f)
-                                }
-                            } else if (lastCpuTotal == 0L) {
-                                // 首次读取，初始化但不计算
-                                lastCpuTotal = total
-                                lastCpuIdle = idleTime
-                                return@use
-                            }
-                            
-                            lastCpuTotal = total
-                            lastCpuIdle = idleTime
-                        }
-                        break
-                    }
+            // 初始化每个核心的最小/最大频率
+            if (!cpuFreqInited) {
+                for (i in 0 until numCpuCores) {
+                    cpuMinFreqs[i] = readIntFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_min_freq")
+                    cpuMaxFreqs[i] = readIntFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq")
+                }
+                cpuFreqInited = true
+            }
+            
+            var totalUsage = 0f
+            var activeCores = 0
+            for (i in 0 until numCpuCores) {
+                val curFreq = readIntFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
+                val minFreq = cpuMinFreqs[i]
+                val maxFreq = cpuMaxFreqs[i]
+                
+                // 核心可能离线，min/max 为 0
+                if (minFreq == 0 || maxFreq == 0) {
+                    cpuMinFreqs[i] = readIntFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_min_freq")
+                    cpuMaxFreqs[i] = readIntFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq")
+                }
+                
+                if (maxFreq > minFreq && curFreq > 0) {
+                    val coreUsage = ((curFreq - minFreq).toFloat() / (maxFreq - minFreq).toFloat()) * 100f
+                    totalUsage += coreUsage.coerceIn(0f, 100f)
+                    activeCores++
                 }
             }
-        } catch (e: Exception) {
-            // 备用方案：尝试读取当前进程的 CPU 时间
+            
+            if (activeCores > 0) {
+                cpuUsage = (totalUsage / activeCores).coerceIn(0f, 100f)
+            }
+        } catch (_: Exception) { }
+    }
+    
+    /** 读取 sysfs 整数文件，失败返回 0 */
+    private fun readIntFromFile(path: String): Int {
+        return try {
+            BufferedReader(FileReader(path)).use { it.readLine()?.trim()?.toIntOrNull() ?: 0 }
+        } catch (_: Exception) { 0 }
+    }
+    
+    /** 读取 sysfs 长整数文件，失败返回 0 */
+    private fun readLongFromFile(path: String): Long {
+        return try {
+            BufferedReader(FileReader(path)).use { it.readLine()?.trim()?.toLongOrNull() ?: 0L }
+        } catch (_: Exception) { 0L }
+    }
+
+    /** 
+     * 更新 GPU 使用率
+     * 策略1: 直接读取 GPU 利用率文件（部分设备可用）
+     * 策略2: 通过 GPU 频率估算负载（和 CPU 频率估算同理，兼容性更好）
+     */
+    private fun updateGpuUsage() {
+        // 策略1: 尝试直接读取 GPU 利用率
+        if (tryReadGpuUtilization()) return
+        
+        // 策略2: GPU 频率估算
+        tryGpuFreqEstimation()
+    }
+    
+    /** 尝试直接读取 GPU 利用率文件，成功返回 true */
+    private fun tryReadGpuUtilization(): Boolean {
+        // 如果之前已经找到可用路径，直接读
+        knownGpuUtilPath?.let { path ->
             try {
-                val pid = android.os.Process.myPid()
-                BufferedReader(FileReader("/proc/$pid/stat")).use { reader ->
+                BufferedReader(FileReader(path)).use { reader ->
                     val line = reader.readLine()
                     if (line != null) {
-                        val parts = line.split("\\s+".toRegex())
-                        if (parts.size > 14) {
-                            val utime = parts[13].toLongOrNull() ?: 0L
-                            val stime = parts[14].toLongOrNull() ?: 0L
-                            val processTime = utime + stime
-                            // 这里只能显示进程相对 CPU 时间，不是百分比
-                            // 但至少能显示有活动
-                            if (processTime > 0 && cpuUsage <= 0f) {
-                                cpuUsage = 1f // 标记为有活动
-                            }
+                        val result = knownGpuUtilParser?.invoke(line) ?: -1f
+                        if (result >= 0f) {
+                            gpuUsage = result.coerceIn(0f, 100f)
+                            return true
                         }
                     }
                 }
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+                knownGpuUtilPath = null // 路径失效，下次重新扫描
+                knownGpuUtilParser = null
+                gpuPathScanned = false
+            }
         }
-    }
-
-    /** 更新 GPU 使用率 (从 sysfs 读取，支持多种 GPU) */
-    private fun updateGpuUsage() {
-        // 尝试多种路径 - 按常见程度排序
+        
+        // 只扫描一次
+        if (gpuPathScanned) return false
+        gpuPathScanned = true
+        
         val gpuPaths = listOf(
-            // Adreno GPU (Qualcomm) - 最常见
+            // Adreno GPU (Qualcomm)
             "/sys/class/kgsl/kgsl-3d0/gpubusy" to ::parseAdrenoGpuBusy,
             "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage" to ::parsePercentage,
-            "/sys/class/kgsl/kgsl-3d0/devfreq/gpu_load" to ::parsePercentage,
-            
-            // Mali GPU (ARM) - 三星、华为、联发科等
+            // Mali GPU (ARM)
             "/sys/kernel/gpu/gpu_busy" to ::parsePercentage,
             "/sys/class/misc/mali0/device/utilization" to ::parsePercentage,
-            "/sys/devices/platform/mali.0/utilization" to ::parsePercentage,
-            "/sys/devices/platform/e82c0000.mali/utilization" to ::parsePercentage,
-            "/sys/devices/platform/13000000.mali/utilization" to ::parsePercentage,
-            "/sys/devices/platform/18500000.mali/utilization" to ::parsePercentage,
-            "/sys/devices/platform/1c500000.mali/utilization" to ::parsePercentage,
-            
-            // 联发科 (MediaTek) GPU
+            // 联发科 (MediaTek)
             "/sys/kernel/ged/hal/gpu_utilization" to ::parsePercentage,
-            "/sys/kernel/ged/hal/gpu_util" to ::parsePercentage,
-            "/d/ged/hal/gpu_utilization" to ::parsePercentage,
             "/sys/module/ged/parameters/gpu_loading" to ::parsePercentage,
-            "/proc/gpu_utilization" to ::parsePercentage,
-            "/proc/gpufreq/gpufreq_var_dump" to ::parseMtkGpuDump,
-            
-            // 华为麒麟 (Kirin) GPU
-            "/sys/class/devfreq/gpufreq/cur_freq" to ::parseKirinGpu,
-            "/sys/class/devfreq/ffa30000.gpu/load" to ::parsePercentage,
-            "/sys/class/devfreq/e82c0000.mali/load" to ::parsePercentage,
-            
-            // Exynos (三星)
-            "/sys/kernel/gpu/gpu_busy" to ::parsePercentage,
+            // Samsung Exynos
             "/sys/devices/platform/17500000.g3d/utilization" to ::parsePercentage,
             "/sys/devices/platform/18500000.g3d/utilization" to ::parsePercentage,
-            
-            // PowerVR GPU (联发科旧款)
-            "/sys/kernel/debug/pvr/status" to ::parsePvrStatus,
-            
-            // 通用 devfreq 路径
-            "/sys/class/devfreq/gpufreq/load" to ::parsePercentage,
-            "/sys/class/devfreq/13000000.gpu/load" to ::parsePercentage,
-            "/sys/class/devfreq/soc:qcom,kgsl-busmon/cur_freq" to ::parsePercentage,
         )
         
         for ((path, parser) in gpuPaths) {
@@ -255,45 +265,77 @@ class FPSDisplayView @JvmOverloads constructor(
                         if (line != null) {
                             val result = parser(line)
                             if (result >= 0f) {
+                                knownGpuUtilPath = path
+                                knownGpuUtilParser = parser
                                 gpuUsage = result.coerceIn(0f, 100f)
-                                return
+                                return true
                             }
                         }
                     }
                 }
             } catch (_: Exception) { }
         }
-        
-        // 尝试动态查找 devfreq 下的 GPU
-        tryFindDevfreqGpu()
+        return false
     }
     
-    /** 动态查找 devfreq 下的 GPU 设备 */
-    private fun tryFindDevfreqGpu() {
+    /** 通过 GPU 频率估算负载（cur_freq 相对于 min/max 的位置） */
+    private fun tryGpuFreqEstimation() {
+        try {
+            if (!gpuFreqInited) {
+                initGpuFreqPaths()
+                gpuFreqInited = true
+            }
+            
+            val path = gpuFreqPath ?: return
+            val curFreq = readLongFromFile("$path/cur_freq")
+            if (curFreq > 0 && gpuMaxFreq > gpuMinFreq) {
+                gpuUsage = ((curFreq - gpuMinFreq).toFloat() / (gpuMaxFreq - gpuMinFreq).toFloat() * 100f)
+                    .coerceIn(0f, 100f)
+            }
+        } catch (_: Exception) { }
+    }
+    
+    /** 初始化 GPU 频率路径（自动检测 GPU 类型） */
+    private fun initGpuFreqPaths() {
+        // Adreno (Qualcomm) - devfreq 路径
+        val adrenoPath = "/sys/class/kgsl/kgsl-3d0/devfreq"
+        if (java.io.File(adrenoPath, "cur_freq").let { it.exists() && it.canRead() }) {
+            gpuFreqPath = adrenoPath
+            gpuMinFreq = readLongFromFile("$adrenoPath/min_freq")
+            gpuMaxFreq = readLongFromFile("$adrenoPath/max_freq")
+            if (gpuMaxFreq > 0) return
+        }
+        
+        // 通用 devfreq: 扫描 /sys/class/devfreq/ 下包含 gpu/mali/kgsl/g3d 的设备
         try {
             val devfreqDir = java.io.File("/sys/class/devfreq")
             if (devfreqDir.exists() && devfreqDir.isDirectory) {
                 devfreqDir.listFiles()?.forEach { device ->
                     val name = device.name.lowercase()
                     if (name.contains("gpu") || name.contains("mali") || name.contains("kgsl") || name.contains("g3d")) {
-                        // 尝试读取 load 或 utilization
-                        listOf("load", "cur_freq", "trans_stat").forEach { attr ->
-                            val attrFile = java.io.File(device, attr)
-                            if (attrFile.exists() && attrFile.canRead()) {
-                                try {
-                                    val content = attrFile.readText().trim()
-                                    val value = parsePercentage(content)
-                                    if (value >= 0f) {
-                                        gpuUsage = value.coerceIn(0f, 100f)
-                                        return
-                                    }
-                                } catch (_: Exception) { }
-                            }
+                        val curFile = java.io.File(device, "cur_freq")
+                        if (curFile.exists() && curFile.canRead()) {
+                            gpuFreqPath = device.absolutePath
+                            gpuMinFreq = readLongFromFile("${device.absolutePath}/min_freq")
+                            gpuMaxFreq = readLongFromFile("${device.absolutePath}/max_freq")
+                            if (gpuMaxFreq > 0) return
                         }
                     }
                 }
             }
         } catch (_: Exception) { }
+        
+        // Adreno 备用路径
+        val kgslPath = "/sys/class/kgsl/kgsl-3d0"
+        if (java.io.File(kgslPath, "gpuclk").let { it.exists() && it.canRead() }) {
+            gpuFreqPath = kgslPath
+            gpuMinFreq = readLongFromFile("$kgslPath/min_pwrlevel").let { 
+                if (it > 0) readLongFromFile("$kgslPath/gpu_available_frequencies")
+                    .toString().split("\\s+".toRegex()).lastOrNull()?.toLongOrNull() ?: 0L
+                else 0L
+            }
+            gpuMaxFreq = readLongFromFile("$kgslPath/max_gpuclk")
+        }
     }
     
     private fun parseAdrenoGpuBusy(line: String): Float {
@@ -301,9 +343,7 @@ class FPSDisplayView @JvmOverloads constructor(
         if (parts.size >= 2) {
             val busy = parts[0].toLongOrNull() ?: return -1f
             val total = parts[1].toLongOrNull() ?: return -1f
-            if (total > 0) {
-                return (busy.toFloat() / total.toFloat()) * 100f
-            }
+            if (total > 0) return (busy.toFloat() / total.toFloat()) * 100f
         }
         return -1f
     }
@@ -311,36 +351,6 @@ class FPSDisplayView @JvmOverloads constructor(
     private fun parsePercentage(line: String): Float {
         val cleaned = line.trim().replace("%", "").replace("@", " ").split("\\s+".toRegex())[0]
         return cleaned.toFloatOrNull() ?: -1f
-    }
-    
-    private fun parsePvrStatus(line: String): Float {
-        // PowerVR 格式: "GPU Utilization: XX%"
-        val match = Regex("(\\d+)%").find(line)
-        return match?.groupValues?.get(1)?.toFloatOrNull() ?: -1f
-    }
-    
-    /** 解析联发科 GPU dump 格式 */
-    private fun parseMtkGpuDump(line: String): Float {
-        // 联发科格式可能是 "gpu_loading: XX" 或 "loading=XX"
-        val patterns = listOf(
-            Regex("loading[=:]\\s*(\\d+)"),
-            Regex("util[=:]\\s*(\\d+)"),
-            Regex("(\\d+)\\s*%")
-        )
-        for (pattern in patterns) {
-            val match = pattern.find(line)
-            if (match != null) {
-                return match.groupValues[1].toFloatOrNull() ?: -1f
-            }
-        }
-        return -1f
-    }
-    
-    /** 解析华为 Kirin GPU (通过频率估算负载) */
-    private fun parseKirinGpu(line: String): Float {
-        // Kirin 可能只提供频率，无法直接获取使用率
-        // 返回 -1 表示需要其他方法
-        return -1f
     }
 
     /** 更新 RAM 使用 */
@@ -435,9 +445,9 @@ class FPSDisplayView @JvmOverloads constructor(
         
         // 构建显示信息行
         val lines = mutableListOf(fpsText)
-        // CPU 和 GPU 使用率 - 始终显示百分比
-        val cpuStr = String.format("%.0f%%", cpuUsage)
-        val gpuStr = String.format("%.0f%%", gpuUsage)
+        // CPU 和 GPU 使用率 - 无数据时显示 N/A
+        val cpuStr = if (cpuUsage >= 0f) String.format("%.0f%%", cpuUsage) else "N/A"
+        val gpuStr = if (gpuUsage >= 0f) String.format("%.0f%%", gpuUsage) else "N/A"
         lines.add("CPU: $cpuStr  GPU: $gpuStr")
         if (ramUsage.isNotEmpty()) lines.add("RAM: $ramUsage")
 

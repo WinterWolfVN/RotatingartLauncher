@@ -2,6 +2,9 @@ package com.app.ralaunch.controls.views
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.DashPathEffect
+import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -14,6 +17,7 @@ import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.packs.ControlLayout as PackControlLayout
 import com.app.ralaunch.utils.AppLogger
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
@@ -62,6 +66,193 @@ class ControlLayout : FrameLayout {
     private var mLastTouchY = 0f // 上次触摸位置
     private var mEditControlListener: EditControlListener? = null // 编辑监听器
     private var mOnControlChangedListener: OnControlChangedListener? = null // 控件修改监听器
+
+    // ===== 拖拽吸附辅助线系统 =====
+    companion object SnapGuide {
+        private const val TAG = "ControlLayout"
+        private const val GRID_SIZE = 50
+        private const val SNAP_THRESHOLD = 12
+    }
+
+    /** 当前活跃的吸附参考线（屏幕像素坐标） */
+    private val mActiveSnapLinesX = mutableListOf<Float>() // 垂直辅助线
+    private val mActiveSnapLinesY = mutableListOf<Float>() // 水平辅助线
+    private var mIsDraggingAny = false // 是否有控件正在被拖拽
+
+    /** 拖拽开始时缓存的其他控件吸附目标 */
+    private var mSnapTargetsX = intArrayOf()
+    private var mSnapTargetsY = intArrayOf()
+
+    private val mSnapLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xCC00E5FF.toInt() // 青色，高对比度
+        strokeWidth = 1.5f
+        style = Paint.Style.STROKE
+        pathEffect = DashPathEffect(floatArrayOf(8f, 6f), 0f)
+    }
+
+    private val mGridPaint = Paint().apply {
+        color = 0x28FFFFFF
+        strokeWidth = 1f
+        style = Paint.Style.STROKE
+    }
+
+    private val mCenterAxisPaint = Paint().apply {
+        color = 0x44FFFFFF
+        strokeWidth = 1.5f
+        style = Paint.Style.STROKE
+    }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        // 拖拽时绘制网格和辅助线（在子 View 下方）
+        if (mIsDraggingAny && mModifiable) {
+            drawGrid(canvas)
+        }
+        super.dispatchDraw(canvas)
+        // 拖拽时绘制吸附参考线（在子 View 上方）
+        if (mIsDraggingAny && mModifiable) {
+            drawSnapGuides(canvas)
+        }
+    }
+
+    private fun drawGrid(canvas: Canvas) {
+        val w = width.toFloat()
+        val h = height.toFloat()
+
+        // 网格
+        var x = 0f
+        while (x <= w) {
+            canvas.drawLine(x, 0f, x, h, mGridPaint)
+            x += GRID_SIZE
+        }
+        var y = 0f
+        while (y <= h) {
+            canvas.drawLine(0f, y, w, y, mGridPaint)
+            y += GRID_SIZE
+        }
+
+        // 中心十字
+        val cx = w / 2f
+        val cy = h / 2f
+        canvas.drawLine(cx, 0f, cx, h, mCenterAxisPaint)
+        canvas.drawLine(0f, cy, w, cy, mCenterAxisPaint)
+    }
+
+    private fun drawSnapGuides(canvas: Canvas) {
+        val w = width.toFloat()
+        val h = height.toFloat()
+        for (x in mActiveSnapLinesX) {
+            canvas.drawLine(x, 0f, x, h, mSnapLinePaint)
+        }
+        for (y in mActiveSnapLinesY) {
+            canvas.drawLine(0f, y, w, y, mSnapLinePaint)
+        }
+    }
+
+    /**
+     * 缓存除被拖拽控件外的所有控件吸附目标（左/中/右，上/中/下）
+     */
+    private fun cacheSnapTargets(excludeView: View) {
+        val xTargets = mutableListOf<Int>()
+        val yTargets = mutableListOf<Int>()
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child === excludeView || child.visibility != VISIBLE) continue
+            val p = child.layoutParams as LayoutParams
+            val left = p.leftMargin
+            val top = p.topMargin
+            val right = left + child.width
+            val bottom = top + child.height
+            val cx = left + child.width / 2
+            val cy = top + child.height / 2
+            xTargets.addAll(listOf(left, cx, right))
+            yTargets.addAll(listOf(top, cy, bottom))
+        }
+        mSnapTargetsX = xTargets.toIntArray()
+        mSnapTargetsY = yTargets.toIntArray()
+    }
+
+    /**
+     * 对给定位置执行吸附计算，返回吸附后的值和活跃的参考线
+     */
+    private fun computeSnap(
+        rawLeft: Int, rawTop: Int, viewWidth: Int, viewHeight: Int
+    ): Pair<IntArray, Pair<List<Float>, List<Float>>> {
+        var snapLeft = rawLeft
+        var snapTop = rawTop
+        val linesX = mutableListOf<Float>()
+        val linesY = mutableListOf<Float>()
+
+        val rawRight = rawLeft + viewWidth
+        val rawCx = rawLeft + viewWidth / 2
+        val rawBottom = rawTop + viewHeight
+        val rawCy = rawTop + viewHeight / 2
+
+        val screenCx = resources.displayMetrics.widthPixels / 2
+        val screenCy = resources.displayMetrics.heightPixels / 2
+
+        // --- X 轴吸附 ---
+        var bestDx = SNAP_THRESHOLD + 1
+        var bestSnapX = rawLeft
+        var bestLineX = -1f
+
+        // 网格吸附（左边缘）
+        val gridSnapLeft = Math.round(rawLeft.toFloat() / GRID_SIZE) * GRID_SIZE
+        val dxGrid = abs(rawLeft - gridSnapLeft)
+        if (dxGrid < bestDx) { bestDx = dxGrid; bestSnapX = gridSnapLeft; bestLineX = gridSnapLeft.toFloat() }
+
+        // 屏幕中心吸附（控件中心）
+        val dxCenter = abs(rawCx - screenCx)
+        if (dxCenter < bestDx) { bestDx = dxCenter; bestSnapX = screenCx - viewWidth / 2; bestLineX = screenCx.toFloat() }
+
+        // 其他控件吸附
+        for (target in mSnapTargetsX) {
+            // 左边缘对齐
+            val dLeft = abs(rawLeft - target)
+            if (dLeft < bestDx) { bestDx = dLeft; bestSnapX = target; bestLineX = target.toFloat() }
+            // 右边缘对齐
+            val dRight = abs(rawRight - target)
+            if (dRight < bestDx) { bestDx = dRight; bestSnapX = target - viewWidth; bestLineX = target.toFloat() }
+            // 中心对齐
+            val dCx = abs(rawCx - target)
+            if (dCx < bestDx) { bestDx = dCx; bestSnapX = target - viewWidth / 2; bestLineX = target.toFloat() }
+        }
+
+        if (bestDx <= SNAP_THRESHOLD) {
+            snapLeft = bestSnapX
+            if (bestLineX >= 0f) linesX.add(bestLineX)
+        }
+
+        // --- Y 轴吸附 ---
+        var bestDy = SNAP_THRESHOLD + 1
+        var bestSnapY = rawTop
+        var bestLineY = -1f
+
+        // 网格吸附（上边缘）
+        val gridSnapTop = Math.round(rawTop.toFloat() / GRID_SIZE) * GRID_SIZE
+        val dyGrid = abs(rawTop - gridSnapTop)
+        if (dyGrid < bestDy) { bestDy = dyGrid; bestSnapY = gridSnapTop; bestLineY = gridSnapTop.toFloat() }
+
+        // 屏幕中心吸附（控件中心）
+        val dyCenter = abs(rawCy - screenCy)
+        if (dyCenter < bestDy) { bestDy = dyCenter; bestSnapY = screenCy - viewHeight / 2; bestLineY = screenCy.toFloat() }
+
+        // 其他控件吸附
+        for (target in mSnapTargetsY) {
+            val dTop = abs(rawTop - target)
+            if (dTop < bestDy) { bestDy = dTop; bestSnapY = target; bestLineY = target.toFloat() }
+            val dBottom = abs(rawBottom - target)
+            if (dBottom < bestDy) { bestDy = dBottom; bestSnapY = target - viewHeight; bestLineY = target.toFloat() }
+            val dCy = abs(rawCy - target)
+            if (dCy < bestDy) { bestDy = dCy; bestSnapY = target - viewHeight / 2; bestLineY = target.toFloat() }
+        }
+
+        if (bestDy <= SNAP_THRESHOLD) {
+            snapTop = bestSnapY
+            if (bestLineY >= 0f) linesY.add(bestLineY)
+        }
+
+        return intArrayOf(snapLeft, snapTop) to (linesX to linesY)
+    }
 
     constructor(context: Context) : super(context) {
         init()
@@ -419,11 +610,13 @@ class ControlLayout : FrameLayout {
             var downPosX = 0f
             var downPosY = 0f
             var isDragging = false
+            var dragNotified = false  // 拖拽开始通知只发一次
+            var accumDx = 0f         // 累计水平位移
+            var accumDy = 0f         // 累计垂直位移
         }
 
         val touchListener = View.OnTouchListener { v: View, event: MotionEvent ->
             if (!mModifiable) {
-                // 在非编辑模式下，不应该有这个 listener，但为了安全，返回 false
                 return@OnTouchListener false
             }
             when (event.action) {
@@ -434,8 +627,10 @@ class ControlLayout : FrameLayout {
                     mLastTouchX = event.rawX
                     mLastTouchY = event.rawY
                     state.isDragging = false
+                    state.dragNotified = false
+                    state.accumDx = 0f
+                    state.accumDy = 0f
 
-                    // 显示按下效果
                     if (controlView is VirtualButton) {
                         controlView.isPressedState = true
                     }
@@ -456,56 +651,39 @@ class ControlLayout : FrameLayout {
                         }
 
                         if (state.isDragging) {
-                            // 开始拖拽时取消按下效果，切换为半透明
-                            if (controlView is VirtualButton) {
-                                controlView.isPressedState = false
+                            // 拖拽开始时的一次性操作（不重复执行）
+                            if (!state.dragNotified) {
+                                state.dragNotified = true
+                                if (controlView is VirtualButton) {
+                                    controlView.isPressedState = false
+                                }
+                                v.alpha = 0.6f
+                                mIsDraggingAny = true
+                                cacheSnapTargets(v)
+                                mOnControlChangedListener?.onControlDragging(true)
+                                invalidate() // 显示网格
                             }
-                            v.alpha = 0.6f
-                            // 通知监听器
-                            mOnControlChangedListener?.onControlDragging(true)
                             
+                            // 累计原始位移
+                            state.accumDx += deltaX
+                            state.accumDy += deltaY
+
+                            // 实时吸附计算
                             val params = v.layoutParams as LayoutParams
-                            var newLeft = params.leftMargin + deltaX.toInt()
-                            var newTop = params.topMargin + deltaY.toInt()
+                            val rawLeft = params.leftMargin + state.accumDx.toInt()
+                            val rawTop = params.topMargin + state.accumDy.toInt()
+                            val (snapped, guides) = computeSnap(rawLeft, rawTop, v.width, v.height)
 
-                            // ===== 自动吸附逻辑 (灵敏度优化) =====
-                            val SNAP_THRESHOLD = 10 // 调小阈值，从 20 降至 10，减弱“磁铁”感
-                            val GRID_SIZE = 50 
+                            // 应用吸附后的 translation
+                            v.translationX = (snapped[0] - params.leftMargin).toFloat()
+                            v.translationY = (snapped[1] - params.topMargin).toFloat()
 
-                            // 1. 吸附到网格
-                            if (Math.abs(newLeft % GRID_SIZE) < SNAP_THRESHOLD) {
-                                newLeft = (newLeft / GRID_SIZE) * GRID_SIZE
-                            } else if (Math.abs(newLeft % GRID_SIZE) > (GRID_SIZE - SNAP_THRESHOLD)) {
-                                newLeft = ((newLeft / GRID_SIZE) + 1) * GRID_SIZE
-                            }
-
-                            if (Math.abs(newTop % GRID_SIZE) < SNAP_THRESHOLD) {
-                                newTop = (newTop / GRID_SIZE) * GRID_SIZE
-                            } else if (Math.abs(newTop % GRID_SIZE) > (GRID_SIZE - SNAP_THRESHOLD)) {
-                                newTop = ((newTop / GRID_SIZE) + 1) * GRID_SIZE
-                            }
-
-                            // 2. 吸附到屏幕中心
-                            val centerX = resources.displayMetrics.widthPixels / 2
-                            val centerY = resources.displayMetrics.heightPixels / 2
-                            
-                            // 控件中心吸附
-                            val controlCenterX = newLeft + v.width / 2
-                            val controlCenterY = newTop + v.height / 2
-                            
-                            if (Math.abs(controlCenterX - centerX) < SNAP_THRESHOLD) {
-                                newLeft = centerX - v.width / 2
-                            }
-                            if (Math.abs(controlCenterY - centerY) < SNAP_THRESHOLD) {
-                                newTop = centerY - v.height / 2
-                            }
-
-                            params.leftMargin = newLeft
-                            params.topMargin = newTop
-                            v.layoutParams = params
-
-                            data.x = xFromPx(params.leftMargin)
-                            data.y = yFromPx(params.topMargin)
+                            // 更新辅助线并刷新绘制
+                            mActiveSnapLinesX.clear()
+                            mActiveSnapLinesX.addAll(guides.first)
+                            mActiveSnapLinesY.clear()
+                            mActiveSnapLinesY.addAll(guides.second)
+                            invalidate()
 
                             mLastTouchX = event.rawX
                             mLastTouchY = event.rawY
@@ -515,24 +693,39 @@ class ControlLayout : FrameLayout {
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    // 恢复正常状态
-                    v.alpha = 1.0f
                     if (controlView is VirtualButton) {
                         controlView.isPressedState = false
                     }
 
-                    val finalDx = event.rawX - state.downPosX
-                    val finalDy = event.rawY - state.downPosY
-                    val finalDistance =
-                        sqrt((finalDx * finalDx + finalDy * finalDy).toDouble()).toFloat()
+                    if (state.isDragging && state.dragNotified) {
+                        // 拖拽结束：translation 已经是吸附后的位置，直接提交
+                        val params = v.layoutParams as LayoutParams
+                        val newLeft = params.leftMargin + v.translationX.toInt()
+                        val newTop = params.topMargin + v.translationY.toInt()
 
-                    if (finalDistance <= DRAG_THRESHOLD && !state.isDragging) {
-                        mEditControlListener?.onEditControl(data)
-                    } else {
+                        v.translationX = 0f
+                        v.translationY = 0f
+                        params.leftMargin = newLeft
+                        params.topMargin = newTop
+                        v.layoutParams = params
+
+                        data.x = xFromPx(newLeft)
+                        data.y = yFromPx(newTop)
+
                         mOnControlChangedListener?.onControlDragging(false)
                         mOnControlChangedListener?.onControlChanged()
+                    } else if (!state.isDragging) {
+                        mEditControlListener?.onEditControl(data)
                     }
 
+                    // 恢复正常状态
+                    v.alpha = 1.0f
+                    v.translationX = 0f
+                    v.translationY = 0f
+                    mIsDraggingAny = false
+                    mActiveSnapLinesX.clear()
+                    mActiveSnapLinesY.clear()
+                    invalidate() // 清除网格和辅助线
                     mSelectedControl = null
                     return@OnTouchListener true
                 }
@@ -623,8 +816,4 @@ class ControlLayout : FrameLayout {
     private fun heightToPx(value: Float) = (value * resources.displayMetrics.heightPixels).toInt()
     private fun xFromPx(px: Int) = px.toFloat() / resources.displayMetrics.widthPixels
     private fun yFromPx(px: Int) = px.toFloat() / resources.displayMetrics.heightPixels
-
-    companion object {
-        private const val TAG = "ControlLayout"
-    }
 }
