@@ -70,6 +70,8 @@ class ControlPackManager(private val context: Context) {
     @Serializable
     data class ManagerState(
         var selectedPackId: String? = null,
+        /** 游戏内快速切换的控件包 ID 列表 */
+        var quickSwitchPackIds: List<String> = emptyList(),
         var lastModified: Long = System.currentTimeMillis()
     )
     
@@ -159,11 +161,79 @@ class ControlPackManager(private val context: Context) {
      * 设置当前选中的控件包 ID
      */
     fun setSelectedPackId(packId: String?) {
-        val state = ManagerState(
+        val currentState = loadManagerState()
+        val state = currentState.copy(
             selectedPackId = packId,
             lastModified = System.currentTimeMillis()
         )
         saveManagerState(state)
+    }
+    
+    // ========== 快速切换管理 ==========
+    
+    /**
+     * 获取游戏内快速切换的控件包 ID 列表
+     */
+    fun getQuickSwitchPackIds(): List<String> {
+        val state = loadManagerState()
+        val installedIds = listPackIds()
+        // 过滤掉已卸载的包
+        return state.quickSwitchPackIds.filter { it in installedIds }
+    }
+    
+    /**
+     * 获取游戏内快速切换的控件包信息列表
+     */
+    fun getQuickSwitchPacks(): List<ControlPackInfo> {
+        return getQuickSwitchPackIds().mapNotNull { getPackInfo(it) }
+    }
+    
+    /**
+     * 设置游戏内快速切换的控件包 ID 列表
+     */
+    fun setQuickSwitchPackIds(ids: List<String>) {
+        val currentState = loadManagerState()
+        val state = currentState.copy(
+            quickSwitchPackIds = ids,
+            lastModified = System.currentTimeMillis()
+        )
+        saveManagerState(state)
+    }
+    
+    /**
+     * 将控件包添加到快速切换列表
+     */
+    fun addToQuickSwitch(packId: String) {
+        val currentIds = getQuickSwitchPackIds().toMutableList()
+        if (packId !in currentIds) {
+            currentIds.add(packId)
+            setQuickSwitchPackIds(currentIds)
+        }
+    }
+    
+    /**
+     * 从快速切换列表移除控件包
+     */
+    fun removeFromQuickSwitch(packId: String) {
+        val currentIds = getQuickSwitchPackIds().toMutableList()
+        currentIds.remove(packId)
+        setQuickSwitchPackIds(currentIds)
+    }
+    
+    /**
+     * 检查控件包是否在快速切换列表中
+     */
+    fun isInQuickSwitch(packId: String): Boolean {
+        return packId in getQuickSwitchPackIds()
+    }
+    
+    /**
+     * 切换激活的控件包（游戏内使用）
+     * @return 新控件包的布局，或 null 如果切换失败
+     */
+    fun switchActivePack(packId: String): ControlLayout? {
+        setSelectedPackId(packId)
+        return getPackLayout(packId)
     }
     
     // ========== 包管理 ==========

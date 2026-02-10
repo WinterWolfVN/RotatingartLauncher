@@ -71,9 +71,10 @@ fun PatchManagementDialogCompose(
     var selectedGameIndex by remember { mutableIntStateOf(-1) }
     var patches by remember { mutableStateOf<List<Patch>>(emptyList()) }
     
-    // 加载游戏列表
+    // 加载游戏列表（按 gameName 去重，保留每个名称的第一个条目）
     LaunchedEffect(Unit) {
-        games = gameRepository?.loadGameList() ?: emptyList()
+        games = (gameRepository?.loadGameList() ?: emptyList())
+            .distinctBy { it.gameName }
     }
     
     // 当选择游戏改变时加载补丁

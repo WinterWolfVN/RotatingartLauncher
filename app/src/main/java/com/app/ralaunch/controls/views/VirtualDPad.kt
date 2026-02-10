@@ -2,13 +2,9 @@ package com.app.ralaunch.controls.views
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
-import android.text.TextPaint
 import android.util.Log
-import android.view.MotionEvent
 import android.view.View
 import com.app.ralaunch.controls.bridges.ControlInputBridge
 import com.app.ralaunch.controls.data.ControlData
@@ -16,14 +12,13 @@ import com.app.ralaunch.controls.textures.TextureLoader
 import com.app.ralaunch.manager.VibrationManager
 import org.koin.java.KoinJavaComponent
 import java.io.File
-import kotlin.math.atan2
+import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sqrt
 
 /**
- * 十字键控件
- * 
- * 支持上下左右四个方向，可选支持斜向输入
+ * 虚拟D-Pad控件View
+ * 3x3网格布局，包含4个方向按钮（上、右、下、左）
+ * 对角位置按下时会同时触发两个相邻的方向键
  */
 class VirtualDPad(
     context: Context?,
@@ -33,13 +28,12 @@ class VirtualDPad(
 
     companion object {
         private const val TAG = "VirtualDPad"
-        
-        // 方向常量
-        const val DIR_NONE = 0
-        const val DIR_UP = 1
-        const val DIR_DOWN = 2
-        const val DIR_LEFT = 4
-        const val DIR_RIGHT = 8
+
+        // D-Pad方向索引（仅4个主方向）
+        private const val DIR_UP = 0
+        private const val DIR_RIGHT = 1
+        private const val DIR_DOWN = 2
+        private const val DIR_LEFT = 3
     }
 
     // 震动管理器
@@ -75,25 +69,17 @@ class VirtualDPad(
     }
 
     // 绘制相关
-    private lateinit var mBackgroundPaint: Paint
-    private lateinit var mButtonPaint: Paint
-    private lateinit var mActivePaint: Paint
-    private lateinit var mStrokePaint: Paint
-    private lateinit var mTextPaint: TextPaint
+    private lateinit var backgroundPaint: Paint
+    private lateinit var strokePaint: Paint
+    private lateinit var buttonPaint: Paint
+    private lateinit var buttonPressedPaint: Paint
+    private lateinit var buttonStrokePaint: Paint
+    private val paintRect: RectF = RectF()
+    private val cornerPath: android.graphics.Path = android.graphics.Path()
 
-    // 按钮区域
-    private val upRect = RectF()
-    private val downRect = RectF()
-    private val leftRect = RectF()
-    private val rightRect = RectF()
-    private val centerRect = RectF()
-
-    // 当前激活的方向
-    private var activeDirections = DIR_NONE
-    private var previousDirections = DIR_NONE
-
-    // 触摸相关
-    private var mTouchPointerId = -1
+    // 按钮状态 - 4个方向
+    private val buttonPressed = BooleanArray(4) { false }
+    private var activePointerId = -1
 
     init {
         initPaints()
@@ -102,539 +88,300 @@ class VirtualDPad(
     private fun initPaints() {
         val opacity = controlData.opacity
         val borderOpacity = controlData.borderOpacity
-        
-        // 自动检测：如果边框是透明的或宽度为0，根据背景亮度自动设置边框颜色
-        val bgLuminance = Color.luminance(controlData.bgColor)
-        val isLightBg = bgLuminance > 0.5f
-        
-        // 如果用户没有设置边框颜色（透明）或宽度为0，自动计算
-        val userStrokeColor = controlData.strokeColor
-        val hasUserStroke = (userStrokeColor ushr 24) > 10 && controlData.strokeWidth > 0
-        val effectiveStrokeColor = if (hasUserStroke) {
-            userStrokeColor
-        } else {
-            // 根据背景亮度选择对比色
-            if (isLightBg) Color.parseColor("#333333") else Color.WHITE
-        }
-        val effectiveStrokeWidth = if (controlData.strokeWidth > 0) {
-            controlData.strokeWidth
-        } else {
-            2f // 默认 2dp 边框
-        }
-        val effectiveBorderOpacity = if (borderOpacity > 0.01f) borderOpacity else 0.5f
 
-        mBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = controlData.bgColor
+            style = Paint.Style.FILL
             alpha = (opacity * 255).toInt()
-            style = Paint.Style.FILL
         }
 
-        mButtonPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = controlData.bgColor
-            alpha = (opacity * 255).toInt()
-            style = Paint.Style.FILL
-        }
-
-        mActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = castedData.activeColor
-            alpha = (opacity * 255).toInt().coerceAtLeast(100)
-            style = Paint.Style.FILL
-        }
-
-        mStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = effectiveStrokeColor
-            alpha = (effectiveBorderOpacity * 255).toInt()
+        strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = controlData.strokeColor
             style = Paint.Style.STROKE
-            strokeWidth = effectiveStrokeWidth * resources.displayMetrics.density
+            strokeWidth = dpToPx(controlData.strokeWidth)
+            alpha = (borderOpacity * 255).toInt()
         }
 
-        mTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = controlData.textColor
-            alpha = (controlData.textOpacity * 255).toInt()
-            textSize = min(width, height) * 0.15f
-            textAlign = Paint.Align.CENTER
+        buttonPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = controlData.bgColor
+            style = Paint.Style.FILL
+            alpha = (opacity * 255).toInt()
+        }
+
+        buttonPressedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = castedData.activeColor
+            style = Paint.Style.FILL
+            alpha = (opacity * 255).toInt().coerceAtLeast(100)
+        }
+
+        buttonStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = controlData.strokeColor
+            style = Paint.Style.STROKE
+            strokeWidth = dpToPx(controlData.strokeWidth)
+            alpha = (borderOpacity * 255).toInt()
         }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        updateButtonRects()
-        mTextPaint.textSize = min(w, h) * 0.12f
+        paintRect.set(0f, 0f, w.toFloat(), h.toFloat())
     }
 
-    private fun updateButtonRects() {
-        val w = width.toFloat()
-        val h = height.toFloat()
-        val size = min(w, h)
-        
-        val buttonSize = size * castedData.buttonSize
-        val spacing = size * castedData.buttonSpacing
-        val centerX = w / 2
-        val centerY = h / 2
+    // ==================== ControlView 接口方法 ====================
 
-        when (castedData.style) {
-            ControlData.DPad.Style.CROSS -> {
-                // 十字形布局
-                val halfButton = buttonSize / 2
-                
-                // 上
-                upRect.set(
-                    centerX - halfButton,
-                    centerY - buttonSize - spacing / 2,
-                    centerX + halfButton,
-                    centerY - spacing / 2
-                )
-                
-                // 下
-                downRect.set(
-                    centerX - halfButton,
-                    centerY + spacing / 2,
-                    centerX + halfButton,
-                    centerY + buttonSize + spacing / 2
-                )
-                
-                // 左
-                leftRect.set(
-                    centerX - buttonSize - spacing / 2,
-                    centerY - halfButton,
-                    centerX - spacing / 2,
-                    centerY + halfButton
-                )
-                
-                // 右
-                rightRect.set(
-                    centerX + spacing / 2,
-                    centerY - halfButton,
-                    centerX + buttonSize + spacing / 2,
-                    centerY + halfButton
-                )
-                
-                // 中心
-                centerRect.set(
-                    centerX - halfButton,
-                    centerY - halfButton,
-                    centerX + halfButton,
-                    centerY + halfButton
-                )
-            }
-            
-            ControlData.DPad.Style.SQUARE -> {
-                // 方形布局（紧凑十字形，无间距）
-                val halfButton = buttonSize / 2
-                
-                // 上 - 顶部中间
-                upRect.set(
-                    centerX - halfButton,
-                    centerY - buttonSize - halfButton,
-                    centerX + halfButton,
-                    centerY - halfButton
-                )
-                
-                // 下 - 底部中间
-                downRect.set(
-                    centerX - halfButton,
-                    centerY + halfButton,
-                    centerX + halfButton,
-                    centerY + buttonSize + halfButton
-                )
-                
-                // 左 - 左侧中间
-                leftRect.set(
-                    centerX - buttonSize - halfButton,
-                    centerY - halfButton,
-                    centerX - halfButton,
-                    centerY + halfButton
-                )
-                
-                // 右 - 右侧中间
-                rightRect.set(
-                    centerX + halfButton,
-                    centerY - halfButton,
-                    centerX + buttonSize + halfButton,
-                    centerY + halfButton
-                )
-                
-                // 中心方块
-                centerRect.set(
-                    centerX - halfButton,
-                    centerY - halfButton,
-                    centerX + halfButton,
-                    centerY + halfButton
-                )
-            }
-            
-            ControlData.DPad.Style.ROUND -> {
-                // 圆形布局（整个控件区域）
-                val radius = size / 2
-                upRect.set(0f, 0f, w, h)
-                downRect.set(0f, 0f, w, h)
-                leftRect.set(0f, 0f, w, h)
-                rightRect.set(0f, 0f, w, h)
-                centerRect.set(
-                    centerX - radius * castedData.deadZone,
-                    centerY - radius * castedData.deadZone,
-                    centerX + radius * castedData.deadZone,
-                    centerY + radius * castedData.deadZone
-                )
-            }
-        }
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        
-        when (castedData.style) {
-            ControlData.DPad.Style.CROSS -> drawCrossStyle(canvas)
-            ControlData.DPad.Style.SQUARE -> drawSquareStyle(canvas)
-            ControlData.DPad.Style.ROUND -> drawRoundStyle(canvas)
-        }
-    }
-
-    private fun drawCrossStyle(canvas: Canvas) {
-        val cornerRadius = min(upRect.width(), upRect.height()) * 0.2f
-        
-        // 绘制中心
-        canvas.drawRoundRect(centerRect, cornerRadius, cornerRadius, mButtonPaint)
-        canvas.drawRoundRect(centerRect, cornerRadius, cornerRadius, mStrokePaint)
-        
-        // 绘制上
-        val upPaint = if (activeDirections and DIR_UP != 0) mActivePaint else mButtonPaint
-        canvas.drawRoundRect(upRect, cornerRadius, cornerRadius, upPaint)
-        canvas.drawRoundRect(upRect, cornerRadius, cornerRadius, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "↑", upRect)
-        }
-        
-        // 绘制下
-        val downPaint = if (activeDirections and DIR_DOWN != 0) mActivePaint else mButtonPaint
-        canvas.drawRoundRect(downRect, cornerRadius, cornerRadius, downPaint)
-        canvas.drawRoundRect(downRect, cornerRadius, cornerRadius, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "↓", downRect)
-        }
-        
-        // 绘制左
-        val leftPaint = if (activeDirections and DIR_LEFT != 0) mActivePaint else mButtonPaint
-        canvas.drawRoundRect(leftRect, cornerRadius, cornerRadius, leftPaint)
-        canvas.drawRoundRect(leftRect, cornerRadius, cornerRadius, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "←", leftRect)
-        }
-        
-        // 绘制右
-        val rightPaint = if (activeDirections and DIR_RIGHT != 0) mActivePaint else mButtonPaint
-        canvas.drawRoundRect(rightRect, cornerRadius, cornerRadius, rightPaint)
-        canvas.drawRoundRect(rightRect, cornerRadius, cornerRadius, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "→", rightRect)
-        }
-    }
-
-    private fun drawSquareStyle(canvas: Canvas) {
-        // 方形样式：无圆角，紧凑十字形
-        val cornerRadius = 0f
-        
-        // 绘制中心
-        canvas.drawRect(centerRect, mButtonPaint)
-        canvas.drawRect(centerRect, mStrokePaint)
-        
-        // 上
-        val upPaint = if (activeDirections and DIR_UP != 0) mActivePaint else mButtonPaint
-        canvas.drawRect(upRect, upPaint)
-        canvas.drawRect(upRect, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "↑", upRect)
-        }
-        
-        // 下
-        val downPaint = if (activeDirections and DIR_DOWN != 0) mActivePaint else mButtonPaint
-        canvas.drawRect(downRect, downPaint)
-        canvas.drawRect(downRect, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "↓", downRect)
-        }
-        
-        // 左
-        val leftPaint = if (activeDirections and DIR_LEFT != 0) mActivePaint else mButtonPaint
-        canvas.drawRect(leftRect, leftPaint)
-        canvas.drawRect(leftRect, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "←", leftRect)
-        }
-        
-        // 右
-        val rightPaint = if (activeDirections and DIR_RIGHT != 0) mActivePaint else mButtonPaint
-        canvas.drawRect(rightRect, rightPaint)
-        canvas.drawRect(rightRect, mStrokePaint)
-        if (castedData.showLabels) {
-            drawTextCentered(canvas, "→", rightRect)
-        }
-    }
-
-    private fun drawRoundStyle(canvas: Canvas) {
-        val centerX = width / 2f
-        val centerY = height / 2f
-        val radius = min(width, height) / 2f
-        val deadZoneRadius = radius * castedData.deadZone
-
-        // 绘制外圈背景
-        canvas.drawCircle(centerX, centerY, radius, mButtonPaint)
-        canvas.drawCircle(centerX, centerY, radius, mStrokePaint)
-
-        // 绘制四个扇区（用路径绘制激活状态）
-        val sectorPath = Path()
-        
-        // 上扇区
-        if (activeDirections and DIR_UP != 0) {
-            sectorPath.reset()
-            sectorPath.moveTo(centerX, centerY - deadZoneRadius)
-            sectorPath.lineTo(centerX - radius * 0.7f, centerY - radius * 0.7f)
-            sectorPath.arcTo(RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius), 225f, 90f)
-            sectorPath.lineTo(centerX, centerY - deadZoneRadius)
-            sectorPath.close()
-            canvas.drawPath(sectorPath, mActivePaint)
-        }
-        
-        // 下扇区
-        if (activeDirections and DIR_DOWN != 0) {
-            sectorPath.reset()
-            sectorPath.moveTo(centerX, centerY + deadZoneRadius)
-            sectorPath.lineTo(centerX + radius * 0.7f, centerY + radius * 0.7f)
-            sectorPath.arcTo(RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius), 45f, 90f)
-            sectorPath.lineTo(centerX, centerY + deadZoneRadius)
-            sectorPath.close()
-            canvas.drawPath(sectorPath, mActivePaint)
-        }
-        
-        // 左扇区
-        if (activeDirections and DIR_LEFT != 0) {
-            sectorPath.reset()
-            sectorPath.moveTo(centerX - deadZoneRadius, centerY)
-            sectorPath.lineTo(centerX - radius * 0.7f, centerY + radius * 0.7f)
-            sectorPath.arcTo(RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius), 135f, 90f)
-            sectorPath.lineTo(centerX - deadZoneRadius, centerY)
-            sectorPath.close()
-            canvas.drawPath(sectorPath, mActivePaint)
-        }
-        
-        // 右扇区
-        if (activeDirections and DIR_RIGHT != 0) {
-            sectorPath.reset()
-            sectorPath.moveTo(centerX + deadZoneRadius, centerY)
-            sectorPath.lineTo(centerX + radius * 0.7f, centerY - radius * 0.7f)
-            sectorPath.arcTo(RectF(centerX - radius, centerY - radius, centerX + radius, centerY + radius), -45f, 90f)
-            sectorPath.lineTo(centerX + deadZoneRadius, centerY)
-            sectorPath.close()
-            canvas.drawPath(sectorPath, mActivePaint)
-        }
-
-        // 绘制十字分隔线
-        val dividerPaint = Paint(mStrokePaint).apply {
-            alpha = (castedData.borderOpacity * 128).toInt()
-        }
-        canvas.drawLine(centerX - radius, centerY, centerX + radius, centerY, dividerPaint)
-        canvas.drawLine(centerX, centerY - radius, centerX, centerY + radius, dividerPaint)
-
-        // 绘制中心死区
-        canvas.drawCircle(centerX, centerY, deadZoneRadius, mButtonPaint)
-        canvas.drawCircle(centerX, centerY, deadZoneRadius, mStrokePaint)
-
-        // 绘制方向标签
-        if (castedData.showLabels) {
-            val labelOffset = radius * 0.6f
-            drawTextAt(canvas, "↑", centerX, centerY - labelOffset)
-            drawTextAt(canvas, "↓", centerX, centerY + labelOffset)
-            drawTextAt(canvas, "←", centerX - labelOffset, centerY)
-            drawTextAt(canvas, "→", centerX + labelOffset, centerY)
-        }
-    }
-
-    private fun drawTextCentered(canvas: Canvas, text: String, rect: RectF) {
-        val x = rect.centerX()
-        val y = rect.centerY() - (mTextPaint.descent() + mTextPaint.ascent()) / 2
-        canvas.drawText(text, x, y, mTextPaint)
-    }
-
-    private fun drawTextAt(canvas: Canvas, text: String, x: Float, y: Float) {
-        val adjustedY = y - (mTextPaint.descent() + mTextPaint.ascent()) / 2
-        canvas.drawText(text, x, adjustedY, mTextPaint)
-    }
-
-    // ControlView 接口实现
     override fun isTouchInBounds(x: Float, y: Float): Boolean {
         return x >= 0 && x <= width && y >= 0 && y <= height
     }
 
     override fun tryAcquireTouch(pointerId: Int, x: Float, y: Float): Boolean {
-        if (mTouchPointerId != -1) return false
+        if (activePointerId != -1) return false
         if (!isTouchInBounds(x, y)) return false
-        
-        mTouchPointerId = pointerId
-        updateActiveDirections(x, y)
-        sendKeyEvents()
+
+        activePointerId = pointerId
+        handleTouchAtPosition(x, y)
         vibrationManager?.vibrateOneShot(50, 30)
         return true
     }
 
     override fun handleTouchMove(pointerId: Int, x: Float, y: Float) {
-        if (pointerId != mTouchPointerId) return
-        updateActiveDirections(x, y)
-        sendKeyEvents()
+        if (pointerId != activePointerId) return
+        handleTouchAtPosition(x, y)
     }
 
     override fun releaseTouch(pointerId: Int) {
-        if (pointerId != mTouchPointerId) return
-        mTouchPointerId = -1
-        releaseAllKeys()
-        activeDirections = DIR_NONE
-        invalidate()
+        if (pointerId != activePointerId) return
+        activePointerId = -1
+        releaseAllButtons()
     }
 
     override fun cancelAllTouches() {
-        if (mTouchPointerId != -1) {
-            releaseAllKeys()
-            mTouchPointerId = -1
-            activeDirections = DIR_NONE
-            invalidate()
+        if (activePointerId != -1) {
+            activePointerId = -1
+            releaseAllButtons()
         }
     }
 
-    private fun updateActiveDirections(x: Float, y: Float) {
-        previousDirections = activeDirections
-        
-        when (castedData.style) {
-            ControlData.DPad.Style.CROSS, ControlData.DPad.Style.SQUARE -> {
-                activeDirections = DIR_NONE
-                
-                if (upRect.contains(x, y)) activeDirections = activeDirections or DIR_UP
-                if (downRect.contains(x, y)) activeDirections = activeDirections or DIR_DOWN
-                if (leftRect.contains(x, y)) activeDirections = activeDirections or DIR_LEFT
-                if (rightRect.contains(x, y)) activeDirections = activeDirections or DIR_RIGHT
-                
-                // 如果允许斜向，检查是否在角落区域
-                if (castedData.allowDiagonal && castedData.style == ControlData.DPad.Style.CROSS) {
-                    val centerX = width / 2f
-                    val centerY = height / 2f
-                    val dx = x - centerX
-                    val dy = y - centerY
-                    val threshold = min(width, height) * 0.15f
-                    
-                    // 左上角
-                    if (dx < -threshold && dy < -threshold) {
-                        activeDirections = DIR_UP or DIR_LEFT
-                    }
-                    // 右上角
-                    else if (dx > threshold && dy < -threshold) {
-                        activeDirections = DIR_UP or DIR_RIGHT
-                    }
-                    // 左下角
-                    else if (dx < -threshold && dy > threshold) {
-                        activeDirections = DIR_DOWN or DIR_LEFT
-                    }
-                    // 右下角
-                    else if (dx > threshold && dy > threshold) {
-                        activeDirections = DIR_DOWN or DIR_RIGHT
-                    }
-                }
-            }
-            
-            ControlData.DPad.Style.ROUND -> {
-                val centerX = width / 2f
-                val centerY = height / 2f
-                val dx = x - centerX
-                val dy = y - centerY
-                val distance = sqrt(dx * dx + dy * dy)
-                val radius = min(width, height) / 2f
-                val deadZoneRadius = radius * castedData.deadZone
-                
-                activeDirections = DIR_NONE
-                
-                // 在死区内不触发任何方向
-                if (distance < deadZoneRadius) {
-                    invalidate()
-                    return
-                }
-                
-                // 计算角度 (0° = 右, 逆时针)
-                val angle = Math.toDegrees(atan2(-dy.toDouble(), dx.toDouble())).toFloat()
-                
-                if (castedData.allowDiagonal) {
-                    // 8向模式
-                    when {
-                        angle >= -22.5f && angle < 22.5f -> activeDirections = DIR_RIGHT
-                        angle >= 22.5f && angle < 67.5f -> activeDirections = DIR_UP or DIR_RIGHT
-                        angle >= 67.5f && angle < 112.5f -> activeDirections = DIR_UP
-                        angle >= 112.5f && angle < 157.5f -> activeDirections = DIR_UP or DIR_LEFT
-                        angle >= 157.5f || angle < -157.5f -> activeDirections = DIR_LEFT
-                        angle >= -157.5f && angle < -112.5f -> activeDirections = DIR_DOWN or DIR_LEFT
-                        angle >= -112.5f && angle < -67.5f -> activeDirections = DIR_DOWN
-                        angle >= -67.5f && angle < -22.5f -> activeDirections = DIR_DOWN or DIR_RIGHT
-                    }
-                } else {
-                    // 4向模式
-                    when {
-                        angle >= -45f && angle < 45f -> activeDirections = DIR_RIGHT
-                        angle >= 45f && angle < 135f -> activeDirections = DIR_UP
-                        angle >= 135f || angle < -135f -> activeDirections = DIR_LEFT
-                        else -> activeDirections = DIR_DOWN
-                    }
-                }
-            }
-        }
-        
+    private fun handleTouchAtPosition(x: Float, y: Float) {
+        // 确定触摸在3x3网格中的哪个单元格
+        val cellWidth = width / 3f
+        val cellHeight = height / 3f
+        val col = min(2, max(0, (x / cellWidth).toInt()))
+        val row = min(2, max(0, (y / cellHeight).toInt()))
+
+        // 映射到方向（对角方向会激活两个方向键）
+        val activeDirections = getCellDirections(row, col)
+
+        // 更新按钮状态
+        updateButtonStates(activeDirections)
+
         invalidate()
     }
 
-    private fun sendKeyEvents() {
-        val pressed = activeDirections
-        val released = previousDirections and activeDirections.inv()
-        
-        // 释放不再激活的方向
-        if (released and DIR_UP != 0) sendKeyUp(castedData.upKeycode)
-        if (released and DIR_DOWN != 0) sendKeyUp(castedData.downKeycode)
-        if (released and DIR_LEFT != 0) sendKeyUp(castedData.leftKeycode)
-        if (released and DIR_RIGHT != 0) sendKeyUp(castedData.rightKeycode)
-        
-        // 按下新激活的方向
-        val newPressed = pressed and previousDirections.inv()
-        if (newPressed and DIR_UP != 0) sendKeyDown(castedData.upKeycode)
-        if (newPressed and DIR_DOWN != 0) sendKeyDown(castedData.downKeycode)
-        if (newPressed and DIR_LEFT != 0) sendKeyDown(castedData.leftKeycode)
-        if (newPressed and DIR_RIGHT != 0) sendKeyDown(castedData.rightKeycode)
-        
-        // 震动反馈（方向变化时）
-        if (newPressed != 0) {
-            vibrationManager?.vibrateOneShot(30, 20)
+    private fun getCellDirections(row: Int, col: Int): Set<Int> {
+        return when {
+            row == 0 && col == 0 -> setOf(DIR_UP, DIR_LEFT)     // 左上
+            row == 0 && col == 1 -> setOf(DIR_UP)                // 上
+            row == 0 && col == 2 -> setOf(DIR_UP, DIR_RIGHT)     // 右上
+            row == 1 && col == 0 -> setOf(DIR_LEFT)              // 左
+            row == 1 && col == 1 -> emptySet()                   // 中心，无方向
+            row == 1 && col == 2 -> setOf(DIR_RIGHT)             // 右
+            row == 2 && col == 0 -> setOf(DIR_DOWN, DIR_LEFT)    // 左下
+            row == 2 && col == 1 -> setOf(DIR_DOWN)              // 下
+            row == 2 && col == 2 -> setOf(DIR_DOWN, DIR_RIGHT)   // 右下
+            else -> emptySet()
         }
     }
 
-    private fun sendKeyDown(keycode: ControlData.KeyCode) {
-        when (castedData.mode) {
-            ControlData.Button.Mode.KEYBOARD -> {
+    private fun updateButtonStates(activeDirections: Set<Int>) {
+        for (i in buttonPressed.indices) {
+            val shouldBePressed = i in activeDirections
+            if (buttonPressed[i] != shouldBePressed) {
+                buttonPressed[i] = shouldBePressed
+
+                if (shouldBePressed) {
+                    sendKeyDown(i)
+                    vibrationManager?.vibrateOneShot(30, 20)
+                } else {
+                    sendKeyUp(i)
+                }
+            }
+        }
+    }
+
+    private fun releaseAllButtons() {
+        for (i in buttonPressed.indices) {
+            if (buttonPressed[i]) {
+                buttonPressed[i] = false
+                sendKeyUp(i)
+            }
+        }
+        invalidate()
+    }
+
+    /**
+     * 根据方向索引获取对应的按键码
+     */
+    private fun getKeycode(direction: Int): ControlData.KeyCode {
+        return when (direction) {
+            DIR_UP -> castedData.upKeycode
+            DIR_RIGHT -> castedData.rightKeycode
+            DIR_DOWN -> castedData.downKeycode
+            DIR_LEFT -> castedData.leftKeycode
+            else -> ControlData.KeyCode.UNKNOWN
+        }
+    }
+
+    private fun sendKeyDown(direction: Int) {
+        val keycode = getKeycode(direction)
+        if (keycode == ControlData.KeyCode.UNKNOWN) return
+
+        when (keycode.type) {
+            ControlData.KeyType.KEYBOARD -> {
                 mInputBridge.sendKey(keycode, true)
             }
-            ControlData.Button.Mode.GAMEPAD -> {
+            ControlData.KeyType.MOUSE -> {
+                val centerX = this.x + width / 2f
+                val centerY = this.y + height / 2f
+                mInputBridge.sendMouseButton(keycode, true, centerX, centerY)
+            }
+            ControlData.KeyType.GAMEPAD -> {
                 mInputBridge.sendXboxButton(keycode, true)
             }
+            else -> {}
         }
     }
 
-    private fun sendKeyUp(keycode: ControlData.KeyCode) {
-        when (castedData.mode) {
-            ControlData.Button.Mode.KEYBOARD -> {
+    private fun sendKeyUp(direction: Int) {
+        val keycode = getKeycode(direction)
+        if (keycode == ControlData.KeyCode.UNKNOWN) return
+
+        when (keycode.type) {
+            ControlData.KeyType.KEYBOARD -> {
                 mInputBridge.sendKey(keycode, false)
             }
-            ControlData.Button.Mode.GAMEPAD -> {
+            ControlData.KeyType.MOUSE -> {
+                val centerX = this.x + width / 2f
+                val centerY = this.y + height / 2f
+                mInputBridge.sendMouseButton(keycode, false, centerX, centerY)
+            }
+            ControlData.KeyType.GAMEPAD -> {
                 mInputBridge.sendXboxButton(keycode, false)
             }
+            else -> {}
         }
     }
 
-    private fun releaseAllKeys() {
-        if (previousDirections and DIR_UP != 0) sendKeyUp(castedData.upKeycode)
-        if (previousDirections and DIR_DOWN != 0) sendKeyUp(castedData.downKeycode)
-        if (previousDirections and DIR_LEFT != 0) sendKeyUp(castedData.leftKeycode)
-        if (previousDirections and DIR_RIGHT != 0) sendKeyUp(castedData.rightKeycode)
-        previousDirections = DIR_NONE
+    // ==================== 绘制 ====================
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+
+        val centerX = width / 2f
+        val centerY = height / 2f
+
+        // 应用旋转
+        if (controlData.rotation != 0f) {
+            canvas.save()
+            canvas.rotate(controlData.rotation, centerX, centerY)
+        }
+
+        val cornerRadius = dpToPx(controlData.cornerRadius)
+
+        // 绘制3x3网格的9个单元格
+        val cellWidth = width / 3f
+        val cellHeight = height / 3f
+
+        for (row in 0..2) {
+            for (col in 0..2) {
+                val left = col * cellWidth
+                val top = row * cellHeight
+                val right = left + cellWidth
+                val bottom = top + cellHeight
+
+                // 判断该单元格是否应该高亮
+                val directions = getCellDirections(row, col)
+                val isPressed = directions.isNotEmpty() && directions.all { buttonPressed[it] }
+
+                val btnPaint = if (isPressed) buttonPressedPaint else buttonPaint
+
+                paintRect.set(left, top, right, bottom)
+
+                // 角落单元格使用Path绘制，只圆角化外侧角
+                when {
+                    row == 0 && col == 0 -> { // 左上角
+                        cornerPath.reset()
+                        cornerPath.moveTo(left + cornerRadius, top)
+                        cornerPath.lineTo(right, top)
+                        cornerPath.lineTo(right, bottom)
+                        cornerPath.lineTo(left, bottom)
+                        cornerPath.lineTo(left, top + cornerRadius)
+                        cornerPath.arcTo(left, top, left + cornerRadius * 2, top + cornerRadius * 2, 180f, 90f, false)
+                        cornerPath.close()
+                        canvas.drawPath(cornerPath, btnPaint)
+                    }
+                    row == 0 && col == 2 -> { // 右上角
+                        cornerPath.reset()
+                        cornerPath.moveTo(left, top)
+                        cornerPath.lineTo(right - cornerRadius, top)
+                        cornerPath.arcTo(right - cornerRadius * 2, top, right, top + cornerRadius * 2, 270f, 90f, false)
+                        cornerPath.lineTo(right, bottom)
+                        cornerPath.lineTo(left, bottom)
+                        cornerPath.close()
+                        canvas.drawPath(cornerPath, btnPaint)
+                    }
+                    row == 2 && col == 0 -> { // 左下角
+                        cornerPath.reset()
+                        cornerPath.moveTo(left, top)
+                        cornerPath.lineTo(right, top)
+                        cornerPath.lineTo(right, bottom)
+                        cornerPath.lineTo(left + cornerRadius, bottom)
+                        cornerPath.arcTo(left, bottom - cornerRadius * 2, left + cornerRadius * 2, bottom, 90f, 90f, false)
+                        cornerPath.lineTo(left, top)
+                        cornerPath.close()
+                        canvas.drawPath(cornerPath, btnPaint)
+                    }
+                    row == 2 && col == 2 -> { // 右下角
+                        cornerPath.reset()
+                        cornerPath.moveTo(left, top)
+                        cornerPath.lineTo(right, top)
+                        cornerPath.lineTo(right, bottom - cornerRadius)
+                        cornerPath.arcTo(right - cornerRadius * 2, bottom - cornerRadius * 2, right, bottom, 0f, 90f, false)
+                        cornerPath.lineTo(left, bottom)
+                        cornerPath.close()
+                        canvas.drawPath(cornerPath, btnPaint)
+                    }
+                    else -> { // 其他单元格：矩形
+                        canvas.drawRect(paintRect, btnPaint)
+                    }
+                }
+            }
+        }
+
+        // 绘制内部网格线
+        if (controlData.strokeWidth > 0) {
+            // 垂直分隔线
+            canvas.drawLine(cellWidth, 0f, cellWidth, height.toFloat(), buttonStrokePaint)
+            canvas.drawLine(cellWidth * 2, 0f, cellWidth * 2, height.toFloat(), buttonStrokePaint)
+
+            // 水平分隔线
+            canvas.drawLine(0f, cellHeight, width.toFloat(), cellHeight, buttonStrokePaint)
+            canvas.drawLine(0f, cellHeight * 2, width.toFloat(), cellHeight * 2, buttonStrokePaint)
+
+            // 外边框（带圆角）
+            val halfStroke = dpToPx(controlData.strokeWidth) / 2f
+            paintRect.set(
+                halfStroke,
+                halfStroke,
+                width.toFloat() - halfStroke,
+                height.toFloat() - halfStroke
+            )
+            canvas.drawRoundRect(paintRect, cornerRadius, cornerRadius, strokePaint)
+        }
+
+        if (controlData.rotation != 0f) {
+            canvas.restore()
+        }
     }
+
+    private fun dpToPx(dp: Float) = dp * resources.displayMetrics.density
 }

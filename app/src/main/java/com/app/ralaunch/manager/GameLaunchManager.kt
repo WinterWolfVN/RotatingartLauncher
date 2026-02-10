@@ -53,18 +53,11 @@ class GameLaunchManager(private val context: Context) {
         val enabledPatches = patchManager?.getApplicableAndEnabledPatches(gameId, assemblyFile.toPath()) ?: emptyList()
         AppLogger.info(TAG, "Game: $gameId, Applicable patches: ${enabledPatches.size}")
 
-        // 检测游戏特定的渲染器设置
-        val defaultRenderer = detectDefaultRenderer(assemblyFile)
-        if (defaultRenderer != null) {
-            AppLogger.info(TAG, "Game default renderer: $defaultRenderer")
-        }
-
         val intent = Intent(context, GameActivity::class.java).apply {
             putExtra("GAME_NAME", game.gameName)
             putExtra("ASSEMBLY_PATH", assemblyPath)
             putExtra("GAME_ID", game.gamePath)
             putExtra("GAME_PATH", game.gamePath)
-            putExtra("DEFAULT_RENDERER", defaultRenderer)
 
             if (enabledPatches.isNotEmpty()) {
                 putStringArrayListExtra(
@@ -109,36 +102,6 @@ class GameLaunchManager(private val context: Context) {
         return null
     }
     
-    /**
-     * 从 game_info.json 检测默认渲染器
-     */
-    private fun detectDefaultRenderer(assemblyFile: File): String? {
-        return try {
-            val json = readGameInfoJson(assemblyFile)
-            json?.optString("default_renderer", null)?.takeIf { it.isNotEmpty() }
-        } catch (e: Exception) {
-            AppLogger.warn(TAG, "Failed to detect default renderer: ${e.message}")
-            null
-        }
-    }
-    
-    /**
-     * 读取 game_info.json 文件
-     */
-    private fun readGameInfoJson(assemblyFile: File): JSONObject? {
-        val gameDir = assemblyFile.parentFile ?: return null
-        var gameInfoFile = File(gameDir, "game_info.json")
-
-        if (!gameInfoFile.exists()) {
-            gameInfoFile = File(gameDir.parentFile, "game_info.json")
-        }
-
-        return if (gameInfoFile.exists()) {
-            val content = FileReader(gameInfoFile).use { it.readText() }
-            JSONObject(content)
-        } else null
-    }
-
     fun launchAssembly(assemblyFile: File?): Boolean {
         if (assemblyFile == null || !assemblyFile.exists()) {
             AppLogger.error(TAG, "Assembly file is null or does not exist")

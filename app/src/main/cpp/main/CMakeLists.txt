@@ -7,6 +7,7 @@ set(MAIN_SOURCES
         app_logger.c
         app_logger_jni.c
         renderer_loader.c
+        osm_renderer.c
         thread_affinity_manager.cpp
         touch_bridge.c
         virtual_mouse_sdl.c

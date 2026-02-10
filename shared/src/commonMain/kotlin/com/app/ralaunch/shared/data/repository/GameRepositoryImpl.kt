@@ -44,6 +44,8 @@ class GameRepositoryImpl(
 
     override suspend fun addGame(game: GameItem, position: Int) {
         val games = _gamesFlow.value.toMutableList()
+        // 去重：如果已存在相同 id 或相同 executablePath 的游戏，先移除旧条目
+        games.removeAll { it.id == game.id || it.executablePath == game.executablePath }
         val insertPosition = position.coerceIn(0, games.size)
         games.add(insertPosition, game)
         updateAndSave(games)

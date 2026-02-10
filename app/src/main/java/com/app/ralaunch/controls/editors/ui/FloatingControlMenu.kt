@@ -3,6 +3,9 @@ package com.app.ralaunch.controls.editors.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -81,6 +84,26 @@ class FloatingMenuState(
     // 菜单面板偏移量（可拖动）
     var menuPanelOffset by mutableStateOf(androidx.compose.ui.geometry.Offset.Zero)
     
+    // ========== 布局切换相关状态 ==========
+    
+    /** 可用的控件布局列表 (id, name) */
+    var availablePacks by mutableStateOf<List<Pair<String, String>>>(emptyList())
+    
+    /** 当前激活的控件布局 ID */
+    var activePackId by mutableStateOf<String?>(null)
+    
+    /** 控件布局选择弹窗是否显示 */
+    var isLayoutPickerVisible by mutableStateOf(false)
+    
+    /** 当前包的子布局列表 (id, name) */
+    var subLayouts by mutableStateOf<List<Pair<String, String>>>(emptyList())
+    
+    /** 当前激活的子布局 ID */
+    var activeSubLayoutId by mutableStateOf<String?>(null)
+    
+    /** 专用布局切换器覆盖层可见性 */
+    var isLayoutSwitcherVisible by mutableStateOf(true)
+    
     /** 计算实际的幽灵模式状态 (手动幽灵 或 控件使用中) */
     val effectiveGhostMode: Boolean
         get() = isGhostMode || isControlInUse
@@ -158,6 +181,11 @@ interface FloatingMenuCallbacks {
     fun onFpsDisplayChanged(enabled: Boolean) {}
     fun onTouchEventChanged(enabled: Boolean) {}
     fun onExitGame() {}
+    
+    // 布局切换回调
+    fun onSwitchPack(packId: String) {}
+    fun onSwitchSubLayout(subLayoutId: String) {}
+    fun onLayoutSwitcherVisibilityChanged(visible: Boolean) {}
     
     // 调试日志回调
     fun onToggleDebugLog() {}
@@ -288,6 +316,19 @@ fun FloatingControlMenu(
             state = state,
             callbacks = callbacks,
             onDismiss = { state.isMultiplayerPanelVisible = false }
+        )
+    }
+    
+    // 控件布局选择弹窗
+    if (state.isLayoutPickerVisible) {
+        LayoutPickerDialog(
+            availablePacks = state.availablePacks,
+            activePackId = state.activePackId,
+            onSelect = { packId ->
+                callbacks.onSwitchPack(packId)
+                state.isLayoutPickerVisible = false
+            },
+            onDismiss = { state.isLayoutPickerVisible = false }
         )
     }
 }
@@ -456,6 +497,83 @@ private fun InGameMenu(
                             callbacks.onToggleControls()
                         }
                     )
+
+                    // ========== 布局切换区域 ==========
+                    
+                    // 子布局快速切换（如果有子布局）
+                    if (state.subLayouts.isNotEmpty()) {
+                        HorizontalDivider()
+                        
+                        Text(
+                            text = "子布局",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                        
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            state.subLayouts.forEach { (id, name) ->
+                                FilterChip(
+                                    selected = id == state.activeSubLayoutId,
+                                    onClick = { 
+                                        state.activeSubLayoutId = id
+                                        callbacks.onSwitchSubLayout(id)
+                                    },
+                                    label = { 
+                                        Text(
+                                            text = name,
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    },
+                                    modifier = Modifier.height(32.dp)
+                                )
+                            }
+                        }
+                        
+                        // 布局切换器覆盖层开关
+                        MenuSwitchItem(
+                            icon = Icons.Default.Tab,
+                            label = "显示快捷切换栏",
+                            checked = state.isLayoutSwitcherVisible,
+                            onCheckedChange = {
+                                state.isLayoutSwitcherVisible = it
+                                callbacks.onLayoutSwitcherVisibilityChanged(it)
+                            }
+                        )
+                    }
+                    
+                    // 控件布局切换（如果有多个可用布局）
+                    if (state.availablePacks.size > 1) {
+                        HorizontalDivider()
+                        
+                        val activePackName = state.availablePacks
+                            .find { it.first == state.activePackId }?.second ?: "未选择"
+                        
+                        MenuRowItem(
+                            icon = Icons.Default.SwapHoriz,
+                            label = "控件布局切换",
+                            isActive = false,
+                            onClick = { state.isLayoutPickerVisible = true }
+                        )
+                        
+                        // 当前布局名称提示
+                        Text(
+                            text = "当前: $activePackName",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 44.dp)
+                        )
+                    }
+                    
+                    HorizontalDivider()
 
                     // FPS 显示开关
                     MenuSwitchItem(
@@ -658,3 +776,76 @@ fun MenuSwitchItem(
     }
 }
 
+/**
+ * 控件布局选择弹窗
+ */
+@Composable
+private fun LayoutPickerDialog(
+    availablePacks: List<Pair<String, String>>,
+    activePackId: String?,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("控件布局切换")
+        },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(availablePacks) { (id, name) ->
+                    val isSelected = id == activePackId
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(id) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        tonalElevation = if (isSelected) 2.dp else 0.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isSelected) Icons.Default.RadioButtonChecked
+                                              else Icons.Default.RadioButtonUnchecked,
+                                contentDescription = null,
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                        else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "已选择",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
+}

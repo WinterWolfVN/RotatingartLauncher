@@ -104,8 +104,7 @@ data class GameDefinition(
             id = "stardew_valley",
             displayName = "Stardew Valley",
             launchTarget = "Stardew Valley.exe",
-            iconPatterns = listOf("stardew"),
-            defaultRenderer = "gl4es"  // 星露谷默认使用 GL4ES 渲染器
+            iconPatterns = listOf("stardew")
         )
         
         val SMAPI = GameDefinition(
@@ -113,8 +112,7 @@ data class GameDefinition(
             displayName = "SMAPI",
             launchTarget = "StardewModdingAPI.dll",
             iconPatterns = listOf("stardew"),
-            isModLoader = true,
-            defaultRenderer = "gl4es"  // SMAPI 默认使用 GL4ES 渲染器
+            isModLoader = true
         )
         
         // ==================== Starbound ====================

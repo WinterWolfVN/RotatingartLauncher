@@ -48,7 +48,6 @@ class InitializationActivity : ComponentActivity() {
         hideSystemUI()
 
         prefs = getSharedPreferences(AppConstants.PREFS_NAME, 0)
-        permissionManager = PermissionManager(this).apply { initialize() }
 
         // 检查是否已完成初始化
         val extracted = prefs.getBoolean(AppConstants.InitKeys.COMPONENTS_EXTRACTED, false)
@@ -56,6 +55,8 @@ class InitializationActivity : ComponentActivity() {
             navigateToMain()
             return
         }
+
+        permissionManager = PermissionManager(this).apply { initialize() }
 
         setContent {
             RaLaunchTheme {

@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.app.ralaunch.controls.data.ControlData
 import com.app.ralaunch.controls.packs.ControlLayout
 import com.app.ralaunch.controls.packs.ControlPackManager
+import com.app.ralaunch.controls.packs.SubLayout
 import org.koin.java.KoinJavaComponent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 /**
  * 控件编辑器 ViewModel
@@ -83,6 +85,26 @@ class ControlEditorViewModel : ViewModel() {
     private val _hasUnsavedChanges = MutableStateFlow(false)
     val hasUnsavedChanges: StateFlow<Boolean> = _hasUnsavedChanges.asStateFlow()
 
+    // ========== 子布局编辑状态 ==========
+    
+    /**
+     * 编辑目标：共享控件 或 某个子布局
+     */
+    sealed class EditTarget {
+        /** 编辑共享控件（顶层 controls 列表） */
+        data object Shared : EditTarget()
+        /** 编辑指定子布局的控件 */
+        data class SubLayoutTarget(val subLayoutId: String) : EditTarget()
+    }
+    
+    /** 当前编辑目标 */
+    private val _activeEditTarget = MutableStateFlow<EditTarget>(EditTarget.Shared)
+    val activeEditTarget: StateFlow<EditTarget> = _activeEditTarget.asStateFlow()
+    
+    /** 子布局列表（运行时同步） */
+    private val _subLayouts = MutableStateFlow<List<SubLayout>>(emptyList())
+    val subLayouts: StateFlow<List<SubLayout>> = _subLayouts.asStateFlow()
+
     // 原始布局快照 (用于检测变更)
     private var originalLayoutSnapshot: String? = null
 
@@ -99,6 +121,10 @@ class ControlEditorViewModel : ViewModel() {
             // 保存原始快照用于检测变更
             originalLayoutSnapshot = layout?.let { serializeLayout(it) }
             _hasUnsavedChanges.value = false
+            
+            // 初始化子布局状态
+            _subLayouts.value = layout?.subLayouts?.toList() ?: emptyList()
+            _activeEditTarget.value = EditTarget.Shared
         }
     }
 
@@ -125,6 +151,39 @@ class ControlEditorViewModel : ViewModel() {
     }
 
     /**
+     * 获取当前编辑目标的控件列表
+     */
+    private fun getActiveControls(): MutableList<ControlData>? {
+        val layout = _layoutState.value ?: return null
+        return when (val target = _activeEditTarget.value) {
+            is EditTarget.Shared -> layout.controls
+            is EditTarget.SubLayoutTarget -> {
+                layout.subLayouts.find { it.id == target.subLayoutId }?.controls
+            }
+        }
+    }
+    
+    /**
+     * 更新布局中的控件列表并刷新状态
+     */
+    private fun updateLayoutWithControls(newControls: MutableList<ControlData>) {
+        val layout = _layoutState.value ?: return
+        when (val target = _activeEditTarget.value) {
+            is EditTarget.Shared -> {
+                _layoutState.value = layout.copy(controls = newControls)
+            }
+            is EditTarget.SubLayoutTarget -> {
+                val newSubLayouts = layout.subLayouts.map { sub ->
+                    if (sub.id == target.subLayoutId) sub.copy(controls = newControls)
+                    else sub
+                }.toMutableList()
+                _layoutState.value = layout.copy(subLayouts = newSubLayouts)
+            }
+        }
+        checkUnsavedChanges()
+    }
+
+    /**
      * 选中控件
      */
     fun selectControl(data: ControlData?) {
@@ -136,16 +195,13 @@ class ControlEditorViewModel : ViewModel() {
      * 更新控件数据
      */
     fun updateControl(updatedData: ControlData) {
-        val layout = _layoutState.value ?: return
-        // 使用 id 作为标识，支持修改控件名称
-        val index = layout.controls.indexOfFirst { it.id == updatedData.id }
+        val controls = getActiveControls() ?: return
+        val index = controls.indexOfFirst { it.id == updatedData.id }
         if (index >= 0) {
-            val newControls = layout.controls.toMutableList()
+            val newControls = controls.toMutableList()
             newControls[index] = updatedData
-            val newLayout = layout.copy(controls = newControls)
-            _layoutState.value = newLayout
+            updateLayoutWithControls(newControls)
             _selectedControl.value = updatedData
-            checkUnsavedChanges()
         }
     }
 
@@ -188,42 +244,42 @@ class ControlEditorViewModel : ViewModel() {
     }
 
     /**
-     * 添加新控件到布局
+     * 添加新控件到布局（添加到当前编辑目标）
      */
     fun addNewControl(type: String) {
-        val layout = _layoutState.value ?: return
+        val controls = getActiveControls() ?: return
         
         val newControl = when (type) {
             "button" -> ControlData.Button().apply {
-                name = "New Button ${layout.controls.size + 1}"
+                name = "New Button ${controls.size + 1}"
                 x = 0.5f
                 y = 0.5f
                 width = 0.1f
                 height = 0.1f
             }
             "joystick" -> ControlData.Joystick().apply {
-                name = "New Joystick ${layout.controls.size + 1}"
+                name = "New Joystick ${controls.size + 1}"
                 x = 0.2f
                 y = 0.7f
                 width = 0.25f
                 height = 0.25f
             }
             "touchpad" -> ControlData.TouchPad().apply {
-                name = "New TouchPad ${layout.controls.size + 1}"
+                name = "New TouchPad ${controls.size + 1}"
                 x = 0.7f
                 y = 0.7f
                 width = 0.3f
                 height = 0.3f
             }
             "mousewheel" -> ControlData.MouseWheel().apply {
-                name = "New MouseWheel ${layout.controls.size + 1}"
+                name = "New MouseWheel ${controls.size + 1}"
                 x = 0.9f
                 y = 0.5f
                 width = 0.08f
                 height = 0.15f
             }
             "text" -> ControlData.Text().apply {
-                name = "New Text ${layout.controls.size + 1}"
+                name = "New Text ${controls.size + 1}"
                 displayText = "文本"
                 x = 0.5f
                 y = 0.3f
@@ -231,14 +287,14 @@ class ControlEditorViewModel : ViewModel() {
                 height = 0.05f
             }
             "radialmenu" -> ControlData.RadialMenu().apply {
-                name = "New RadialMenu ${layout.controls.size + 1}"
-                x = 0.5f  // 屏幕中心
+                name = "New RadialMenu ${controls.size + 1}"
+                x = 0.5f
                 y = 0.5f
                 width = 0.12f
                 height = 0.12f
             }
             "dpad" -> ControlData.DPad().apply {
-                name = "New DPad ${layout.controls.size + 1}"
+                name = "New DPad ${controls.size + 1}"
                 x = 0.15f
                 y = 0.65f
                 width = 0.25f
@@ -247,47 +303,47 @@ class ControlEditorViewModel : ViewModel() {
             else -> return
         }
 
-        val newControls = layout.controls.toMutableList()
+        val newControls = controls.toMutableList()
         newControls.add(newControl)
-        _layoutState.value = layout.copy(controls = newControls)
+        updateLayoutWithControls(newControls)
         selectControl(newControl)
         saveLayout()
     }
 
     /**
-     * 删除当前选中的控件
+     * 删除当前选中的控件（从当前编辑目标中删除）
      */
     fun deleteSelectedControl() {
         val selected = _selectedControl.value ?: return
-        val layout = _layoutState.value ?: return
+        val controls = getActiveControls() ?: return
         
-        val newControls = layout.controls.toMutableList()
+        val newControls = controls.toMutableList()
         newControls.removeAll { it.id == selected.id }
         
-        _layoutState.value = layout.copy(controls = newControls)
+        updateLayoutWithControls(newControls)
         selectControl(null)
         saveLayout()
     }
 
     /**
-     * 复制当前选中的控件
+     * 复制当前选中的控件（在当前编辑目标中复制）
      */
     fun duplicateSelectedControl() {
         val selected = _selectedControl.value ?: return
-        val layout = _layoutState.value ?: return
+        val controls = getActiveControls() ?: return
         
         // 深拷贝控件并生成新的 ID 和名称
         val duplicated = selected.deepCopy().apply {
-            id = java.util.UUID.randomUUID().toString()
+            id = UUID.randomUUID().toString()
             name = "${selected.name}_副本"
             // 稍微偏移位置，避免完全重叠
             x = (x + 0.05f).coerceAtMost(0.95f)
             y = (y + 0.05f).coerceAtMost(0.95f)
         }
         
-        val newControls = layout.controls.toMutableList()
+        val newControls = controls.toMutableList()
         newControls.add(duplicated)
-        _layoutState.value = layout.copy(controls = newControls)
+        updateLayoutWithControls(newControls)
         selectControl(duplicated)
         saveLayout()
     }
@@ -470,6 +526,91 @@ class ControlEditorViewModel : ViewModel() {
             is ControlData.Joystick -> updateJoystickTexture(control, textureType, imagePath, true)
             else -> {}
         }
+    }
+
+    // ========== 子布局管理方法 ==========
+    
+    /**
+     * 切换编辑目标
+     */
+    fun switchEditTarget(target: EditTarget) {
+        _activeEditTarget.value = target
+        selectControl(null)
+    }
+    
+    /**
+     * 添加新子布局
+     */
+    fun addSubLayout(name: String) {
+        val layout = _layoutState.value ?: return
+        
+        val newSubLayout = SubLayout(
+            id = UUID.randomUUID().toString(),
+            name = name,
+            controls = mutableListOf()
+        )
+        
+        val newSubLayouts = layout.subLayouts.toMutableList()
+        newSubLayouts.add(newSubLayout)
+        
+        val newLayout = layout.copy(
+            subLayouts = newSubLayouts,
+            activeSubLayoutId = layout.activeSubLayoutId ?: newSubLayout.id
+        )
+        _layoutState.value = newLayout
+        _subLayouts.value = newSubLayouts
+        
+        // 自动切换到新子布局进行编辑
+        _activeEditTarget.value = EditTarget.SubLayoutTarget(newSubLayout.id)
+        selectControl(null)
+        saveLayout()
+    }
+    
+    /**
+     * 删除子布局
+     */
+    fun deleteSubLayout(subLayoutId: String) {
+        val layout = _layoutState.value ?: return
+        
+        val newSubLayouts = layout.subLayouts.filter { it.id != subLayoutId }.toMutableList()
+        
+        // 如果删除的是当前激活的子布局，切换到第一个
+        var newActiveId = layout.activeSubLayoutId
+        if (newActiveId == subLayoutId) {
+            newActiveId = newSubLayouts.firstOrNull()?.id
+        }
+        
+        val newLayout = layout.copy(
+            subLayouts = newSubLayouts,
+            activeSubLayoutId = newActiveId
+        )
+        _layoutState.value = newLayout
+        _subLayouts.value = newSubLayouts
+        
+        // 如果当前正在编辑被删除的子布局，切换到共享
+        val currentTarget = _activeEditTarget.value
+        if (currentTarget is EditTarget.SubLayoutTarget && currentTarget.subLayoutId == subLayoutId) {
+            _activeEditTarget.value = EditTarget.Shared
+        }
+        
+        selectControl(null)
+        saveLayout()
+    }
+    
+    /**
+     * 重命名子布局
+     */
+    fun renameSubLayout(subLayoutId: String, newName: String) {
+        val layout = _layoutState.value ?: return
+        
+        val newSubLayouts = layout.subLayouts.map { sub ->
+            if (sub.id == subLayoutId) sub.copy(name = newName) else sub
+        }.toMutableList()
+        
+        val newLayout = layout.copy(subLayouts = newSubLayouts)
+        _layoutState.value = newLayout
+        _subLayouts.value = newSubLayouts
+        saveLayout()
     }
 
     /**

@@ -30,13 +30,14 @@ object RendererConfig {
     const val RENDERER_GL4ES_ANGLE: String = "gl4es+angle" // GL4ES + ANGLE
     const val RENDERER_MOBILEGLUES: String = "mobileglues" // MobileGlues
     const val RENDERER_ANGLE: String = "angle" // ANGLE
+    const val RENDERER_ZINK: String = "zink" // Zink (OpenGL over Vulkan via Mesa OSMesa)
 
     // 已弃用的渲染器 ID（向后兼容）
     @Deprecated("Use RENDERER_NATIVE_GLES instead")
     const val RENDERER_OPENGLES3: String = "opengles3"
     @Deprecated("Use RENDERER_GL4ES instead")
     const val RENDERER_OPENGL_GL4ES: String = "opengl_gl4es"
-    @Deprecated("Use RENDERER_NATIVE_GLES instead")
+    @Deprecated("Use RENDERER_ZINK instead")
     const val RENDERER_VULKAN: String = "vulkan"
 
     // 默认渲染器
@@ -91,7 +92,7 @@ object RendererConfig {
         return when (value) {
             "opengl_native", RENDERER_OPENGLES3 -> RENDERER_NATIVE_GLES
             RENDERER_OPENGL_GL4ES -> RENDERER_GL4ES
-            RENDERER_VULKAN -> RENDERER_NATIVE_GLES
+            RENDERER_VULKAN -> RENDERER_ZINK
             else -> value
         }
     }
@@ -146,6 +147,16 @@ object RendererConfig {
             "OpenGL ES over Vulkan (Google官方)",
             "libEGL_angle.so",  // 现在在 runtime_libs 中
             "libGLESv2_angle.so",
+            true,
+            Build.VERSION_CODES.N // Vulkan 需要 Android 7.0+
+        ),
+        // Zink 渲染器（Mesa OpenGL over Vulkan via OSMesa）
+        RendererInfo(
+            RENDERER_ZINK,
+            "Zink (Mesa Vulkan)",
+            "桌面 OpenGL over Vulkan (Mesa Zink + Turnip)",
+            "libOSMesa.so",
+            "libOSMesa.so",
             true,
             Build.VERSION_CODES.N // Vulkan 需要 Android 7.0+
         )
@@ -253,6 +264,7 @@ object RendererConfig {
             RENDERER_GL4ES_ANGLE -> addGl4esAngleEnv(envMap)
             RENDERER_MOBILEGLUES -> addMobileGluesEnv(envMap)
             RENDERER_ANGLE -> addAngleEnv(envMap)
+            RENDERER_ZINK -> addZinkEnv(envMap)
             RENDERER_NATIVE_GLES -> { /* No additional env vars needed */ }
         }
     }
@@ -295,6 +307,27 @@ object RendererConfig {
         envMap.apply {
             put("RALCORE_EGL", "libEGL_angle.so")
             put("LIBGL_GLES", "libGLESv2_angle.so")
+        }
+    }
+
+    private fun addZinkEnv(envMap: MutableMap<String?, String?>) {
+        envMap.apply {
+            put("RALCORE_RENDERER", "vulkan_zink")
+            // Mesa Gallium driver selection - force Zink
+            put("GALLIUM_DRIVER", "zink")
+            put("MESA_LOADER_DRIVER_OVERRIDE", "zink")
+            // Mesa OpenGL version override (desktop OpenGL 4.3 for FNA compatibility)
+            put("MESA_GL_VERSION_OVERRIDE", "4.3")
+            put("MESA_GLSL_VERSION_OVERRIDE", "430")
+            // Zink performance settings
+            put("MESA_NO_ERROR", "1")
+            put("ZINK_DESCRIPTORS", "auto")
+            // Turnip (Mesa Vulkan driver for Adreno) debug - disable for production
+            put("TU_DEBUG", "log")
+            // Mesa debug logging - disable for production
+            put("MESA_LOG", "debug")
+            put("MESA_DEBUG", "1")
+            put("LIBGL_DEBUG", "verbose")
         }
     }
 
@@ -433,8 +466,8 @@ object RendererConfig {
      */
     private fun getOpenGlVersionConfig(rendererId: String): Map<String, String?> {
         return when {
-            // Desktop OpenGL renderers (GL4ES) - unset ES3 constraints
-            rendererId == RENDERER_GL4ES -> {
+            // Desktop OpenGL renderers (GL4ES, Zink) - unset ES3 constraints
+            rendererId == RENDERER_GL4ES || rendererId == RENDERER_ZINK -> {
                 buildMap {
                     put("FNA3D_OPENGL_FORCE_ES3", null)
                     put("FNA3D_OPENGL_FORCE_VER_MAJOR", null)
@@ -459,7 +492,8 @@ object RendererConfig {
         // Vulkan-translated renderers need it disabled for compatibility
         val vulkanTranslatedRenderers = setOf(
             RENDERER_ANGLE,
-            RENDERER_GL4ES_ANGLE
+            RENDERER_GL4ES_ANGLE,
+            RENDERER_ZINK
         )
 
         return when {
@@ -483,6 +517,8 @@ object RendererConfig {
         when (rendererId) {
             RENDERER_GL4ES ->
                 Log.i(TAG, "OpenGL Profile: Desktop OpenGL 2.1 Compatibility Profile")
+            RENDERER_ZINK ->
+                Log.i(TAG, "OpenGL Profile: Desktop OpenGL 4.3 (Mesa Zink over Vulkan)")
             else ->
                 Log.i(TAG, "OpenGL Profile: OpenGL ES 3.0")
         }

@@ -74,12 +74,14 @@
     </style>
 
     <!-- 全屏主题（用于主界面） -->
+    <!-- windowBackground 使用带 Logo 的启动画面，系统 Starting Window 会显示此背景 -->
+    <!-- 这样冷启动和切换后台返回时看到的是 App Logo，而非空白 -->
     <style name="FullScreenTheme" parent="Theme.raLaunch">
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">@drawable/bg_splash</item>
         <!-- 忽略刘海屏设置 -->
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <!-- 隐藏状态栏 -->

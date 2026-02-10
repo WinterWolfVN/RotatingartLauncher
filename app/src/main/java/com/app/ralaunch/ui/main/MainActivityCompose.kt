@@ -50,6 +50,7 @@ import com.app.ralaunch.ui.screens.SettingsScreenWrapper
 import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.utils.DensityAdapter
 import com.app.ralaunch.error.ErrorHandler
+import com.app.ralaunch.ui.compose.splash.SplashOverlay
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,6 +110,11 @@ class MainActivityCompose : BaseActivity() {
         contractAdapter = MainContractAdapter()
         presenter = MainPresenter(this).also { it.attach(contractAdapter) }
 
+        // 同步加载游戏列表（在 setContent 之前执行）
+        // loadGameList 是同步的，数据已在 Repository init 时读入内存
+        // 这样 setContent 首帧就能拿到完整的游戏列表，不会出现空白画面
+        presenter.onCreate()
+
         // 设置纯 Compose UI
         setContent {
             val state by uiState.collectAsStateWithLifecycle()
@@ -136,49 +142,63 @@ class MainActivityCompose : BaseActivity() {
                 if (bgOpacity > 0) bgOpacity / 100f else 1f
             }
 
+            // Splash 覆盖层状态
+            var showSplash by remember { mutableStateOf(true) }
+            val isContentReady = !state.isLoading
+
             RaLaunchTheme(
                 themeMode = themeMode,
                 themeColor = themeColor
             ) {
-                MainActivityContent(
-                    state = state.copy(backgroundType = backgroundType),
-                    navState = navState,
-                    pageAlpha = pageAlpha,
-                    videoSpeed = videoSpeed,
-                    onGameClick = { selectGameUi(it) },
-                    onGameLongClick = { selectGameUi(it) },
-                    onLaunchClick = { presenter.launchSelectedGame() },
-                    onDeleteClick = { handleDeleteClick() },
-                    onNavigate = { handleNavigation(it) },
-                    onDismissDeleteDialog = { dismissDeleteDialog() },
-                    onConfirmDelete = { confirmDelete() },
-                    permissionManager = permissionManager,
-                    onImportComplete = { gameType, gameItem ->
-                        gameItem?.let { game ->
-                            // 添加游戏到 presenter
-                            presenter.onGameImportComplete(gameType, game)
-                            // 强制刷新 UI 状态，确保新游戏显示
-                            val updatedGames = presenter.getGameList()
-                            gameItemsMap.clear()
-                            updatedGames.forEach { g ->
-                                val uniqueId = "${g.gameName}_${g.gamePath}"
-                                gameItemsMap[uniqueId] = g
-                            }
-                            _uiState.update { state ->
-                                state.copy(
-                                    games = updatedGames.toUiModels(),
-                                    selectedGame = null,
-                                    isLoading = false
-                                )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // 主内容（始终渲染，Splash 覆盖在上方）
+                    MainActivityContent(
+                        state = state.copy(backgroundType = backgroundType),
+                        navState = navState,
+                        pageAlpha = pageAlpha,
+                        videoSpeed = videoSpeed,
+                        onGameClick = { selectGameUi(it) },
+                        onGameLongClick = { selectGameUi(it) },
+                        onLaunchClick = { presenter.launchSelectedGame() },
+                        onDeleteClick = { handleDeleteClick() },
+                        onNavigate = { handleNavigation(it) },
+                        onDismissDeleteDialog = { dismissDeleteDialog() },
+                        onConfirmDelete = { confirmDelete() },
+                        permissionManager = permissionManager,
+                        onImportComplete = { gameType, gameItem ->
+                            gameItem?.let { game ->
+                                // 添加游戏到 presenter
+                                presenter.onGameImportComplete(gameType, game)
+                                // 强制刷新 UI 状态，确保新游戏显示
+                                val updatedGames = presenter.getGameList()
+                                gameItemsMap.clear()
+                                updatedGames.forEach { g ->
+                                    val uniqueId = "${g.gameName}_${g.gamePath}"
+                                    gameItemsMap[uniqueId] = g
+                                }
+                                _uiState.update { s ->
+                                    s.copy(
+                                        games = updatedGames.toUiModels(),
+                                        selectedGame = null,
+                                        isLoading = false
+                                    )
+                                }
                             }
                         }
+                    )
+
+                    // MD3 风格启动画面覆盖层
+                    if (showSplash) {
+                        SplashOverlay(
+                            isReady = isContentReady,
+                            onSplashFinished = { showSplash = false }
+                        )
                     }
-                )
+                }
             }
         }
 
-        // 初始化（InitializationActivity 已处理）
-            presenter.onCreate()
+        // presenter.onCreate() 已在 setContent 之前调用
 
         checkRestoreSettings()
     }

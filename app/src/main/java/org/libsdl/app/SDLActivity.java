@@ -1825,7 +1825,36 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
     {
         try {
             Intent i = new Intent(Intent.ACTION_VIEW);
-            i.setData(Uri.parse(url));
+            Uri uri = Uri.parse(url);
+
+            // Handle file:// URIs - Android 7+ blocks file:// for inter-app sharing
+            if ("file".equals(uri.getScheme())) {
+                String path = uri.getPath();
+                if (path != null) {
+                    java.io.File file = new java.io.File(path);
+                    if (file.isDirectory()) {
+                        // Convert folder path to content:// DocumentsProvider URI
+                        String primaryStorage = android.os.Environment.getExternalStorageDirectory().getPath() + "/";
+                        if (path.startsWith(primaryStorage)) {
+                            String relativePath = path.substring(primaryStorage.length());
+                            // Remove trailing slash if present
+                            if (relativePath.endsWith("/")) {
+                                relativePath = relativePath.substring(0, relativePath.length() - 1);
+                            }
+                            String documentId = "primary:" + relativePath;
+                            uri = android.provider.DocumentsContract.buildDocumentUri(
+                                    "com.android.externalstorage.documents", documentId);
+                            i.setDataAndType(uri, "vnd.android.document/directory");
+                            Log.v("SDL", "openURL: converted folder to content URI: " + uri);
+                        }
+                    }
+                }
+            }
+
+            // Only set data if type wasn't already set (for folder case)
+            if (i.getType() == null) {
+                i.setData(uri);
+            }
 
             int flags = Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_MULTIPLE_TASK;
             if (Build.VERSION.SDK_INT >= 21 /* Android 5.0 (LOLLIPOP) */) {
@@ -1837,6 +1866,7 @@ public class SDLActivity extends FragmentActivity implements View.OnSystemUiVisi
 
             mSingleton.startActivity(i);
         } catch (Exception ex) {
+            Log.e("SDL", "openURL failed: " + url, ex);
             return -1;
         }
         return 0;

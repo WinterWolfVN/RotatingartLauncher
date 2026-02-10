@@ -80,7 +80,9 @@ object RendererLoader {
     fun clearRendererEnv() {
         listOf(
             "RALCORE_RENDERER", "RALCORE_EGL", "LIBGL_GLES", "LIBGL_ES",
-            "LIBGL_MIPMAP", "LIBGL_NORMALIZE", "LIBGL_NOINTOVLHACK", "LIBGL_NOERROR"
+            "LIBGL_MIPMAP", "LIBGL_NORMALIZE", "LIBGL_NOINTOVLHACK", "LIBGL_NOERROR",
+            "GALLIUM_DRIVER", "MESA_GL_VERSION_OVERRIDE", "MESA_GLSL_VERSION_OVERRIDE",
+            "MESA_NO_ERROR", "ZINK_DESCRIPTORS"
         ).forEach { EnvVarsManager.quickSetEnvVar(it, null) }
     }
 }

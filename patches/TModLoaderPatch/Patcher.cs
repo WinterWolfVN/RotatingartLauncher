@@ -1,11 +1,11 @@
 using HarmonyLib;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
+using Terraria;
 
 namespace TModLoaderPatch;
 
@@ -16,6 +16,9 @@ namespace TModLoaderPatch;
 public static class Patcher
 {
     private static Harmony? _harmony;
+
+    // tModLoader 程序集引用 (通过 public 类型 Terraria.Utils 获取)
+    private static Assembly TmlAssembly => typeof(Utils).Assembly;
 
     /// <summary>
     /// 补丁初始化方法
@@ -111,67 +114,43 @@ public static class Patcher
     private static void ApplyPatchesInternal(Assembly assembly)
     {
         InstallVerifierBugMitigation(assembly);
-        LoggingHooksHarmonyPatch(assembly);
-        TMLContentManagerPatch(assembly);
-        SetResolveNativeLibraryHandler(assembly);
+        LoggingHooksHarmonyPatch();
+        TMLContentManagerPatch();
+        SetResolveNativeLibraryHandler();
+        OpenToURLPatch();
     }
 
-    public static void LoggingHooksHarmonyPatch(Assembly assembly)
+    public static void LoggingHooksHarmonyPatch()
     {
-        // Get the type for LoggingHooks from the external assembly
-        Type? loggingHooksType = assembly.GetType("Terraria.ModLoader.Engine.LoggingHooks");
-
-        // Get the MethodInfo for the method you want to patch
-        MethodInfo? originalMethod = loggingHooksType?.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic);
-        
-        if (originalMethod == null)
+        var method = TmlAssembly.GetType("Terraria.ModLoader.Engine.LoggingHooks")
+            ?.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic);
+        if (method == null)
         {
             Console.WriteLine("[TModLoaderPatch] LoggingHooks.Init method not found");
             return;
         }
-        
-        // Harmony instance lazy loading
-        Harmony harmony = _harmony!;
 
-        // Create the HarmonyMethod for the prefix
-        HarmonyMethod prefix = new HarmonyMethod(typeof(Patcher), nameof(LoggingPatch_Prefix));
-
-        // Apply the patch
-        harmony.Patch(originalMethod, prefix: prefix);
-
+        _harmony!.Patch(method, prefix: new HarmonyMethod(typeof(Patcher), nameof(LoggingPatch_Prefix)));
         Console.WriteLine("[TModLoaderPatch] LoggingHooks patch applied successfully!");
     }
 
     public static bool LoggingPatch_Prefix()
     {
         Console.WriteLine("[TModLoaderPatch] LoggingHooks.Init method is now a no-op.");
-        return false; // Skip the original method
+        return false;
     }
 
-    public static void TMLContentManagerPatch(Assembly assembly)
+    public static void TMLContentManagerPatch()
     {
-        // Get the type for TMLContentManager from the external assembly
-        Type? tmlContentManagerType = assembly.GetType("Terraria.ModLoader.Engine.TMLContentManager");
-
-       
-        // Get the MethodInfo for the method you want to patch
-        MethodInfo? originalMethod = tmlContentManagerType?.GetMethod("TryFixFileCasings", BindingFlags.Static | BindingFlags.NonPublic);
-
-        if (originalMethod == null)
+        var method = TmlAssembly.GetType("Terraria.ModLoader.Engine.TMLContentManager")
+            ?.GetMethod("TryFixFileCasings", BindingFlags.Static | BindingFlags.NonPublic);
+        if (method == null)
         {
             Console.WriteLine("[TModLoaderPatch] TMLContentManager.TryFixFileCasings method not found");
             return;
         }
 
-        // Harmony instance lazy loading
-        Harmony harmony = _harmony!;
-
-        // Create the HarmonyMethod for the prefix
-        HarmonyMethod prefix = new HarmonyMethod(typeof(Patcher), nameof(TMLContentManagerPatch_Prefix));
-
-        // Apply the patch
-        harmony.Patch(originalMethod, prefix: prefix);
-
+        _harmony!.Patch(method, prefix: new HarmonyMethod(typeof(Patcher), nameof(TMLContentManagerPatch_Prefix)));
         Console.WriteLine("[TModLoaderPatch] TMLContentManager patch applied successfully!");
     }
     
@@ -265,55 +244,46 @@ public static class Patcher
 
     public static void InstallVerifierBugMitigation(Assembly assembly)
     {
-        Type? installVerifierType = assembly.GetType("Terraria.ModLoader.Engine.InstallVerifier");
-
-        if (installVerifierType == null)
+        var t = TmlAssembly.GetType("Terraria.ModLoader.Engine.InstallVerifier");
+        if (t == null)
         {
-            Console.WriteLine("[TModLoaderPatch] InstallVerifier class not found in the external assembly.");
+            Console.WriteLine("[TModLoaderPatch] InstallVerifier class not found");
             return;
         }
+        var flags = BindingFlags.Static | BindingFlags.NonPublic;
 
         // Get the fields which are not properly initialized on Linux ARM64
-        var steamAPIPathField = installVerifierType.GetField("steamAPIPath", BindingFlags.Static | BindingFlags.NonPublic);
-        var steamAPIHashField = installVerifierType.GetField("steamAPIHash", BindingFlags.Static | BindingFlags.NonPublic);
-        var vanillaSteamAPIField = installVerifierType.GetField("vanillaSteamAPI", BindingFlags.Static | BindingFlags.NonPublic);
-        var gogHashField = installVerifierType.GetField("gogHash", BindingFlags.Static | BindingFlags.NonPublic);
-        var steamHashField = installVerifierType.GetField("steamHash", BindingFlags.Static | BindingFlags.NonPublic);
-        var isSteamUnsupportedField = installVerifierType.GetField("IsSteamUnsupported", BindingFlags.Static | BindingFlags.NonPublic);
+        var steamAPIPathField = t.GetField("steamAPIPath", flags);
+        var steamAPIHashField = t.GetField("steamAPIHash", flags);
+        var vanillaSteamAPIField = t.GetField("vanillaSteamAPI", flags);
+        var gogHashField = t.GetField("gogHash", flags);
+        var steamHashField = t.GetField("steamHash", flags);
+        var isSteamUnsupportedField = t.GetField("IsSteamUnsupported", flags);
 
         Console.WriteLine($"[TModLoaderPatch] Found fields: steamAPIPath={steamAPIPathField != null}, steamAPIHash={steamAPIHashField != null}, " +
                           $"vanillaSteamAPI={vanillaSteamAPIField != null}, gogHash={gogHashField != null}, steamHash={steamHashField != null}, " +
                           $"IsSteamUnsupported={isSteamUnsupportedField != null}");
 
         // Set basic field values for Android/ARM64
-        byte[] steamHashValue = Convert.FromHexString("2ff21c600897a9485ca5ae645a06202d");
-        byte[] steamAPIHashValue = Convert.FromHexString("4b7a8cabaa354fcd25743aabfb4b1366");
-
         steamAPIPathField?.SetValue(null, "libsteam_api.so");
-        steamAPIHashField?.SetValue(null, steamAPIHashValue);
+        steamAPIHashField?.SetValue(null, Convert.FromHexString("4b7a8cabaa354fcd25743aabfb4b1366"));
         vanillaSteamAPIField?.SetValue(null, "libsteam_api.so");
-        gogHashField?.SetValue(null, Convert.FromHexString(GogLinuxHashes[0])); // 默认设第一个
-        steamHashField?.SetValue(null, steamHashValue);
+        gogHashField?.SetValue(null, Convert.FromHexString(GogLinuxHashes[0]));
+        steamHashField?.SetValue(null, Convert.FromHexString("2ff21c600897a9485ca5ae645a06202d"));
         isSteamUnsupportedField?.SetValue(null, false);
 
         Console.WriteLine($"[TModLoaderPatch] Set default gogHash={GogLinuxHashes[0]}");
-        Console.WriteLine($"[TModLoaderPatch] Known GOG Linux hashes ({GogLinuxHashes.Length}):");
-        foreach (var h in GogLinuxHashes)
-            Console.WriteLine($"  - {h}");
 
         // Harmony patch CheckGoG 方法, 使其支持多个 GOG 哈希
-        var checkGoGMethod = installVerifierType.GetMethod("CheckGoG",
-            BindingFlags.Static | BindingFlags.NonPublic);
-
+        var checkGoGMethod = t.GetMethod("CheckGoG", flags);
         if (checkGoGMethod != null)
         {
-            _harmony!.Patch(checkGoGMethod,
-                prefix: new HarmonyMethod(typeof(Patcher), nameof(CheckGoG_Prefix)));
+            _harmony!.Patch(checkGoGMethod, prefix: new HarmonyMethod(typeof(Patcher), nameof(CheckGoG_Prefix)));
             Console.WriteLine("[TModLoaderPatch] CheckGoG patched for multi-hash support!");
         }
         else
         {
-            Console.WriteLine("[TModLoaderPatch] WARNING: CheckGoG method not found, falling back to single hash");
+            Console.WriteLine("[TModLoaderPatch] WARNING: CheckGoG method not found");
         }
 
         Console.WriteLine("[TModLoaderPatch] InstallVerifier mitigations applied!");
@@ -330,73 +300,55 @@ public static class Patcher
         {
             Console.WriteLine("[TModLoaderPatch] CheckGoG: Multi-hash verification...");
 
-            // 通过反射获取 vanillaExePath 和 steamHash
-            var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
-            var tModLoaderAssembly = loadedAssemblies.FirstOrDefault(a => a.GetName().Name == "tModLoader");
-            var installVerifierType = tModLoaderAssembly?.GetType("Terraria.ModLoader.Engine.InstallVerifier");
-
-            var vanillaExePathField = installVerifierType?.GetField("vanillaExePath",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            var steamHashField = installVerifierType?.GetField("steamHash",
-                BindingFlags.Static | BindingFlags.NonPublic);
-            var gogHashField = installVerifierType?.GetField("gogHash",
-                BindingFlags.Static | BindingFlags.NonPublic);
+            var flags = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
+            var t = TmlAssembly.GetType("Terraria.ModLoader.Engine.InstallVerifier");
+            var vanillaExePathField = t.GetField("vanillaExePath", flags);
+            var steamHashField = t.GetField("steamHash", flags);
+            var gogHashField = t.GetField("gogHash", flags);
 
             string? vanillaExePath = vanillaExePathField?.GetValue(null) as string;
             byte[]? steamHash = steamHashField?.GetValue(null) as byte[];
 
-            if (string.IsNullOrEmpty(vanillaExePath))
+            if (string.IsNullOrEmpty(vanillaExePath) || !File.Exists(vanillaExePath))
             {
-                Console.WriteLine("[TModLoaderPatch] CheckGoG: vanillaExePath is null/empty, skipping check");
-                return false; // 跳过原始方法
-            }
-
-            if (!File.Exists(vanillaExePath))
-            {
-                Console.WriteLine($"[TModLoaderPatch] CheckGoG: File not found: {vanillaExePath}, skipping check");
+                Console.WriteLine($"[TModLoaderPatch] CheckGoG: vanillaExePath missing, skipping check");
                 return false;
             }
 
-            // 计算文件的 MD5 哈希
-            using var md5 = System.Security.Cryptography.MD5.Create();
+            using var md5 = MD5.Create();
             using var stream = File.OpenRead(vanillaExePath);
             byte[] fileHash = md5.ComputeHash(stream);
             string fileHashHex = Convert.ToHexString(fileHash).ToLower();
 
             Console.WriteLine($"[TModLoaderPatch] CheckGoG: File={Path.GetFileName(vanillaExePath)}, Hash={fileHashHex}");
 
-            // 检查是否匹配任意一个已知 GOG 哈希
             foreach (var knownHash in GogLinuxHashes)
             {
                 if (fileHashHex == knownHash)
                 {
                     Console.WriteLine($"[TModLoaderPatch] CheckGoG: Matched GOG hash: {knownHash}");
-                    // 同步更新 gogHash 字段为匹配到的哈希值
                     gogHashField?.SetValue(null, Convert.FromHexString(knownHash));
-                    return false; // 验证通过，跳过原始方法
+                    return false;
                 }
             }
 
-            // 检查是否匹配 Steam 哈希
             if (steamHash != null && fileHash.SequenceEqual(steamHash))
             {
-                Console.WriteLine($"[TModLoaderPatch] CheckGoG: Matched Steam hash");
-                return false; // 验证通过
+                Console.WriteLine("[TModLoaderPatch] CheckGoG: Matched Steam hash");
+                return false;
             }
 
-            // 都不匹配 - 打印警告但不阻止启动 (Android 上可能是重打包的版本)
-            Console.WriteLine($"[TModLoaderPatch] CheckGoG WARNING: Hash {fileHashHex} does not match any known GOG or Steam hash!");
-            Console.WriteLine("[TModLoaderPatch] CheckGoG: Allowing launch anyway (Android compatibility)");
-            return false; // 仍然跳过原始方法，不 FatalExit
+            Console.WriteLine($"[TModLoaderPatch] CheckGoG WARNING: Unknown hash {fileHashHex}, allowing anyway");
+            return false;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[TModLoaderPatch] CheckGoG error: {ex.Message}");
-            return false; // 出错也不阻止启动
+            return false;
         }
     }
     
-    public static void SetResolveNativeLibraryHandler(Assembly assembly)
+    public static void SetResolveNativeLibraryHandler()
     {
 	    AssemblyLoadContext.Default.ResolvingUnmanagedDll += ResolveNativeLibrary;
     }
@@ -411,5 +363,75 @@ public static class Patcher
 	    }
 
 	    return IntPtr.Zero;
+    }
+
+    // ============================================
+    // OpenToURL 补丁 - 修复 Android 上 xdg-open 不存在导致的崩溃
+    // ============================================
+
+    /// <summary>
+    /// 补丁所有使用 xdg-open 的方法 (Android 上不存在此命令)
+    /// - Utils.OpenToURL: 打开 URL
+    /// - Utils.OpenFolder: 打开文件夹
+    /// </summary>
+    public static void OpenToURLPatch()
+    {
+        try
+        {
+            // 补丁 OpenToURL (public)
+            var openToURL = typeof(Utils).GetMethod("OpenToURL", BindingFlags.Static | BindingFlags.Public);
+            if (openToURL != null)
+            {
+                _harmony!.Patch(openToURL, prefix: new HarmonyMethod(typeof(Patcher), nameof(OpenToURL_Prefix)));
+                Console.WriteLine("[TModLoaderPatch] Utils.OpenToURL patched!");
+            }
+
+            // 补丁 OpenFolder (public) - 也使用 xdg-open
+            var openFolder = typeof(Utils).GetMethod("OpenFolder", BindingFlags.Static | BindingFlags.Public);
+            if (openFolder != null)
+            {
+                _harmony!.Patch(openFolder, prefix: new HarmonyMethod(typeof(Patcher), nameof(OpenFolder_Prefix)));
+                Console.WriteLine("[TModLoaderPatch] Utils.OpenFolder patched!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TModLoaderPatch] xdg-open patch failed: {ex.Message}");
+        }
+    }
+
+    public static bool OpenToURL_Prefix(string url)
+    {
+        try
+        {
+            Console.WriteLine($"[TModLoaderPatch] OpenToURL intercepted: {url}");
+            int result = SDL2.SDL.SDL_OpenURL(url);
+            Console.WriteLine($"[TModLoaderPatch] SDL_OpenURL result: {result}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TModLoaderPatch] OpenToURL error: {ex.Message}");
+        }
+        return false; // 始终跳过原始方法
+    }
+
+    public static bool OpenFolder_Prefix(string folderPath)
+    {
+        try
+        {
+            Console.WriteLine($"[TModLoaderPatch] OpenFolder intercepted: {folderPath}");
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+            // SDLActivity.openURL() 已修改为支持 file:// 文件夹路径
+            // Java 层会自动转换为 content:// URI 并用 DocumentsProvider 打开
+            int result = SDL2.SDL.SDL_OpenURL("file://" + folderPath);
+            Console.WriteLine($"[TModLoaderPatch] SDL_OpenURL folder result: {result}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TModLoaderPatch] OpenFolder error: {ex.Message}");
+        }
+        return false;
     }
 }

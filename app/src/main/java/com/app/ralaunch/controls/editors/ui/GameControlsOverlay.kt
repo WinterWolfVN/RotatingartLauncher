@@ -84,6 +84,20 @@ fun GameControlsOverlay(
         menuState.isFpsDisplayEnabled = settingsManager.isFPSDisplayEnabled
         menuState.isTouchEventEnabled = settingsManager.isTouchEventEnabled
         ConsoleManager.start()
+        
+        // 初始化布局切换状态（优先使用快速切换列表，如果为空则显示全部）
+        val quickSwitchPacks = packManager.getQuickSwitchPacks()
+        val packsToShow = quickSwitchPacks.ifEmpty { packManager.getInstalledPacks() }
+        menuState.availablePacks = packsToShow.map { it.id to it.name }
+        menuState.activePackId = packManager.getSelectedPackId()
+        
+        // 初始化子布局状态
+        val layout = controlLayoutView.currentLayout
+        if (layout != null && layout.hasSubLayouts()) {
+            menuState.subLayouts = layout.subLayouts.map { it.id to it.name }
+            menuState.activeSubLayoutId = layout.activeSubLayoutId
+                ?: layout.subLayouts.firstOrNull()?.id
+        }
     }
     
     // 同步调试日志状态到菜单
@@ -317,6 +331,41 @@ fun GameControlsOverlay(
             override fun initVpnService(onReady: () -> Unit, onError: (String) -> Unit) {
                 onReady()
             }
+            
+            // ========== 布局切换回调 ==========
+            
+            override fun onSwitchPack(packId: String) {
+                // 切换控件包
+                packManager.setSelectedPackId(packId)
+                controlLayoutView.loadLayoutFromPackManager()
+                
+                // 更新菜单状态
+                menuState.activePackId = packId
+                val newLayout = packManager.getPackLayout(packId)
+                currentLayout = newLayout
+                if (newLayout != null && newLayout.hasSubLayouts()) {
+                    menuState.subLayouts = newLayout.subLayouts.map { it.id to it.name }
+                    menuState.activeSubLayoutId = newLayout.activeSubLayoutId
+                        ?: newLayout.subLayouts.firstOrNull()?.id
+                } else {
+                    menuState.subLayouts = emptyList()
+                    menuState.activeSubLayoutId = null
+                }
+                
+                hasUnsavedChanges = false
+                selectedControl = null
+            }
+            
+            override fun onSwitchSubLayout(subLayoutId: String) {
+                // 切换子布局
+                controlLayoutView.switchSubLayout(subLayoutId)
+                menuState.activeSubLayoutId = subLayoutId
+                currentLayout = controlLayoutView.currentLayout
+            }
+            
+            override fun onLayoutSwitcherVisibilityChanged(visible: Boolean) {
+                menuState.isLayoutSwitcherVisible = visible
+            }
         }
     }
     
@@ -437,6 +486,18 @@ fun GameControlsOverlay(
                     hasUnsavedChanges = true
                     selectedControl = null
                 }
+            )
+        }
+
+        // 子布局快捷切换覆盖层（非编辑模式 + 有子布局时显示）
+        if (menuState.subLayouts.isNotEmpty() 
+            && menuState.isLayoutSwitcherVisible 
+            && !menuState.isInEditMode
+        ) {
+            LayoutSwitcherOverlay(
+                subLayouts = menuState.subLayouts,
+                activeSubLayoutId = menuState.activeSubLayoutId,
+                onSwitch = { callbacks.onSwitchSubLayout(it) }
             )
         }
 

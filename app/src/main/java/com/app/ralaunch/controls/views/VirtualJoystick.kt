@@ -81,6 +81,8 @@ class VirtualJoystick(
         const val DIR_LEFT: Int = 6 // 左 (A)
         const val DIR_UP_LEFT: Int = 7 // 左上 (W+A)
 
+        private const val STICK_BACKGROUND_SIZE = 0.75f // 背景圆占摇杆半径的比例
+
         private const val CLICK_ATTACK_INTERVAL_MS = 150 // 点击攻击间隔（毫秒）
 
         private const val MOUSE_CLICK_INTERVAL_MS = 100 // 鼠标点击间隔（毫秒）
@@ -340,8 +342,8 @@ class VirtualJoystick(
             canvas.rotate(castedData.rotation, centerX, centerY)
         }
 
-        // RadialGamePad 风格：背景圆使用 75% 半径（STICK_BACKGROUND_SIZE = 0.75f）
-        val backgroundRadius = mRadius * 0.75f
+        // RadialGamePad 风格：背景圆使用 75% 半径
+        val backgroundRadius = mRadius * STICK_BACKGROUND_SIZE
         
         // 检查是否有纹理
         val hasTexture = castedData.texture.hasAnyTexture && assetsDir != null && textureLoader != null
@@ -569,24 +571,35 @@ class VirtualJoystick(
     }
 
     private fun handleMove(touchX: Float, touchY: Float) {
+        // 输入方向使用原始触摸坐标（不受旋转影响）
         val dx = touchX - mCenterX
         val dy = touchY - mCenterY
         val distance = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
 
+        // 计算视觉位置：如果画布有旋转，需要对触摸坐标做反向旋转
+        // 这样在旋转画布上绘制时，摇杆圆心能准确出现在手指位置
+        var visDx = dx
+        var visDy = dy
+        if (castedData.rotation != 0f) {
+            val rad = Math.toRadians(-castedData.rotation.toDouble())
+            val cos = Math.cos(rad).toFloat()
+            val sin = Math.sin(rad).toFloat()
+            visDx = dx * cos - dy * sin
+            visDy = dx * sin + dy * cos
+        }
 
-        // 计算摇杆位置（限制在圆内）
-        val maxDistance = mRadius - mStickRadius
+        // 计算摇杆位置（限制在背景圆范围内，与视觉边界一致）
+        val maxDistance = mRadius * STICK_BACKGROUND_SIZE
         if (distance > maxDistance) {
             // 触摸点超出摇杆圆，限制在边缘
             val ratio = maxDistance / distance
-            mStickX = mCenterX + dx * ratio
-            mStickY = mCenterY + dy * ratio
+            mStickX = mCenterX + visDx * ratio
+            mStickY = mCenterY + visDy * ratio
         } else {
-
             // 触摸点在摇杆圆内，摇杆小圆点跟随触摸点（提供视觉反馈）
             // 注意：即使在死区内，小圆点也会移动，但不会触发输入事件（由后续的死区检测处理）
-            mStickX = touchX
-            mStickY = touchY
+            mStickX = mCenterX + visDx
+            mStickY = mCenterY + visDy
         }
 
 
@@ -1001,8 +1014,8 @@ class VirtualJoystick(
         }
 
 
-        // 标准化偏移量到 [-1, 1] 范围
-        val maxDistance = mRadius - mStickRadius
+        // 标准化偏移量到 [-1, 1] 范围（使用与视觉一致的背景圆半径）
+        val maxDistance = mRadius * STICK_BACKGROUND_SIZE
         val normalizedX = dx / maxDistance
         val normalizedY = dy / maxDistance
 

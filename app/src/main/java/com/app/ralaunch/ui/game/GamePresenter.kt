@@ -72,13 +72,8 @@ class GamePresenter : GameContract.Presenter {
                 return -2
             }
             
-            // 应用游戏特定的默认渲染器
-            val defaultRenderer = intent.getStringExtra("DEFAULT_RENDERER")
-            if (!defaultRenderer.isNullOrEmpty()) {
-                AppLogger.info(TAG, "Applying game-specific renderer: $defaultRenderer")
-                val appContext: Context = KoinJavaComponent.get(Context::class.java)
-                com.app.ralaunch.renderer.RendererConfig.setRenderer(appContext, defaultRenderer)
-            }
+            // 不再根据 game_info.json 中的 default_renderer 强制切换渲染器
+            // 始终使用用户在设置中选择的渲染器
 
                     val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
                     val patchManager: PatchManager? = try {

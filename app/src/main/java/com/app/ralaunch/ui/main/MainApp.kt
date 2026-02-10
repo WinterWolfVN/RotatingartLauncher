@@ -196,12 +196,7 @@ fun MainApp(
                         }
                     }
 
-                    // 加载指示器（不参与页面切换动画，作为独立覆盖层）
-                    if (isLoading && navState.currentScreen is Screen.Games) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
+                    // 加载指示器已由 SplashOverlay 取代
                 }
             }
         }

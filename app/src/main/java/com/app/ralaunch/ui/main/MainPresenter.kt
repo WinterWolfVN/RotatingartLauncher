@@ -13,8 +13,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent.get
 
 /**
@@ -72,13 +70,11 @@ class MainPresenter(
     // ==================== 游戏列表 ====================
 
     override fun loadGameList() {
-        presenterScope.launch {
-            val games = withContext(Dispatchers.IO) {
-                gameRepository.loadGameList()
-            }
-            gameList = games.toMutableList()
-            withView { showGameList(gameList) }
-        }
+        // 同步加载：数据已在 Repository 初始化时读入内存，此处直接读取几乎无开销
+        // 避免异步加载导致 Compose 首帧无数据，出现空白闪烁
+        val games = gameRepository.loadGameList()
+        gameList = games.toMutableList()
+        withView { showGameList(gameList) }
     }
 
     override fun selectGame(game: GameItem) {

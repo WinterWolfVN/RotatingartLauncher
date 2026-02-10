@@ -41,6 +41,7 @@ fun ControlLayoutScreenWrapper(
     // 状态
     var layouts by remember { mutableStateOf<List<ControlPackInfo>>(emptyList()) }
     var selectedPackId by remember { mutableStateOf<String?>(null) }
+    var quickSwitchIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<ControlPackInfo?>(null) }
     var showRenameDialog by remember { mutableStateOf<ControlPackInfo?>(null) }
@@ -51,6 +52,7 @@ fun ControlLayoutScreenWrapper(
     fun loadLayouts() {
         layouts = packManager.getInstalledPacks()
         selectedPackId = packManager.getSelectedPackId()
+        quickSwitchIds = packManager.getQuickSwitchPackIds()
     }
 
     // 初始加载
@@ -157,6 +159,7 @@ fun ControlLayoutScreenWrapper(
     ControlLayoutScreen(
         layouts = layouts,
         selectedPackId = selectedPackId,
+        quickSwitchIds = quickSwitchIds,
         showCreateDialog = showCreateDialog,
         showDeleteDialog = showDeleteDialog,
         showRenameDialog = showRenameDialog,
@@ -168,6 +171,11 @@ fun ControlLayoutScreenWrapper(
         onCreateDismiss = { showCreateDialog = false },
         onLayoutClick = { pack -> ControlEditorActivity.start(context, pack.id) },
         onSetDefault = { setDefaultLayout(it) },
+        onToggleQuickSwitch = { packId, enabled ->
+            if (enabled) packManager.addToQuickSwitch(packId)
+            else packManager.removeFromQuickSwitch(packId)
+            quickSwitchIds = packManager.getQuickSwitchPackIds()
+        },
         onShowMoreMenu = { showMoreMenu = it },
         onDismissMoreMenu = { showMoreMenu = null },
         onRenameClick = { showRenameDialog = it; showMoreMenu = null },
@@ -205,6 +213,7 @@ fun ControlLayoutScreenWrapper(
 private fun ControlLayoutScreen(
     layouts: List<ControlPackInfo>,
     selectedPackId: String?,
+    quickSwitchIds: List<String>,
     showCreateDialog: Boolean,
     showDeleteDialog: ControlPackInfo?,
     showRenameDialog: ControlPackInfo?,
@@ -216,6 +225,7 @@ private fun ControlLayoutScreen(
     onCreateDismiss: () -> Unit,
     onLayoutClick: (ControlPackInfo) -> Unit,
     onSetDefault: (ControlPackInfo) -> Unit,
+    onToggleQuickSwitch: (String, Boolean) -> Unit,
     onShowMoreMenu: (ControlPackInfo) -> Unit,
     onDismissMoreMenu: () -> Unit,
     onRenameClick: (ControlPackInfo) -> Unit,
@@ -250,6 +260,7 @@ private fun ControlLayoutScreen(
             LayoutListPanel(
                 layouts = layouts,
                 selectedPackId = selectedPackId,
+                quickSwitchIds = quickSwitchIds,
                 selectedLayout = selectedLayout,
                 showMoreMenu = showMoreMenu,
                 onLayoutSelect = { selectedLayout = it },
@@ -278,8 +289,12 @@ private fun ControlLayoutScreen(
             LayoutDetailPanel(
                 layout = selectedLayout,
                 isDefault = selectedLayout?.id == selectedPackId,
+                isQuickSwitch = selectedLayout?.id in quickSwitchIds,
                 onEditClick = { selectedLayout?.let { onLayoutClick(it) } },
                 onSetDefault = { selectedLayout?.let { onSetDefault(it) } },
+                onToggleQuickSwitch = { enabled ->
+                    selectedLayout?.let { onToggleQuickSwitch(it.id, enabled) }
+                },
                 onPreviewClick = { selectedLayout?.let { onPreviewClick(it) } },
                 modifier = Modifier
                     .weight(1f)
@@ -328,6 +343,7 @@ private fun ControlLayoutScreen(
 private fun LayoutListPanel(
     layouts: List<ControlPackInfo>,
     selectedPackId: String?,
+    quickSwitchIds: List<String>,
     selectedLayout: ControlPackInfo?,
     showMoreMenu: ControlPackInfo?,
     onLayoutSelect: (ControlPackInfo) -> Unit,
@@ -393,6 +409,7 @@ private fun LayoutListPanel(
                     LayoutListItem(
                         pack = pack,
                         isDefault = pack.id == selectedPackId,
+                        isQuickSwitch = pack.id in quickSwitchIds,
                         isSelected = pack.id == selectedLayout?.id,
                         showMoreMenu = showMoreMenu?.id == pack.id,
                         onClick = { onLayoutSelect(pack) },
@@ -452,6 +469,7 @@ private fun LayoutListPanel(
 private fun LayoutListItem(
     pack: ControlPackInfo,
     isDefault: Boolean,
+    isQuickSwitch: Boolean,
     isSelected: Boolean,
     showMoreMenu: Boolean,
     onClick: () -> Unit,
@@ -529,6 +547,20 @@ private fun LayoutListItem(
                             )
                         }
                     }
+                    if (isQuickSwitch) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.tertiary
+                        ) {
+                            Text(
+                                text = "快切",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiary,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
                 }
                 Text(
                     text = pack.author.ifBlank { "自定义布局" },
@@ -589,8 +621,10 @@ private fun LayoutListItem(
 private fun LayoutDetailPanel(
     layout: ControlPackInfo?,
     isDefault: Boolean,
+    isQuickSwitch: Boolean,
     onEditClick: () -> Unit,
     onSetDefault: () -> Unit,
+    onToggleQuickSwitch: (Boolean) -> Unit,
     onPreviewClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -660,6 +694,45 @@ private fun LayoutDetailPanel(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // 快速切换开关
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.SwapHoriz,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = if (isQuickSwitch) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "游戏内快速切换",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "启用后可在游戏悬浮菜单中快速切换到此布局",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isQuickSwitch,
+                            onCheckedChange = onToggleQuickSwitch
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
