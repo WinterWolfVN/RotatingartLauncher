@@ -3,17 +3,18 @@ package com.app.ralaunch.manager
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.patch.PatchManager
 import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.ui.game.GameActivity
 import com.app.ralaunch.utils.AppLogger
-import org.json.JSONObject
 import java.io.File
-import java.io.FileReader
 
 /**
  * 游戏启动管理器
+ *
+ * 使用新的存储结构: games/{GameDirName}/game_info.json
+ * 所有路径都是相对于游戏目录的
  */
 class GameLaunchManager(private val context: Context) {
 
@@ -22,25 +23,15 @@ class GameLaunchManager(private val context: Context) {
     }
 
     fun launchGame(game: GameItem): Boolean {
-        android.util.Log.d(TAG, ">>> launchGame called for: ${game.gameName}")
-        AppLogger.info(TAG, "launchGame called for: ${game.gameName}, path: ${game.gamePath}")
-        
-        var assemblyPath = game.gamePath
-        var assemblyFile = File(assemblyPath)
+        android.util.Log.d(TAG, ">>> launchGame called for: ${game.displayedName}")
+        AppLogger.info(TAG, "launchGame called for: ${game.displayedName}, path: ${game.gameExePathRelative}")
 
-        // 如果 gamePath 是目录而不是文件，尝试从 game_info.json 获取 launch_target
-        if (assemblyFile.exists() && assemblyFile.isDirectory) {
-            AppLogger.info(TAG, "gamePath is a directory, attempting to resolve launch_target...")
-            val resolvedPath = resolveLaunchTargetFromDir(assemblyFile)
-            if (resolvedPath != null) {
-                assemblyPath = resolvedPath
-                assemblyFile = File(assemblyPath)
-                AppLogger.info(TAG, "Resolved assembly path: $assemblyPath")
-            }
-        }
+        // 获取游戏目录和完整路径
+        val gameDir = getGameDirectory(game)
+        val gameFile = File(gameDir, game.gameExePathRelative)
 
-        if (!assemblyFile.exists() || !assemblyFile.isFile) {
-            AppLogger.error(TAG, "Assembly file not found: $assemblyPath")
+        if (!gameFile.exists() || !gameFile.isFile) {
+            AppLogger.error(TAG, "Assembly file not found: ${gameFile.absolutePath}")
             return false
         }
 
@@ -49,15 +40,15 @@ class GameLaunchManager(private val context: Context) {
         val patchManager: PatchManager? = try {
             KoinJavaComponent.getOrNull(PatchManager::class.java)
         } catch (e: Exception) { null }
-        val gameId = game.gameName
-        val enabledPatches = patchManager?.getApplicableAndEnabledPatches(gameId, assemblyFile.toPath()) ?: emptyList()
-        AppLogger.info(TAG, "Game: $gameId, Applicable patches: ${enabledPatches.size}")
+        val gameCategoryId = game.gameId
+        val enabledPatches = patchManager?.getApplicableAndEnabledPatches(gameCategoryId, gameFile.toPath()) ?: emptyList()
+        AppLogger.info(TAG, "Game: $gameCategoryId, Applicable patches: ${enabledPatches.size}")
 
         val intent = Intent(context, GameActivity::class.java).apply {
-            putExtra("GAME_NAME", game.gameName)
-            putExtra("ASSEMBLY_PATH", assemblyPath)
-            putExtra("GAME_ID", game.gamePath)
-            putExtra("GAME_PATH", game.gamePath)
+            putExtra("GAME_NAME", game.displayedName)
+            putExtra("ASSEMBLY_PATH", gameFile.absolutePath)
+            putExtra("GAME_ID", game.gameId)
+            putExtra("GAME_PATH", gameDir.absolutePath)
 
             if (enabledPatches.isNotEmpty()) {
                 putStringArrayListExtra(
@@ -74,34 +65,14 @@ class GameLaunchManager(private val context: Context) {
     }
 
     /**
-     * 从游戏目录解析启动目标
-     * 1. 首先尝试从 game_info.json 读取 launch_target
-     * 2. 如果没有，尝试查找常见的启动文件
+     * 获取游戏目录
+     * 根据新的存储结构，目录名就是 storageBasePathRelative
      */
-    private fun resolveLaunchTargetFromDir(gameDir: File): String? {
-        try {
-           
-            val gameInfoFile = File(gameDir, "game_info.json")
-            if (gameInfoFile.exists()) {
-                val content = FileReader(gameInfoFile).use { it.readText() }
-                val json = JSONObject(content)
-                if (json.has("launch_target")) {
-                    val launchTarget = json.getString("launch_target")
-                    val targetFile = File(gameDir, launchTarget)
-                    if (targetFile.exists() && targetFile.isFile) {
-                        return targetFile.absolutePath
-                    }
-                }
-            }
-            
-         
-            
-        } catch (e: Exception) {
-            AppLogger.warn(TAG, "Failed to resolve launch target: ${e.message}")
-        }
-        return null
+    private fun getGameDirectory(game: GameItem): File {
+        val gamesDir = File(context.getExternalFilesDir(null), "games")
+        return File(gamesDir, game.storageRootPathRelative)
     }
-    
+
     fun launchAssembly(assemblyFile: File?): Boolean {
         if (assemblyFile == null || !assemblyFile.exists()) {
             AppLogger.error(TAG, "Assembly file is null or does not exist")

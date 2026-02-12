@@ -1,6 +1,6 @@
 package com.app.ralaunch.installer
 
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 
 /**
  * 安装回调接口

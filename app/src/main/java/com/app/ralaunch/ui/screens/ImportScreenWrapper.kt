@@ -33,7 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.ralaunch.R
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.data.repository.GameListStorage
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.data.repository.GameRepository
 import com.app.ralaunch.installer.GameInstaller
 import com.app.ralaunch.installer.InstallCallback
@@ -55,9 +56,9 @@ private val mainHandler = Handler(Looper.getMainLooper())
 @Composable
 fun ImportScreenWrapper(
     gameFilePath: String? = null,
-    gameName: String? = null,
+    detectedGameId: String? = null,
     modLoaderFilePath: String? = null,
-    modLoaderName: String? = null,
+    detectedModLoaderId: String? = null,
     onBack: () -> Unit = {},
     onImportComplete: (String, GameItem?) -> Unit = { _, _ -> },
     onSelectGameFile: () -> Unit = {},
@@ -87,20 +88,26 @@ fun ImportScreenWrapper(
         importStatus = "准备中..."
         errorMessage = null
 
-        installer = GameInstaller(context)
+        // 获取 GameListStorage
+        val storage: GameListStorage = try {
+            KoinJavaComponent.get(GameListStorage::class.java)
+        } catch (_: Exception) {
+            isImporting = false
+            errorMessage = "无法初始化游戏存储"
+            return
+        }
 
-        // 获取 GameRepository 用于直接保存游戏（避免页面切换导致回调失效）
         val gameRepository: GameRepository? = try {
             KoinJavaComponent.getOrNull(GameRepository::class.java)
         } catch (_: Exception) { null }
 
-        installer?.install(
+        val installer = GameInstaller(storage)
+
+        installer.install(
             gameFilePath = gamePath ?: "",
             modLoaderFilePath = modLoaderFilePath,
-            gameName = modLoaderName ?: gameName,
             callback = object : InstallCallback {
                 override fun onProgress(message: String, progress: Int) {
-                    // 使用 mainHandler 确保即使页面切换也能更新 UI
                     mainHandler.post {
                         importStatus = message
                         importProgress = progress
@@ -108,19 +115,14 @@ fun ImportScreenWrapper(
                 }
 
                 override fun onComplete(gameItem: GameItem) {
-                    // 直接保存到仓库，确保游戏被添加（即使页面已切换）
                     gameRepository?.addGame(gameItem)
-                    
                     mainHandler.post {
                         isImporting = false
                         importStatus = "导入完成！"
                         importProgress = 100
-                        // 尝试调用回调（如果页面还在可能有效）
                         try {
                             onImportComplete("game", gameItem)
-                        } catch (_: Exception) {
-                            // 页面已切换，忽略回调错误
-                        }
+                        } catch (_: Exception) {}
                         Toast.makeText(context, "游戏导入成功", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -150,9 +152,9 @@ fun ImportScreenWrapper(
     // UI
     ModernImportScreen(
         gameFilePath = gameFilePath,
-        gameName = gameName,
+        detectedGameId = detectedGameId,
         modLoaderFilePath = modLoaderFilePath,
-        modLoaderName = modLoaderName,
+        detectedModLoaderId = detectedModLoaderId,
         isImporting = isImporting,
         importProgress = importProgress,
         importStatus = importStatus,
@@ -171,9 +173,9 @@ fun ImportScreenWrapper(
 @Composable
 private fun ModernImportScreen(
     gameFilePath: String?,
-    gameName: String?,
+    detectedGameId: String?,
     modLoaderFilePath: String?,
-    modLoaderName: String?,
+    detectedModLoaderId: String?,
     isImporting: Boolean,
     importProgress: Int,
     importStatus: String,
@@ -217,8 +219,8 @@ private fun ModernImportScreen(
                 )
 
                 // 检测结果（选择文件后显示）
-                val displayName = modLoaderName ?: gameName
-                val displayLabel = if (modLoaderName != null) "检测到模组加载器" else "检测到游戏"
+                val displayName = detectedModLoaderId ?: detectedGameId
+                val displayLabel = if (detectedModLoaderId != null) "检测到模组加载器" else "检测到游戏"
 
                 AnimatedVisibility(
                     visible = displayName != null,

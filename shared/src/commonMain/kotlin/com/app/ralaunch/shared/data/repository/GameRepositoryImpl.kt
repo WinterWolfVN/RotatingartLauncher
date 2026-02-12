@@ -5,7 +5,6 @@ import com.app.ralaunch.shared.domain.repository.GameRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
@@ -32,6 +31,8 @@ class GameRepositoryImpl(
 
     private fun loadGamesInternal() {
         val games = gameListStorage.loadGameList()
+        // 确保所有游戏项都设置了 gameListStorageParent 引用（虽然 loadGameList 应该已经设置了）
+        games.forEach { it.gameListStorageParent = gameListStorage }
         _gamesFlow.value = games
     }
 
@@ -39,13 +40,14 @@ class GameRepositoryImpl(
 
     override suspend fun getGameList(): List<GameItem> = _gamesFlow.value
 
-    override suspend fun getGameById(id: String): GameItem? =
-        _gamesFlow.value.find { it.id == id }
+    override suspend fun getGameById(id: String): GameItem? {
+        return _gamesFlow.value.find { it.id == id }
+    }
 
     override suspend fun addGame(game: GameItem, position: Int) {
         val games = _gamesFlow.value.toMutableList()
-        // 去重：如果已存在相同 id 或相同 executablePath 的游戏，先移除旧条目
-        games.removeAll { it.id == game.id || it.executablePath == game.executablePath }
+        // 去重：如果已存在相同 storageBasePath 的游戏，先移除旧条目
+        games.removeAll { it.id == game.id }
         val insertPosition = position.coerceIn(0, games.size)
         games.add(insertPosition, game)
         updateAndSave(games)
@@ -92,6 +94,8 @@ class GameRepositoryImpl(
     }
 
     private fun updateAndSave(games: List<GameItem>) {
+        // 确保所有游戏项都设置了 gameListStorageParent 引用
+        games.forEach { it.gameListStorageParent = gameListStorage }
         _gamesFlow.value = games
         gameListStorage.saveGameList(games)
     }
@@ -104,4 +108,11 @@ class GameRepositoryImpl(
 interface GameListStorage {
     fun loadGameList(): List<GameItem>
     fun saveGameList(games: List<GameItem>)
+    fun getGameGlobalStorageDirFull(): String
+    /**
+     * 创建游戏安装目录
+     * @param gameId 游戏名称（用于生成存储ID）
+     * @return Pair(目录绝对路径, 存储ID)
+     */
+    fun createGameStorageRoot(gameId: String): Pair<String, String>
 }

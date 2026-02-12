@@ -9,22 +9,28 @@ import com.app.ralaunch.shared.domain.model.GameItem
  */
 data class GameItemUi(
     val id: String,
-    val name: String,
-    val description: String? = null,
-    val iconPath: String? = null,
+    val displayedName: String,
+    val displayedDescription: String? = null,
+    val iconPathFull: String? = null,
     val isShortcut: Boolean = false,
     val modLoaderEnabled: Boolean = true
-)
+) {
+    /**
+     * @deprecated Use `id` instead. This alias will be removed in a future version.
+     */
+    @Deprecated("Use 'id' instead", ReplaceWith("id"))
+    val storageBasePathRelative: String
+        get() = id
+}
 
 /**
  * 领域模型 -> UI 模型转换
  */
 fun GameItem.toUiModel(): GameItemUi = GameItemUi(
     id = id,
-    name = name,
-    description = description,
-    iconPath = iconPath,
-    isShortcut = isShortcut,
+    displayedName = displayedName,
+    displayedDescription = displayedDescription,
+    iconPathFull = iconPathFull,  // Use absolute path for UI
     modLoaderEnabled = modLoaderEnabled
 )
 

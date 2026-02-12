@@ -75,13 +75,13 @@ class GamePresenter : GameContract.Presenter {
             // 不再根据 game_info.json 中的 default_renderer 强制切换渲染器
             // 始终使用用户在设置中选择的渲染器
 
-                    val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
-                    val patchManager: PatchManager? = try {
-                        KoinJavaComponent.getOrNull(PatchManager::class.java)
-                    } catch (e: Exception) { null }
-                    val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
-                        patchManager?.getPatchesByIds(it)
-                    }
+                val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
+                val patchManager: PatchManager? = try {
+                    KoinJavaComponent.getOrNull(PatchManager::class.java)
+                } catch (e: Exception) { null }
+                val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
+                    patchManager?.getPatchesByIds(it)
+                }
                     
             val exitCode = GameLauncher.launchDotNetAssembly(assemblyPath, emptyArray(), enabledPatches).also { code ->
                         onGameExit(code, GameLauncher.getLastErrorMessage())

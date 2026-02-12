@@ -26,8 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.app.ralaunch.R
 import com.app.ralaunch.data.SettingsManager
-import com.app.ralaunch.data.model.GameItem
-import com.app.ralaunch.manager.GameDeletionManager
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.manager.PermissionManager
 import com.app.ralaunch.manager.ThemeManager
 import com.app.ralaunch.manager.common.MessageHelper
@@ -173,8 +172,7 @@ class MainActivityCompose : BaseActivity() {
                                 val updatedGames = presenter.getGameList()
                                 gameItemsMap.clear()
                                 updatedGames.forEach { g ->
-                                    val uniqueId = "${g.gameName}_${g.gamePath}"
-                                    gameItemsMap[uniqueId] = g
+                                    gameItemsMap[g.id] = g
                                 }
                                 _uiState.update { s ->
                                     s.copy(
@@ -297,17 +295,16 @@ class MainActivityCompose : BaseActivity() {
         
         // 首先尝试从 gameItemsMap 获取
         var gameItem = gameItemsMap[gameUi.id]
-        
-        // 如果找不到，尝试通过名称和描述查找
+
+        // 如果找不到，尝试通过 id 查找
         if (gameItem == null) {
             Log.w("MainActivityCompose", "selectGameUi: gameItem not found in map for id=${gameUi.id}, trying fallback")
-            gameItem = presenter.getGameList().find { 
-                it.gameName == gameUi.name && 
-                (it.gameDescription == gameUi.description || gameUi.description.isNullOrEmpty())
+            gameItem = presenter.getGameList().find {
+                it.id == gameUi.id
             }
             // 如果找到了，更新 map
             if (gameItem != null) {
-                Log.i("MainActivityCompose", "selectGameUi: found gameItem via fallback for ${gameUi.name}")
+                Log.i("MainActivityCompose", "selectGameUi: found gameItem via fallback for id=${gameUi.id}")
                 gameItemsMap[gameUi.id] = gameItem
             }
         }
@@ -315,7 +312,7 @@ class MainActivityCompose : BaseActivity() {
         if (gameItem != null) {
             presenter.selectGame(gameItem)
         } else {
-            Log.e("MainActivityCompose", "selectGameUi: unable to find gameItem for ${gameUi.name}")
+            Log.e("MainActivityCompose", "selectGameUi: unable to find gameItem for id=${gameUi.id}")
             MessageHelper.showError(this, "无法选择游戏")
         }
     }
@@ -333,7 +330,7 @@ class MainActivityCompose : BaseActivity() {
         var position = _uiState.value.games.indexOfFirst { it.id == gameUi.id }
         if (position < 0) {
             position = presenter.getGameList().indexOfFirst { 
-                it.gameName == gameItem.gameName && it.gamePath == gameItem.gamePath 
+                it.id == gameItem.id
             }
         }
         // 显示纯 Compose 删除对话框
@@ -360,14 +357,10 @@ class MainActivityCompose : BaseActivity() {
         val gameUi = _uiState.value.gameToDelete ?: return
         val position = _uiState.value.deletePosition
         val gameItem = gameItemsMap[gameUi.id] ?: return
-        
+
         // 执行删除
-        val filesDeleted = if (gameItem.isShortcut) {
-            false
-        } else {
-            presenter.getGameDeletionManager().deleteGameFiles(gameItem)
-        }
-        
+        val filesDeleted = presenter.getGameDeletionManager().deleteGameFiles(gameItem)
+
         presenter.deleteGame(gameItem, position)
         showDeleteResultMessage(gameItem, filesDeleted)
         
@@ -402,7 +395,6 @@ class MainActivityCompose : BaseActivity() {
 
     private fun showDeleteResultMessage(game: GameItem, filesDeleted: Boolean) {
         when {
-            game.isShortcut -> MessageHelper.showSuccess(this, getString(R.string.main_shortcut_removed))
             filesDeleted -> MessageHelper.showSuccess(this, getString(R.string.main_game_deleted))
             else -> MessageHelper.showToast(this, getString(R.string.main_game_deleted_partial))
         }
@@ -436,9 +428,8 @@ class MainActivityCompose : BaseActivity() {
         override fun showGameList(games: List<GameItem>) {
             gameItemsMap.clear()
             games.forEach { game ->
-                // 使用与 GameItemMapper.generateUniqueId() 相同的算法生成 key
-                val uniqueId = "${game.gameName}_${game.gamePath}"
-                gameItemsMap[uniqueId] = game
+                // 使用 game.id 作为 key
+                gameItemsMap[game.id] = game
             }
             _uiState.update {
                 it.copy(
@@ -479,7 +470,7 @@ class MainActivityCompose : BaseActivity() {
         override fun showSuccess(message: String) = MessageHelper.showSuccess(this@MainActivityCompose, message)
 
         override fun launchGame(game: GameItem) {
-            Log.d("MainActivityCompose", ">>> View.launchGame called for: ${game.gameName}")
+            Log.d("MainActivityCompose", ">>> View.launchGame called for: ${game.displayedName}")
             val success = presenter.getGameLaunchManager().launchGame(game)
             Log.d("MainActivityCompose", "launchGame result: $success")
             if (success && SettingsManager.getInstance().isKillLauncherUIAfterLaunch) {
@@ -633,10 +624,10 @@ private fun MainActivityContent(
             importContent = {
                 ImportScreenWrapper(
                     gameFilePath = importGameFilePath,
-                    gameName = importGameName,
+                    detectedGameId = importGameName,
                     modLoaderFilePath = importModLoaderFilePath,
-                    modLoaderName = importModLoaderName,
-                    onBack = { 
+                    detectedModLoaderId = importModLoaderName,
+                    onBack = {
                         resetImportState()
                         navState.navigateToGames() 
                     },
@@ -731,7 +722,7 @@ private fun MainActivityContent(
         // 删除确认对话框 (纯 Compose)
         if (state.showDeleteDialog && state.gameToDelete != null) {
             DeleteGameComposeDialog(
-                gameName = state.gameToDelete.name,
+                gameName = state.gameToDelete.displayedName,
                 onConfirm = onConfirmDelete,
                 onDismiss = onDismissDeleteDialog
             )

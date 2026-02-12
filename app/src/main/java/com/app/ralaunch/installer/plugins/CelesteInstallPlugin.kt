@@ -1,6 +1,5 @@
 package com.app.ralaunch.installer.plugins
 
-import android.content.Context
 import com.app.ralaunch.core.GameLauncher
 import com.app.ralaunch.installer.*
 import com.app.ralaunch.patch.PatchManager
@@ -44,7 +43,7 @@ class CelesteInstallPlugin : BaseInstallPlugin() {
     override fun install(
         gameFile: File,
         modLoaderFile: File?,
-        outputDir: File,
+        gameStorageRoot: File,
         callback: InstallCallback
     ) {
         isCancelled = false
@@ -55,12 +54,12 @@ class CelesteInstallPlugin : BaseInstallPlugin() {
                     callback.onProgress("开始安装...", 0)
                 }
 
-                if (!outputDir.exists()) outputDir.mkdirs()
+                if (!gameStorageRoot.exists()) gameStorageRoot.mkdirs()
 
                 // 解压游戏本体
                 val extractResult = GameExtractorUtils.extractZip(
                     zipFile = gameFile,
-                    outputDir = outputDir,
+                    outputDir = gameStorageRoot,
                     progressCallback = { msg, progress ->
                         if (!isCancelled) {
                             val progressInt = (progress * 45).toInt().coerceIn(0, 45)
@@ -91,7 +90,7 @@ class CelesteInstallPlugin : BaseInstallPlugin() {
                     withContext(Dispatchers.Main) {
                         callback.onProgress("安装 Everest...", 55)
                     }
-                    installEverest(modLoaderFile, outputDir, callback)
+                    installEverest(modLoaderFile, gameStorageRoot, callback)
                     definition = GameDefinition.EVEREST
                 }
 
@@ -99,19 +98,18 @@ class CelesteInstallPlugin : BaseInstallPlugin() {
                 withContext(Dispatchers.Main) {
                     callback.onProgress("提取图标...", 92)
                 }
-                val iconPath = extractIcon(outputDir, definition)
+                val iconPath = extractIcon(gameStorageRoot, definition)
 
-                // 创建游戏信息文件
+                // 创建游戏信息文件 - outputDir 既是存储根目录也是实际游戏目录
                 withContext(Dispatchers.Main) {
                     callback.onProgress("完成安装...", 98)
                 }
-                createGameInfo(outputDir, definition, iconPath)
+                createGameInfo(gameStorageRoot, definition, iconPath)
 
                 // 创建 GameItem 并回调
                 val gameItem = createGameItem(
                     definition = definition,
-                    gameDir = outputDir.absolutePath,
-                    gameBasePath = outputDir.absolutePath,
+                    gameDir = gameStorageRoot,
                     iconPath = iconPath
                 )
 

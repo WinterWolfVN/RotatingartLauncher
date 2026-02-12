@@ -82,7 +82,7 @@ class SmapiInstallPlugin : BaseInstallPlugin() {
     override fun install(
         gameFile: File,
         modLoaderFile: File?,
-        outputDir: File,
+        gameStorageRoot: File,
         callback: InstallCallback
     ) {
         isCancelled = false
@@ -93,10 +93,10 @@ class SmapiInstallPlugin : BaseInstallPlugin() {
                     callback.onProgress("开始安装...", 0)
                 }
                 
-                if (!outputDir.exists()) outputDir.mkdirs()
+                if (!gameStorageRoot.exists()) gameStorageRoot.mkdirs()
                 
                 // 解压游戏本体
-                var actualGameDir = extractGameFile(gameFile, outputDir, callback)
+                var actualGameDir = extractGameFile(gameFile, gameStorageRoot, callback)
                 if (actualGameDir == null) {
                     withContext(Dispatchers.Main) { callback.onError("游戏解压失败") }
                     return@launch
@@ -146,17 +146,17 @@ class SmapiInstallPlugin : BaseInstallPlugin() {
                 }
                 val iconPath = extractIcon(actualGameDir, definition)
                 
-                // 创建游戏信息文件
+                // 创建游戏信息文件 - 使用 outputDir 作为存储根目录
                 withContext(Dispatchers.Main) {
                     callback.onProgress("完成安装...", 98)
                 }
-                createGameInfo(actualGameDir, definition, iconPath)
-                
+                createGameInfo(gameStorageRoot, actualGameDir, definition, iconPath)
+
                 // 创建 GameItem 并回调
                 val gameItem = createGameItem(
                     definition = definition,
-                    gameDir = actualGameDir.absolutePath,
-                    gameBasePath = outputDir.absolutePath,
+                    storageRootDir = gameStorageRoot,
+                    actualGameDir = actualGameDir,
                     iconPath = iconPath
                 )
                 

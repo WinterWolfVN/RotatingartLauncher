@@ -1,18 +1,15 @@
 package com.app.ralaunch.data.repository
 
-import com.app.ralaunch.data.model.GameItem
-import com.app.ralaunch.data.model.toAppModel
-import com.app.ralaunch.data.model.toAppModels
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.shared.domain.repository.GameRepository as SharedGameRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import com.app.ralaunch.shared.domain.model.GameItem as SharedGameItem
 
 /**
  * 旧版 GameRepository 接口 (兼容层)
  *
- * 保持与旧代码的兼容性
+ * 保持与旧代码的兼容性，使用统一的 GameItem
  */
 interface GameRepository {
     fun loadGameList(): List<GameItem>
@@ -33,19 +30,19 @@ class LegacyGameRepositoryBridge(
 
     override fun loadGameList(): List<GameItem> {
         return runBlocking {
-            sharedRepository.getGameList().map { it.toAppModel() }
+            sharedRepository.getGameList()
         }
     }
 
     override fun saveGameList(games: List<GameItem>) {
         runBlocking {
-            sharedRepository.saveGameList(games.map { it.toShared() })
+            sharedRepository.saveGameList(games)
         }
     }
 
     override fun addGame(game: GameItem) {
         runBlocking {
-            sharedRepository.addGame(game.toShared(), 0)
+            sharedRepository.addGame(game, 0)
         }
     }
 
@@ -57,7 +54,7 @@ class LegacyGameRepositoryBridge(
 
     override fun updateGame(position: Int, game: GameItem) {
         runBlocking {
-            sharedRepository.updateGame(game.toShared())
+            sharedRepository.updateGame(game)
         }
     }
 
@@ -67,16 +64,14 @@ class LegacyGameRepositoryBridge(
      * 获取游戏列表 Flow（推荐使用）
      */
     fun getGamesFlow(): Flow<List<GameItem>> {
-        return sharedRepository.getGames().map { list ->
-            list.toAppModels()
-        }
+        return sharedRepository.getGames()
     }
 
     /**
      * 异步添加游戏
      */
     suspend fun addGameAsync(game: GameItem) {
-        sharedRepository.addGame(game.toShared(), 0)
+        sharedRepository.addGame(game, 0)
     }
 
     /**
@@ -90,11 +85,6 @@ class LegacyGameRepositoryBridge(
      * 异步更新游戏
      */
     suspend fun updateGameAsync(game: GameItem) {
-        sharedRepository.updateGame(game.toShared())
+        sharedRepository.updateGame(game)
     }
 }
-
-/**
- * 扩展函数：将 App GameItem 转换为 Shared GameItem
- */
-private fun GameItem.toShared(): SharedGameItem = this.toShared()

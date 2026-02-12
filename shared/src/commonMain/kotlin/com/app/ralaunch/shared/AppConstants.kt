@@ -34,8 +34,10 @@ object AppConstants {
     // ==================== 文件名称 ====================
     
     object Files {
-        /** 游戏列表 JSON */
+        /** 游戏列表 JSON (根目录，包含游戏名称列表) */
         const val GAME_LIST = "game_list.json"
+        /** 单个游戏信息 JSON */
+        const val GAME_INFO = "game_info.json"
         /** 设置 JSON */
         const val SETTINGS = "settings.json"
     }

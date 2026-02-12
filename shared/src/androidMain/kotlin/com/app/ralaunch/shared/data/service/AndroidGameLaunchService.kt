@@ -30,7 +30,10 @@ class AndroidGameLaunchService(
     
     override suspend fun canLaunch(game: GameItem): String? = withContext(Dispatchers.IO) {
         // 检查游戏路径是否存在
-        val executablePath = game.executablePath
+        val executablePath = game.gameExePathFull
+        if (executablePath == null) {
+            return@withContext "游戏可执行文件路径为空"
+        }
         if (executablePath.isBlank()) {
             return@withContext "游戏可执行文件路径未设置"
         }
@@ -72,7 +75,10 @@ class AndroidGameLaunchService(
     
     private suspend fun launchGame(game: GameItem, config: LaunchConfig): LaunchResult {
         return try {
-            val executablePath = game.executablePath
+            val executablePath = game.gameExePathFull
+            if (executablePath == null) {
+                return LaunchResult.Error("可执行文件路径为空")
+            }
             if (executablePath.isBlank()) {
                 return LaunchResult.Error("可执行文件路径未设置")
             }

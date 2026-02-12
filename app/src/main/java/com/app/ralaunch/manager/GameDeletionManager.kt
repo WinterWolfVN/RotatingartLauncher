@@ -1,7 +1,7 @@
 package com.app.ralaunch.manager
 
 import android.content.Context
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.shared.AppConstants
 import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.utils.FileUtils
@@ -10,14 +10,14 @@ import java.nio.file.Paths
 
 /**
  * 游戏删除管理器
+ *
+ * 使用新的存储结构: games/{GameDirName}/game_info.json
  */
 class GameDeletionManager(private val context: Context) {
 
     fun deleteGameFiles(game: GameItem): Boolean {
         return try {
-            if (game.isShortcut) return false
-
-            val gameDir = findGameDirectory(game) ?: return false
+            val gameDir = getGameDirectory(game) ?: return false
 
             val dirPath = gameDir.absolutePath
             if (!dirPath.contains("/files/games/") && !dirPath.contains("/files/imported_games/")) {
@@ -41,24 +41,14 @@ class GameDeletionManager(private val context: Context) {
         }
     }
 
-    private fun findGameDirectory(game: GameItem): File? {
-        val gameBasePath = game.gameBasePath
-        if (!gameBasePath.isNullOrEmpty()) {
-            return File(gameBasePath)
-        }
+    /**
+     * 获取游戏目录
+     * 根据新的存储结构，目录名就是 storageBasePathRelative
+     */
+    private fun getGameDirectory(game: GameItem): File? {
+        if (game.storageRootPathRelative.isBlank()) return null
 
-        val gamePath = game.gamePath
-        if (gamePath.isNullOrEmpty()) return null
-
-        val gameFile = File(gamePath)
-        var gameDir: File? = null
-        var parent = gameFile.parentFile
-
-        while (parent != null && parent.name != AppConstants.Dirs.GAMES) {
-            gameDir = parent
-            parent = parent.parentFile
-        }
-
-        return gameDir ?: gameFile.parentFile
+        val gamesDir = File(context.getExternalFilesDir(null), AppConstants.Dirs.GAMES)
+        return File(gamesDir, game.storageRootPathRelative)
     }
 }

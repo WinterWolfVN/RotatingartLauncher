@@ -4,7 +4,6 @@ import android.content.Context
 import com.app.ralaunch.core.AssemblyPatcher
 import com.app.ralaunch.data.repository.GameRepository
 import org.koin.java.KoinJavaComponent
-import com.app.ralaunch.utils.FileUtils
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -90,7 +89,7 @@ object PatchExtractor {
             if (games.isEmpty()) return
 
             games.forEach { game ->
-                val gameDir = getGameDirectory(game.gamePath) ?: return@forEach
+                val gameDir = getGameDirectory(game.gameExePathRelative) ?: return@forEach
                 AssemblyPatcher.applyMonoModPatches(context, gameDir, false)
             }
         } catch (e: Exception) {

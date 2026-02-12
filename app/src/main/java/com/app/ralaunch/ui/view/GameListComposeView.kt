@@ -5,7 +5,7 @@ import android.util.AttributeSet
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.AbstractComposeView
 import coil.compose.AsyncImage
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.shared.ui.components.game.GameListContent
 import com.app.ralaunch.shared.ui.model.GameItemUi
 import com.app.ralaunch.shared.ui.theme.RaLaunchTheme
@@ -103,15 +103,11 @@ class GameListComposeView @JvmOverloads constructor(
      */
     private fun GameItem.toUi(): GameItemUi {
         return GameItemUi(
-            id = this.id,
-            name = this.gameName,
-            description = this.gameDescription,
-            iconPath = this.iconPath,
-            isShortcut = this.isShortcut
+            id = id,
+            displayedName = displayedName,
+            displayedDescription = displayedDescription,
+            iconPathFull = iconPathFull,  // Use absolute path for UI
+            isShortcut = false
         )
     }
-
-    // GameItem 扩展属性 - 使用名称+路径组合，避免 hashCode 碰撞
-    private val GameItem.id: String
-        get() = "${gameName}_${gamePath}"
 }

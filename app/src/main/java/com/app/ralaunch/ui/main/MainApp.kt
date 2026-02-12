@@ -11,8 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import com.app.ralaunch.data.model.GameItem
 import com.app.ralaunch.shared.ui.components.AppNavigationRail
 import com.app.ralaunch.shared.ui.navigation.*
 import com.app.ralaunch.shared.ui.theme.LocalHazeState
@@ -334,8 +332,8 @@ fun MainAppPreview() {
             games = listOf(
                 GameItemUi(
                     id = "1",
-                    name = "Sample Game",
-                    iconPath = null
+                    displayedName = "Sample Game",
+                    iconPathFull = null
                 )
             )
         )

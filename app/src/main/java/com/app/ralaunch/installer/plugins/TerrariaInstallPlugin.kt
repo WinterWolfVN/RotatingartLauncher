@@ -46,7 +46,7 @@ class TerrariaInstallPlugin : BaseInstallPlugin() {
     override fun install(
         gameFile: File,
         modLoaderFile: File?,
-        outputDir: File,
+        gameStorageRootFull: File,
         callback: InstallCallback
     ) {
         isCancelled = false
@@ -57,12 +57,12 @@ class TerrariaInstallPlugin : BaseInstallPlugin() {
                     callback.onProgress("开始安装...", 0)
                 }
                 
-                if (!outputDir.exists()) outputDir.mkdirs()
+                if (!gameStorageRootFull.exists()) gameStorageRootFull.mkdirs()
                 
                 // 解压游戏本体
-                var terrariaGameDir: File? = extractGameFile(gameFile, outputDir, callback)
+                var terrariaExeParent: File? = extractGameFile(gameFile, gameStorageRootFull, callback)
                 
-                if (terrariaGameDir == null) {
+                if (terrariaExeParent == null) {
                     withContext(Dispatchers.Main) { callback.onError("游戏解压失败") }
                     return@launch
                 }
@@ -74,7 +74,7 @@ class TerrariaInstallPlugin : BaseInstallPlugin() {
                 
                 // 确定最终的游戏定义
                 var definition = GameDefinition.TERRARIA
-                var finalGameDir = terrariaGameDir
+                var finalExeParent = terrariaExeParent
                 
                 // 安装 tModLoader
                 if (modLoaderFile != null) {
@@ -82,17 +82,17 @@ class TerrariaInstallPlugin : BaseInstallPlugin() {
                         callback.onProgress("准备 tModLoader 目录...", 48)
                     }
                     
-                    val gogGamesDir = terrariaGameDir.parentFile
-                    val tModLoaderDir = File(gogGamesDir, "tModLoader")
-                    tModLoaderDir.mkdirs()
+                    val gogGamesDir = terrariaExeParent.parentFile
+                    val tModLoaderExeParent = File(gogGamesDir, "tModLoader")
+                    tModLoaderExeParent.mkdirs()
                     
                     withContext(Dispatchers.Main) {
                         callback.onProgress("安装 tModLoader...", 55)
                     }
-                    installTModLoader(modLoaderFile, tModLoaderDir, callback)
+                    installTModLoader(modLoaderFile, tModLoaderExeParent, callback)
                     
                     definition = GameDefinition.TMODLOADER
-                    finalGameDir = tModLoaderDir
+                    finalExeParent = tModLoaderExeParent
                 }
                 
                 if (isCancelled) {
@@ -104,25 +104,25 @@ class TerrariaInstallPlugin : BaseInstallPlugin() {
                 withContext(Dispatchers.Main) {
                     callback.onProgress("安装 MonoMod 库...", 90)
                 }
-                installMonoMod(finalGameDir)
+                installMonoMod(finalExeParent)
                 
                 // 提取图标
                 withContext(Dispatchers.Main) {
                     callback.onProgress("提取图标...", 92)
                 }
-                val iconPath = extractIcon(finalGameDir, definition)
+                val iconPath = extractIcon(finalExeParent, definition)
                 
-                // 创建游戏信息文件
+                // 创建游戏信息文件 - 使用 outputDir 作为存储根目录
                 withContext(Dispatchers.Main) {
                     callback.onProgress("完成安装...", 98)
                 }
-                createGameInfo(finalGameDir, definition, iconPath)
-                
+                createGameInfo(gameStorageRootFull, finalExeParent, definition, iconPath)
+
                 // 创建 GameItem 并回调
                 val gameItem = createGameItem(
                     definition = definition,
-                    gameDir = finalGameDir.absolutePath,
-                    gameBasePath = outputDir.absolutePath,
+                    storageRootDir = gameStorageRootFull,
+                    actualGameDir = finalExeParent,
                     iconPath = iconPath
                 )
                 

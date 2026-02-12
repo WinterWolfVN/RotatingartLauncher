@@ -41,13 +41,13 @@ interface GameInstallPlugin {
      * 安装游戏
      * @param gameFile 游戏本体文件
      * @param modLoaderFile 模组加载器文件（可选）
-     * @param outputDir 输出目录
+     * @param gameStorageRoot 输出目录
      * @param callback 安装回调
      */
     fun install(
         gameFile: File,
         modLoaderFile: File?,
-        outputDir: File,
+        gameStorageRoot: File,
         callback: InstallCallback
     )
     

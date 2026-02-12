@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.app.ralaunch.shared.AppConstants
 import com.app.ralaunch.R
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.data.repository.GameRepository
 import com.app.ralaunch.manager.GameLaunchManager
 import com.app.ralaunch.manager.GameDeletionManager
@@ -105,7 +105,7 @@ class MainPresenter(
         android.util.Log.d("MainPresenter", "launchSelectedGame called, selectedGame=$selectedGame, isViewAttached=$isViewAttached")
         val game = selectedGame
         if (game != null) {
-            android.util.Log.d("MainPresenter", "Launching game: ${game.gameName}")
+            android.util.Log.d("MainPresenter", "Launching game: ${game.displayedName}")
             withView { launchGame(game) }
         } else {
             android.util.Log.w("MainPresenter", "selectedGame is null!")

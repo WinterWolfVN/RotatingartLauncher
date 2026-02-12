@@ -1,6 +1,6 @@
 package com.app.ralaunch.ui.main
 
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 
 /**
  * 主界面 MVP 契约

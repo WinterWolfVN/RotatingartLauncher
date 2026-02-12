@@ -158,7 +158,7 @@ private fun DeleteGameDialog(
         onDismissRequest = onDismiss,
         title = { Text("删除游戏") },
         text = {
-            Text("确定要删除 \"${game.name}\" 吗？此操作不可撤销。")
+            Text("确定要删除 \"${game.displayedName}\" 吗？此操作不可撤销。")
         },
         confirmButton = {
             TextButton(

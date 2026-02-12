@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Gamepad
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,16 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.app.ralaunch.R
-import com.app.ralaunch.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 import com.app.ralaunch.data.repository.GameRepository
 import com.app.ralaunch.patch.Patch
 import com.app.ralaunch.patch.PatchManager
@@ -71,16 +68,15 @@ fun PatchManagementDialogCompose(
     var selectedGameIndex by remember { mutableIntStateOf(-1) }
     var patches by remember { mutableStateOf<List<Patch>>(emptyList()) }
     
-    // 加载游戏列表（按 gameName 去重，保留每个名称的第一个条目）
+    // 加载游戏列表
     LaunchedEffect(Unit) {
-        games = (gameRepository?.loadGameList() ?: emptyList())
-            .distinctBy { it.gameName }
+        games = gameRepository?.loadGameList() ?: emptyList()
     }
     
     // 当选择游戏改变时加载补丁
     LaunchedEffect(selectedGame) {
         patches = selectedGame?.let { game ->
-            patchManager?.getApplicablePatches(game.gameName) ?: emptyList()
+            patchManager?.getApplicablePatches(game.gameId) ?: emptyList()
         } ?: emptyList()
     }
     
@@ -94,7 +90,7 @@ fun PatchManagementDialogCompose(
                     if (success) {
                         // 刷新补丁列表
                         selectedGame?.let { game ->
-                            patches = patchManager?.getApplicablePatches(game.gameName) ?: emptyList()
+                            patches = patchManager?.getApplicablePatches(game.gameId) ?: emptyList()
                         }
                     }
                 }
@@ -285,9 +281,10 @@ private fun GameSelectableItem(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (!game.iconPath.isNullOrEmpty() && File(game.iconPath).exists()) {
-                    val bitmap = remember(game.iconPath) {
-                        BitmapFactory.decodeFile(game.iconPath)?.asImageBitmap()
+                val iconPathFull = game.iconPathFull  // Use absolute path
+                if (!iconPathFull.isNullOrEmpty() && File(iconPathFull).exists()) {
+                    val bitmap = remember(iconPathFull) {
+                        BitmapFactory.decodeFile(iconPathFull)?.asImageBitmap()
                     }
                     bitmap?.let {
                         Image(
@@ -304,7 +301,7 @@ private fun GameSelectableItem(
             Spacer(modifier = Modifier.width(12.dp))
             
             Text(
-                text = game.gameName,
+                text = game.displayedName,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -403,7 +400,10 @@ private fun PatchItem(
     patchManager: PatchManager?,
     context: android.content.Context
 ) {
-    val gameAsmPath = remember(selectedGame) { Paths.get(selectedGame.gamePath) }
+    // Use absolute path for patch config, not relative path
+    val gameAsmPath = remember(selectedGame) {
+        selectedGame.gameExePathFull?.let { Paths.get(it) } ?: Paths.get(selectedGame.gameExePathRelative)
+    }
     var isEnabled by remember(patch, selectedGame) {
         mutableStateOf(patchManager?.isPatchEnabled(gameAsmPath, patch.manifest.id) ?: false)
     }
@@ -451,7 +451,7 @@ private fun PatchItem(
                     }
                     Toast.makeText(
                         context,
-                        "${selectedGame.gameName} - ${patch.manifest.name}: $statusText",
+                        "${selectedGame.displayedName} - ${patch.manifest.name}: $statusText",
                         Toast.LENGTH_SHORT
                     ).show()
                 }

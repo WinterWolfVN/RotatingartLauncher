@@ -1,6 +1,6 @@
 package com.app.ralaunch.shared.data.repository
 
-import com.app.ralaunch.shared.data.model.GameItem
+import com.app.ralaunch.shared.domain.model.GameItem
 
 /**
  * 游戏仓库接口 - 跨平台共享

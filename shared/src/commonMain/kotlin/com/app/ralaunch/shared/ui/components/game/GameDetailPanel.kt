@@ -1,6 +1,5 @@
 package com.app.ralaunch.shared.ui.components.game
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,14 +22,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.app.ralaunch.shared.ui.model.GameItemUi
-import com.app.ralaunch.shared.ui.theme.RaLaunchTheme
 
 /**
  * 游戏详情面板 - Material Design 3
@@ -97,9 +93,9 @@ fun GameDetailPanel(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (game.iconPath != null) {
+                    if (game.iconPathFull != null) {
                         iconLoader(
-                            game.iconPath,
+                            game.iconPathFull,
                             Modifier
                                 .fillMaxSize()
                                 .padding(8.dp)
@@ -120,7 +116,7 @@ fun GameDetailPanel(
             
             // 游戏名称
             Text(
-                text = game.name,
+                text = game.displayedName,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -130,7 +126,7 @@ fun GameDetailPanel(
             )
             
             // 描述
-            game.description?.let { desc ->
+            game.displayedDescription?.let { desc ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = desc,

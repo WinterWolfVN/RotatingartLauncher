@@ -2,7 +2,6 @@ package com.app.ralaunch.shared.ui.components.game
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -159,14 +158,14 @@ fun GameCard(
                 contentAlignment = Alignment.Center
             ) {
                 GameCardIconSection(
-                    iconPath = game.iconPath,
+                    iconPath = game.iconPathFull,
                     iconLoader = iconLoader
                 )
             }
 
             // 底部文字
             Text(
-                text = game.name,
+                text = game.displayedName,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,
