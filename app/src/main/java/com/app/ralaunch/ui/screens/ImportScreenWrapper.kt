@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.app.ralaunch.R
 import com.app.ralaunch.shared.data.repository.GameListStorage
 import com.app.ralaunch.shared.domain.model.GameItem
-import com.app.ralaunch.data.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepository
 import com.app.ralaunch.installer.GameInstaller
 import com.app.ralaunch.installer.InstallCallback
 import com.app.ralaunch.installer.InstallPluginRegistry
@@ -115,7 +115,9 @@ fun ImportScreenWrapper(
                 }
 
                 override fun onComplete(gameItem: GameItem) {
-                    gameRepository?.addGame(gameItem)
+                    scope.launch {
+                        gameRepository?.addGame(gameItem, 0)
+                    }
                     mainHandler.post {
                         isImporting = false
                         importStatus = "导入完成！"
@@ -723,4 +725,3 @@ private fun ImportGuideSection(
         }
     }
 }
-

@@ -6,8 +6,6 @@ import com.app.ralaunch.shared.domain.repository.ControlLayoutRepository
 import com.app.ralaunch.shared.domain.repository.GameRepository
 import com.app.ralaunch.shared.domain.repository.SettingsRepository
 import com.app.ralaunch.shared.ui.screens.controls.ControlLayoutViewModel
-import com.app.ralaunch.shared.ui.screens.import.ImportViewModel
-import com.app.ralaunch.shared.ui.screens.main.MainViewModel
 import com.app.ralaunch.shared.ui.screens.settings.AppInfo
 import com.app.ralaunch.shared.ui.screens.settings.SettingsViewModel
 import org.koin.core.module.dsl.viewModel
@@ -33,18 +31,10 @@ val sharedModule = module {
     // ==================== ViewModels ====================
 
     viewModel {
-        MainViewModel(gameRepository = get())
-    }
-
-    viewModel {
         SettingsViewModel(
             settingsRepository = get(),
             appInfo = getOrNull<AppInfo>() ?: AppInfo()
         )
-    }
-
-    viewModel {
-        ImportViewModel()
     }
 
     viewModel { (controlLayoutRepository: ControlLayoutRepository) ->

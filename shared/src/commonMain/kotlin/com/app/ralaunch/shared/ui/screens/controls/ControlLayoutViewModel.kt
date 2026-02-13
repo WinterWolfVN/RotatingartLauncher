@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.app.ralaunch.shared.domain.model.ControlLayout
 import com.app.ralaunch.shared.domain.model.ControlConfig
 import com.app.ralaunch.shared.domain.repository.ControlLayoutRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -73,8 +76,8 @@ class ControlLayoutViewModel(
     private val _uiState = MutableStateFlow(ControlLayoutUiState())
     val uiState: StateFlow<ControlLayoutUiState> = _uiState.asStateFlow()
 
-    private val _effect = MutableStateFlow<ControlLayoutEffect?>(null)
-    val effect: StateFlow<ControlLayoutEffect?> = _effect.asStateFlow()
+    private val _effect = MutableSharedFlow<ControlLayoutEffect>(extraBufferCapacity = 16)
+    val effect: SharedFlow<ControlLayoutEffect> = _effect.asSharedFlow()
 
     init {
         loadLayouts()
@@ -107,12 +110,8 @@ class ControlLayoutViewModel(
         }
     }
 
-    fun clearEffect() {
-        _effect.value = null
-    }
-
     private fun sendEffect(effect: ControlLayoutEffect) {
-        _effect.value = effect
+        _effect.tryEmit(effect)
     }
 
     // ==================== 布局管理 ====================

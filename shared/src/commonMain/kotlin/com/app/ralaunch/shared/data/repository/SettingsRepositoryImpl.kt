@@ -270,23 +270,11 @@ class SettingsRepositoryImpl(
 
     override suspend fun getRendererType(): String {
         val renderer = dataStore.data.first()[PreferencesKeys.FNA_RENDERER] ?: "auto"
-        return when (renderer.lowercase()) {
-            "auto" -> "自动"
-            "opengl", "opengl es" -> "OpenGL ES"
-            "vulkan" -> "Vulkan"
-            "software" -> "软件渲染"
-            else -> "自动"
-        }
+        return normalizeRendererValue(renderer)
     }
 
     override suspend fun setRendererType(renderer: String) {
-        val value = when (renderer) {
-            "自动" -> "auto"
-            "OpenGL ES" -> "opengl"
-            "Vulkan" -> "vulkan"
-            "软件渲染" -> "software"
-            else -> "auto"
-        }
+        val value = normalizeRendererValue(renderer)
         dataStore.edit { it[PreferencesKeys.FNA_RENDERER] = value }
     }
 
@@ -415,7 +403,7 @@ class SettingsRepositoryImpl(
                     "background_type" -> prefs[PreferencesKeys.BACKGROUND_TYPE] = value.toString()
                     "background_image_path" -> prefs[PreferencesKeys.BACKGROUND_IMAGE_PATH] = value.toString()
                     "background_video_path" -> prefs[PreferencesKeys.BACKGROUND_VIDEO_PATH] = value.toString()
-                    "fna_renderer" -> prefs[PreferencesKeys.FNA_RENDERER] = value.toString()
+                    "fna_renderer" -> prefs[PreferencesKeys.FNA_RENDERER] = normalizeRendererValue(value.toString())
                     "verbose_logging" -> prefs[PreferencesKeys.VERBOSE_LOGGING] = value as? Boolean ?: false
                 }
             }
@@ -424,5 +412,19 @@ class SettingsRepositoryImpl(
 
     override suspend fun resetToDefaults() {
         dataStore.edit { it.clear() }
+    }
+
+    private fun normalizeRendererValue(value: String?): String {
+        if (value.isNullOrBlank()) return "auto"
+        return when (value.lowercase()) {
+            "自动", "自动选择", "auto" -> "auto"
+            "native", "native opengl es 3", "opengl", "opengl es", "opengles3", "opengl_native" -> "native"
+            "gl4es", "opengl_gl4es" -> "gl4es"
+            "gl4es+angle" -> "gl4es+angle"
+            "mobileglues" -> "mobileglues"
+            "angle" -> "angle"
+            "zink", "vulkan" -> "zink"
+            else -> value
+        }
     }
 }

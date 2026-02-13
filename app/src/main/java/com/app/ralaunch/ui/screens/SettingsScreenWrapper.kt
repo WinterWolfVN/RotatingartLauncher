@@ -7,27 +7,26 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import com.app.ralaunch.data.SettingsManager
+import com.app.ralaunch.shared.domain.repository.SettingsRepository
 import com.app.ralaunch.shared.ui.components.dialogs.*
 import com.app.ralaunch.shared.ui.screens.settings.*
 import com.app.ralaunch.shared.ui.theme.AppThemeState
 import com.app.ralaunch.ui.compose.dialogs.PatchManagementDialogCompose
-import com.app.ralaunch.ui.compose.settings.SettingsViewModel as AppSettingsViewModel
-import com.app.ralaunch.ui.main.MainActivityCompose
 import com.app.ralaunch.utils.AssetIntegrityChecker
 import com.app.ralaunch.R
 import com.app.ralaunch.runtime.RuntimeLibraryLoader
-import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.utils.LocaleManager
 import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent
 
 /**
  * 设置页面包装器 - App 层
@@ -43,14 +42,20 @@ fun SettingsScreenWrapper(
     val scope = rememberCoroutineScope()
     
     // 使用 Activity 级别的 ViewModel 缓存，避免页面切换时重建
-    val viewModel: AppSettingsViewModel = remember {
+    val viewModel: SettingsViewModel = remember {
+        val settingsRepository: SettingsRepository = KoinJavaComponent.get(SettingsRepository::class.java)
+        val appInfo: AppInfo = KoinJavaComponent.getOrNull(AppInfo::class.java) ?: AppInfo()
         ViewModelProvider(
             activity as ViewModelStoreOwner,
-            AppSettingsViewModel.Factory(context)
-        )[AppSettingsViewModel::class.java]
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return SettingsViewModel(settingsRepository, appInfo) as T
+                }
+            }
+        )[SettingsViewModel::class.java]
     }
     val uiState by viewModel.uiState.collectAsState()
-    val effect by viewModel.effect.collectAsState()
 
     // 对话框状态
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -110,8 +115,8 @@ fun SettingsScreenWrapper(
     }
 
     // 处理副作用
-    LaunchedEffect(effect) {
-        effect?.let { eff ->
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { eff ->
             when (eff) {
                 is SettingsEffect.OpenImagePicker -> imagePickerLauncher.launch("image/*")
                 is SettingsEffect.OpenVideoPicker -> videoPickerLauncher.launch("video/*")
@@ -134,18 +139,17 @@ fun SettingsScreenWrapper(
                 }
                 is SettingsEffect.ClearCacheComplete -> clearAppCache(context)
                 is SettingsEffect.ForceReinstallPatchesComplete -> forceReinstallPatches(context)
-                is SettingsEffect.BackgroundOpacityChanged -> applyOpacityChange(context, eff.opacity)
-                is SettingsEffect.VideoSpeedChanged -> applyVideoSpeedChange(context, eff.speed)
+                is SettingsEffect.BackgroundOpacityChanged -> applyOpacityChange(eff.opacity)
+                is SettingsEffect.VideoSpeedChanged -> applyVideoSpeedChange(eff.speed)
                 is SettingsEffect.RestoreDefaultBackgroundComplete -> restoreDefaultBackground(context)
             }
-            viewModel.clearEffect()
         }
     }
 
     // 渲染设置页面
     SettingsScreenContent(
         currentCategory = uiState.currentCategory,
-        onCategoryClick = { viewModel.selectCategory(it) }
+        onCategoryClick = { viewModel.onEvent(SettingsEvent.SelectCategory(it)) }
     ) { category ->
         when (category) {
             SettingsCategory.APPEARANCE -> {
@@ -158,9 +162,9 @@ fun SettingsScreenWrapper(
                         videoPlaybackSpeed = uiState.videoPlaybackSpeed,
                         language = uiState.language
                     ),
-                    onThemeModeChange = { viewModel.setThemeMode(it) },
+                    onThemeModeChange = { viewModel.onEvent(SettingsEvent.SetThemeMode(it)) },
                     onThemeColorClick = { viewModel.onEvent(SettingsEvent.OpenThemeColorSelector) },
-                    onBackgroundTypeChange = { viewModel.setBackgroundType(it) },
+                    onBackgroundTypeChange = { viewModel.onEvent(SettingsEvent.SetBackgroundType(it)) },
                     onSelectImageClick = { viewModel.onEvent(SettingsEvent.SelectBackgroundImage) },
                     onSelectVideoClick = { viewModel.onEvent(SettingsEvent.SelectBackgroundVideo) },
                     onBackgroundOpacityChange = { viewModel.onEvent(SettingsEvent.SetBackgroundOpacity(it)) },
@@ -172,21 +176,21 @@ fun SettingsScreenWrapper(
             SettingsCategory.CONTROLS -> {
                 ControlsSettingsContent(
                     touchMultitouchEnabled = uiState.touchMultitouchEnabled,
-                    onTouchMultitouchChange = { viewModel.setTouchMultitouch(it) },
+                    onTouchMultitouchChange = { viewModel.onEvent(SettingsEvent.SetTouchMultitouch(it)) },
                     mouseRightStickEnabled = uiState.mouseRightStickEnabled,
-                    onMouseRightStickChange = { viewModel.setMouseRightStick(it) },
+                    onMouseRightStickChange = { viewModel.onEvent(SettingsEvent.SetMouseRightStick(it)) },
                     vibrationEnabled = uiState.vibrationEnabled,
-                    onVibrationChange = { viewModel.setVibrationEnabled(it) },
+                    onVibrationChange = { viewModel.onEvent(SettingsEvent.SetVibrationEnabled(it)) },
                     vibrationStrength = uiState.vibrationStrength,
-                    onVibrationStrengthChange = { viewModel.setVibrationStrength(it) }
+                    onVibrationStrengthChange = { viewModel.onEvent(SettingsEvent.SetVibrationStrength(it)) }
                 )
             }
             SettingsCategory.GAME -> {
                 GameSettingsContent(
                     bigCoreAffinityEnabled = uiState.bigCoreAffinityEnabled,
-                    onBigCoreAffinityChange = { viewModel.setBigCoreAffinity(it) },
+                    onBigCoreAffinityChange = { viewModel.onEvent(SettingsEvent.SetBigCoreAffinity(it)) },
                     lowLatencyAudioEnabled = uiState.lowLatencyAudioEnabled,
-                    onLowLatencyAudioChange = { viewModel.setLowLatencyAudio(it) },
+                    onLowLatencyAudioChange = { viewModel.onEvent(SettingsEvent.SetLowLatencyAudio(it)) },
                     rendererType = uiState.rendererType,
                     onRendererClick = { viewModel.onEvent(SettingsEvent.OpenRendererSelector) },
                     // 画质设置
@@ -248,14 +252,14 @@ fun SettingsScreenWrapper(
                         tieredCompilationEnabled = uiState.tieredCompilationEnabled,
                         fnaMapBufferRangeOptEnabled = uiState.fnaMapBufferRangeOptEnabled
                     ),
-                    onLoggingChange = { viewModel.setLoggingEnabled(it) },
+                    onLoggingChange = { viewModel.onEvent(SettingsEvent.SetLoggingEnabled(it)) },
                     onVerboseLoggingChange = { viewModel.onEvent(SettingsEvent.SetVerboseLogging(it)) },
                     onViewLogsClick = { viewModel.onEvent(SettingsEvent.ViewLogs) },
                     onExportLogsClick = { viewModel.onEvent(SettingsEvent.ExportLogs) },
                     onClearCacheClick = { viewModel.onEvent(SettingsEvent.ClearCache) },
-                    onBigCoreAffinityChange = { viewModel.setBigCoreAffinity(it) },
+                    onBigCoreAffinityChange = { viewModel.onEvent(SettingsEvent.SetBigCoreAffinity(it)) },
                     onKillLauncherUIChange = { viewModel.onEvent(SettingsEvent.SetKillLauncherUI(it)) },
-                    onLowLatencyAudioChange = { viewModel.setLowLatencyAudio(it) },
+                    onLowLatencyAudioChange = { viewModel.onEvent(SettingsEvent.SetLowLatencyAudio(it)) },
                     onServerGCChange = { viewModel.onEvent(SettingsEvent.SetServerGC(it)) },
                     onConcurrentGCChange = { viewModel.onEvent(SettingsEvent.SetConcurrentGC(it)) },
                     onTieredCompilationChange = { viewModel.onEvent(SettingsEvent.SetTieredCompilation(it)) },
@@ -297,8 +301,6 @@ fun SettingsScreenWrapper(
         ThemeColorSelectDialog(
             currentColor = uiState.themeColor,
             onSelect = { color ->
-                // 保存到设置
-                SettingsManager.getInstance().themeColor = color
                 // 更新 ViewModel
                 viewModel.onEvent(SettingsEvent.SetThemeColor(color))
                 // 更新全局主题状态
@@ -484,5 +486,3 @@ fun SettingsScreenWrapper(
         )
     }
 }
-
-

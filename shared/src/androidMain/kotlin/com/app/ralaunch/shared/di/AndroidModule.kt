@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.app.ralaunch.shared.data.local.AndroidControlLayoutStorage
 import com.app.ralaunch.shared.data.local.AndroidGameListStorage
 import com.app.ralaunch.shared.data.local.DataStoreFactory
+import com.app.ralaunch.shared.data.local.StoragePathsProvider
 import com.app.ralaunch.shared.data.repository.ControlLayoutRepositoryImpl
 import com.app.ralaunch.shared.data.repository.ControlLayoutStorage
 import com.app.ralaunch.shared.data.repository.GameListStorage
@@ -31,14 +32,19 @@ val androidModule = module {
         DataStoreFactory(androidContext()).createPreferencesDataStore()
     }
 
+    // StoragePathsProvider
+    single<StoragePathsProvider> {
+        StoragePathsProvider(androidContext())
+    }
+
     // GameListStorage
     single<GameListStorage> {
-        AndroidGameListStorage(androidContext())
+        AndroidGameListStorage(get())
     }
 
     // ControlLayoutStorage
     single<ControlLayoutStorage> {
-        AndroidControlLayoutStorage(androidContext())
+        AndroidControlLayoutStorage(get())
     }
 
     // ==================== Repositories ====================

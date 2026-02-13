@@ -6,15 +6,15 @@ import android.net.Uri
 import android.widget.Toast
 import com.app.ralaunch.data.SettingsManager
 import com.app.ralaunch.patch.PatchManager
+import com.app.ralaunch.shared.domain.repository.SettingsRepository
 import com.app.ralaunch.shared.ui.screens.settings.*
 import com.app.ralaunch.shared.ui.theme.AppThemeState
 import com.app.ralaunch.sponsor.SponsorsActivity
-import com.app.ralaunch.ui.compose.settings.SettingsViewModel as AppSettingsViewModel
-import com.app.ralaunch.ui.main.MainActivityCompose
 import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.utils.LocaleManager
 import com.app.ralaunch.utils.LogcatReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent
 import java.io.File
@@ -22,12 +22,12 @@ import java.io.FileOutputStream
 
 // ==================== 背景处理 ====================
 
-internal suspend fun handleImageSelection(context: Context, uri: Uri, viewModel: AppSettingsViewModel) {
+internal suspend fun handleImageSelection(context: Context, uri: Uri, viewModel: SettingsViewModel) {
     withContext(Dispatchers.IO) {
         try {
             val backgroundDir = File(context.filesDir, "backgrounds")
             if (!backgroundDir.exists()) backgroundDir.mkdirs()
-            
+
             val destFile = File(backgroundDir, "background_${System.currentTimeMillis()}.jpg")
             context.contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(destFile).use { output ->
@@ -35,29 +35,45 @@ internal suspend fun handleImageSelection(context: Context, uri: Uri, viewModel:
                 }
             }
             
-            val oldPath = SettingsManager.getInstance().backgroundImagePath
+            val settingsRepository: SettingsRepository? = try {
+                KoinJavaComponent.getOrNull(SettingsRepository::class.java)
+            } catch (_: Exception) {
+                null
+            }
+
+            val oldPath = settingsRepository
+                ?.getBackgroundImagePath()
+                ?.first()
+                ?: SettingsManager.getInstance().backgroundImagePath
             if (!oldPath.isNullOrEmpty()) {
                 val oldFile = File(oldPath)
                 if (oldFile.exists() && oldFile.parentFile == backgroundDir) {
                     oldFile.delete()
                 }
             }
-            
+
             val newPath = destFile.absolutePath
-            SettingsManager.getInstance().apply {
-                backgroundImagePath = newPath
-                backgroundType = "image"
-                backgroundVideoPath = ""
-                backgroundOpacity = 90
+            if (settingsRepository != null) {
+                settingsRepository.setBackgroundImagePath(newPath)
+                settingsRepository.setBackgroundType(1)
+                settingsRepository.setBackgroundVideoPath("")
+                settingsRepository.setBackgroundOpacity(90)
+            } else {
+                SettingsManager.getInstance().apply {
+                    backgroundImagePath = newPath
+                    backgroundType = "image"
+                    backgroundVideoPath = ""
+                    backgroundOpacity = 90
+                }
             }
-            
+
             withContext(Dispatchers.Main) {
                 AppThemeState.updateBackgroundType(1)
                 AppThemeState.updateBackgroundImagePath(newPath)
                 AppThemeState.updateBackgroundVideoPath("")
                 AppThemeState.updateBackgroundOpacity(90)
-                
-                viewModel.setBackgroundType(1)
+
+                viewModel.onEvent(SettingsEvent.SetBackgroundType(1))
                 viewModel.onEvent(SettingsEvent.SetBackgroundOpacity(90))
                 Toast.makeText(context, "背景图片已设置", Toast.LENGTH_SHORT).show()
             }
@@ -69,7 +85,7 @@ internal suspend fun handleImageSelection(context: Context, uri: Uri, viewModel:
     }
 }
 
-internal suspend fun handleVideoSelection(context: Context, uri: Uri, viewModel: AppSettingsViewModel) {
+internal suspend fun handleVideoSelection(context: Context, uri: Uri, viewModel: SettingsViewModel) {
     withContext(Dispatchers.IO) {
         try {
             val backgroundDir = File(context.filesDir, "backgrounds")
@@ -81,22 +97,35 @@ internal suspend fun handleVideoSelection(context: Context, uri: Uri, viewModel:
                     input.copyTo(output)
                 }
             }
-            
+
             val newPath = destFile.absolutePath
-            SettingsManager.getInstance().apply {
-                backgroundVideoPath = newPath
-                backgroundType = "video"
-                backgroundImagePath = ""
-                backgroundOpacity = 90
+            val settingsRepository: SettingsRepository? = try {
+                KoinJavaComponent.getOrNull(SettingsRepository::class.java)
+            } catch (_: Exception) {
+                null
             }
-            
+
+            if (settingsRepository != null) {
+                settingsRepository.setBackgroundVideoPath(newPath)
+                settingsRepository.setBackgroundType(2)
+                settingsRepository.setBackgroundImagePath("")
+                settingsRepository.setBackgroundOpacity(90)
+            } else {
+                SettingsManager.getInstance().apply {
+                    backgroundVideoPath = newPath
+                    backgroundType = "video"
+                    backgroundImagePath = ""
+                    backgroundOpacity = 90
+                }
+            }
+
             withContext(Dispatchers.Main) {
                 AppThemeState.updateBackgroundType(2)
                 AppThemeState.updateBackgroundVideoPath(newPath)
                 AppThemeState.updateBackgroundImagePath("")
                 AppThemeState.updateBackgroundOpacity(90)
-                
-                viewModel.setBackgroundType(2)
+
+                viewModel.onEvent(SettingsEvent.SetBackgroundType(2))
                 viewModel.onEvent(SettingsEvent.SetBackgroundOpacity(90))
                 Toast.makeText(context, "背景视频已设置", Toast.LENGTH_SHORT).show()
             }
@@ -190,14 +219,12 @@ internal fun forceReinstallPatches(context: Context) {
     }.start()
 }
 
-internal fun applyOpacityChange(context: Context, opacity: Int) {
-    SettingsManager.getInstance().backgroundOpacity = opacity
-    MainActivityCompose.instance?.updateVideoBackgroundOpacity(opacity)
+internal fun applyOpacityChange(opacity: Int) {
+    AppThemeState.updateBackgroundOpacity(opacity)
 }
 
-internal fun applyVideoSpeedChange(context: Context, speed: Float) {
-    SettingsManager.getInstance().videoPlaybackSpeed = speed
-    MainActivityCompose.instance?.updateVideoBackgroundSpeed(speed)
+internal fun applyVideoSpeedChange(speed: Float) {
+    AppThemeState.updateVideoPlaybackSpeed(speed)
 }
 
 internal fun restoreDefaultBackground(context: Context) {
@@ -208,7 +235,7 @@ internal fun restoreDefaultBackground(context: Context) {
         backgroundOpacity = 0
         videoPlaybackSpeed = 1.0f
     }
-    MainActivityCompose.instance?.updateVideoBackground()
+    AppThemeState.restoreDefaultBackground()
 }
 
 internal fun applyThemeColor(context: Context, colorId: Int) {
@@ -229,12 +256,17 @@ internal fun getLanguageCode(languageName: String): String {
 
 internal fun getRendererCode(rendererName: String): String {
     return when (rendererName) {
+        "auto" -> "auto"
         "自动选择" -> "auto"
+        "自动" -> "auto"
+        "native" -> "native"
         "Native OpenGL ES 3" -> "native"
         "GL4ES" -> "gl4es"
         "GL4ES + ANGLE" -> "gl4es+angle"
         "MobileGlues" -> "mobileglues"
+        "mobileglues" -> "mobileglues"
         "ANGLE" -> "angle"
+        "angle" -> "angle"
         else -> "auto"
     }
 }

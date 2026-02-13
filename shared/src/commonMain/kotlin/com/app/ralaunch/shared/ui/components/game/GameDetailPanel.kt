@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.app.ralaunch.shared.ui.model.GameItemUi
 
 /**
@@ -59,11 +61,26 @@ fun GameDetailPanel(
 
     // Edit dialog
     if (showEditDialog) {
-        AlertDialog(
+        Dialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("编辑游戏信息") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "编辑游戏信息",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
                     OutlinedTextField(
                         value = editedName,
                         onValueChange = { editedName = it },
@@ -75,38 +92,42 @@ fun GameDetailPanel(
                         value = editedDescription,
                         onValueChange = { editedDescription = it },
                         label = { Text("游戏描述") },
-                        maxLines = 3,
+                        maxLines = 5,
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        // Create updated game with modified fields
-                        val updatedGame = game.copy(
-                            displayedName = editedName.trim(),
-                            displayedDescription = editedDescription.trim().ifEmpty { null }
-                        )
-                        onEditClick(updatedGame)
-                        showEditDialog = false
-                    },
-                    enabled = editedName.isNotBlank()
-                ) {
-                    Text("保存")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showEditDialog = false
-                    // Reset to original values
-                    editedName = game.displayedName
-                    editedDescription = game.displayedDescription ?: ""
-                }) {
-                    Text("取消")
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = {
+                            showEditDialog = false
+                            // Reset to original values
+                            editedName = game.displayedName
+                            editedDescription = game.displayedDescription ?: ""
+                        }) {
+                            Text("取消")
+                        }
+                        TextButton(
+                            onClick = {
+                                // Create updated game with modified fields
+                                val updatedGame = game.copy(
+                                    displayedName = editedName.trim(),
+                                    displayedDescription = editedDescription.trim().ifEmpty { null }
+                                )
+                                onEditClick(updatedGame)
+                                showEditDialog = false
+                            },
+                            enabled = editedName.isNotBlank()
+                        ) {
+                            Text("保存")
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 
     Box(

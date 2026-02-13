@@ -1,9 +1,11 @@
 package com.app.ralaunch.shared.ui.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 /**
  * 导航状态
@@ -104,34 +106,4 @@ fun rememberNavState(
     initialScreen: Screen = Screen.Games
 ): NavState {
     return remember { NavState(initialScreen) }
-}
-
-/**
- * 应用导航宿主
- * 基于状态驱动的导航容器，无动画切换（更流畅）
- */
-@Composable
-fun AppNavHost(
-    navState: NavState,
-    modifier: Modifier = Modifier,
-    content: @Composable (Screen) -> Unit
-) {
-    Box(modifier = modifier.fillMaxSize()) {
-        content(navState.currentScreen)
-    }
-}
-
-
-/**
- * 简化版导航宿主 - 无动画
- */
-@Composable
-fun SimpleNavHost(
-    navState: NavState,
-    modifier: Modifier = Modifier,
-    content: @Composable (Screen) -> Unit
-) {
-    Box(modifier = modifier.fillMaxSize()) {
-        content(navState.currentScreen)
-    }
 }

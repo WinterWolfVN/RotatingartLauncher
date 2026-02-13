@@ -2,13 +2,14 @@ package com.app.ralaunch.utils
 
 import android.content.Context
 import com.app.ralaunch.core.AssemblyPatcher
-import com.app.ralaunch.data.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepository
 import org.koin.java.KoinJavaComponent
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.runBlocking
 
 /**
  * 补丁提取工具
@@ -85,7 +86,7 @@ object PatchExtractor {
                 KoinJavaComponent.getOrNull(GameRepository::class.java)
             } catch (e: Exception) { null }
             if (gameRepository == null) return
-            val games = gameRepository.loadGameList()
+            val games = runBlocking { gameRepository.getGameList() }
             if (games.isEmpty()) return
 
             games.forEach { game ->

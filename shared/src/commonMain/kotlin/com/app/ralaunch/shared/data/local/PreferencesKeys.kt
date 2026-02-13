@@ -79,6 +79,4 @@ object PreferencesKeys {
     val PERMISSIONS_GRANTED = booleanPreferencesKey("permissions_granted")
     val COMPONENTS_EXTRACTED = booleanPreferencesKey("components_extracted")
 
-    // ==================== 控制布局 ====================
-    val CURRENT_LAYOUT_ID = stringPreferencesKey("current_layout_id")
 }

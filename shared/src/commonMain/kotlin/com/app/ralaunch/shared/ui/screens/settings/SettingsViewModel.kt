@@ -3,7 +3,10 @@ package com.app.ralaunch.shared.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.ralaunch.shared.domain.repository.SettingsRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -146,8 +149,8 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    private val _effect = MutableStateFlow<SettingsEffect?>(null)
-    val effect: StateFlow<SettingsEffect?> = _effect.asStateFlow()
+    private val _effect = MutableSharedFlow<SettingsEffect>(extraBufferCapacity = 16)
+    val effect: SharedFlow<SettingsEffect> = _effect.asSharedFlow()
 
     init {
         loadSettings()
@@ -214,12 +217,8 @@ class SettingsViewModel(
         }
     }
 
-    fun clearEffect() {
-        _effect.value = null
-    }
-
     private fun sendEffect(effect: SettingsEffect) {
-        _effect.value = effect
+        _effect.tryEmit(effect)
     }
 
     private fun loadSettings() {
@@ -232,7 +231,7 @@ class SettingsViewModel(
                     backgroundType = settingsRepository.getBackgroundType(),
                     backgroundOpacity = settingsRepository.getBackgroundOpacity(),
                     videoPlaybackSpeed = settingsRepository.getVideoPlaybackSpeed(),
-                    language = settingsRepository.getLanguage(),
+                    language = getLanguageDisplayName(settingsRepository.getLanguage()),
                     // 控制
                     touchMultitouchEnabled = settingsRepository.isTouchMultitouchEnabled(),
                     mouseRightStickEnabled = settingsRepository.isMouseRightStickEnabled(),
@@ -241,7 +240,7 @@ class SettingsViewModel(
                     // 游戏
                     bigCoreAffinityEnabled = settingsRepository.isBigCoreAffinityEnabled(),
                     lowLatencyAudioEnabled = settingsRepository.isLowLatencyAudioEnabled(),
-                    rendererType = settingsRepository.getRendererType(),
+                    rendererType = getRendererDisplayName(settingsRepository.getRendererType()),
                     // 开发者
                     loggingEnabled = settingsRepository.isLoggingEnabled(),
                     verboseLogging = settingsRepository.isVerboseLogging(),
@@ -290,7 +289,7 @@ class SettingsViewModel(
     private fun setLanguage(language: String) {
         viewModelScope.launch {
             settingsRepository.setLanguage(language)
-            _uiState.update { it.copy(language = language) }
+            _uiState.update { it.copy(language = getLanguageDisplayName(language)) }
         }
     }
 
@@ -313,6 +312,8 @@ class SettingsViewModel(
     private fun restoreDefaultBackground() {
         viewModelScope.launch {
             settingsRepository.setBackgroundType(0)
+            settingsRepository.setBackgroundImagePath("")
+            settingsRepository.setBackgroundVideoPath("")
             settingsRepository.setBackgroundOpacity(0)
             settingsRepository.setVideoPlaybackSpeed(1.0f)
             _uiState.update { it.copy(
@@ -374,7 +375,7 @@ class SettingsViewModel(
     private fun setRenderer(renderer: String) {
         viewModelScope.launch {
             settingsRepository.setRendererType(renderer)
-            _uiState.update { it.copy(rendererType = renderer) }
+            _uiState.update { it.copy(rendererType = getRendererDisplayName(renderer)) }
         }
     }
 
@@ -480,6 +481,28 @@ class SettingsViewModel(
 
     private fun checkUpdate() {
         sendEffect(SettingsEffect.ShowToast("正在检查更新..."))
+    }
+
+    private fun getRendererDisplayName(rendererId: String?): String {
+        return when (rendererId?.lowercase()) {
+            "auto" -> "自动选择"
+            "native" -> "Native OpenGL ES 3"
+            "gl4es" -> "GL4ES"
+            "gl4es+angle" -> "GL4ES + ANGLE"
+            "mobileglues" -> "MobileGlues"
+            "angle" -> "ANGLE"
+            else -> "自动选择"
+        }
+    }
+
+    private fun getLanguageDisplayName(languageCode: String): String {
+        return when (languageCode) {
+            "zh" -> "简体中文"
+            "en" -> "English"
+            "ru" -> "Русский"
+            "es" -> "Español"
+            else -> "Follow System"
+        }
     }
 }
 

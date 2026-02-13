@@ -22,6 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.app.ralaunch.R
@@ -38,24 +39,23 @@ import com.app.ralaunch.ui.base.BaseActivity
 import com.app.ralaunch.ui.compose.background.AppBackground
 import com.app.ralaunch.ui.compose.background.BackgroundType
 import com.app.ralaunch.shared.ui.model.GameItemUi
-import com.app.ralaunch.ui.mapper.toUiModel
-import com.app.ralaunch.ui.mapper.toUiModels
+import com.app.ralaunch.ui.contracts.MainUiEffect
+import com.app.ralaunch.ui.contracts.MainUiEvent
+import com.app.ralaunch.ui.contracts.MainUiState
 import com.app.ralaunch.ui.screens.ControlLayoutScreenWrapper
 import com.app.ralaunch.ui.screens.ControlStoreScreenWrapper
 import com.app.ralaunch.ui.screens.DownloadScreenWrapper
 import com.app.ralaunch.ui.screens.FileBrowserScreenWrapper
 import com.app.ralaunch.ui.screens.ImportScreenWrapper
 import com.app.ralaunch.ui.screens.SettingsScreenWrapper
+import com.app.ralaunch.ui.viewmodel.MainViewModel
+import com.app.ralaunch.ui.viewmodel.MainViewModelFactory
 import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.utils.DensityAdapter
 import com.app.ralaunch.error.ErrorHandler
 import com.app.ralaunch.ui.compose.splash.SplashOverlay
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -63,26 +63,12 @@ import java.io.File
 
 class MainActivityCompose : BaseActivity() {
 
-    companion object {
-        @JvmStatic
-        var instance: MainActivityCompose? = null
-            private set
-    }
-
     // Managers
     private lateinit var themeManager: ThemeManager
     private lateinit var permissionManager: PermissionManager
-
-    // State
-    private val _uiState = MutableStateFlow(MainActivityUiState())
-    private val uiState: StateFlow<MainActivityUiState> = _uiState.asStateFlow()
+    private lateinit var mainViewModel: MainViewModel
 
     private val navState = NavState()
-    private val gameItemsMap = mutableMapOf<String, GameItem>()
-
-    // Presenter (保留兼容)
-    private lateinit var presenter: MainPresenter
-    private lateinit var contractAdapter: MainContractAdapter  // 保持强引用，防止 GC 回收
 
     // ==================== Lifecycle ====================
 
@@ -96,7 +82,6 @@ class MainActivityCompose : BaseActivity() {
         themeManager.applyThemeFromSettings()
 
         super.onCreate(savedInstanceState)
-        instance = this
 
         // 初始化全局主题状态（从 SettingsManager 加载）
         initializeThemeState()
@@ -104,20 +89,12 @@ class MainActivityCompose : BaseActivity() {
         initLogger()
         ErrorHandler.init(this)
         permissionManager = PermissionManager(this).apply { initialize() }
-
-        // Presenter - 保持 contractAdapter 强引用，防止 WeakReference 被 GC 回收
-        contractAdapter = MainContractAdapter()
-        presenter = MainPresenter(this).also { it.attach(contractAdapter) }
-
-        // 同步加载游戏列表（在 setContent 之前执行）
-        // loadGameList 是同步的，数据已在 Repository init 时读入内存
-        // 这样 setContent 首帧就能拿到完整的游戏列表，不会出现空白画面
-        presenter.onCreate()
+        mainViewModel = ViewModelProvider(this, MainViewModelFactory(this))[MainViewModel::class.java]
 
         // 设置纯 Compose UI
         setContent {
-            val state by uiState.collectAsStateWithLifecycle()
-            
+            val state by mainViewModel.uiState.collectAsStateWithLifecycle()
+
             // 监听 AppThemeState 实现实时更新 (使用 collectAsState 确保实时响应)
             val themeMode by AppThemeState.themeMode.collectAsState()
             val themeColor by AppThemeState.themeColor.collectAsState()
@@ -144,6 +121,15 @@ class MainActivityCompose : BaseActivity() {
             // Splash 覆盖层状态
             var showSplash by remember { mutableStateOf(true) }
             val isContentReady = !state.isLoading
+            LaunchedEffect(Unit) {
+                mainViewModel.effects.collect { effect ->
+                    when (effect) {
+                        is MainUiEffect.ShowToast -> MessageHelper.showToast(this@MainActivityCompose, effect.message)
+                        is MainUiEffect.ShowSuccess -> MessageHelper.showSuccess(this@MainActivityCompose, effect.message)
+                        is MainUiEffect.ExitLauncher -> finishAffinity()
+                    }
+                }
+            }
 
             RaLaunchTheme(
                 themeMode = themeMode,
@@ -156,46 +142,17 @@ class MainActivityCompose : BaseActivity() {
                         navState = navState,
                         pageAlpha = pageAlpha,
                         videoSpeed = videoSpeed,
-                        onGameClick = { selectGameUi(it) },
-                        onGameLongClick = { selectGameUi(it) },
-                        onLaunchClick = { presenter.launchSelectedGame() },
-                        onDeleteClick = { handleDeleteClick() },
-                        onEditClick = { updatedGameUi ->
-                            presenter.updateGame(updatedGameUi)
-                            // 刷新 UI 状态
-                            val updatedGames = presenter.getGameList()
-                            gameItemsMap.clear()
-                            updatedGames.forEach { g ->
-                                gameItemsMap[g.id] = g
-                            }
-                            _uiState.update { s ->
-                                s.copy(
-                                    games = updatedGames.toUiModels(),
-                                    selectedGame = updatedGameUi
-                                )
-                            }
-                        },
-                        onNavigate = { handleNavigation(it) },
-                        onDismissDeleteDialog = { dismissDeleteDialog() },
-                        onConfirmDelete = { confirmDelete() },
+                        onGameClick = { mainViewModel.onEvent(MainUiEvent.GameSelected(it)) },
+                        onGameLongClick = { mainViewModel.onEvent(MainUiEvent.GameSelected(it)) },
+                        onLaunchClick = { mainViewModel.onEvent(MainUiEvent.LaunchRequested) },
+                        onDeleteClick = { mainViewModel.onEvent(MainUiEvent.DeleteRequested) },
+                        onEditClick = { updatedGameUi -> mainViewModel.onEvent(MainUiEvent.GameEdited(updatedGameUi)) },
+                        onDismissDeleteDialog = { mainViewModel.onEvent(MainUiEvent.DeleteDialogDismissed) },
+                        onConfirmDelete = { mainViewModel.onEvent(MainUiEvent.DeleteConfirmed) },
                         permissionManager = permissionManager,
                         onImportComplete = { gameType, gameItem ->
                             gameItem?.let { game ->
-                                // 添加游戏到 presenter
-                                presenter.onGameImportComplete(gameType, game)
-                                // 强制刷新 UI 状态，确保新游戏显示
-                                val updatedGames = presenter.getGameList()
-                                gameItemsMap.clear()
-                                updatedGames.forEach { g ->
-                                    gameItemsMap[g.id] = g
-                                }
-                                _uiState.update { s ->
-                                    s.copy(
-                                        games = updatedGames.toUiModels(),
-                                        selectedGame = null,
-                                        isLoading = false
-                                    )
-                                }
+                                mainViewModel.onEvent(MainUiEvent.ImportCompleted(gameType, game))
                             }
                         }
                     )
@@ -211,8 +168,6 @@ class MainActivityCompose : BaseActivity() {
             }
         }
 
-        // presenter.onCreate() 已在 setContent 之前调用
-
         checkRestoreSettings()
     }
 
@@ -224,27 +179,23 @@ class MainActivityCompose : BaseActivity() {
         }
 
         ErrorHandler.setCurrentActivity(this)
-        presenter.onResume()
 
         // 恢复视频播放
         Handler(Looper.getMainLooper()).postDelayed({
             if (!isFinishing && !isDestroyed) {
-                _uiState.update { it.copy(isVideoPlaying = true) }
+                mainViewModel.onEvent(MainUiEvent.AppResumed)
             }
         }, 200)
     }
 
     override fun onPause() {
-        _uiState.update { it.copy(isVideoPlaying = false) }
+        mainViewModel.onEvent(MainUiEvent.AppPaused)
         super.onPause()
-        presenter.onPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        presenter.onDestroy()
         if (!isChangingConfigurations) AppLogger.close()
-        instance = null
     }
 
     @Deprecated("Deprecated in Java")
@@ -253,9 +204,7 @@ class MainActivityCompose : BaseActivity() {
         if (navState.handleBackPress()) {
             return
         }
-        if (!presenter.onBackPressed()) {
-            super.onBackPressed()
-        }
+        super.onBackPressed()
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -303,219 +252,14 @@ class MainActivityCompose : BaseActivity() {
         )
     }
 
-    // ==================== State Updates ====================
-
-    private fun selectGameUi(gameUi: GameItemUi) {
-        _uiState.update { it.copy(selectedGame = gameUi) }
-        
-        // 首先尝试从 gameItemsMap 获取
-        var gameItem = gameItemsMap[gameUi.id]
-
-        // 如果找不到，尝试通过 id 查找
-        if (gameItem == null) {
-            Log.w("MainActivityCompose", "selectGameUi: gameItem not found in map for id=${gameUi.id}, trying fallback")
-            gameItem = presenter.getGameList().find {
-                it.id == gameUi.id
-            }
-            // 如果找到了，更新 map
-            if (gameItem != null) {
-                Log.i("MainActivityCompose", "selectGameUi: found gameItem via fallback for id=${gameUi.id}")
-                gameItemsMap[gameUi.id] = gameItem
-            }
-        }
-        
-        if (gameItem != null) {
-            presenter.selectGame(gameItem)
-        } else {
-            Log.e("MainActivityCompose", "selectGameUi: unable to find gameItem for id=${gameUi.id}")
-            MessageHelper.showError(this, "无法选择游戏")
-        }
-    }
-
-    private fun handleDeleteClick() {
-        val gameUi = _uiState.value.selectedGame ?: run {
-            Log.w("MainActivityCompose", "handleDeleteClick: selectedGame is null")
-            return
-        }
-        val gameItem = gameItemsMap[gameUi.id] ?: run {
-            Log.w("MainActivityCompose", "handleDeleteClick: gameItem not found for id=${gameUi.id}")
-            MessageHelper.showError(this, "找不到要删除的游戏")
-            return
-        }
-        var position = _uiState.value.games.indexOfFirst { it.id == gameUi.id }
-        if (position < 0) {
-            position = presenter.getGameList().indexOfFirst { 
-                it.id == gameItem.id
-            }
-        }
-        // 显示纯 Compose 删除对话框
-        _uiState.update { 
-            it.copy(
-                showDeleteDialog = true, 
-                gameToDelete = gameUi,
-                deletePosition = position
-            ) 
-        }
-    }
-    
-    private fun dismissDeleteDialog() {
-        _uiState.update { 
-            it.copy(
-                showDeleteDialog = false, 
-                gameToDelete = null,
-                deletePosition = -1
-            ) 
-        }
-    }
-    
-    private fun confirmDelete() {
-        val gameUi = _uiState.value.gameToDelete ?: return
-        val position = _uiState.value.deletePosition
-        val gameItem = gameItemsMap[gameUi.id] ?: return
-
-        // 执行删除
-        val filesDeleted = presenter.getGameDeletionManager().deleteGameFiles(gameItem)
-
-        presenter.deleteGame(gameItem, position)
-        showDeleteResultMessage(gameItem, filesDeleted)
-        
-        // 关闭对话框
-        dismissDeleteDialog()
-    }
-
-    private fun handleNavigation(destination: NavDestination) {
-        navState.navigateTo(destination)
-    }
-
-    // ==================== Background ====================
-
-    private fun getBackgroundType(): BackgroundType {
-        val settings = SettingsManager.getInstance()
-        return when {
-            themeManager.isVideoBackground && !themeManager.videoBackgroundPath.isNullOrEmpty() -> {
-                BackgroundType.Video(
-                    path = themeManager.videoBackgroundPath!!,
-                    opacity = settings.backgroundOpacity,
-                    speed = settings.videoPlaybackSpeed
-                )
-            }
-            !settings.backgroundImagePath.isNullOrEmpty() -> {
-                BackgroundType.Image(settings.backgroundImagePath!!)
-            }
-            else -> BackgroundType.None
-        }
-    }
-
-    // ==================== Game Operations ====================
-
-    private fun showDeleteResultMessage(game: GameItem, filesDeleted: Boolean) {
-        when {
-            filesDeleted -> MessageHelper.showSuccess(this, getString(R.string.main_game_deleted))
-            else -> MessageHelper.showToast(this, getString(R.string.main_game_deleted_partial))
-        }
-    }
-
-    // ==================== Public API ====================
-
-    fun getThemeManager(): ThemeManager = themeManager
-
-    fun updateVideoBackground() {
-        _uiState.update { it.copy(backgroundType = getBackgroundType()) }
-    }
-
-    fun updateVideoBackgroundSpeed(speed: Float) {
-        val current = _uiState.value.backgroundType
-        if (current is BackgroundType.Video) {
-            _uiState.update { it.copy(backgroundType = current.copy(speed = speed)) }
-        }
-    }
-
-    fun updateVideoBackgroundOpacity(opacity: Int) {
-        val current = _uiState.value.backgroundType
-        if (current is BackgroundType.Video) {
-            _uiState.update { it.copy(backgroundType = current.copy(opacity = opacity)) }
-        }
-    }
-
-    // ==================== MainContract Adapter ====================
-
-    private inner class MainContractAdapter : MainContract.View {
-        override fun showGameList(games: List<GameItem>) {
-            gameItemsMap.clear()
-            games.forEach { game ->
-                // 使用 game.id 作为 key
-                gameItemsMap[game.id] = game
-            }
-            _uiState.update {
-                it.copy(
-                    games = games.toUiModels(),
-                    selectedGame = null,
-                    isLoading = false
-                )
-            }
-        }
-
-        override fun refreshGameList() = showGameList(presenter.getGameList())
-
-        override fun showSelectedGame(game: GameItem) {
-            _uiState.update { it.copy(selectedGame = game.toUiModel()) }
-        }
-
-        override fun showNoGameSelected() {
-            _uiState.update { it.copy(selectedGame = null) }
-        }
-
-        override fun showLaunchButton() {}
-        override fun hideLaunchButton() {}
-        override fun showLoading() {
-            _uiState.update { it.copy(isLoading = true) }
-        }
-        override fun hideLoading() {
-            _uiState.update { it.copy(isLoading = false) }
-        }
-
-        override fun showGamePage() = navState.navigateToGames()
-        override fun showSettingsPage() = navState.navigateToSettings()
-        override fun showControlPage() = navState.navigateToControls()
-        override fun showDownloadPage() = navState.navigateToDownload()
-        override fun showImportPage() = navState.navigateToImport()
-
-        override fun showToast(message: String) = MessageHelper.showToast(this@MainActivityCompose, message)
-        override fun showError(message: String) = MessageHelper.showError(this@MainActivityCompose, message)
-        override fun showSuccess(message: String) = MessageHelper.showSuccess(this@MainActivityCompose, message)
-
-        override fun launchGame(game: GameItem) {
-            Log.d("MainActivityCompose", ">>> View.launchGame called for: ${game.displayedName}")
-            val success = presenter.getGameLaunchManager().launchGame(game)
-            Log.d("MainActivityCompose", "launchGame result: $success")
-            if (success && SettingsManager.getInstance().isKillLauncherUIAfterLaunch) {
-                System.exit(0)
-            }
-        }
-    }
 }
-
-/**
- * 主界面 UI 状态
- */
-data class MainActivityUiState(
-    val games: List<GameItemUi> = emptyList(),
-    val selectedGame: GameItemUi? = null,
-    val isLoading: Boolean = true,
-    val backgroundType: BackgroundType = BackgroundType.None,
-    val isVideoPlaying: Boolean = true,
-    // 删除对话框状态
-    val showDeleteDialog: Boolean = false,
-    val gameToDelete: GameItemUi? = null,
-    val deletePosition: Int = -1
-)
 
 /**
  * 主界面 Compose 内容
  */
 @Composable
 private fun MainActivityContent(
-    state: MainActivityUiState,
+    state: MainUiState,
     navState: NavState,
     pageAlpha: Float = 1f,
     videoSpeed: Float = 1f,
@@ -524,7 +268,6 @@ private fun MainActivityContent(
     onLaunchClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onEditClick: (updatedGame: GameItemUi) -> Unit,
-    onNavigate: (NavDestination) -> Unit,
     onDismissDeleteDialog: () -> Unit = {},
     onConfirmDelete: () -> Unit = {},
     onImportComplete: (String, GameItem?) -> Unit = { _, _ -> },
@@ -541,6 +284,9 @@ private fun MainActivityContent(
     
     // 当前文件选择类型 (game / modloader)
     var currentFileType by remember { mutableStateOf("") }
+    var hasFilePermission by remember(permissionManager) {
+        mutableStateOf(permissionManager?.hasRequiredPermissions() ?: true)
+    }
     
     // 重置导入状态
     val resetImportState: () -> Unit = {
@@ -681,7 +427,7 @@ private fun MainActivityContent(
                     initialPath = initialPath,
                     fileType = fileType,
                     allowedExtensions = allowedExtensions,
-                    hasPermission = true, // TODO: 检查权限
+                    hasPermission = hasFilePermission,
                     onFileSelected = { path, type ->
                         val selectedType = type ?: currentFileType
                         val file = File(path)
@@ -730,16 +476,24 @@ private fun MainActivityContent(
                         navState.goBack()
                     },
                     onRequestPermission = {
-                        // TODO: 请求权限
+                        permissionManager?.requestRequiredPermissions(object : PermissionManager.PermissionCallback {
+                            override fun onPermissionsGranted() {
+                                hasFilePermission = true
+                            }
+
+                            override fun onPermissionsDenied() {
+                                hasFilePermission = false
+                            }
+                        })
                     }
                 )
             }
         )
         
         // 删除确认对话框 (纯 Compose)
-        if (state.showDeleteDialog && state.gameToDelete != null) {
+        state.gamePendingDeletion?.let { game ->
             DeleteGameComposeDialog(
-                gameName = state.gameToDelete.displayedName,
+                gameName = game.displayedName,
                 onConfirm = onConfirmDelete,
                 onDismiss = onDismissDeleteDialog
             )
