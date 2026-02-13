@@ -12,7 +12,7 @@ import com.app.ralaunch.shared.data.repository.GameListStorage
 import com.app.ralaunch.shared.data.service.AndroidControlLayoutService
 import com.app.ralaunch.shared.data.service.AndroidGameLaunchService
 import com.app.ralaunch.shared.data.service.AndroidPatchService
-import com.app.ralaunch.shared.domain.repository.ControlLayoutRepository
+import com.app.ralaunch.shared.domain.repository.ControlLayoutRepositoryV2
 import com.app.ralaunch.shared.domain.service.ControlLayoutService
 import com.app.ralaunch.shared.domain.service.GameLaunchService
 import com.app.ralaunch.shared.domain.service.PatchService
@@ -49,7 +49,7 @@ val androidModule = module {
 
     // ==================== Repositories ====================
 
-    single<ControlLayoutRepository> {
+    single<ControlLayoutRepositoryV2> {
         ControlLayoutRepositoryImpl(storage = get())
     }
 

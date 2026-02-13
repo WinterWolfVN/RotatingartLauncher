@@ -3,7 +3,7 @@ package com.app.ralaunch.data.migration
 import android.content.Context
 import android.util.Log
 import com.app.ralaunch.shared.domain.model.GameItem
-import com.app.ralaunch.shared.domain.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -19,7 +19,7 @@ import java.io.File
  */
 class GameDataMigrator(
     private val context: Context,
-    private val gameRepository: GameRepository
+    private val gameRepository: GameRepositoryV2
 ) {
     companion object {
         private const val TAG = "GameDataMigrator"

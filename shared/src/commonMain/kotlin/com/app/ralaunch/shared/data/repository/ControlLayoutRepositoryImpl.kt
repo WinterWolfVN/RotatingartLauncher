@@ -2,11 +2,19 @@ package com.app.ralaunch.shared.data.repository
 
 import com.app.ralaunch.shared.domain.model.ControlLayout
 import com.app.ralaunch.shared.domain.model.ControlPackManifest
-import com.app.ralaunch.shared.domain.repository.ControlLayoutRepository
-import kotlinx.coroutines.flow.Flow
+import com.app.ralaunch.shared.domain.repository.ControlLayoutRepositoryV2
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * 控制布局仓库实现 - 跨平台
@@ -15,29 +23,47 @@ import kotlinx.coroutines.flow.map
  */
 class ControlLayoutRepositoryImpl(
     private val storage: ControlLayoutStorage
-) : ControlLayoutRepository {
+) : ControlLayoutRepositoryV2 {
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val initMutex = Mutex()
+
+    @Volatile
+    private var initialized = false
 
     private val _layouts = MutableStateFlow<List<ControlLayout>>(emptyList())
     private val _currentLayoutId = MutableStateFlow<String?>(null)
     private val _availablePacks = MutableStateFlow<List<ControlPackManifest>>(emptyList())
 
-    override fun getLayouts(): Flow<List<ControlLayout>> = _layouts.asStateFlow()
+    override val layouts: StateFlow<List<ControlLayout>> = _layouts.asStateFlow()
+    override val currentLayout: StateFlow<ControlLayout?> = combine(_layouts, _currentLayoutId) { list, id ->
+        list.find { it.id == id }
+    }.stateIn(
+        scope = repositoryScope,
+        started = SharingStarted.Eagerly,
+        initialValue = null
+    )
+    override val availablePacks: StateFlow<List<ControlPackManifest>> = _availablePacks.asStateFlow()
 
-    override fun getCurrentLayout(): Flow<ControlLayout?> = _currentLayoutId.map { id ->
-        _layouts.value.find { it.id == id }
+    init {
+        repositoryScope.launch {
+            ensureInitialized()
+        }
     }
 
     override suspend fun setCurrentLayout(layoutId: String) {
+        ensureInitialized()
         _currentLayoutId.value = layoutId
         storage.saveCurrentLayoutId(layoutId)
     }
 
     override suspend fun getLayoutById(id: String): ControlLayout? {
-        return _layouts.value.find { it.id == id }
+        ensureInitialized()
+        return layouts.value.find { it.id == id }
     }
 
     override suspend fun saveLayout(layout: ControlLayout) {
-        val updatedList = _layouts.value.toMutableList()
+        ensureInitialized()
+        val updatedList = layouts.value.toMutableList()
         val index = updatedList.indexOfFirst { it.id == layout.id }
         if (index >= 0) {
             updatedList[index] = layout
@@ -49,7 +75,8 @@ class ControlLayoutRepositoryImpl(
     }
 
     override suspend fun deleteLayout(id: String) {
-        _layouts.value = _layouts.value.filter { it.id != id }
+        ensureInitialized()
+        _layouts.value = layouts.value.filter { it.id != id }
         if (_currentLayoutId.value == id) {
             _currentLayoutId.value = _layouts.value.firstOrNull()?.id
         }
@@ -65,13 +92,12 @@ class ControlLayoutRepositoryImpl(
     }
 
     override suspend fun exportLayout(layoutId: String, outputPath: String): Result<String> {
+        ensureInitialized()
         val layout = getLayoutById(layoutId) ?: return Result.failure(
             IllegalArgumentException("Layout not found: $layoutId")
         )
         return storage.exportLayout(layout, outputPath)
     }
-
-    override fun getAvailablePacks(): Flow<List<ControlPackManifest>> = _availablePacks.asStateFlow()
 
     override suspend fun refreshPacksFromRemote(): Result<List<ControlPackManifest>> {
         return storage.fetchRemotePacks().also { result ->
@@ -81,12 +107,14 @@ class ControlLayoutRepositoryImpl(
         }
     }
 
-    /**
-     * 加载所有布局（初始化时调用）
-     */
-    suspend fun loadLayouts() {
-        _layouts.value = storage.loadAllLayouts()
-        _currentLayoutId.value = storage.loadCurrentLayoutId()
+    private suspend fun ensureInitialized() {
+        if (initialized) return
+        initMutex.withLock {
+            if (initialized) return
+            _layouts.value = storage.loadAllLayouts()
+            _currentLayoutId.value = storage.loadCurrentLayoutId()
+            initialized = true
+        }
     }
 }
 

@@ -23,6 +23,7 @@ object SettingsMapper {
             backgroundVideoPath = (json["background_video_path"] as? String) ?: "",
             backgroundOpacity = (json["background_opacity"] as? Number)?.toInt() ?: 0,
             videoPlaybackSpeed = (json["video_playback_speed"] as? Number)?.toFloat() ?: 1.0f,
+            language = (json["language"] as? String) ?: "en",
 
             // 控制设置
             controlsOpacity = (json["controls_opacity"] as? Number)?.toFloat() ?: 0.7f,
@@ -53,8 +54,13 @@ object SettingsMapper {
             setThreadAffinityToBigCore = (json["set_thread_affinity_to_big_core_enabled"] as? Boolean) ?: true,
 
             // FNA 设置
-            fnaRenderer = FnaRenderer.fromValue((json["fna_renderer"] as? String) ?: "auto"),
+            fnaRenderer = (json["fna_renderer"] as? String) ?: FnaRenderer.AUTO.value,
             fnaMapBufferRangeOptimization = (json["fna_enable_map_buffer_range_optimization_if_available"] as? Boolean) ?: true,
+
+            // 画质设置
+            qualityLevel = (json["fna_quality_level"] as? Number)?.toInt() ?: 0,
+            shaderLowPrecision = (json["fna_shader_low_precision"] as? Boolean) ?: false,
+            targetFps = (json["fna_target_fps"] as? Number)?.toInt() ?: 0,
 
             // CoreCLR 设置
             serverGC = (json["coreclr_server_gc"] as? Boolean) ?: false,
@@ -90,6 +96,7 @@ object SettingsMapper {
             "background_video_path" to settings.backgroundVideoPath,
             "background_opacity" to settings.backgroundOpacity,
             "video_playback_speed" to settings.videoPlaybackSpeed,
+            "language" to settings.language,
             "controls_opacity" to settings.controlsOpacity,
             "controls_vibration_enabled" to settings.vibrationEnabled,
             "virtual_controller_vibration_enabled" to settings.virtualControllerVibrationEnabled,
@@ -107,7 +114,10 @@ object SettingsMapper {
             "mouse_right_stick_speed" to settings.mouseRightStickSpeed,
             "enable_log_system" to settings.logSystemEnabled,
             "verbose_logging" to settings.verboseLogging,
-            "fna_renderer" to settings.fnaRenderer.value,
+            "fna_renderer" to settings.fnaRenderer,
+            "fna_quality_level" to settings.qualityLevel,
+            "fna_shader_low_precision" to settings.shaderLowPrecision,
+            "fna_target_fps" to settings.targetFps,
             "kill_launcher_ui_after_launch" to settings.killLauncherUIAfterLaunch
         )
     }

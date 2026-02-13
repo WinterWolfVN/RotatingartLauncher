@@ -1,6 +1,7 @@
 package com.app.ralaunch.controls.packs
 
 import android.content.Context
+import com.app.ralaunch.net.JsonHttpRepositoryClient
 import com.app.ralaunch.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -90,61 +91,42 @@ class ControlPackRepositoryService(private val context: Context) {
             System.currentTimeMillis() - cacheTimestamp < cacheValidDuration) {
             return Result.success(cachedRepository!!)
         }
-        
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = URL("$repoUrl/$REPO_INDEX_FILE")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = CONNECT_TIMEOUT
-                connection.readTimeout = READ_TIMEOUT
-                connection.requestMethod = "GET"
-                
-                val responseCode = connection.responseCode
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    return@withContext Result.failure(Exception("HTTP $responseCode"))
-                }
-                
-                val content = connection.inputStream.bufferedReader().readText()
-                val repository = json.decodeFromString<ControlPackRepository>(content)
-                
-                // 更新缓存
-                cachedRepository = repository
-                cacheTimestamp = System.currentTimeMillis()
-                
-                AppLogger.info(TAG, "Fetched repository: ${repository.packs.size} packs")
-                Result.success(repository)
-            } catch (e: Exception) {
-                AppLogger.error(TAG, "Failed to fetch repository", e)
-                Result.failure(e)
-            }
+
+        val result = JsonHttpRepositoryClient.getJson<ControlPackRepository>(
+            urlString = "$repoUrl/$REPO_INDEX_FILE",
+            json = json,
+            connectTimeoutMs = CONNECT_TIMEOUT,
+            readTimeoutMs = READ_TIMEOUT
+        )
+
+        result.getOrNull()?.let { repository ->
+            cachedRepository = repository
+            cacheTimestamp = System.currentTimeMillis()
+            AppLogger.info(TAG, "Fetched repository: ${repository.packs.size} packs")
         }
+
+        result.exceptionOrNull()?.let { error ->
+            AppLogger.error(TAG, "Failed to fetch repository", error)
+        }
+
+        return result
     }
     
     /**
      * 获取单个控件包的详细信息
      */
     suspend fun fetchPackInfo(packId: String): Result<ControlPackInfo> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val url = URL("$repoUrl/packs/$packId/manifest.json")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = CONNECT_TIMEOUT
-                connection.readTimeout = READ_TIMEOUT
-                
-                val responseCode = connection.responseCode
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    return@withContext Result.failure(Exception("HTTP $responseCode"))
-                }
-                
-                val content = connection.inputStream.bufferedReader().readText()
-                val info = json.decodeFromString<ControlPackInfo>(content)
-                
-                Result.success(info)
-            } catch (e: Exception) {
-                AppLogger.error(TAG, "Failed to fetch pack info: $packId", e)
-                Result.failure(e)
-            }
+        val result = JsonHttpRepositoryClient.getJson<ControlPackInfo>(
+            urlString = "$repoUrl/packs/$packId/manifest.json",
+            json = json,
+            connectTimeoutMs = CONNECT_TIMEOUT,
+            readTimeoutMs = READ_TIMEOUT
+        )
+
+        result.exceptionOrNull()?.let { error ->
+            AppLogger.error(TAG, "Failed to fetch pack info: $packId", error)
         }
+        return result
     }
     
     /**
@@ -153,25 +135,30 @@ class ControlPackRepositoryService(private val context: Context) {
     private suspend fun downloadFile(urlString: String, targetFile: File): Result<File> {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL(urlString)
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = CONNECT_TIMEOUT
-                connection.readTimeout = READ_TIMEOUT
+                val connection = JsonHttpRepositoryClient.openConnection(
+                    urlString = urlString,
+                    connectTimeoutMs = CONNECT_TIMEOUT,
+                    readTimeoutMs = READ_TIMEOUT
+                )
                 
-                val responseCode = connection.responseCode
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    return@withContext Result.failure(Exception("HTTP $responseCode"))
-                }
-                
-                targetFile.parentFile?.mkdirs()
-                
-                connection.inputStream.use { input ->
-                    FileOutputStream(targetFile).use { output ->
-                        input.copyTo(output)
+                try {
+                    val responseCode = connection.responseCode
+                    if (responseCode != HttpURLConnection.HTTP_OK) {
+                        return@withContext Result.failure(Exception("HTTP $responseCode"))
                     }
+
+                    targetFile.parentFile?.mkdirs()
+
+                    connection.inputStream.use { input ->
+                        FileOutputStream(targetFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+
+                    Result.success(targetFile)
+                } finally {
+                    connection.disconnect()
                 }
-                
-                Result.success(targetFile)
             } catch (e: Exception) {
                 Result.failure(e)
             }
@@ -278,29 +265,34 @@ class ControlPackRepositoryService(private val context: Context) {
     suspend fun downloadPreviewImage(packId: String, imageName: String): Result<File> {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL("$repoUrl/packs/$packId/$imageName")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = CONNECT_TIMEOUT
-                connection.readTimeout = READ_TIMEOUT
+                val connection = JsonHttpRepositoryClient.openConnection(
+                    urlString = "$repoUrl/packs/$packId/$imageName",
+                    connectTimeoutMs = CONNECT_TIMEOUT,
+                    readTimeoutMs = READ_TIMEOUT
+                )
                 
-                val responseCode = connection.responseCode
-                if (responseCode != HttpURLConnection.HTTP_OK) {
-                    return@withContext Result.failure(Exception("HTTP $responseCode"))
-                }
-                
-                val cacheDir = context.externalCacheDir ?: context.cacheDir
-                val previewDir = File(cacheDir, "pack_previews")
-                previewDir.mkdirs()
-                
-                val previewFile = File(previewDir, "${packId}_$imageName")
-                
-                connection.inputStream.use { input ->
-                    FileOutputStream(previewFile).use { output ->
-                        input.copyTo(output)
+                try {
+                    val responseCode = connection.responseCode
+                    if (responseCode != HttpURLConnection.HTTP_OK) {
+                        return@withContext Result.failure(Exception("HTTP $responseCode"))
                     }
+
+                    val cacheDir = context.externalCacheDir ?: context.cacheDir
+                    val previewDir = File(cacheDir, "pack_previews")
+                    previewDir.mkdirs()
+
+                    val previewFile = File(previewDir, "${packId}_$imageName")
+
+                    connection.inputStream.use { input ->
+                        FileOutputStream(previewFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+
+                    Result.success(previewFile)
+                } finally {
+                    connection.disconnect()
                 }
-                
-                Result.success(previewFile)
             } catch (e: Exception) {
                 AppLogger.error(TAG, "Failed to download preview: $packId/$imageName", e)
                 Result.failure(e)
@@ -368,4 +360,3 @@ class ControlPackRepositoryService(private val context: Context) {
         previewDir.deleteRecursively()
     }
 }
-

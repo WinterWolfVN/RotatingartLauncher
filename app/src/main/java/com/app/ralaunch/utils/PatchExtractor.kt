@@ -2,14 +2,13 @@ package com.app.ralaunch.utils
 
 import android.content.Context
 import com.app.ralaunch.core.AssemblyPatcher
-import com.app.ralaunch.shared.domain.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
 import org.koin.java.KoinJavaComponent
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import kotlinx.coroutines.runBlocking
 
 /**
  * 补丁提取工具
@@ -82,11 +81,11 @@ object PatchExtractor {
 
     private fun applyMonoModToAllGames(context: Context, monoModDir: File) {
         try {
-            val gameRepository: GameRepository? = try {
-                KoinJavaComponent.getOrNull(GameRepository::class.java)
+            val gameRepository: GameRepositoryV2? = try {
+                KoinJavaComponent.getOrNull(GameRepositoryV2::class.java)
             } catch (e: Exception) { null }
             if (gameRepository == null) return
-            val games = runBlocking { gameRepository.getGameList() }
+            val games = gameRepository.games.value
             if (games.isEmpty()) return
 
             games.forEach { game ->

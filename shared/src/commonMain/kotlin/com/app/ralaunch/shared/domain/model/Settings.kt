@@ -38,8 +38,12 @@ enum class BackgroundType(val value: String) {
 @Serializable
 enum class FnaRenderer(val value: String, val displayName: String) {
     AUTO("auto", "Auto"),
-    OPENGL("opengl", "OpenGL"),
-    VULKAN("vulkan", "Vulkan");
+    NATIVE("native", "Native OpenGL ES 3"),
+    GL4ES("gl4es", "GL4ES"),
+    GL4ES_ANGLE("gl4es+angle", "GL4ES + ANGLE"),
+    MOBILEGLUES("mobileglues", "MobileGlues"),
+    ANGLE("angle", "ANGLE"),
+    ZINK("zink", "Zink");
 
     companion object {
         fun fromValue(value: String): FnaRenderer =
@@ -75,6 +79,7 @@ data class AppSettings(
     val backgroundVideoPath: String = "",
     val backgroundOpacity: Int = 0,
     val videoPlaybackSpeed: Float = 1.0f,
+    val language: String = "en",
 
     // 控制设置
     val controlsOpacity: Float = 0.7f,
@@ -105,8 +110,13 @@ data class AppSettings(
     val setThreadAffinityToBigCore: Boolean = true,
 
     // FNA 设置
-    val fnaRenderer: FnaRenderer = FnaRenderer.AUTO,
+    val fnaRenderer: String = FnaRenderer.AUTO.value,
     val fnaMapBufferRangeOptimization: Boolean = true,
+
+    // 画质设置
+    val qualityLevel: Int = 0,
+    val shaderLowPrecision: Boolean = false,
+    val targetFps: Int = 0,
 
     // CoreCLR 设置
     val serverGC: Boolean = false,

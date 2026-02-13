@@ -15,7 +15,7 @@ import com.app.ralaunch.domain.usecase.UpdateGameUseCase
 import com.app.ralaunch.manager.GameDeletionManager
 import com.app.ralaunch.manager.GameLaunchManager
 import com.app.ralaunch.shared.domain.model.GameItem
-import com.app.ralaunch.shared.domain.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
 import com.app.ralaunch.shared.ui.model.applyFromUiModel
 import com.app.ralaunch.shared.ui.model.toUiModels
 import com.app.ralaunch.ui.contracts.MainUiEffect
@@ -195,7 +195,7 @@ class MainViewModelFactory(
         if (!modelClass.isAssignableFrom(MainViewModel::class.java)) {
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
-        val gameRepository: GameRepository = KoinJavaComponent.get(GameRepository::class.java)
+        val gameRepository: GameRepositoryV2 = KoinJavaComponent.get(GameRepositoryV2::class.java)
         val loadGamesUseCase = LoadGamesUseCase(gameRepository)
         val addGameUseCase = AddGameUseCase(gameRepository)
         val updateGameUseCase = UpdateGameUseCase(gameRepository)

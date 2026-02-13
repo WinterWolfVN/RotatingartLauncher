@@ -1,12 +1,11 @@
 package com.app.ralaunch.sponsor
 
 import android.content.Context
+import com.app.ralaunch.net.JsonHttpRepositoryClient
 import com.app.ralaunch.utils.AppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * 赞助商仓库服务
@@ -92,32 +91,25 @@ class SponsorRepositoryService(private val context: Context) {
         }
     }
     
-    private fun tryFetchFrom(baseUrl: String): Result<SponsorRepository> {
-        return try {
-            val url = URL("$baseUrl/$REPO_INDEX_FILE")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = CONNECT_TIMEOUT
-            connection.readTimeout = READ_TIMEOUT
-            connection.requestMethod = "GET"
+    private suspend fun tryFetchFrom(baseUrl: String): Result<SponsorRepository> {
+        val result = JsonHttpRepositoryClient.getJson<SponsorRepository>(
+            urlString = "$baseUrl/$REPO_INDEX_FILE",
+            json = json,
+            connectTimeoutMs = CONNECT_TIMEOUT,
+            readTimeoutMs = READ_TIMEOUT
+        )
 
-            val responseCode = connection.responseCode
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                return Result.failure(Exception("HTTP $responseCode from $baseUrl"))
-            }
-
-            val content = connection.inputStream.bufferedReader().readText()
-            val repository = json.decodeFromString<SponsorRepository>(content)
-
-            // 更新缓存
+        result.getOrNull()?.let { repository ->
             cachedRepository = repository
             cacheTimestamp = System.currentTimeMillis()
-
             AppLogger.info(TAG, "Fetched sponsors from $baseUrl: ${repository.sponsors.size} sponsors")
-            Result.success(repository)
-        } catch (e: Exception) {
-            AppLogger.error(TAG, "Failed to fetch from $baseUrl", e)
-            Result.failure(e)
         }
+
+        result.exceptionOrNull()?.let { error ->
+            AppLogger.error(TAG, "Failed to fetch from $baseUrl", error)
+        }
+
+        return result
     }
 
     /**
@@ -149,4 +141,3 @@ class SponsorRepositoryService(private val context: Context) {
         cacheTimestamp = 0
     }
 }
-

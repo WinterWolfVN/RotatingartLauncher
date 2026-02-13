@@ -1,11 +1,12 @@
 package com.app.ralaunch.shared.data.repository
 
 import com.app.ralaunch.shared.domain.model.GameItem
-import com.app.ralaunch.shared.domain.repository.GameRepository
-import kotlinx.coroutines.flow.Flow
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * 游戏仓库实现
@@ -14,90 +15,68 @@ import kotlinx.serialization.json.Json
  */
 class GameRepositoryImpl(
     private val gameListStorage: GameListStorage
-) : GameRepository {
+) : GameRepositoryV2 {
+    private val mutationMutex = Mutex()
+    private val _gamesFlow = MutableStateFlow(loadGamesInternal())
+    override val games: StateFlow<List<GameItem>> = _gamesFlow.asStateFlow()
 
-    private val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
-
-    private val _gamesFlow = MutableStateFlow<List<GameItem>>(emptyList())
-
-    init {
-        // 初始化时加载数据
-        loadGamesInternal()
-    }
-
-    private fun loadGamesInternal() {
+    private fun loadGamesInternal(): List<GameItem> {
         val games = gameListStorage.loadGameList()
-        // 确保所有游戏项都设置了 gameListStorageParent 引用（虽然 loadGameList 应该已经设置了）
+        attachStorage(games)
+        return games
+    }
+
+    override suspend fun getById(id: String): GameItem? = games.value.find { it.id == id }
+
+    override suspend fun upsert(game: GameItem, index: Int) = mutateAndSave { list ->
+        list.removeAll { it.id == game.id }
+        val insertIndex = index.coerceIn(0, list.size)
+        list.add(insertIndex, game)
+    }
+
+    override suspend fun removeById(id: String) = mutateAndSave { list ->
+        list.removeAll { it.id == id }
+    }
+
+    override suspend fun removeAt(index: Int) = mutateAndSave { list ->
+        if (index in list.indices) list.removeAt(index)
+    }
+
+    override suspend fun reorder(from: Int, to: Int) = mutateAndSave { list ->
+        if (from !in list.indices || to !in list.indices || from == to) return@mutateAndSave
+        val game = list.removeAt(from)
+        list.add(to, game)
+    }
+
+    override suspend fun replaceAll(games: List<GameItem>) {
+        mutationMutex.withLock {
+            persist(games)
+        }
+    }
+
+    override suspend fun clear() {
+        mutationMutex.withLock {
+            persist(emptyList())
+        }
+    }
+
+    private suspend inline fun mutateAndSave(crossinline mutate: (MutableList<GameItem>) -> Unit) {
+        mutationMutex.withLock {
+            val list = _gamesFlow.value.toMutableList()
+            mutate(list)
+            persist(list)
+        }
+    }
+
+    private fun persist(games: List<GameItem>) {
+        val immutable = games.toList()
+        attachStorage(immutable)
+        _gamesFlow.value = immutable
+        gameListStorage.saveGameList(immutable)
+    }
+
+    private fun attachStorage(games: List<GameItem>) {
         games.forEach { it.gameListStorageParent = gameListStorage }
-        _gamesFlow.value = games
-    }
-
-    override fun getGames(): Flow<List<GameItem>> = _gamesFlow.asStateFlow()
-
-    override suspend fun getGameList(): List<GameItem> = _gamesFlow.value
-
-    override suspend fun getGameById(id: String): GameItem? {
-        return _gamesFlow.value.find { it.id == id }
-    }
-
-    override suspend fun addGame(game: GameItem, position: Int) {
-        val games = _gamesFlow.value.toMutableList()
-        // 去重：如果已存在相同 storageBasePath 的游戏，先移除旧条目
-        games.removeAll { it.id == game.id }
-        val insertPosition = position.coerceIn(0, games.size)
-        games.add(insertPosition, game)
-        updateAndSave(games)
-    }
-
-    override suspend fun updateGame(game: GameItem) {
-        val games = _gamesFlow.value.toMutableList()
-        val index = games.indexOfFirst { it.id == game.id }
-        if (index >= 0) {
-            games[index] = game
-            updateAndSave(games)
-        }
-    }
-
-    override suspend fun deleteGame(id: String) {
-        val games = _gamesFlow.value.toMutableList()
-        games.removeAll { it.id == id }
-        updateAndSave(games)
-    }
-
-    override suspend fun deleteGameAt(position: Int) {
-        val games = _gamesFlow.value.toMutableList()
-        if (position in games.indices) {
-            games.removeAt(position)
-            updateAndSave(games)
-        }
-    }
-
-    override suspend fun moveGame(fromPosition: Int, toPosition: Int) {
-        val games = _gamesFlow.value.toMutableList()
-        if (fromPosition in games.indices && toPosition in games.indices) {
-            val game = games.removeAt(fromPosition)
-            games.add(toPosition, game)
-            updateAndSave(games)
-        }
-    }
-
-    override suspend fun clearAll() {
-        updateAndSave(emptyList())
-    }
-
-    override suspend fun saveGameList(games: List<GameItem>) {
-        updateAndSave(games)
-    }
-
-    private fun updateAndSave(games: List<GameItem>) {
-        // 确保所有游戏项都设置了 gameListStorageParent 引用
-        games.forEach { it.gameListStorageParent = gameListStorage }
-        _gamesFlow.value = games
-        gameListStorage.saveGameList(games)
     }
 }
 

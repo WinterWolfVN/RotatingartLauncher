@@ -2,9 +2,9 @@ package com.app.ralaunch.shared.di
 
 import com.app.ralaunch.shared.data.repository.GameRepositoryImpl
 import com.app.ralaunch.shared.data.repository.SettingsRepositoryImpl
-import com.app.ralaunch.shared.domain.repository.ControlLayoutRepository
-import com.app.ralaunch.shared.domain.repository.GameRepository
-import com.app.ralaunch.shared.domain.repository.SettingsRepository
+import com.app.ralaunch.shared.domain.repository.ControlLayoutRepositoryV2
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
+import com.app.ralaunch.shared.domain.repository.SettingsRepositoryV2
 import com.app.ralaunch.shared.ui.screens.controls.ControlLayoutViewModel
 import com.app.ralaunch.shared.ui.screens.settings.AppInfo
 import com.app.ralaunch.shared.ui.screens.settings.SettingsViewModel
@@ -20,11 +20,11 @@ val sharedModule = module {
 
     // ==================== Repositories ====================
 
-    single<GameRepository> {
+    single<GameRepositoryV2> {
         GameRepositoryImpl(gameListStorage = get())
     }
 
-    single<SettingsRepository> {
+    single<SettingsRepositoryV2> {
         SettingsRepositoryImpl(dataStore = get())
     }
 
@@ -32,12 +32,12 @@ val sharedModule = module {
 
     viewModel {
         SettingsViewModel(
-            settingsRepository = get(),
+            settingsRepository = get<SettingsRepositoryV2>(),
             appInfo = getOrNull<AppInfo>() ?: AppInfo()
         )
     }
 
-    viewModel { (controlLayoutRepository: ControlLayoutRepository) ->
+    viewModel { (controlLayoutRepository: ControlLayoutRepositoryV2) ->
         ControlLayoutViewModel(repository = controlLayoutRepository)
     }
 }

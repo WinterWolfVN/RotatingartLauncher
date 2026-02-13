@@ -12,8 +12,8 @@ import com.app.ralaunch.patch.PatchManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.bind
 import org.koin.dsl.module
-import com.app.ralaunch.shared.domain.repository.GameRepository as SharedGameRepository
-import com.app.ralaunch.shared.domain.repository.SettingsRepository
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2 as SharedGameRepositoryV2
+import com.app.ralaunch.shared.domain.repository.SettingsRepositoryV2
 
 /**
  * App 模块 Koin 依赖配置
@@ -44,11 +44,11 @@ val appModule = module {
     // ==================== Migration ====================
 
     single {
-        SettingsDataMigrator(androidContext(), get<SettingsRepository>())
+        SettingsDataMigrator(androidContext(), get<SettingsRepositoryV2>())
     }
 
     single {
-        GameDataMigrator(androidContext(), get<SharedGameRepository>())
+        GameDataMigrator(androidContext(), get<SharedGameRepositoryV2>())
     }
 
     // ==================== UI Managers (参数化工厂) ====================

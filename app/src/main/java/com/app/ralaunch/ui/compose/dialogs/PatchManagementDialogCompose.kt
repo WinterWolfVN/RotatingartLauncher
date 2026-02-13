@@ -32,7 +32,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.app.ralaunch.R
 import com.app.ralaunch.shared.domain.model.GameItem
-import com.app.ralaunch.shared.domain.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
 import com.app.ralaunch.patch.Patch
 import com.app.ralaunch.patch.PatchManager
 import com.app.ralaunch.utils.StreamUtils
@@ -56,8 +56,8 @@ fun PatchManagementDialogCompose(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
-    val gameRepository: GameRepository? = remember {
-        try { KoinJavaComponent.getOrNull(GameRepository::class.java) } catch (_: Exception) { null }
+    val gameRepository: GameRepositoryV2? = remember {
+        try { KoinJavaComponent.getOrNull(GameRepositoryV2::class.java) } catch (_: Exception) { null }
     }
     val patchManager: PatchManager? = remember {
         try { KoinJavaComponent.getOrNull(PatchManager::class.java) } catch (_: Exception) { null }
@@ -70,7 +70,7 @@ fun PatchManagementDialogCompose(
     
     // 加载游戏列表
     LaunchedEffect(Unit) {
-        games = gameRepository?.getGameList() ?: emptyList()
+        games = gameRepository?.games?.value ?: emptyList()
     }
     
     // 当选择游戏改变时加载补丁

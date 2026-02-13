@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.app.ralaunch.R
 import com.app.ralaunch.shared.data.repository.GameListStorage
 import com.app.ralaunch.shared.domain.model.GameItem
-import com.app.ralaunch.shared.domain.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
 import com.app.ralaunch.installer.GameInstaller
 import com.app.ralaunch.installer.InstallCallback
 import com.app.ralaunch.installer.InstallPluginRegistry
@@ -97,8 +97,8 @@ fun ImportScreenWrapper(
             return
         }
 
-        val gameRepository: GameRepository? = try {
-            KoinJavaComponent.getOrNull(GameRepository::class.java)
+        val gameRepository: GameRepositoryV2? = try {
+            KoinJavaComponent.getOrNull(GameRepositoryV2::class.java)
         } catch (_: Exception) { null }
 
         val installer = GameInstaller(storage)
@@ -116,7 +116,7 @@ fun ImportScreenWrapper(
 
                 override fun onComplete(gameItem: GameItem) {
                     scope.launch {
-                        gameRepository?.addGame(gameItem, 0)
+                        gameRepository?.upsert(gameItem, 0)
                     }
                     mainHandler.post {
                         isImporting = false

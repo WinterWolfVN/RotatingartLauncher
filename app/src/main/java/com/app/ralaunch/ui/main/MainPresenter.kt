@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import com.app.ralaunch.shared.AppConstants
 import com.app.ralaunch.R
 import com.app.ralaunch.shared.domain.model.GameItem
-import com.app.ralaunch.shared.domain.repository.GameRepository
+import com.app.ralaunch.shared.domain.repository.GameRepositoryV2
 import com.app.ralaunch.shared.ui.model.GameItemUi
 import com.app.ralaunch.shared.ui.model.applyFromUiModel
 import com.app.ralaunch.manager.GameLaunchManager
@@ -38,7 +38,7 @@ class MainPresenter(
     }
 
     // 通过 Koin 获取 GameRepository
-    private val gameRepository: GameRepository = get(GameRepository::class.java)
+    private val gameRepository: GameRepositoryV2 = get(GameRepositoryV2::class.java)
     private val gameLaunchManager: GameLaunchManager = GameLaunchManager(context)
     private val gameDeletionManager: GameDeletionManager = GameDeletionManager(context)
     
@@ -75,7 +75,7 @@ class MainPresenter(
     override fun loadGameList() {
         // 同步加载：数据已在 Repository 初始化时读入内存，此处直接读取几乎无开销
         // 避免异步加载导致 Compose 首帧无数据，出现空白闪烁
-        val games = runBlocking { gameRepository.getGameList() }
+        val games = gameRepository.games.value
         gameList = games.toMutableList()
         withView { showGameList(gameList) }
     }
@@ -100,7 +100,7 @@ class MainPresenter(
         if (position in gameList.indices) {
             gameList.removeAt(position)
             runBlocking {
-                gameRepository.deleteGameAt(position)
+                gameRepository.removeAt(position)
             }
             withView { refreshGameList() }
         }
@@ -121,7 +121,7 @@ class MainPresenter(
     override fun addGame(game: GameItem) {
         gameList.add(0, game)
         runBlocking {
-            gameRepository.addGame(game, 0)
+            gameRepository.upsert(game, 0)
         }
         withView {
             refreshGameList()
@@ -149,7 +149,7 @@ class MainPresenter(
             game.applyFromUiModel(updatedGameUi)
 
             runBlocking {
-                gameRepository.updateGame(game)
+                gameRepository.upsert(game, index)
             }
 
             // 如果是当前选中的游戏，更新选中状态

@@ -2,7 +2,9 @@ package com.app.ralaunch.shared.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.ralaunch.shared.domain.repository.SettingsRepository
+import com.app.ralaunch.shared.domain.model.BackgroundType
+import com.app.ralaunch.shared.domain.model.ThemeMode
+import com.app.ralaunch.shared.domain.repository.SettingsRepositoryV2
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -142,7 +144,7 @@ sealed class SettingsEffect {
  * 设置 ViewModel - 跨平台
  */
 class SettingsViewModel(
-    private val settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepositoryV2,
     private val appInfo: AppInfo = AppInfo()
 ) : ViewModel() {
 
@@ -223,32 +225,37 @@ class SettingsViewModel(
 
     private fun loadSettings() {
         viewModelScope.launch {
+            val settings = settingsRepository.getSettingsSnapshot()
             _uiState.update { state ->
                 state.copy(
                     // 外观
-                    themeMode = settingsRepository.getThemeMode(),
-                    themeColor = settingsRepository.getThemeColor(),
-                    backgroundType = settingsRepository.getBackgroundType(),
-                    backgroundOpacity = settingsRepository.getBackgroundOpacity(),
-                    videoPlaybackSpeed = settingsRepository.getVideoPlaybackSpeed(),
-                    language = getLanguageDisplayName(settingsRepository.getLanguage()),
+                    themeMode = settings.themeMode.value,
+                    themeColor = settings.themeColor,
+                    backgroundType = backgroundTypeToInt(settings.backgroundType),
+                    backgroundOpacity = settings.backgroundOpacity,
+                    videoPlaybackSpeed = settings.videoPlaybackSpeed,
+                    language = getLanguageDisplayName(settings.language),
                     // 控制
-                    touchMultitouchEnabled = settingsRepository.isTouchMultitouchEnabled(),
-                    mouseRightStickEnabled = settingsRepository.isMouseRightStickEnabled(),
-                    vibrationEnabled = settingsRepository.isVibrationEnabled(),
-                    vibrationStrength = settingsRepository.getVibrationStrength(),
+                    touchMultitouchEnabled = settings.touchMultitouchEnabled,
+                    mouseRightStickEnabled = settings.mouseRightStickEnabled,
+                    vibrationEnabled = settings.vibrationEnabled,
+                    vibrationStrength = settings.virtualControllerVibrationIntensity,
                     // 游戏
-                    bigCoreAffinityEnabled = settingsRepository.isBigCoreAffinityEnabled(),
-                    lowLatencyAudioEnabled = settingsRepository.isLowLatencyAudioEnabled(),
-                    rendererType = getRendererDisplayName(settingsRepository.getRendererType()),
+                    bigCoreAffinityEnabled = settings.setThreadAffinityToBigCore,
+                    lowLatencyAudioEnabled = settings.sdlAaudioLowLatency,
+                    rendererType = getRendererDisplayName(settings.fnaRenderer),
+                    // 画质
+                    qualityLevel = settings.qualityLevel,
+                    shaderLowPrecision = settings.shaderLowPrecision,
+                    targetFps = settings.targetFps,
                     // 开发者
-                    loggingEnabled = settingsRepository.isLoggingEnabled(),
-                    verboseLogging = settingsRepository.isVerboseLogging(),
-                    killLauncherUIEnabled = settingsRepository.isKillLauncherUIEnabled(),
-                    serverGCEnabled = settingsRepository.isServerGCEnabled(),
-                    concurrentGCEnabled = settingsRepository.isConcurrentGCEnabled(),
-                    tieredCompilationEnabled = settingsRepository.isTieredCompilationEnabled(),
-                    fnaMapBufferRangeOptEnabled = settingsRepository.isFnaMapBufferRangeOptEnabled(),
+                    loggingEnabled = settings.logSystemEnabled,
+                    verboseLogging = settings.verboseLogging,
+                    killLauncherUIEnabled = settings.killLauncherUIAfterLaunch,
+                    serverGCEnabled = settings.serverGC,
+                    concurrentGCEnabled = settings.concurrentGC,
+                    tieredCompilationEnabled = settings.tieredCompilation,
+                    fnaMapBufferRangeOptEnabled = settings.fnaMapBufferRangeOptimization,
                     // 关于
                     appVersion = appInfo.versionName,
                     buildInfo = "Build ${appInfo.versionCode}"
@@ -267,35 +274,35 @@ class SettingsViewModel(
 
     private fun setThemeMode(mode: Int) {
         viewModelScope.launch {
-            settingsRepository.setThemeMode(mode)
+            settingsRepository.update { it.copy(themeMode = ThemeMode.fromValue(mode)) }
             _uiState.update { it.copy(themeMode = mode) }
         }
     }
 
     private fun setThemeColor(color: Int) {
         viewModelScope.launch {
-            settingsRepository.setThemeColor(color)
+            settingsRepository.update { it.copy(themeColor = color) }
             _uiState.update { it.copy(themeColor = color) }
         }
     }
 
     private fun setBackgroundType(type: Int) {
         viewModelScope.launch {
-            settingsRepository.setBackgroundType(type)
+            settingsRepository.update { it.copy(backgroundType = intToBackgroundType(type)) }
             _uiState.update { it.copy(backgroundType = type) }
         }
     }
 
     private fun setLanguage(language: String) {
         viewModelScope.launch {
-            settingsRepository.setLanguage(language)
+            settingsRepository.update { it.copy(language = language) }
             _uiState.update { it.copy(language = getLanguageDisplayName(language)) }
         }
     }
 
     private fun setBackgroundOpacity(opacity: Int) {
         viewModelScope.launch {
-            settingsRepository.setBackgroundOpacity(opacity)
+            settingsRepository.update { it.copy(backgroundOpacity = opacity) }
             _uiState.update { it.copy(backgroundOpacity = opacity) }
             sendEffect(SettingsEffect.BackgroundOpacityChanged(opacity))
         }
@@ -303,7 +310,7 @@ class SettingsViewModel(
 
     private fun setVideoPlaybackSpeed(speed: Float) {
         viewModelScope.launch {
-            settingsRepository.setVideoPlaybackSpeed(speed)
+            settingsRepository.update { it.copy(videoPlaybackSpeed = speed) }
             _uiState.update { it.copy(videoPlaybackSpeed = speed) }
             sendEffect(SettingsEffect.VideoSpeedChanged(speed))
         }
@@ -311,11 +318,15 @@ class SettingsViewModel(
 
     private fun restoreDefaultBackground() {
         viewModelScope.launch {
-            settingsRepository.setBackgroundType(0)
-            settingsRepository.setBackgroundImagePath("")
-            settingsRepository.setBackgroundVideoPath("")
-            settingsRepository.setBackgroundOpacity(0)
-            settingsRepository.setVideoPlaybackSpeed(1.0f)
+            settingsRepository.update {
+                it.copy(
+                    backgroundType = BackgroundType.DEFAULT,
+                    backgroundImagePath = "",
+                    backgroundVideoPath = "",
+                    backgroundOpacity = 0,
+                    videoPlaybackSpeed = 1.0f
+                )
+            }
             _uiState.update { it.copy(
                 backgroundType = 0,
                 backgroundOpacity = 0,
@@ -330,28 +341,28 @@ class SettingsViewModel(
 
     private fun setTouchMultitouch(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setTouchMultitouchEnabled(enabled)
+            settingsRepository.update { it.copy(touchMultitouchEnabled = enabled) }
             _uiState.update { it.copy(touchMultitouchEnabled = enabled) }
         }
     }
 
     private fun setMouseRightStick(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setMouseRightStickEnabled(enabled)
+            settingsRepository.update { it.copy(mouseRightStickEnabled = enabled) }
             _uiState.update { it.copy(mouseRightStickEnabled = enabled) }
         }
     }
 
     private fun setVibrationEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setVibrationEnabled(enabled)
+            settingsRepository.update { it.copy(vibrationEnabled = enabled) }
             _uiState.update { it.copy(vibrationEnabled = enabled) }
         }
     }
 
     private fun setVibrationStrength(strength: Float) {
         viewModelScope.launch {
-            settingsRepository.setVibrationStrength(strength)
+            settingsRepository.update { it.copy(virtualControllerVibrationIntensity = strength) }
             _uiState.update { it.copy(vibrationStrength = strength) }
         }
     }
@@ -360,21 +371,21 @@ class SettingsViewModel(
 
     private fun setBigCoreAffinity(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setBigCoreAffinityEnabled(enabled)
+            settingsRepository.update { it.copy(setThreadAffinityToBigCore = enabled) }
             _uiState.update { it.copy(bigCoreAffinityEnabled = enabled) }
         }
     }
 
     private fun setLowLatencyAudio(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setLowLatencyAudioEnabled(enabled)
+            settingsRepository.update { it.copy(sdlAaudioLowLatency = enabled) }
             _uiState.update { it.copy(lowLatencyAudioEnabled = enabled) }
         }
     }
 
     private fun setRenderer(renderer: String) {
         viewModelScope.launch {
-            settingsRepository.setRendererType(renderer)
+            settingsRepository.update { it.copy(fnaRenderer = renderer) }
             _uiState.update { it.copy(rendererType = getRendererDisplayName(renderer)) }
         }
     }
@@ -383,7 +394,7 @@ class SettingsViewModel(
 
     private fun setQualityLevel(level: Int) {
         viewModelScope.launch {
-            settingsRepository.setQualityLevel(level)
+            settingsRepository.update { it.copy(qualityLevel = level) }
             _uiState.update { it.copy(qualityLevel = level) }
             val qualityName = when (level) {
                 0 -> "高画质"
@@ -397,7 +408,7 @@ class SettingsViewModel(
 
     private fun setShaderLowPrecision(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setShaderLowPrecision(enabled)
+            settingsRepository.update { it.copy(shaderLowPrecision = enabled) }
             _uiState.update { it.copy(shaderLowPrecision = enabled) }
             sendEffect(SettingsEffect.ShowToast("重启游戏后生效"))
         }
@@ -405,7 +416,7 @@ class SettingsViewModel(
 
     private fun setTargetFps(fps: Int) {
         viewModelScope.launch {
-            settingsRepository.setTargetFps(fps)
+            settingsRepository.update { it.copy(targetFps = fps) }
             _uiState.update { it.copy(targetFps = fps) }
             val fpsName = if (fps == 0) "无限制" else "$fps FPS"
             sendEffect(SettingsEffect.ShowToast("帧率限制已设置为${fpsName}，重启游戏后生效"))
@@ -416,28 +427,28 @@ class SettingsViewModel(
 
     private fun setLoggingEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setLoggingEnabled(enabled)
+            settingsRepository.update { it.copy(logSystemEnabled = enabled) }
             _uiState.update { it.copy(loggingEnabled = enabled) }
         }
     }
 
     private fun setVerboseLogging(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setVerboseLogging(enabled)
+            settingsRepository.update { it.copy(verboseLogging = enabled) }
             _uiState.update { it.copy(verboseLogging = enabled) }
         }
     }
 
     private fun setKillLauncherUI(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setKillLauncherUIEnabled(enabled)
+            settingsRepository.update { it.copy(killLauncherUIAfterLaunch = enabled) }
             _uiState.update { it.copy(killLauncherUIEnabled = enabled) }
         }
     }
 
     private fun setServerGC(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setServerGCEnabled(enabled)
+            settingsRepository.update { it.copy(serverGC = enabled) }
             _uiState.update { it.copy(serverGCEnabled = enabled) }
             sendEffect(SettingsEffect.ShowToast("重启游戏后生效"))
         }
@@ -445,7 +456,7 @@ class SettingsViewModel(
 
     private fun setConcurrentGC(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setConcurrentGCEnabled(enabled)
+            settingsRepository.update { it.copy(concurrentGC = enabled) }
             _uiState.update { it.copy(concurrentGCEnabled = enabled) }
             sendEffect(SettingsEffect.ShowToast("重启游戏后生效"))
         }
@@ -453,7 +464,7 @@ class SettingsViewModel(
 
     private fun setTieredCompilation(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setTieredCompilationEnabled(enabled)
+            settingsRepository.update { it.copy(tieredCompilation = enabled) }
             _uiState.update { it.copy(tieredCompilationEnabled = enabled) }
             sendEffect(SettingsEffect.ShowToast("重启游戏后生效"))
         }
@@ -461,7 +472,7 @@ class SettingsViewModel(
 
     private fun setFnaMapBufferRangeOpt(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setFnaMapBufferRangeOptEnabled(enabled)
+            settingsRepository.update { it.copy(fnaMapBufferRangeOptimization = enabled) }
             _uiState.update { it.copy(fnaMapBufferRangeOptEnabled = enabled) }
         }
     }
@@ -491,6 +502,7 @@ class SettingsViewModel(
             "gl4es+angle" -> "GL4ES + ANGLE"
             "mobileglues" -> "MobileGlues"
             "angle" -> "ANGLE"
+            "zink", "vulkan" -> "Zink (Mesa Vulkan)"
             else -> "自动选择"
         }
     }
@@ -503,6 +515,20 @@ class SettingsViewModel(
             "es" -> "Español"
             else -> "Follow System"
         }
+    }
+
+    private fun backgroundTypeToInt(type: BackgroundType): Int = when (type) {
+        BackgroundType.DEFAULT -> 0
+        BackgroundType.IMAGE -> 1
+        BackgroundType.VIDEO -> 2
+        BackgroundType.COLOR -> 3
+    }
+
+    private fun intToBackgroundType(value: Int): BackgroundType = when (value) {
+        1 -> BackgroundType.IMAGE
+        2 -> BackgroundType.VIDEO
+        3 -> BackgroundType.COLOR
+        else -> BackgroundType.DEFAULT
     }
 }
 

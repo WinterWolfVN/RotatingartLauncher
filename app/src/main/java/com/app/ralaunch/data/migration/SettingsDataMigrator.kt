@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.app.ralaunch.shared.data.mapper.SettingsMapper
 import com.app.ralaunch.shared.domain.model.AppSettings
-import com.app.ralaunch.shared.domain.repository.SettingsRepository
+import com.app.ralaunch.shared.domain.repository.SettingsRepositoryV2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -17,7 +17,7 @@ import java.io.File
  */
 class SettingsDataMigrator(
     private val context: Context,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepositoryV2
 ) {
     companion object {
         private const val TAG = "SettingsDataMigrator"

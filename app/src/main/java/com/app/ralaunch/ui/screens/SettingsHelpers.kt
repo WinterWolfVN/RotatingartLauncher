@@ -6,7 +6,8 @@ import android.net.Uri
 import android.widget.Toast
 import com.app.ralaunch.data.SettingsManager
 import com.app.ralaunch.patch.PatchManager
-import com.app.ralaunch.shared.domain.repository.SettingsRepository
+import com.app.ralaunch.shared.domain.model.BackgroundType
+import com.app.ralaunch.shared.domain.repository.SettingsRepositoryV2
 import com.app.ralaunch.shared.ui.screens.settings.*
 import com.app.ralaunch.shared.ui.theme.AppThemeState
 import com.app.ralaunch.sponsor.SponsorsActivity
@@ -14,7 +15,6 @@ import com.app.ralaunch.utils.AppLogger
 import com.app.ralaunch.utils.LocaleManager
 import com.app.ralaunch.utils.LogcatReader
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent
 import java.io.File
@@ -35,15 +35,15 @@ internal suspend fun handleImageSelection(context: Context, uri: Uri, viewModel:
                 }
             }
             
-            val settingsRepository: SettingsRepository? = try {
-                KoinJavaComponent.getOrNull(SettingsRepository::class.java)
+            val settingsRepository: SettingsRepositoryV2? = try {
+                KoinJavaComponent.getOrNull(SettingsRepositoryV2::class.java)
             } catch (_: Exception) {
                 null
             }
 
             val oldPath = settingsRepository
-                ?.getBackgroundImagePath()
-                ?.first()
+                ?.getSettingsSnapshot()
+                ?.backgroundImagePath
                 ?: SettingsManager.getInstance().backgroundImagePath
             if (!oldPath.isNullOrEmpty()) {
                 val oldFile = File(oldPath)
@@ -54,10 +54,14 @@ internal suspend fun handleImageSelection(context: Context, uri: Uri, viewModel:
 
             val newPath = destFile.absolutePath
             if (settingsRepository != null) {
-                settingsRepository.setBackgroundImagePath(newPath)
-                settingsRepository.setBackgroundType(1)
-                settingsRepository.setBackgroundVideoPath("")
-                settingsRepository.setBackgroundOpacity(90)
+                settingsRepository.update {
+                    it.copy(
+                        backgroundImagePath = newPath,
+                        backgroundType = BackgroundType.IMAGE,
+                        backgroundVideoPath = "",
+                        backgroundOpacity = 90
+                    )
+                }
             } else {
                 SettingsManager.getInstance().apply {
                     backgroundImagePath = newPath
@@ -99,17 +103,21 @@ internal suspend fun handleVideoSelection(context: Context, uri: Uri, viewModel:
             }
 
             val newPath = destFile.absolutePath
-            val settingsRepository: SettingsRepository? = try {
-                KoinJavaComponent.getOrNull(SettingsRepository::class.java)
+            val settingsRepository: SettingsRepositoryV2? = try {
+                KoinJavaComponent.getOrNull(SettingsRepositoryV2::class.java)
             } catch (_: Exception) {
                 null
             }
 
             if (settingsRepository != null) {
-                settingsRepository.setBackgroundVideoPath(newPath)
-                settingsRepository.setBackgroundType(2)
-                settingsRepository.setBackgroundImagePath("")
-                settingsRepository.setBackgroundOpacity(90)
+                settingsRepository.update {
+                    it.copy(
+                        backgroundVideoPath = newPath,
+                        backgroundType = BackgroundType.VIDEO,
+                        backgroundImagePath = "",
+                        backgroundOpacity = 90
+                    )
+                }
             } else {
                 SettingsManager.getInstance().apply {
                     backgroundVideoPath = newPath
@@ -267,6 +275,8 @@ internal fun getRendererCode(rendererName: String): String {
         "mobileglues" -> "mobileglues"
         "ANGLE" -> "angle"
         "angle" -> "angle"
+        "Zink (Mesa Vulkan)" -> "zink"
+        "zink" -> "zink"
         else -> "auto"
     }
 }

@@ -16,7 +16,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import com.app.ralaunch.data.SettingsManager
-import com.app.ralaunch.shared.domain.repository.SettingsRepository
+import com.app.ralaunch.shared.domain.repository.SettingsRepositoryV2
 import com.app.ralaunch.shared.ui.components.dialogs.*
 import com.app.ralaunch.shared.ui.screens.settings.*
 import com.app.ralaunch.shared.ui.theme.AppThemeState
@@ -43,7 +43,7 @@ fun SettingsScreenWrapper(
     
     // 使用 Activity 级别的 ViewModel 缓存，避免页面切换时重建
     val viewModel: SettingsViewModel = remember {
-        val settingsRepository: SettingsRepository = KoinJavaComponent.get(SettingsRepository::class.java)
+        val settingsRepository: SettingsRepositoryV2 = KoinJavaComponent.get(SettingsRepositoryV2::class.java)
         val appInfo: AppInfo = KoinJavaComponent.getOrNull(AppInfo::class.java) ?: AppInfo()
         ViewModelProvider(
             activity as ViewModelStoreOwner,
