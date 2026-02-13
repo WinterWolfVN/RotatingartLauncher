@@ -8,14 +8,12 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import com.app.ralaunch.controls.packs.ControlPackManager
 import com.app.ralaunch.data.SettingsAccess
-import com.app.ralaunch.data.migration.SettingsDataMigrator
 import com.app.ralaunch.di.KoinInitializer
 import com.app.ralaunch.manager.VibrationManager
 import com.app.ralaunch.utils.DensityAdapter
 import com.app.ralaunch.utils.LocaleManager
 import com.app.ralaunch.patch.PatchManager
 import com.kyant.fishnet.Fishnet
-import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import java.io.File
@@ -51,7 +49,6 @@ class RaLaunchApp : Application(), KoinComponent {
     private val _vibrationManager: VibrationManager by inject()
     private val _controlPackManager: ControlPackManager by inject()
     private val _patchManager: PatchManager? by inject()
-    private val _settingsDataMigrator: SettingsDataMigrator by inject()
 
     override fun onCreate() {
         super.onCreate()
@@ -63,19 +60,16 @@ class RaLaunchApp : Application(), KoinComponent {
         // 2. 初始化 Koin DI（必须在使用 inject 之前）
         KoinInitializer.init(this)
 
-        // 3. 启动前设置迁移（旧键名 -> 规范 JSON）
-        migrateSettingsIfNeeded()
-
-        // 4. 应用主题设置
+        // 3. 应用主题设置
         applyThemeFromSettings()
 
-        // 5. 初始化崩溃捕获
+        // 4. 初始化崩溃捕获
         initCrashHandler()
 
-        // 6. 后台安装补丁
+        // 5. 后台安装补丁
         installPatchesInBackground()
 
-        // 7. 设置环境变量
+        // 6. 设置环境变量
         setupEnvironmentVariables()
     }
 
@@ -101,16 +95,6 @@ class RaLaunchApp : Application(), KoinComponent {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply theme: ${e.message}")
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-        }
-    }
-
-    private fun migrateSettingsIfNeeded() {
-        runBlocking {
-            if (!_settingsDataMigrator.needsMigration()) return@runBlocking
-            _settingsDataMigrator.migrate()
-                .onFailure { error ->
-                    Log.e(TAG, "Settings migration failed: ${error.message}", error)
-                }
         }
     }
 

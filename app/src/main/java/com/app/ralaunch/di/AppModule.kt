@@ -3,8 +3,6 @@ package com.app.ralaunch.di
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import com.app.ralaunch.controls.packs.ControlPackManager
-import com.app.ralaunch.data.migration.GameDataMigrator
-import com.app.ralaunch.data.migration.SettingsDataMigrator
 import com.app.ralaunch.manager.*
 import com.app.ralaunch.shared.manager.IThemeManager
 import com.app.ralaunch.shared.manager.IVibrationManager
@@ -12,8 +10,6 @@ import com.app.ralaunch.patch.PatchManager
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.bind
 import org.koin.dsl.module
-import com.app.ralaunch.shared.domain.repository.GameRepositoryV2 as SharedGameRepositoryV2
-import com.app.ralaunch.shared.domain.repository.SettingsRepositoryV2
 
 /**
  * App 模块 Koin 依赖配置
@@ -39,16 +35,6 @@ val appModule = module {
         } catch (e: Exception) {
             null
         }
-    }
-
-    // ==================== Migration ====================
-
-    single {
-        SettingsDataMigrator(androidContext(), get<SettingsRepositoryV2>())
-    }
-
-    single {
-        GameDataMigrator(androidContext(), get<SharedGameRepositoryV2>())
     }
 
     // ==================== UI Managers (参数化工厂) ====================
