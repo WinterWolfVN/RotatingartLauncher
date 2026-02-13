@@ -151,7 +151,7 @@ int dotnet_launcher::hostfxr_launch(const std::string& assembly_path,
 
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_com_app_ralaunch_dotnet_DotNetLauncher_getNativeDotNetLauncherHostfxrLastErrorMsg(JNIEnv *env,
+Java_com_app_ralaunch_core_platform_runtime_dotnet_DotNetLauncher_getNativeDotNetLauncherHostfxrLastErrorMsg(JNIEnv *env,
                                                                                        jobject thiz) {
     std::string msg = get_last_error();
     return env->NewStringUTF(msg.c_str());
@@ -159,7 +159,7 @@ Java_com_app_ralaunch_dotnet_DotNetLauncher_getNativeDotNetLauncherHostfxrLastEr
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_app_ralaunch_dotnet_DotNetLauncher_nativeDotNetLauncherHostfxrLaunch(JNIEnv *env,
+Java_com_app_ralaunch_core_platform_runtime_dotnet_DotNetLauncher_nativeDotNetLauncherHostfxrLaunch(JNIEnv *env,
                                                                               jobject thiz,
                                                                               jstring assembly_path,
                                                                               jobjectArray args,

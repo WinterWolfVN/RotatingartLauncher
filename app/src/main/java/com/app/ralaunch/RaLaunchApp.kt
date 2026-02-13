@@ -6,13 +6,13 @@ import android.content.res.Configuration
 import android.system.Os
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
-import com.app.ralaunch.controls.packs.ControlPackManager
-import com.app.ralaunch.data.SettingsAccess
-import com.app.ralaunch.di.KoinInitializer
-import com.app.ralaunch.manager.VibrationManager
-import com.app.ralaunch.utils.DensityAdapter
-import com.app.ralaunch.utils.LocaleManager
-import com.app.ralaunch.patch.PatchManager
+import com.app.ralaunch.feature.controls.packs.ControlPackManager
+import com.app.ralaunch.core.common.SettingsAccess
+import com.app.ralaunch.core.di.KoinInitializer
+import com.app.ralaunch.core.common.VibrationManager
+import com.app.ralaunch.core.common.util.DensityAdapter
+import com.app.ralaunch.core.common.util.LocaleManager
+import com.app.ralaunch.feature.patch.data.PatchManager
 import com.kyant.fishnet.Fishnet
 import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
@@ -115,7 +115,7 @@ class RaLaunchApp : Application(), KoinComponent {
         _patchManager?.let { manager ->
             Thread({
                 try {
-                    com.app.ralaunch.utils.PatchExtractor.extractPatchesIfNeeded(applicationContext)
+                    com.app.ralaunch.core.common.util.PatchExtractor.extractPatchesIfNeeded(applicationContext)
                     PatchManager.installBuiltInPatches(manager, false)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to install patches: ${e.message}")

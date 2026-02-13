@@ -94,7 +94,7 @@ extern "C" void init_corehost_trace_redirect() {
 // JNI接口函数
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_dotnet_CoreHostTrace_nativeInitCoreHostTraceRedirect(JNIEnv *env,
+Java_com_app_ralaunch_core_platform_runtime_dotnet_CoreHostTrace_nativeInitCoreHostTraceRedirect(JNIEnv *env,
                                                                            jobject thiz) {
     init_corehost_trace_redirect();
 }

@@ -21,7 +21,7 @@ import android.view.WindowManager;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.app.ralaunch.controls.TouchPointerTracker;
+import com.app.ralaunch.feature.controls.TouchPointerTracker;
 
 /**
     SDLSurface. This is what we draw on, so we need to know when it's created
@@ -38,7 +38,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     private static native void nativeSetTouchData(int count, float[] x, float[] y, int screenWidth, int screenHeight);
     private static native void nativeClearTouchData();
     
-      private com.app.ralaunch.game.controls.GameVirtualControlsManager mVirtualControlsManager;
+      private com.app.ralaunch.feature.game.GameVirtualControlsManager mVirtualControlsManager;
       
       // Touch bridge availability flag (lazy init)
     private static Boolean sTouchBridgeAvailable = null;
@@ -269,7 +269,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
             // 简化的触摸事件处理 - SDL 层会处理虚拟控件的过滤
             // 所有触摸事件都发送给 SDL，SDL 层会根据 consumed fingers 列表决定是否转换为鼠标事件
 
-            var settingsManager = com.app.ralaunch.data.SettingsAccess.getInstance();
+            var settingsManager = com.app.ralaunch.core.common.SettingsAccess.getInstance();
             // if touch events are disabled in settings, do not report any touches
             if (!settingsManager.isTouchEventEnabled()) {
                 // handle touches
@@ -355,7 +355,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
                 return;
             }
 
-            var settingsManager = com.app.ralaunch.data.SettingsAccess.getInstance();
+            var settingsManager = com.app.ralaunch.core.common.SettingsAccess.getInstance();
             // if touch events are disabled in settings, do not report any touches
             if (!settingsManager.isTouchEventEnabled()) {
                 nativeClearTouchData();
@@ -505,7 +505,7 @@ public class SDLSurface extends SurfaceView implements SurfaceHolder.Callback,
     /**
      * 设置虚拟控件管理器（用于更新虚拟鼠标光标）
      */
-    public void setVirtualControlsManager(com.app.ralaunch.game.controls.GameVirtualControlsManager manager) {
+    public void setVirtualControlsManager(com.app.ralaunch.feature.game.GameVirtualControlsManager manager) {
         mVirtualControlsManager = manager;
     }
     

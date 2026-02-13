@@ -92,7 +92,7 @@ int setThreadAffinityToBigCores() {
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_app_ralaunch_core_ThreadAffinityManager_nativeSetThreadAffinityToBigCores(JNIEnv *env,
+Java_com_app_ralaunch_core_platform_runtime_ThreadAffinityManager_nativeSetThreadAffinityToBigCores(JNIEnv *env,
                                                                                    jobject thiz) {
     return setThreadAffinityToBigCores();
 }

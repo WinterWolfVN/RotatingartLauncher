@@ -56,7 +56,7 @@ int game_launcher_launch_new_dotnet_process(const char* assembly_path,
     jstring jGameId = env->NewStringUTF(game_id ? game_id : "");
 
     // Get GameLauncher class
-    jclass gameLauncherClass = env->FindClass("com/app/ralaunch/core/GameLauncher");
+    jclass gameLauncherClass = env->FindClass("com/app/ralaunch/core/platform/runtime/GameLauncher");
     if (gameLauncherClass == nullptr) {
         LOGE(LOG_TAG, "Failed to find GameLauncher class");
         env->DeleteLocalRef(jAssemblyPath);

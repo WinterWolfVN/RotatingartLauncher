@@ -10,7 +10,7 @@
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_app_ralaunch_utils_NativeMethods_nativeChdir(JNIEnv *env, jclass clazz, jstring path) {
+Java_com_app_ralaunch_core_common_util_NativeMethods_nativeChdir(JNIEnv *env, jclass clazz, jstring path) {
     if (path == nullptr) {
         return -1;
     }
@@ -38,7 +38,7 @@ static int s_stdin_write_fd = -1;
  */
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_app_ralaunch_utils_NativeMethods_nativeSetupStdinPipe(JNIEnv *env, jclass clazz) {
+Java_com_app_ralaunch_core_common_util_NativeMethods_nativeSetupStdinPipe(JNIEnv *env, jclass clazz) {
     int pipefd[2]; // [0]=read, [1]=write
     if (pipe(pipefd) != 0) {
         __android_log_print(ANDROID_LOG_ERROR, NATIVE_TAG, "pipe() failed: %s", strerror(errno));
@@ -85,7 +85,7 @@ Java_com_app_ralaunch_utils_NativeMethods_nativeSetupStdinPipe(JNIEnv *env, jcla
  */
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_app_ralaunch_utils_NativeMethods_nativeWriteStdin(JNIEnv *env, jclass clazz, jstring input) {
+Java_com_app_ralaunch_core_common_util_NativeMethods_nativeWriteStdin(JNIEnv *env, jclass clazz, jstring input) {
     if (s_stdin_write_fd < 0) {
         __android_log_print(ANDROID_LOG_WARN, NATIVE_TAG, "stdin pipe not setup, ignoring write");
         return -1;
@@ -125,7 +125,7 @@ Java_com_app_ralaunch_utils_NativeMethods_nativeWriteStdin(JNIEnv *env, jclass c
  */
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_utils_NativeMethods_nativeCloseStdinPipe(JNIEnv *env, jclass clazz) {
+Java_com_app_ralaunch_core_common_util_NativeMethods_nativeCloseStdinPipe(JNIEnv *env, jclass clazz) {
     if (s_stdin_write_fd >= 0) {
         close(s_stdin_write_fd);
         __android_log_print(ANDROID_LOG_INFO, NATIVE_TAG, "stdin pipe write_fd closed");

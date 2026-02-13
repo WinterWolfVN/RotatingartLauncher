@@ -84,18 +84,18 @@ Java_org_libsdl_app_SDLSurface_nativeClearTouchData(JNIEnv *env, jclass clazz) {
 
 // GameActivity JNI 函数
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_ui_game_GameActivity_nativeSetTouchData(JNIEnv *env, jclass clazz,
+Java_com_app_ralaunch_feature_game_legacy_GameActivity_nativeSetTouchData(JNIEnv *env, jclass clazz,
     int count, jfloatArray x_arr, jfloatArray y_arr, int screenWidth, int screenHeight) {
     setTouchDataInternal(env, count, x_arr, y_arr, screenWidth, screenHeight);
 }
 
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_ui_game_GameActivity_nativeClearTouchData(JNIEnv *env, jclass clazz) {
+Java_com_app_ralaunch_feature_game_legacy_GameActivity_nativeClearTouchData(JNIEnv *env, jclass clazz) {
     g_touch_data.count = 0;
 }
 
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeSetVirtualTouch(JNIEnv *env, jclass clazz,
+Java_com_app_ralaunch_feature_controls_bridges_SDLInputBridge_nativeSetVirtualTouch(JNIEnv *env, jclass clazz,
     jint index, jfloat x, jfloat y, jint screenWidth, jint screenHeight) {
     if (index >= 0 && index < MAX_VIRTUAL_TOUCHES) {
         g_virtual_touch.x[index] = x / screenWidth;  // 存储为归一化坐标
@@ -114,7 +114,7 @@ Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeSetVirtualTouch(JNIE
 
 // 清除虚拟触屏点（释放）
 JNIEXPORT void JNICALL
-Java_com_app_ralaunch_controls_bridges_SDLInputBridge_nativeClearVirtualTouch(JNIEnv *env, jclass clazz,
+Java_com_app_ralaunch_feature_controls_bridges_SDLInputBridge_nativeClearVirtualTouch(JNIEnv *env, jclass clazz,
     jint index) {
     if (index >= 0 && index < MAX_VIRTUAL_TOUCHES) {
         g_virtual_touch.active[index] = 0;

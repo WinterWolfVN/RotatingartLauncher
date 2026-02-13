@@ -237,7 +237,7 @@ void app_logger_init_jvm(JavaVM* vm) {
     }
 
     // Find ErrorHandler class
-    jclass local_class = (*env)->FindClass(env, "com/app/ralib/error/ErrorHandler");
+    jclass local_class = (*env)->FindClass(env, "com/app/ralaunch/core/common/ErrorHandler");
     if (!local_class) {
         __android_log_print(ANDROID_LOG_ERROR, APP_TAG "/Logger",
                           "Failed to find ErrorHandler class");
