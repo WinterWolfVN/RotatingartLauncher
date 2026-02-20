@@ -128,7 +128,7 @@ fun ThemeColorSelectDialog(
  * 渲染器选项
  */
 data class RendererOption(
-    val id: String,
+    val renderer: String,
     val name: String,
     val description: String
 )
@@ -139,7 +139,7 @@ data class RendererOption(
 @Composable
 fun RendererSelectDialog(
     currentRenderer: String,
-    renderers: List<RendererOption> = defaultRenderers(),
+    renderers: List<RendererOption>,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -158,12 +158,12 @@ fun RendererSelectDialog(
             ) {
                 items(renderers.size) { index ->
                     val renderer = renderers[index]
-                    val isSelected = renderer.id == currentRenderer
+                    val isSelected = renderer.renderer == currentRenderer
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                onSelect(renderer.id)
+                                onSelect(renderer.renderer)
                                 onDismiss()
                             },
                         shape = RoundedCornerShape(10.dp),
@@ -183,7 +183,7 @@ fun RendererSelectDialog(
                                 RadioButton(
                                     selected = isSelected,
                                     onClick = {
-                                        onSelect(renderer.id)
+                                        onSelect(renderer.renderer)
                                         onDismiss()
                                     },
                                     modifier = Modifier.size(20.dp)
@@ -216,16 +216,6 @@ fun RendererSelectDialog(
         }
     )
 }
-
-fun defaultRenderers() = listOf(
-    RendererOption("auto", "自动选择", "根据设备自动选择最佳渲染器"),
-    RendererOption("native", "Native OpenGL ES 3", "最快，有GPU加速，但可能有渲染错误"),
-    RendererOption("gl4es", "GL4ES", "最完美，游戏兼容性最强，但帧率稍慢"),
-    RendererOption("gl4es+angle", "GL4ES + ANGLE", "翻译成Vulkan，速度和兼容性最佳，推荐高通骁龙使用"),
-    RendererOption("mobileglues", "MobileGlues 1.3.3", "OpenGL 4.6 翻译至 OpenGL ES 3.2（现代化翻译层）"),
-    RendererOption("angle", "ANGLE (Vulkan Backend)", "OpenGL ES over Vulkan (Google官方，需要 Android 7.0+)"),
-    RendererOption("zink", "Zink (Mesa Vulkan)", "桌面 OpenGL over Vulkan (Mesa Zink + Turnip，需要 libOSMesa.so)")
-)
 
 /**
  * 日志查看对话框

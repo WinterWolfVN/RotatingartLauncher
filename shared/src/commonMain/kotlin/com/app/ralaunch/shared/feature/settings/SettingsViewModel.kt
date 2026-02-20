@@ -2,6 +2,7 @@ package com.app.ralaunch.shared.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.app.ralaunch.core.platform.runtime.renderer.RendererRegistry
 import com.app.ralaunch.shared.core.model.domain.BackgroundType
 import com.app.ralaunch.shared.core.model.domain.ThemeMode
 import com.app.ralaunch.shared.core.contract.repository.SettingsRepositoryV2
@@ -37,7 +38,7 @@ data class SettingsUiState(
     // 游戏设置
     val bigCoreAffinityEnabled: Boolean = false,
     val lowLatencyAudioEnabled: Boolean = false,
-    val rendererType: String = "OpenGL ES",
+    val rendererType: String = DEFAULT_RENDERER_ID,
 
     // 画质设置
     val qualityLevel: Int = 0, // 0=高, 1=中, 2=低
@@ -243,7 +244,7 @@ class SettingsViewModel(
                     // 游戏
                     bigCoreAffinityEnabled = settings.setThreadAffinityToBigCore,
                     lowLatencyAudioEnabled = settings.sdlAaudioLowLatency,
-                    rendererType = getRendererDisplayName(settings.fnaRenderer),
+                    rendererType = RendererRegistry.normalizeRendererId(settings.fnaRenderer),
                     // 画质
                     qualityLevel = settings.qualityLevel,
                     shaderLowPrecision = settings.shaderLowPrecision,
@@ -382,9 +383,10 @@ class SettingsViewModel(
     }
 
     private fun setRenderer(renderer: String) {
+        val normalized = RendererRegistry.normalizeRendererId(renderer)
         viewModelScope.launch {
-            settingsRepository.update { fnaRenderer = renderer }
-            _uiState.update { it.copy(rendererType = getRendererDisplayName(renderer)) }
+            settingsRepository.update { fnaRenderer = normalized }
+            _uiState.update { it.copy(rendererType = normalized) }
         }
     }
 
@@ -492,19 +494,6 @@ class SettingsViewModel(
         sendEffect(SettingsEffect.ShowToast("正在检查更新..."))
     }
 
-    private fun getRendererDisplayName(rendererId: String?): String {
-        return when (rendererId?.lowercase()) {
-            "auto" -> "自动选择"
-            "native" -> "Native OpenGL ES 3"
-            "gl4es" -> "GL4ES"
-            "gl4es+angle" -> "GL4ES + ANGLE"
-            "mobileglues" -> "MobileGlues"
-            "angle" -> "ANGLE"
-            "zink", "vulkan" -> "Zink (Mesa Vulkan)"
-            else -> "自动选择"
-        }
-    }
-
     private fun getLanguageDisplayName(languageCode: String): String {
         return when (languageCode) {
             "zh" -> "简体中文"
@@ -529,6 +518,8 @@ class SettingsViewModel(
         else -> BackgroundType.DEFAULT
     }
 }
+
+private const val DEFAULT_RENDERER_ID = "native"
 
 /**
  * 应用信息 - 由平台提供

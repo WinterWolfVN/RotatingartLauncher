@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -31,18 +32,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.app.ralaunch.shared.core.component.dialogs.RendererOption
+import com.app.ralaunch.shared.core.component.dialogs.RendererSelectDialog
 import com.app.ralaunch.shared.core.model.ui.GameItemUi
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun GameInfoEditSubScreen(
     game: GameItemUi,
+    rendererOptions: List<RendererOption>,
     onBack: () -> Unit,
     onSave: (GameItemUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var editedName by remember(game.id) { mutableStateOf(game.displayedName) }
     var editedDescription by remember(game.id) { mutableStateOf(game.displayedDescription ?: "") }
+    val initialRendererOverride = remember(game.id, rendererOptions) {
+        game.rendererOverride?.takeIf { rendererId ->
+            rendererOptions.any { option -> option.renderer == rendererId }
+        }
+    }
+    var editedRendererOverride by remember(game.id, rendererOptions) { mutableStateOf(initialRendererOverride) }
+    var showRendererDialog by remember { mutableStateOf(false) }
+
+    val rendererDisplayName = remember(editedRendererOverride, rendererOptions) {
+        editedRendererOverride?.let { rendererId ->
+            rendererOptions.firstOrNull { it.renderer == rendererId }?.name ?: rendererId
+        } ?: "跟随全局设置"
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -93,6 +110,42 @@ fun GameInfoEditSubScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Text(
+                text = "渲染器（可选）",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            OutlinedTextField(
+                value = rendererDisplayName,
+                onValueChange = {},
+                label = { Text("渲染器覆盖") },
+                readOnly = true,
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { editedRendererOverride = null },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("跟随全局")
+                }
+
+                Button(
+                    onClick = { showRendererDialog = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("选择渲染器")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -104,7 +157,8 @@ fun GameInfoEditSubScreen(
                     onClick = {
                         val updated = game.copy(
                             displayedName = editedName.trim(),
-                            displayedDescription = editedDescription.trim().ifEmpty { null }
+                            displayedDescription = editedDescription.trim().ifEmpty { null },
+                            rendererOverride = editedRendererOverride
                         )
                         onSave(updated)
                         onBack()
@@ -116,5 +170,16 @@ fun GameInfoEditSubScreen(
                 }
             }
         }
+    }
+
+    if (showRendererDialog) {
+        RendererSelectDialog(
+            currentRenderer = editedRendererOverride ?: (rendererOptions.firstOrNull()?.renderer ?: "native"),
+            renderers = rendererOptions,
+            onSelect = { renderer ->
+                editedRendererOverride = renderer
+            },
+            onDismiss = { showRendererDialog = false }
+        )
     }
 }

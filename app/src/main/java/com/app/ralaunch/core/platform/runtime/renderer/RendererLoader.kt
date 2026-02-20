@@ -11,25 +11,26 @@ import com.app.ralaunch.core.common.util.AppLogger
 object RendererLoader {
     private const val TAG = "RendererLoader"
 
-    fun loadRenderer(context: Context, rendererId: String): Boolean {
+    fun loadRenderer(context: Context, renderer: String): Boolean {
         return try {
-            val renderer = RendererConfig.getRendererById(rendererId)
-            if (renderer == null) {
-                AppLogger.error(TAG, "Unknown renderer: $rendererId")
+            val normalizedRenderer = RendererRegistry.normalizeRendererId(renderer)
+            val rendererInfo = RendererRegistry.getRendererInfo(normalizedRenderer)
+            if (rendererInfo == null) {
+                AppLogger.error(TAG, "Unknown renderer: $renderer")
                 return false
             }
 
-            if (!RendererConfig.isRendererCompatible(context, rendererId)) {
+            if (!RendererRegistry.isRendererCompatible(normalizedRenderer)) {
                 AppLogger.error(TAG, "Renderer is not compatible with this device")
                 return false
             }
 
-            val envMap = RendererConfig.getRendererEnv(context, rendererId)
-            envMap.forEach { (k, v) -> k?.let { EnvVarsManager.quickSetEnvVar(it, v) } }
+            val envMap = RendererRegistry.buildRendererEnv(normalizedRenderer)
+            EnvVarsManager.quickSetEnvVars(envMap)
 
-            if (renderer.needsPreload && renderer.eglLibrary != null) {
+            if (rendererInfo.needsPreload && rendererInfo.eglLibrary != null) {
                 try {
-                    val eglLibPath = RendererConfig.getRendererLibraryPath(context, renderer.eglLibrary!!)
+                    val eglLibPath = RendererRegistry.getRendererLibraryPath(rendererInfo.eglLibrary)
                     EnvVarsManager.quickSetEnvVar("FNA3D_OPENGL_LIBRARY", eglLibPath)
                 } catch (e: UnsatisfiedLinkError) {
                     AppLogger.error(TAG, "Failed to preload renderer library: ${e.message}")
@@ -47,7 +48,7 @@ object RendererLoader {
                 AppLogger.info(TAG, "RALCORE_RUNTIMEDIR = $runtimePath")
                 
                 // 设置 LD_LIBRARY_PATH 包含 runtime_libs 目录，让 dlopen 能找到库
-                val currentLdPath = android.system.Os.getenv("LD_LIBRARY_PATH") ?: ""
+                val currentLdPath = Os.getenv("LD_LIBRARY_PATH") ?: ""
                 val newLdPath = if (currentLdPath.isNotEmpty()) {
                     "$runtimePath:$nativeLibDir:$currentLdPath"
                 } else {
@@ -74,15 +75,5 @@ object RendererLoader {
             ralcoreEgl?.contains("angle") == true -> "angle"
             else -> "native"
         }
-    }
-
-    @JvmStatic
-    fun clearRendererEnv() {
-        listOf(
-            "RALCORE_RENDERER", "RALCORE_EGL", "LIBGL_GLES", "LIBGL_ES",
-            "LIBGL_MIPMAP", "LIBGL_NORMALIZE", "LIBGL_NOINTOVLHACK", "LIBGL_NOERROR",
-            "GALLIUM_DRIVER", "MESA_GL_VERSION_OVERRIDE", "MESA_GLSL_VERSION_OVERRIDE",
-            "MESA_NO_ERROR", "ZINK_DESCRIPTORS"
-        ).forEach { EnvVarsManager.quickSetEnvVar(it, null) }
     }
 }

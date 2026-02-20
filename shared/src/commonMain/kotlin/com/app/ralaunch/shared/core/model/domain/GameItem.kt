@@ -18,6 +18,7 @@ import kotlin.io.path.Path
  * @property gameExePathRelative 游戏主程序相对路径（相对于游戏存储根目录）
  * @property iconPathRelative 图标相对路径（相对于游戏存储根目录），可为空
  * @property modLoaderEnabled 是否启用 ModLoader
+ * @property rendererOverride 渲染器覆盖（null 表示跟随全局设置）
  * @property gameListStorageParent 父存储实例引用（非序列化，反序列化后需手动设置）
  */
 @Serializable
@@ -29,6 +30,7 @@ data class GameItem(
     var gameExePathRelative: String,
     var iconPathRelative: String? = null,
     var modLoaderEnabled: Boolean = true,
+    var rendererOverride: String? = null,
 
     @Transient
     var gameListStorageParent: GameListStorage? = null

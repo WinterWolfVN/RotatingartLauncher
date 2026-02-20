@@ -1,8 +1,6 @@
 package com.app.ralaunch.core.common
 
-import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import com.app.ralaunch.shared.core.model.domain.GameItem
 import com.app.ralaunch.feature.patch.data.PatchManager
 import org.koin.java.KoinJavaComponent
@@ -44,22 +42,17 @@ class GameLaunchManager(private val context: Context) {
         val enabledPatches = patchManager?.getApplicableAndEnabledPatches(gameCategoryId, gameFile.toPath()) ?: emptyList()
         AppLogger.info(TAG, "Game: $gameCategoryId, Applicable patches: ${enabledPatches.size}")
 
-        val intent = Intent(context, GameActivity::class.java).apply {
-            putExtra("GAME_NAME", game.displayedName)
-            putExtra("ASSEMBLY_PATH", gameFile.absolutePath)
-            putExtra("GAME_ID", game.gameId)
-            putExtra("GAME_PATH", gameDir.absolutePath)
-
-            if (enabledPatches.isNotEmpty()) {
-                putStringArrayListExtra(
-                    "ENABLED_PATCH_IDS",
-                    ArrayList(enabledPatches.map { it.manifest.id })
-                )
-            }
-        }
-
-        context.startActivity(intent)
-        (context as? Activity)?.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        GameActivity.launch(
+            context = context,
+            gameName = game.displayedName,
+            assemblyPath = gameFile.absolutePath,
+            gameId = game.gameId,
+            gamePath = gameDir.absolutePath,
+            rendererOverride = game.rendererOverride,
+            enabledPatchIds = enabledPatches
+                .takeIf { it.isNotEmpty() }
+                ?.let { ArrayList(it.map { patch -> patch.manifest.id }) }
+        )
 
         return true
     }
@@ -79,13 +72,11 @@ class GameLaunchManager(private val context: Context) {
             return false
         }
 
-        val intent = Intent(context, GameActivity::class.java).apply {
-            putExtra("ASSEMBLY_PATH", assemblyFile.absolutePath)
-            putExtra("GAME_NAME", assemblyFile.name)
-        }
-
-        context.startActivity(intent)
-        (context as? Activity)?.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        GameActivity.launch(
+            context = context,
+            gameName = assemblyFile.name,
+            assemblyPath = assemblyFile.absolutePath
+        )
 
         return true
     }

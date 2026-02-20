@@ -13,7 +13,8 @@ data class GameItemUi(
     val displayedDescription: String? = null,
     val iconPathFull: String? = null,
     val isShortcut: Boolean = false,
-    val modLoaderEnabled: Boolean = true
+    val modLoaderEnabled: Boolean = true,
+    val rendererOverride: String? = null
 ) {
     /**
      * @deprecated Use `id` instead. This alias will be removed in a future version.
@@ -31,7 +32,8 @@ fun GameItem.toUiModel(): GameItemUi = GameItemUi(
     displayedName = displayedName,
     displayedDescription = displayedDescription,
     iconPathFull = iconPathFull,  // Use absolute path for UI
-    modLoaderEnabled = modLoaderEnabled
+    modLoaderEnabled = modLoaderEnabled,
+    rendererOverride = rendererOverride
 )
 
 /**
@@ -54,8 +56,8 @@ fun GameItem.applyFromUiModel(uiModel: GameItemUi): GameItem {
     this.displayedName = uiModel.displayedName
     this.displayedDescription = uiModel.displayedDescription ?: ""
     this.modLoaderEnabled = uiModel.modLoaderEnabled
+    this.rendererOverride = uiModel.rendererOverride
     // 未来可扩展更多可编辑字段...
 
     return this
 }
-

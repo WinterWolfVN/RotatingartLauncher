@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import com.app.ralaunch.feature.patch.data.PatchManager
+import com.app.ralaunch.core.platform.runtime.renderer.RendererRegistry
+import com.app.ralaunch.shared.core.component.dialogs.RendererOption
 import com.app.ralaunch.shared.core.model.domain.BackgroundType
 import com.app.ralaunch.shared.core.contract.repository.SettingsRepositoryV2
 import com.app.ralaunch.shared.feature.settings.*
@@ -238,21 +240,16 @@ internal fun getLanguageCode(languageName: String): String {
     }
 }
 
-internal fun getRendererCode(rendererName: String): String {
-    return when (rendererName) {
-        "auto" -> "auto"
-        "自动选择" -> "auto"
-        "自动" -> "auto"
-        "native" -> "native"
-        "Native OpenGL ES 3" -> "native"
-        "GL4ES" -> "gl4es"
-        "GL4ES + ANGLE" -> "gl4es+angle"
-        "MobileGlues" -> "mobileglues"
-        "mobileglues" -> "mobileglues"
-        "ANGLE" -> "angle"
-        "angle" -> "angle"
-        "Zink (Mesa Vulkan)" -> "zink"
-        "zink" -> "zink"
-        else -> "auto"
+internal fun buildRendererOptions(): List<RendererOption> {
+    return buildList {
+        RendererRegistry.getCompatibleRenderers().forEach { info ->
+            add(
+                RendererOption(
+                    renderer = info.id,
+                    name = RendererRegistry.getRendererDisplayName(info.id),
+                    description = RendererRegistry.getRendererDescription(info.id)
+                )
+            )
+        }
     }
 }

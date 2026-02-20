@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.app.ralaunch.shared.core.component.AppNavigationRail
+import com.app.ralaunch.shared.core.component.dialogs.RendererOption
 import com.app.ralaunch.shared.core.navigation.*
 import com.app.ralaunch.shared.core.theme.LocalHazeState
 import com.app.ralaunch.shared.core.theme.RaLaunchTheme
@@ -46,6 +47,7 @@ fun MainApp(
     onLaunchClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
     onEditClick: (updatedGame: GameItemUi) -> Unit = {},
+    gameRendererOptions: List<RendererOption> = emptyList(),
     iconLoader: @Composable (String?, Modifier) -> Unit = { _, _ -> },
     // 页面内容 Slots
     controlsContent: @Composable () -> Unit = { PlaceholderScreen("控制布局") },
@@ -166,6 +168,7 @@ fun MainApp(
                                 onLaunchClick = onLaunchClick,
                                 onDeleteClick = onDeleteClick,
                                 onEditClick = onEditClick,
+                                gameRendererOptions = gameRendererOptions,
                                 iconLoader = iconLoader,
                                 controlsContent = controlsContent,
                                 downloadContent = downloadContent,
@@ -187,6 +190,7 @@ fun MainApp(
                                     onLaunchClick = onLaunchClick,
                                     onDeleteClick = onDeleteClick,
                                     onEditClick = onEditClick,
+                                    gameRendererOptions = gameRendererOptions,
                                     iconLoader = iconLoader,
                                     controlsContent = controlsContent,
                                     downloadContent = downloadContent,
@@ -245,6 +249,7 @@ private fun PageContent(
     onLaunchClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onEditClick: (updatedGame: GameItemUi) -> Unit,
+    gameRendererOptions: List<RendererOption>,
     iconLoader: @Composable (String?, Modifier) -> Unit,
     controlsContent: @Composable () -> Unit,
     downloadContent: @Composable () -> Unit,
@@ -281,6 +286,7 @@ private fun PageContent(
             if (game != null) {
                 GameInfoEditSubScreen(
                     game = game,
+                    rendererOptions = gameRendererOptions,
                     onBack = { navState.goBack() },
                     onSave = onEditClick
                 )

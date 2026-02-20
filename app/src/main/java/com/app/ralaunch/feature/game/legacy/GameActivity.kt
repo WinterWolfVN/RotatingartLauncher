@@ -1,6 +1,7 @@
 package com.app.ralaunch.feature.game.legacy
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -36,10 +37,62 @@ class GameActivity : SDLActivity(), GameContract.View {
     companion object {
         private const val TAG = "GameActivity"
         private const val CONTROL_EDITOR_REQUEST_CODE = 2001
+        const val EXTRA_GAME_NAME = "GAME_NAME"
+        const val EXTRA_ASSEMBLY_PATH = "ASSEMBLY_PATH"
+        const val EXTRA_GAME_ID = "GAME_ID"
+        const val EXTRA_GAME_PATH = "GAME_PATH"
+        const val EXTRA_ENABLED_PATCH_IDS = "ENABLED_PATCH_IDS"
+        const val EXTRA_GAME_RENDERER_OVERRIDE = "GAME_RENDERER_OVERRIDE"
 
         @JvmStatic
         var instance: GameActivity? = null
             private set
+
+        @JvmStatic
+        fun createLaunchIntent(
+            context: Context,
+            gameName: String,
+            assemblyPath: String,
+            gameId: String? = null,
+            gamePath: String? = null,
+            rendererOverride: String? = null,
+            enabledPatchIds: ArrayList<String>? = null
+        ): Intent {
+            return Intent(context, GameActivity::class.java).apply {
+                putExtra(EXTRA_GAME_NAME, gameName)
+                putExtra(EXTRA_ASSEMBLY_PATH, assemblyPath)
+                gameId?.let { putExtra(EXTRA_GAME_ID, it) }
+                gamePath?.let { putExtra(EXTRA_GAME_PATH, it) }
+                rendererOverride?.let { putExtra(EXTRA_GAME_RENDERER_OVERRIDE, it) }
+                enabledPatchIds
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { putStringArrayListExtra(EXTRA_ENABLED_PATCH_IDS, it) }
+            }
+        }
+
+        @JvmStatic
+        fun launch(
+            context: Context,
+            gameName: String,
+            assemblyPath: String,
+            gameId: String? = null,
+            gamePath: String? = null,
+            rendererOverride: String? = null,
+            enabledPatchIds: ArrayList<String>? = null
+        ) {
+            context.startActivity(
+                createLaunchIntent(
+                    context = context,
+                    gameName = gameName,
+                    assemblyPath = assemblyPath,
+                    gameId = gameId,
+                    gamePath = gamePath,
+                    rendererOverride = rendererOverride,
+                    enabledPatchIds = enabledPatchIds
+                )
+            )
+            (context as? Activity)?.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        }
 
         // ==================== 静态方法供 JNI/其他类调用 ====================
 

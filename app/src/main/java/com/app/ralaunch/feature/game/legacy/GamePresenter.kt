@@ -47,7 +47,7 @@ class GamePresenter : GameContract.Presenter {
         return try {
             val intent = view.getActivityIntent()
 
-            val assemblyPath = intent.getStringExtra("ASSEMBLY_PATH")
+            val assemblyPath = intent.getStringExtra(GameActivity.EXTRA_ASSEMBLY_PATH)
 
             if (assemblyPath.isNullOrEmpty()) {
                 AppLogger.error(TAG, "Assembly path is null or empty")
@@ -72,19 +72,22 @@ class GamePresenter : GameContract.Presenter {
                 return -2
             }
             
-            // 不再根据 game_info.json 中的 default_renderer 强制切换渲染器
-            // 始终使用用户在设置中选择的渲染器
+            val rendererOverride = intent.getStringExtra(GameActivity.EXTRA_GAME_RENDERER_OVERRIDE)
+            val enabledPatchIds = intent.getStringArrayListExtra(GameActivity.EXTRA_ENABLED_PATCH_IDS)
+            val patchManager: PatchManager? = try {
+                KoinJavaComponent.getOrNull(PatchManager::class.java)
+            } catch (e: Exception) { null }
+            val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
+                patchManager?.getPatchesByIds(it)
+            }
 
-                val enabledPatchIds = intent.getStringArrayListExtra("ENABLED_PATCH_IDS")
-                val patchManager: PatchManager? = try {
-                    KoinJavaComponent.getOrNull(PatchManager::class.java)
-                } catch (e: Exception) { null }
-                val enabledPatches = enabledPatchIds?.takeIf { it.isNotEmpty() }?.let {
-                    patchManager?.getPatchesByIds(it)
-                }
-                    
-            val exitCode = GameLauncher.launchDotNetAssembly(assemblyPath, emptyArray(), enabledPatches).also { code ->
-                        onGameExit(code, GameLauncher.getLastErrorMessage())
+            val exitCode = GameLauncher.launchDotNetAssembly(
+                assemblyPath = assemblyPath,
+                args = emptyArray(),
+                enabledPatches = enabledPatches,
+                rendererOverride = rendererOverride
+            ).also { code ->
+                onGameExit(code, GameLauncher.getLastErrorMessage())
             }
 
             if (exitCode == 0) {
@@ -214,7 +217,7 @@ class GamePresenter : GameContract.Presenter {
                 // 核心组件
                 "GameLauncher", "GamePresenter", "RuntimeLibLoader", "RuntimeLibraryLoader",
                 // 渲染器
-                "RendererConfig", "RendererLoader",
+                "RendererEnvironmentConfigurator", "RendererRegistry", "RendererLoader",
                 // .NET 运行时
                 "DotNetHost", "DotNetLauncher", "CoreCLR", "MonoGame",
                 // SDL 和音频

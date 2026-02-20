@@ -22,6 +22,7 @@ import com.app.ralaunch.shared.core.theme.AppThemeState
 import com.app.ralaunch.core.ui.dialog.PatchManagementDialogCompose
 import com.app.ralaunch.core.common.util.AssetIntegrityChecker
 import com.app.ralaunch.R
+import com.app.ralaunch.core.platform.runtime.renderer.RendererRegistry
 import com.app.ralaunch.core.platform.runtime.RuntimeLibraryLoader
 import com.app.ralaunch.core.common.util.LocaleManager
 import kotlinx.coroutines.launch
@@ -51,7 +52,10 @@ fun SettingsScreenWrapper(
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SettingsViewModel(settingsRepository, appInfo) as T
+                    return SettingsViewModel(
+                        settingsRepository = settingsRepository,
+                        appInfo = appInfo
+                    ) as T
                 }
             }
         )[SettingsViewModel::class.java]
@@ -191,7 +195,7 @@ fun SettingsScreenWrapper(
                     state = GameState(
                         bigCoreAffinityEnabled = uiState.bigCoreAffinityEnabled,
                         lowLatencyAudioEnabled = uiState.lowLatencyAudioEnabled,
-                        rendererType = uiState.rendererType,
+                        rendererDisplayName = RendererRegistry.getRendererDisplayName(uiState.rendererType),
                         qualityLevel = uiState.qualityLevel,
                         shaderLowPrecision = uiState.shaderLowPrecision,
                         targetFps = uiState.targetFps
@@ -320,22 +324,14 @@ fun SettingsScreenWrapper(
     if (showRendererDialog) {
         // 获取设备上实际可用的渲染器
         val availableRenderers = remember {
-            val compatible = com.app.ralaunch.core.platform.runtime.renderer.RendererConfig.getCompatibleRenderers(context)
-            // 始终包含 "自动选择" 选项
-            val list = mutableListOf(
-                RendererOption("auto", "自动选择", "根据设备自动选择最佳渲染器")
-            )
-            compatible.forEach { info ->
-                list.add(RendererOption(info.id, info.displayName ?: info.id, info.description ?: ""))
-            }
-            list
+            buildRendererOptions()
         }
         
         RendererSelectDialog(
-            currentRenderer = getRendererCode(uiState.rendererType),
+            currentRenderer = uiState.rendererType,
             renderers = availableRenderers,
-            onSelect = { rendererId ->
-                viewModel.onEvent(SettingsEvent.SetRenderer(rendererId))
+            onSelect = { renderer ->
+                viewModel.onEvent(SettingsEvent.SetRenderer(renderer))
             },
             onDismiss = { showRendererDialog = false }
         )

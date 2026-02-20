@@ -5,6 +5,7 @@ import com.app.ralaunch.shared.core.model.domain.AppSettings
 import com.app.ralaunch.shared.core.model.domain.KeyboardType
 import com.app.ralaunch.shared.core.model.domain.ThemeMode
 import com.app.ralaunch.shared.core.contract.repository.SettingsRepositoryV2
+import com.app.ralaunch.core.platform.runtime.renderer.RendererRegistry
 import kotlinx.coroutines.runBlocking
 import org.koin.java.KoinJavaComponent
 
@@ -132,8 +133,8 @@ object SettingsAccess {
         set(value) = update { setThreadAffinityToBigCore = value }
 
     var fnaRenderer: String
-        get() = settings.fnaRenderer
-        set(value) = update { fnaRenderer = value }
+        get() = RendererRegistry.normalizeRendererId(settings.fnaRenderer)
+        set(value) = update { fnaRenderer = RendererRegistry.normalizeRendererId(value) }
 
     var isFnaEnableMapBufferRangeOptimization: Boolean
         get() = settings.fnaMapBufferRangeOptimization

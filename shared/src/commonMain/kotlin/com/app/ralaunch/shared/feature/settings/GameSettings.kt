@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 data class GameState(
     val bigCoreAffinityEnabled: Boolean = false, // 大核亲和性
     val lowLatencyAudioEnabled: Boolean = false, // 低延迟音频
-    val rendererType: String = "auto",           // 渲染器类型
+    val rendererDisplayName: String = "Native OpenGL ES 3", // 渲染器显示名称
     val qualityLevel: Int = 0,                   // 0=高画质, 1=中画质, 2=低画质
     val shaderLowPrecision: Boolean = false,     // 低精度着色器
     val targetFps: Int = 0                       // 帧率限制, 0=无限制
@@ -54,7 +54,7 @@ fun GameSettingsContent(
 
         // 渲染设置
         RendererSection(
-            rendererType = state.rendererType,
+            rendererDisplayName = state.rendererDisplayName,
             onRendererClick = onRendererClick
         )
 
@@ -100,14 +100,14 @@ private fun PerformanceSection(
 
 @Composable
 private fun RendererSection(
-    rendererType: String,
+    rendererDisplayName: String,
     onRendererClick: () -> Unit
 ) {
     SettingsSection(title = "渲染") {
         ClickableSettingItem(
             title = "渲染器",
             subtitle = "选择图形渲染后端",
-            value = rendererType,
+            value = rendererDisplayName,
             icon = Icons.Default.Tv,
             onClick = onRendererClick
         )

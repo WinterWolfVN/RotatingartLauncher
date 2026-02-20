@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
@@ -49,6 +50,7 @@ import com.app.ralaunch.feature.main.screens.DownloadScreenWrapper
 import com.app.ralaunch.feature.main.screens.FileBrowserScreenWrapper
 import com.app.ralaunch.feature.main.screens.ImportScreenWrapper
 import com.app.ralaunch.feature.main.screens.SettingsScreenWrapper
+import com.app.ralaunch.feature.main.screens.buildRendererOptions
 import com.app.ralaunch.feature.main.MainViewModel
 import com.app.ralaunch.feature.main.MainViewModelFactory
 import com.app.ralaunch.core.common.util.AppLogger
@@ -280,8 +282,12 @@ private fun MainActivityContent(
     onImportCompletionHandled: () -> Unit = {},
     permissionManager: PermissionManager? = null
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val hazeState = remember { HazeState() }
+    val gameRendererOptions = remember {
+        buildRendererOptions()
+    }
 
     // 导入状态 - 提升到此层级避免导航时丢失
     var importGameFilePath by remember { mutableStateOf<String?>(null) }
@@ -368,6 +374,7 @@ private fun MainActivityContent(
             onLaunchClick = onLaunchClick,
             onDeleteClick = onDeleteClick,
             onEditClick = onEditClick,
+            gameRendererOptions = gameRendererOptions,
             iconLoader = { iconPath, modifier ->
                 iconPath?.let {
                     AsyncImage(

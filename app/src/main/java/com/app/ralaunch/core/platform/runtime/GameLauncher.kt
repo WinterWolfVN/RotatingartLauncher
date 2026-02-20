@@ -22,7 +22,7 @@ import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.core.platform.runtime.dotnet.DotNetLauncher
 import com.app.ralaunch.core.common.util.AppLogger
 import com.app.ralaunch.core.common.util.NativeMethods
-import com.app.ralaunch.core.platform.runtime.renderer.RendererConfig
+import com.app.ralaunch.core.platform.runtime.renderer.RendererEnvironmentConfigurator
 import com.app.ralaunch.feature.patch.data.Patch
 import com.app.ralaunch.feature.patch.data.PatchManager
 import com.app.ralaunch.core.platform.android.ProcessLauncherService
@@ -197,12 +197,19 @@ object GameLauncher {
      *             Command line arguments to pass to the assembly
      * @param enabledPatches 要启用的补丁列表，null 表示不使用补丁
      *                       List of patches to enable, null means no patches
+     * @param rendererOverride 可选的渲染器覆盖（null 表示使用全局设置）
+     *                         Optional renderer override (null means use global setting)
      * @return 程序集退出代码：
      *         Assembly exit code:
      *         - 0 或正数：正常退出码 / Normal exit code
      *         - -1：启动失败（文件不存在或发生异常）/ Launch failed (file not found or exception)
      */
-    fun launchDotNetAssembly(assemblyPath: String, args: Array<String>, enabledPatches: List<Patch>? = null): Int {
+    fun launchDotNetAssembly(
+        assemblyPath: String,
+        args: Array<String>,
+        enabledPatches: List<Patch>? = null,
+        rendererOverride: String? = null
+    ): Int {
         try {
             AppLogger.info(TAG, "=== 开始启动 .NET 程序集 / Starting .NET Assembly Launch ===")
             AppLogger.info(TAG, "程序集路径 / Assembly path: $assemblyPath")
@@ -331,7 +338,10 @@ object GameLauncher {
             // 步骤8：配置渲染器
             // Step 8: Configure renderer
             AppLogger.debug(TAG, "配置渲染器环境 / Applying renderer environment...")
-            RendererConfig.applyRendererEnvironment(appContext)
+            RendererEnvironmentConfigurator.apply(
+                context = appContext,
+                rendererOverride = rendererOverride
+            )
             AppLogger.debug(TAG, "渲染器环境配置完成 / Renderer environment applied: OK")
 
             // 步骤9：设置线程亲和性

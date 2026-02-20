@@ -33,25 +33,6 @@ enum class BackgroundType(val value: String) {
 }
 
 /**
- * 渲染器类型
- */
-@Serializable
-enum class FnaRenderer(val value: String, val displayName: String) {
-    AUTO("auto", "Auto"),
-    NATIVE("native", "Native OpenGL ES 3"),
-    GL4ES("gl4es", "GL4ES"),
-    GL4ES_ANGLE("gl4es+angle", "GL4ES + ANGLE"),
-    MOBILEGLUES("mobileglues", "MobileGlues"),
-    ANGLE("angle", "ANGLE"),
-    ZINK("zink", "Zink");
-
-    companion object {
-        fun fromValue(value: String): FnaRenderer =
-            entries.find { it.value == value } ?: AUTO
-    }
-}
-
-/**
  * 键盘类型
  */
 @Serializable
@@ -110,7 +91,7 @@ data class AppSettings(
     var setThreadAffinityToBigCore: Boolean = false,
 
     // FNA 设置
-    var fnaRenderer: String = FnaRenderer.AUTO.value,
+    var fnaRenderer: String = "native",
     var fnaMapBufferRangeOptimization: Boolean = true,
 
     // 画质设置
