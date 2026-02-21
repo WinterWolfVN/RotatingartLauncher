@@ -304,6 +304,7 @@ object GameLauncher {
                 // 音频配置
                 // Audio configuration
                 "SDL_AAUDIO_LOW_LATENCY" to if (settings.isSdlAaudioLowLatency) "1" else "0",
+                "RAL_AUDIO_BUFFERSIZE" to settings.ralAudioBufferSize?.toString(),
             )
             AppLogger.debug(TAG, "游戏设置环境变量配置完成 / Game settings environment variables set: OK")
 

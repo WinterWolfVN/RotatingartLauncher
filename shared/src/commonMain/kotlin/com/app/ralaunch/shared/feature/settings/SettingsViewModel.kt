@@ -38,6 +38,7 @@ data class SettingsUiState(
     // 游戏设置
     val bigCoreAffinityEnabled: Boolean = false,
     val lowLatencyAudioEnabled: Boolean = false,
+    val ralAudioBufferSize: Int? = null,
     val rendererType: String = DEFAULT_RENDERER_ID,
 
     // 画质设置
@@ -83,6 +84,7 @@ sealed class SettingsEvent {
     // 游戏
     data class SetBigCoreAffinity(val enabled: Boolean) : SettingsEvent()
     data class SetLowLatencyAudio(val enabled: Boolean) : SettingsEvent()
+    data class SetRalAudioBufferSize(val size: Int?) : SettingsEvent()
     data class SetRenderer(val renderer: String) : SettingsEvent()
     
     // 画质
@@ -188,6 +190,7 @@ class SettingsViewModel(
             // 游戏
             is SettingsEvent.SetBigCoreAffinity -> setBigCoreAffinity(event.enabled)
             is SettingsEvent.SetLowLatencyAudio -> setLowLatencyAudio(event.enabled)
+            is SettingsEvent.SetRalAudioBufferSize -> setRalAudioBufferSize(event.size)
             is SettingsEvent.SetRenderer -> setRenderer(event.renderer)
             is SettingsEvent.OpenRendererSelector -> sendEffect(SettingsEffect.OpenRendererDialog)
             
@@ -244,6 +247,7 @@ class SettingsViewModel(
                     // 游戏
                     bigCoreAffinityEnabled = settings.setThreadAffinityToBigCore,
                     lowLatencyAudioEnabled = settings.sdlAaudioLowLatency,
+                    ralAudioBufferSize = normalizeRalAudioBufferSize(settings.ralAudioBufferSize),
                     rendererType = RendererRegistry.normalizeRendererId(settings.fnaRenderer),
                     // 画质
                     qualityLevel = settings.qualityLevel,
@@ -380,6 +384,20 @@ class SettingsViewModel(
             settingsRepository.update { sdlAaudioLowLatency = enabled }
             _uiState.update { it.copy(lowLatencyAudioEnabled = enabled) }
         }
+    }
+
+    private fun setRalAudioBufferSize(size: Int?) {
+        val normalized = normalizeRalAudioBufferSize(size)
+        viewModelScope.launch {
+            settingsRepository.update { ralAudioBufferSize = normalized }
+            _uiState.update { it.copy(ralAudioBufferSize = normalized) }
+        }
+    }
+
+    private fun normalizeRalAudioBufferSize(value: Int?): Int? {
+        if (value == null) return null
+        if (value < 16 || value > 1024) return null
+        return if ((value and (value - 1)) == 0) value else null
     }
 
     private fun setRenderer(renderer: String) {

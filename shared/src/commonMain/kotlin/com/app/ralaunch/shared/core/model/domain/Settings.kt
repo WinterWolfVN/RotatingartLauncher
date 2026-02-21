@@ -116,6 +116,7 @@ data class AppSettings(
 
     // 音频设置
     var sdlAaudioLowLatency: Boolean = false,
+    var ralAudioBufferSize: Int? = null,
 
     // 联机设置
     var multiplayerEnabled: Boolean = false,

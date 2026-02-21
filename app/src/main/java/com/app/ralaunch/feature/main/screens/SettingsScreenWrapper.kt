@@ -195,6 +195,7 @@ fun SettingsScreenWrapper(
                     state = GameState(
                         bigCoreAffinityEnabled = uiState.bigCoreAffinityEnabled,
                         lowLatencyAudioEnabled = uiState.lowLatencyAudioEnabled,
+                        ralAudioBufferSize = uiState.ralAudioBufferSize,
                         rendererDisplayName = RendererRegistry.getRendererDisplayName(uiState.rendererType),
                         qualityLevel = uiState.qualityLevel,
                         shaderLowPrecision = uiState.shaderLowPrecision,
@@ -202,6 +203,7 @@ fun SettingsScreenWrapper(
                     ),
                     onBigCoreAffinityChange = { viewModel.onEvent(SettingsEvent.SetBigCoreAffinity(it)) },
                     onLowLatencyAudioChange = { viewModel.onEvent(SettingsEvent.SetLowLatencyAudio(it)) },
+                    onRalAudioBufferSizeChange = { viewModel.onEvent(SettingsEvent.SetRalAudioBufferSize(it)) },
                     onRendererClick = { viewModel.onEvent(SettingsEvent.OpenRendererSelector) },
                     onQualityLevelChange = { viewModel.onEvent(SettingsEvent.SetQualityLevel(it)) },
                     onShaderLowPrecisionChange = { viewModel.onEvent(SettingsEvent.SetShaderLowPrecision(it)) },

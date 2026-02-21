@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 /**
  * 游戏设置状态
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 data class GameState(
     val bigCoreAffinityEnabled: Boolean = false, // 大核亲和性
     val lowLatencyAudioEnabled: Boolean = false, // 低延迟音频
+    val ralAudioBufferSize: Int? = null,         // RAL_AUDIO_BUFFERSIZE
     val rendererDisplayName: String = "Native OpenGL ES 3", // 渲染器显示名称
     val qualityLevel: Int = 0,                   // 0=高画质, 1=中画质, 2=低画质
     val shaderLowPrecision: Boolean = false,     // 低精度着色器
@@ -31,6 +33,7 @@ fun GameSettingsContent(
     state: GameState,
     onBigCoreAffinityChange: (Boolean) -> Unit,
     onLowLatencyAudioChange: (Boolean) -> Unit,
+    onRalAudioBufferSizeChange: (Int?) -> Unit,
     onRendererClick: () -> Unit,
     onQualityLevelChange: (Int) -> Unit,
     onShaderLowPrecisionChange: (Boolean) -> Unit,
@@ -48,8 +51,10 @@ fun GameSettingsContent(
         PerformanceSection(
             bigCoreAffinityEnabled = state.bigCoreAffinityEnabled,
             lowLatencyAudioEnabled = state.lowLatencyAudioEnabled,
+            ralAudioBufferSize = state.ralAudioBufferSize,
             onBigCoreAffinityChange = onBigCoreAffinityChange,
-            onLowLatencyAudioChange = onLowLatencyAudioChange
+            onLowLatencyAudioChange = onLowLatencyAudioChange,
+            onRalAudioBufferSizeChange = onRalAudioBufferSizeChange
         )
 
         // 渲染设置
@@ -74,8 +79,10 @@ fun GameSettingsContent(
 private fun PerformanceSection(
     bigCoreAffinityEnabled: Boolean,
     lowLatencyAudioEnabled: Boolean,
+    ralAudioBufferSize: Int?,
     onBigCoreAffinityChange: (Boolean) -> Unit,
-    onLowLatencyAudioChange: (Boolean) -> Unit
+    onLowLatencyAudioChange: (Boolean) -> Unit,
+    onRalAudioBufferSizeChange: (Int?) -> Unit
 ) {
     SettingsSection(title = "性能") {
         SwitchSettingItem(
@@ -95,7 +102,35 @@ private fun PerformanceSection(
             checked = lowLatencyAudioEnabled,
             onCheckedChange = onLowLatencyAudioChange
         )
+
+        SettingsDivider()
+
+        SliderSettingItem(
+            title = "音频缓冲区大小",
+            subtitle = "设置 FAudio 和 FMOD 的缓冲区大小，较小的值可降低音频延迟但可能增加断音风险",
+            icon = Icons.Default.Tune,
+            value = audioBufferSizeToSliderPosition(ralAudioBufferSize),
+            valueRange = 0f..7f,
+            steps = 6,
+            valueLabel = ralAudioBufferSize?.toString() ?: "Auto",
+            onValueChange = { sliderValue ->
+                onRalAudioBufferSizeChange(sliderPositionToAudioBufferSize(sliderValue))
+            }
+        )
     }
+}
+
+private val AUDIO_BUFFER_SIZE_OPTIONS: List<Int?> =
+    listOf(null) + (4..10).map { 1 shl it }
+
+private fun audioBufferSizeToSliderPosition(bufferSize: Int?): Float {
+    val index = AUDIO_BUFFER_SIZE_OPTIONS.indexOf(bufferSize).takeIf { it >= 0 } ?: 0
+    return index.toFloat()
+}
+
+private fun sliderPositionToAudioBufferSize(sliderValue: Float): Int? {
+    val index = sliderValue.roundToInt().coerceIn(0, AUDIO_BUFFER_SIZE_OPTIONS.lastIndex)
+    return AUDIO_BUFFER_SIZE_OPTIONS[index]
 }
 
 @Composable

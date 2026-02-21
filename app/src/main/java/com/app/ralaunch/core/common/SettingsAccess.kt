@@ -218,6 +218,10 @@ object SettingsAccess {
         get() = settings.sdlAaudioLowLatency
         set(value) = update { sdlAaudioLowLatency = value }
 
+    var ralAudioBufferSize: Int?
+        get() = settings.ralAudioBufferSize
+        set(value) = update { ralAudioBufferSize = value }
+
     // 联机设置
     var isMultiplayerEnabled: Boolean
         get() = settings.multiplayerEnabled
