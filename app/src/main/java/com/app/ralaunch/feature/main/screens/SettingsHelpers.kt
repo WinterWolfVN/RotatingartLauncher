@@ -240,6 +240,28 @@ internal fun getLanguageCode(languageName: String): String {
     }
 }
 
+internal fun isChineseLanguage(context: Context): Boolean {
+    val configuredLanguage = LocaleManager.getLanguage(context).trim().lowercase()
+    val normalizedConfiguredLanguage = configuredLanguage
+        .substringBefore('-')
+        .substringBefore('_')
+
+    if (normalizedConfiguredLanguage == LocaleManager.LANGUAGE_ZH || configuredLanguage == "简体中文") {
+        return true
+    }
+
+    val shouldFollowSystem = normalizedConfiguredLanguage == LocaleManager.LANGUAGE_AUTO ||
+        configuredLanguage == "follow system" ||
+        configuredLanguage == "跟随系统" ||
+        configuredLanguage.isBlank()
+
+    if (shouldFollowSystem) {
+        val locale = context.resources.configuration.locales[0]
+        return locale.language == "zh"
+    }
+    return normalizedConfiguredLanguage == LocaleManager.LANGUAGE_ZH
+}
+
 internal fun buildRendererOptions(): List<RendererOption> {
     return buildList {
         RendererRegistry.getCompatibleRenderers().forEach { info ->

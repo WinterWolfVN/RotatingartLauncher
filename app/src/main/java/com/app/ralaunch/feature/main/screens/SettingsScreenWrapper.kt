@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -71,6 +72,7 @@ fun SettingsScreenWrapper(
     var showPatchManagementDialog by remember { mutableStateOf(false) }
     var showMultiplayerDisclaimerDialog by remember { mutableStateOf(false) }
     var logs by remember { mutableStateOf<List<String>>(emptyList()) }
+    var appInfoTapCount by rememberSaveable { mutableIntStateOf(0) }
     
     // 联机设置状态
     var multiplayerEnabled by remember { mutableStateOf(settingsRepository.Settings.multiplayerEnabled) }
@@ -290,7 +292,21 @@ fun SettingsScreenWrapper(
                     onLicenseClick = { viewModel.onEvent(SettingsEvent.OpenLicense) },
                     onSponsorsClick = { viewModel.onEvent(SettingsEvent.OpenSponsors) },
                     onCommunityLinkClick = { url -> viewModel.onEvent(SettingsEvent.OpenUrl(url)) },
-                    onContributorClick = { url -> viewModel.onEvent(SettingsEvent.OpenUrl(url)) }
+                    onContributorClick = { url -> viewModel.onEvent(SettingsEvent.OpenUrl(url)) },
+                    onAppInfoCardClick = {
+                        val nextTapCount = appInfoTapCount + 1
+                        if (nextTapCount >= APP_INFO_EASTER_EGG_TRIGGER_COUNT) {
+                            appInfoTapCount = 0
+                            val url = if (isChineseLanguage(context)) {
+                                APP_INFO_EASTER_EGG_ZH_URL
+                            } else {
+                                APP_INFO_EASTER_EGG_NON_ZH_URL
+                            }
+                            viewModel.onEvent(SettingsEvent.OpenUrl(url))
+                        } else {
+                            appInfoTapCount = nextTapCount
+                        }
+                    }
                 )
             }
         }
@@ -495,3 +511,7 @@ fun SettingsScreenWrapper(
         )
     }
 }
+
+private const val APP_INFO_EASTER_EGG_TRIGGER_COUNT = 50
+private const val APP_INFO_EASTER_EGG_NON_ZH_URL = "https://youtu.be/CB42Hz349JM"
+private const val APP_INFO_EASTER_EGG_ZH_URL = "https://www.bilibili.com/video/BV19wHSe3E1v"

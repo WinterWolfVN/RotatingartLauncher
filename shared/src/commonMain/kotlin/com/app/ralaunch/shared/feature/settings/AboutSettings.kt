@@ -2,6 +2,7 @@ package com.app.ralaunch.shared.feature.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -51,6 +52,7 @@ fun AboutSettingsContent(
     onSponsorsClick: () -> Unit,
     onCommunityLinkClick: (String) -> Unit,
     onContributorClick: (String) -> Unit,
+    onAppInfoCardClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val communityLinks = remember {
@@ -86,7 +88,8 @@ fun AboutSettingsContent(
         AppInfoSection(
             appVersion = state.appVersion,
             buildInfo = state.buildInfo,
-            onCheckUpdateClick = onCheckUpdateClick
+            onCheckUpdateClick = onCheckUpdateClick,
+            onAppInfoCardClick = onAppInfoCardClick
         )
 
         // 社区链接
@@ -119,12 +122,14 @@ fun AboutSettingsContent(
 private fun AppInfoSection(
     appVersion: String,
     buildInfo: String,
-    onCheckUpdateClick: () -> Unit
+    onCheckUpdateClick: () -> Unit,
+    onAppInfoCardClick: () -> Unit
 ) {
     SettingsSection(title = "应用信息") {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onAppInfoCardClick)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
