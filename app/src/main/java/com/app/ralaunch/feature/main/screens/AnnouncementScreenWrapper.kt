@@ -48,7 +48,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.app.ralaunch.feature.announcement.AnnouncementItem
 import com.app.ralaunch.feature.announcement.AnnouncementRepositoryService
-import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.launch
 import org.koin.java.KoinJavaComponent
 
@@ -334,7 +333,10 @@ private fun AnnouncementCard(
             Spacer(modifier = Modifier.height(12.dp))
             when {
                 !markdown.isNullOrBlank() -> {
-                    MarkdownText(markdown = markdown)
+                    Text(
+                        text = markdown,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
 
                 isMarkdownLoading -> {

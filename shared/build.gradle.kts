@@ -1,17 +1,13 @@
 plugins {
     alias(libs.plugins.kmp)
-    alias(libs.plugins.android.kotlin.multiplatform.library)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.plugin.serialization)
 }
 
 kotlin {
-    androidLibrary {
-        namespace = "com.app.ralaunch.shared"
-        compileSdk = 36
-        minSdk = 28
-    }
+    androidTarget()
 
     jvmToolchain(21)
 
@@ -56,5 +52,14 @@ kotlin {
                 implementation(libs.lifecycle.viewmodel.compose)
             }
         }
+    }
+}
+
+android {
+    namespace = "com.app.ralaunch.shared"
+    compileSdk = 36
+
+    defaultConfig {
+        minSdk = 28
     }
 }

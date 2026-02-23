@@ -1,5 +1,7 @@
 package com.app.ralaunch.feature.main
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModelProvider
@@ -41,6 +44,7 @@ import com.app.ralaunch.feature.main.background.AppBackground
 import com.app.ralaunch.feature.main.background.BackgroundType
 import com.app.ralaunch.shared.core.model.ui.GameItemUi
 import com.app.ralaunch.feature.main.contracts.ImportUiState
+import com.app.ralaunch.feature.main.contracts.AppUpdateUiModel
 import com.app.ralaunch.feature.main.contracts.MainUiEffect
 import com.app.ralaunch.feature.main.contracts.MainUiEvent
 import com.app.ralaunch.feature.main.contracts.MainUiState
@@ -132,6 +136,7 @@ class MainActivityCompose : BaseActivity() {
                     when (effect) {
                         is MainUiEffect.ShowToast -> MessageHelper.showToast(this@MainActivityCompose, effect.message)
                         is MainUiEffect.ShowSuccess -> MessageHelper.showSuccess(this@MainActivityCompose, effect.message)
+                        is MainUiEffect.OpenUrl -> openExternalUrl(effect.url)
                         is MainUiEffect.ExitLauncher -> finishAffinity()
                     }
                 }
@@ -156,6 +161,10 @@ class MainActivityCompose : BaseActivity() {
                         onEditClick = { updatedGameUi -> mainViewModel.onEvent(MainUiEvent.GameEdited(updatedGameUi)) },
                         onDismissDeleteDialog = { mainViewModel.onEvent(MainUiEvent.DeleteDialogDismissed) },
                         onConfirmDelete = { mainViewModel.onEvent(MainUiEvent.DeleteConfirmed) },
+                        availableUpdate = state.availableUpdate,
+                        onDismissUpdateDialog = { mainViewModel.onEvent(MainUiEvent.UpdateDialogDismissed) },
+                        onIgnoreUpdateClick = { mainViewModel.onEvent(MainUiEvent.UpdateIgnoreClicked) },
+                        onUpdateActionClick = { mainViewModel.onEvent(MainUiEvent.UpdateActionClicked) },
                         permissionManager = permissionManager,
                         onStartImport = { gameFilePath, modLoaderFilePath ->
                             mainViewModel.startImport(gameFilePath, modLoaderFilePath)
@@ -259,6 +268,14 @@ class MainActivityCompose : BaseActivity() {
         )
     }
 
+    private fun openExternalUrl(url: String) {
+        runCatching {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        }.onFailure {
+            MessageHelper.showToast(this, "无法打开链接")
+        }
+    }
+
 }
 
 /**
@@ -278,6 +295,10 @@ private fun MainActivityContent(
     onEditClick: (updatedGame: GameItemUi) -> Unit,
     onDismissDeleteDialog: () -> Unit = {},
     onConfirmDelete: () -> Unit = {},
+    availableUpdate: AppUpdateUiModel? = null,
+    onDismissUpdateDialog: () -> Unit = {},
+    onIgnoreUpdateClick: () -> Unit = {},
+    onUpdateActionClick: () -> Unit = {},
     onStartImport: (gameFilePath: String?, modLoaderFilePath: String?) -> Unit = { _, _ -> },
     onDismissImportError: () -> Unit = {},
     onImportCompletionHandled: () -> Unit = {},
@@ -530,6 +551,15 @@ private fun MainActivityContent(
                 onDismiss = onDismissDeleteDialog
             )
         }
+
+        availableUpdate?.let { update ->
+            AppUpdateComposeDialog(
+                update = update,
+                onConfirm = onUpdateActionClick,
+                onIgnore = onIgnoreUpdateClick,
+                onDismiss = onDismissUpdateDialog
+            )
+        }
     }
 }
 
@@ -607,6 +637,70 @@ private fun DeleteGameComposeDialog(
                 TextButton(onClick = onDismiss) {
                     Text("取消")
                 }
+            }
+        }
+    )
+}
+
+@Composable
+private fun AppUpdateComposeDialog(
+    update: AppUpdateUiModel,
+    onConfirm: () -> Unit,
+    onIgnore: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val previewNotes = remember(update.releaseNotes) {
+        val normalized = update.releaseNotes.trim()
+        if (normalized.length <= 240) normalized else normalized.take(240) + "..."
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text(
+                text = "发现新版本",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "当前版本: ${update.currentVersion}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "最新版本: ${update.latestVersion}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = update.releaseName,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (previewNotes.isNotEmpty()) {
+                    Text(
+                        text = previewNotes,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 6,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("前往更新")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onIgnore) {
+                Text("忽略此版本")
             }
         }
     )
