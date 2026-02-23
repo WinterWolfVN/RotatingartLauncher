@@ -65,7 +65,12 @@ class MainViewModel(
 
     private val gameItemsMap = mutableMapOf<String, GameItem>()
     private var activeInstaller: GameInstaller? = null
-    private var hasCheckedUpdate = false
+    private var isUpdateCheckInProgress = false
+    private var lastUpdateCheckAt: Long = 0L
+
+    companion object {
+        private const val UPDATE_CHECK_INTERVAL_MS = 60_000L
+    }
 
     init {
         onEvent(MainUiEvent.RefreshRequested)
@@ -76,6 +81,11 @@ class MainViewModel(
         when (event) {
             is MainUiEvent.RefreshRequested -> refreshGames()
             is MainUiEvent.CheckAppUpdate -> checkAppUpdate()
+            is MainUiEvent.CheckAppUpdateManually -> checkAppUpdate(
+                force = true,
+                bypassIgnoredVersion = true,
+                fromUserAction = true
+            )
             is MainUiEvent.GameSelected -> selectGame(event.game.id)
             is MainUiEvent.GameEdited -> updateGame(event.game)
             is MainUiEvent.LaunchRequested -> launchSelectedGame()
@@ -86,7 +96,10 @@ class MainViewModel(
             is MainUiEvent.UpdateIgnoreClicked -> ignoreCurrentUpdate()
             is MainUiEvent.UpdateActionClicked -> openUpdateUrl()
             is MainUiEvent.ImportCompleted -> onGameImportComplete(event.game)
-            is MainUiEvent.AppResumed -> _uiState.update { it.copy(isVideoPlaying = true) }
+            is MainUiEvent.AppResumed -> {
+                _uiState.update { it.copy(isVideoPlaying = true) }
+                checkAppUpdate(force = false)
+            }
             is MainUiEvent.AppPaused -> _uiState.update { it.copy(isVideoPlaying = false) }
         }
     }
@@ -343,25 +356,53 @@ class MainViewModel(
         }
     }
 
-    private fun checkAppUpdate() {
-        if (hasCheckedUpdate) return
-        hasCheckedUpdate = true
+    private fun checkAppUpdate(
+        force: Boolean = true,
+        bypassIgnoredVersion: Boolean = false,
+        fromUserAction: Boolean = false
+    ) {
+        if (isUpdateCheckInProgress) return
+        if (_uiState.value.availableUpdate != null) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastUpdateCheckAt < UPDATE_CHECK_INTERVAL_MS) return
 
+        if (fromUserAction) {
+            emitEffect(MainUiEffect.ShowToast("正在检查更新..."))
+        }
+        lastUpdateCheckAt = now
+        isUpdateCheckInProgress = true
         viewModelScope.launch {
-            val currentVersion = resolveCurrentVersionName()
-            val result = launcherUpdateChecker.checkForUpdate(currentVersion)
+            try {
+                val currentVersion = resolveCurrentVersionName()
+                val result = launcherUpdateChecker.checkForUpdate(currentVersion)
 
-            result.onSuccess { info ->
-                if (info == null) return@onSuccess
-                val ignoredVersion = LauncherUpdatePreferences.getIgnoredUpdateVersion(appContext)
-                if (ignoredVersion == info.latestVersion.trim()) {
-                    return@onSuccess
+                result.onSuccess { info ->
+                    if (info == null) {
+                        AppLogger.info("MainViewModel", "No update. currentVersion=$currentVersion")
+                        if (fromUserAction) {
+                            emitEffect(MainUiEffect.ShowToast("当前已是最新版本"))
+                        }
+                        return@onSuccess
+                    }
+                    if (!bypassIgnoredVersion) {
+                        val ignoredVersion = LauncherUpdatePreferences.getIgnoredUpdateVersion(appContext)
+                        if (ignoredVersion == info.latestVersion.trim()) {
+                            AppLogger.info("MainViewModel", "Ignored update version=${info.latestVersion}")
+                            return@onSuccess
+                        }
+                    }
+                    _uiState.update { state ->
+                        state.copy(availableUpdate = info.toAppUpdateUiModel())
+                    }
+                    AppLogger.info(
+                        "MainViewModel",
+                        "Update available current=${info.currentVersion}, latest=${info.latestVersion}"
+                    )
+                }.onFailure { error ->
+                    AppLogger.warn("MainViewModel", "Check update failed: ${error.message}", error)
                 }
-                _uiState.update { state ->
-                    state.copy(availableUpdate = info.toAppUpdateUiModel())
-                }
-            }.onFailure { error ->
-                AppLogger.warn("MainViewModel", "Check update failed: ${error.message}")
+            } finally {
+                isUpdateCheckInProgress = false
             }
         }
     }
@@ -374,7 +415,17 @@ class MainViewModel(
         val updateInfo = _uiState.value.availableUpdate ?: return
         LauncherUpdatePreferences.clearIgnoredUpdateVersion(appContext)
         _uiState.update { it.copy(availableUpdate = null) }
-        emitEffect(MainUiEffect.OpenUrl(updateInfo.releaseUrl))
+        if (updateInfo.downloadUrl.isNotBlank()) {
+            emitEffect(
+                MainUiEffect.DownloadLauncherUpdate(
+                    downloadUrl = updateInfo.downloadUrl,
+                    latestVersion = updateInfo.latestVersion,
+                    releaseUrl = updateInfo.releaseUrl
+                )
+            )
+        } else {
+            emitEffect(MainUiEffect.OpenUrl(updateInfo.releaseUrl))
+        }
     }
 
     private fun ignoreCurrentUpdate() {
@@ -389,6 +440,7 @@ class MainViewModel(
             latestVersion = latestVersion,
             releaseName = releaseName,
             releaseNotes = releaseNotes,
+            downloadUrl = downloadUrl,
             releaseUrl = releaseUrl
         )
     }

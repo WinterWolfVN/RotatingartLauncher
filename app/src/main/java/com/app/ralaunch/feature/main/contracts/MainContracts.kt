@@ -21,12 +21,14 @@ data class AppUpdateUiModel(
     val latestVersion: String,
     val releaseName: String,
     val releaseNotes: String,
+    val downloadUrl: String,
     val releaseUrl: String
 )
 
 sealed interface MainUiEvent {
     data object RefreshRequested : MainUiEvent
     data object CheckAppUpdate : MainUiEvent
+    data object CheckAppUpdateManually : MainUiEvent
     data class GameSelected(val game: GameItemUi) : MainUiEvent
     data class GameEdited(val game: GameItemUi) : MainUiEvent
     data object LaunchRequested : MainUiEvent
@@ -44,6 +46,11 @@ sealed interface MainUiEvent {
 sealed interface MainUiEffect {
     data class ShowToast(val message: String) : MainUiEffect
     data class ShowSuccess(val message: String) : MainUiEffect
+    data class DownloadLauncherUpdate(
+        val downloadUrl: String,
+        val latestVersion: String,
+        val releaseUrl: String
+    ) : MainUiEffect
     data class OpenUrl(val url: String) : MainUiEffect
     data object ExitLauncher : MainUiEffect
 }

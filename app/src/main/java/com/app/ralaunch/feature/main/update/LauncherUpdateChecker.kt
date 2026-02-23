@@ -1,9 +1,13 @@
 package com.app.ralaunch.feature.main.update
 
 import com.app.ralaunch.core.common.JsonHttpRepositoryClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.net.HttpURLConnection
+import java.net.URL
 
 class LauncherUpdateChecker(
     private val repositoryOwner: String = DEFAULT_REPOSITORY_OWNER,
@@ -30,21 +34,8 @@ class LauncherUpdateChecker(
                 IllegalArgumentException("Invalid current version: $currentVersionName")
             )
 
-        val url = "$GITHUB_API_BASE_URL/repos/$repositoryOwner/$repositoryName/releases/latest"
-
-        return JsonHttpRepositoryClient.getJson<GitHubReleaseResponse>(
-            urlString = url,
-            json = json,
-            connectTimeoutMs = CONNECT_TIMEOUT_MS,
-            readTimeoutMs = READ_TIMEOUT_MS,
-            headers = mapOf(
-                "Accept" to "application/vnd.github+json",
-                "User-Agent" to USER_AGENT
-            )
-        ).mapCatching { release ->
-            if (release.draft || release.prerelease || release.tagName.isBlank()) {
-                return@mapCatching null
-            }
+        return fetchLatestStableRelease().mapCatching { release ->
+            if (release.tagName.isBlank()) return@mapCatching null
 
             val latestVersion = parseVersion(release.tagName) ?: return@mapCatching null
             if (!isRemoteVersionNewer(currentVersion, latestVersion)) {
@@ -56,10 +47,93 @@ class LauncherUpdateChecker(
                 latestVersion = release.tagName.trim(),
                 releaseName = release.name.ifBlank { release.tagName.trim() },
                 releaseNotes = release.body.trim(),
+                downloadUrl = release.resolveDownloadUrl(),
                 releaseUrl = release.htmlUrl.ifBlank {
                     "https://github.com/$repositoryOwner/$repositoryName/releases/latest"
                 }
             )
+        }
+    }
+
+    private suspend fun fetchLatestStableRelease(): Result<GitHubReleaseResponse> {
+        val headers = mapOf(
+            "Accept" to "application/vnd.github+json",
+            "User-Agent" to USER_AGENT
+        )
+
+        val latestUrl = "$GITHUB_API_BASE_URL/repos/$repositoryOwner/$repositoryName/releases/latest"
+        val latestResult = JsonHttpRepositoryClient.getJson<GitHubReleaseResponse>(
+            urlString = latestUrl,
+            json = json,
+            connectTimeoutMs = CONNECT_TIMEOUT_MS,
+            readTimeoutMs = READ_TIMEOUT_MS,
+            headers = headers
+        )
+        latestResult.getOrNull()
+            ?.takeIf { !it.draft && !it.prerelease && it.tagName.isNotBlank() }
+            ?.let { return Result.success(it) }
+
+        val releasesUrl = "$GITHUB_API_BASE_URL/repos/$repositoryOwner/$repositoryName/releases?per_page=10"
+        val releasesResult = JsonHttpRepositoryClient.getJson<List<GitHubReleaseResponse>>(
+            urlString = releasesUrl,
+            json = json,
+            connectTimeoutMs = CONNECT_TIMEOUT_MS,
+            readTimeoutMs = READ_TIMEOUT_MS,
+            headers = headers
+        )
+        releasesResult.getOrNull()
+            ?.firstOrNull { !it.draft && !it.prerelease && it.tagName.isNotBlank() }
+            ?.let { return Result.success(it) }
+
+        val redirectTagResult = resolveLatestTagByRedirect()
+        val redirectTag = redirectTagResult.getOrNull()
+        if (!redirectTag.isNullOrBlank()) {
+            val releaseUrl = "https://github.com/$repositoryOwner/$repositoryName/releases/tag/$redirectTag"
+            return Result.success(
+                GitHubReleaseResponse(
+                    tagName = redirectTag,
+                    name = redirectTag,
+                    body = "",
+                    htmlUrl = releaseUrl,
+                    assets = emptyList(),
+                    draft = false,
+                    prerelease = false
+                )
+            )
+        }
+
+        val latestError = latestResult.exceptionOrNull()
+        val listError = releasesResult.exceptionOrNull()
+        val redirectError = redirectTagResult.exceptionOrNull()
+        return Result.failure(
+            latestError
+                ?: listError
+                ?: redirectError
+                ?: IllegalStateException("Unable to resolve latest release")
+        )
+    }
+
+    private suspend fun resolveLatestTagByRedirect(): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val latestReleasePage = "https://github.com/$repositoryOwner/$repositoryName/releases/latest"
+            val connection = URL(latestReleasePage).openConnection() as HttpURLConnection
+            try {
+                connection.connectTimeout = CONNECT_TIMEOUT_MS
+                connection.readTimeout = READ_TIMEOUT_MS
+                connection.instanceFollowRedirects = true
+                connection.requestMethod = "GET"
+                connection.setRequestProperty("User-Agent", USER_AGENT)
+                connection.connect()
+
+                val finalUrl = connection.url.toString()
+                finalUrl.substringAfter("/releases/tag/", "")
+                    .substringBefore('?')
+                    .substringBefore('#')
+                    .trim()
+                    .ifBlank { throw IllegalStateException("Cannot parse tag from $finalUrl") }
+            } finally {
+                connection.disconnect()
+            }
         }
     }
 
@@ -94,6 +168,23 @@ class LauncherUpdateChecker(
         return false
     }
 
+    private fun GitHubReleaseResponse.resolveDownloadUrl(): String {
+        val apkAssets = assets.filter { asset ->
+            val lowerName = asset.name.lowercase()
+            val lowerType = asset.contentType.lowercase()
+            lowerName.endsWith(".apk") ||
+                lowerType.contains("application/vnd.android.package-archive")
+        }
+        if (apkAssets.isEmpty()) return ""
+
+        val preferredKeywords = listOf("arm64-v8a", "arm64", "aarch64")
+        val preferred = apkAssets.firstOrNull { asset ->
+            val lowerName = asset.name.lowercase()
+            preferredKeywords.any { keyword -> keyword in lowerName }
+        }
+        return (preferred ?: apkAssets.first()).browserDownloadUrl.trim()
+    }
+
     private data class ParsedVersion(
         val parts: List<Int>
     )
@@ -106,8 +197,18 @@ class LauncherUpdateChecker(
         val body: String = "",
         @SerialName("html_url")
         val htmlUrl: String = "",
+        val assets: List<GitHubReleaseAssetResponse> = emptyList(),
         val draft: Boolean = false,
         val prerelease: Boolean = false
+    )
+
+    @Serializable
+    private data class GitHubReleaseAssetResponse(
+        val name: String = "",
+        @SerialName("browser_download_url")
+        val browserDownloadUrl: String = "",
+        @SerialName("content_type")
+        val contentType: String = ""
     )
 }
 
@@ -116,5 +217,6 @@ data class LauncherUpdateInfo(
     val latestVersion: String,
     val releaseName: String,
     val releaseNotes: String,
+    val downloadUrl: String,
     val releaseUrl: String
 )
