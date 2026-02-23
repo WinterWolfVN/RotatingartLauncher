@@ -104,7 +104,7 @@ object GameLauncher {
             System.loadLibrary("SDL2")
             System.loadLibrary("main")
             System.loadLibrary("openal32")
-            
+            System.loadLibrary("lwjgl_lz4")
             // 大型运行时库按需加载:
             // Large runtime libraries loaded on-demand:
             // - libSkiaSharp.so (7 MB) - 通过 RuntimeLibraryLoader.loadSkiaSharp() 加载
