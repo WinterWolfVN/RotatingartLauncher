@@ -363,7 +363,7 @@ private fun LegalPage(
                     TextButton(
                         onClick = {
                             try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/nicholasng1998/RotatingartLauncher")))
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/FireworkSky/RotatingartLauncher")))
                             } catch (e: Exception) {
                                 Toast.makeText(context, context.getString(R.string.init_cannot_open_browser), Toast.LENGTH_SHORT).show()
                             }

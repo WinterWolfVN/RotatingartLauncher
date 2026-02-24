@@ -35,7 +35,7 @@ val appModule = module {
     }
 
     single {
-        LauncherUpdateChecker()
+        LauncherUpdateChecker(androidContext())
     }
 
     // PatchManager 初始化（可空，延迟加载）

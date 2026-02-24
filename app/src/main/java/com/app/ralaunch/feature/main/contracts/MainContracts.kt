@@ -11,10 +11,19 @@ data class MainUiState(
     val backgroundType: BackgroundType = BackgroundType.None,
     val isVideoPlaying: Boolean = true,
     val showAnnouncementBadge: Boolean = false,
+    val forceAnnouncement: ForceAnnouncementUiModel? = null,
     val gamePendingDeletion: GameItemUi? = null,
     val deletePosition: Int = -1,
     val isDeletingGame: Boolean = false,
     val availableUpdate: AppUpdateUiModel? = null
+)
+
+data class ForceAnnouncementUiModel(
+    val announcementId: String,
+    val title: String,
+    val publishedAt: String,
+    val tags: List<String> = emptyList(),
+    val markdown: String? = null
 )
 
 data class AppUpdateUiModel(
@@ -23,7 +32,10 @@ data class AppUpdateUiModel(
     val releaseName: String,
     val releaseNotes: String,
     val downloadUrl: String,
-    val releaseUrl: String
+    val releaseUrl: String,
+    val githubDownloadUrl: String = "",
+    val cloudDownloadUrl: String = "",
+    val publishedAt: String = ""
 )
 
 sealed interface MainUiEvent {
@@ -39,10 +51,12 @@ sealed interface MainUiEvent {
     data object UpdateDialogDismissed : MainUiEvent
     data object UpdateIgnoreClicked : MainUiEvent
     data object UpdateActionClicked : MainUiEvent
+    data object UpdateCloudActionClicked : MainUiEvent
     data class ImportCompleted(val gameType: String, val game: GameItem) : MainUiEvent
     data object AppResumed : MainUiEvent
     data object AppPaused : MainUiEvent
     data object AnnouncementTabOpened : MainUiEvent
+    data object AnnouncementPopupConfirmed : MainUiEvent
 }
 
 sealed interface MainUiEffect {

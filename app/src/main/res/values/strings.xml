@@ -1848,6 +1848,8 @@
     <string name="main_update_latest_version">Latest version: %1$s</string>
     <string name="main_update_action_open_release">Open Update</string>
     <string name="main_update_action_download">Download Update</string>
+    <string name="main_update_action_download_github">Download via GitHub</string>
+    <string name="main_update_action_download_cloud">Download via Cloud Link</string>
     <string name="main_update_action_ignore_version">Ignore This Version</string>
     <string name="main_update_status_starting">Preparing download</string>
     <string name="main_update_status_downloading">Downloading update</string>
@@ -1873,6 +1875,8 @@
     <string name="announcement_load_failed">Failed to load announcements</string>
     <string name="announcement_empty">No announcements</string>
     <string name="announcement_no_content">No content</string>
+    <string name="main_announcement_dialog_title">New announcement</string>
+    <string name="main_announcement_dialog_action_view">View announcement</string>
 
     <string name="init_runtime_components_title">Runtime Components</string>
     <string name="init_runtime_components_subtitle">Install runtime components required by games</string>

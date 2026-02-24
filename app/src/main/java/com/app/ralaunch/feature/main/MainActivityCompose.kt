@@ -58,6 +58,7 @@ import com.app.ralaunch.feature.main.background.BackgroundType
 import com.app.ralaunch.shared.core.model.ui.GameItemUi
 import com.app.ralaunch.feature.main.contracts.ImportUiState
 import com.app.ralaunch.feature.main.contracts.AppUpdateUiModel
+import com.app.ralaunch.feature.main.contracts.ForceAnnouncementUiModel
 import com.app.ralaunch.feature.main.contracts.MainUiEffect
 import com.app.ralaunch.feature.main.contracts.MainUiEvent
 import com.app.ralaunch.feature.main.contracts.MainUiState
@@ -83,6 +84,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import dev.jeziellago.compose.markdowntext.MarkdownText
 
 
 class MainActivityCompose : BaseActivity() {
@@ -193,6 +195,7 @@ class MainActivityCompose : BaseActivity() {
                         importUiState = importState,
                         navState = navState,
                         showAnnouncementBadge = state.showAnnouncementBadge,
+                        forceAnnouncement = state.forceAnnouncement,
                         pageAlpha = pageAlpha,
                         videoSpeed = videoSpeed,
                         onGameClick = { mainViewModel.onEvent(MainUiEvent.GameSelected(it)) },
@@ -207,6 +210,7 @@ class MainActivityCompose : BaseActivity() {
                         onDismissUpdateDialog = { mainViewModel.onEvent(MainUiEvent.UpdateDialogDismissed) },
                         onIgnoreUpdateClick = { mainViewModel.onEvent(MainUiEvent.UpdateIgnoreClicked) },
                         onUpdateActionClick = { mainViewModel.onEvent(MainUiEvent.UpdateActionClicked) },
+                        onUpdateCloudActionClick = { mainViewModel.onEvent(MainUiEvent.UpdateCloudActionClicked) },
                         onCheckLauncherUpdateClick = {
                             mainViewModel.onEvent(MainUiEvent.CheckAppUpdateManually)
                         },
@@ -219,7 +223,11 @@ class MainActivityCompose : BaseActivity() {
                         },
                         onDismissImportError = { mainViewModel.clearImportError() },
                         onImportCompletionHandled = { mainViewModel.resetImportCompletedFlag() },
-                        onAnnouncementsOpened = { mainViewModel.onEvent(MainUiEvent.AnnouncementTabOpened) }
+                        onAnnouncementsOpened = { mainViewModel.onEvent(MainUiEvent.AnnouncementTabOpened) },
+                        onForceAnnouncementConfirm = {
+                            navState.navigateToAnnouncements()
+                            mainViewModel.onEvent(MainUiEvent.AnnouncementPopupConfirmed)
+                        }
                     )
 
                     // MD3 风格启动画面覆盖层
@@ -608,6 +616,7 @@ private fun MainActivityContent(
     importUiState: ImportUiState,
     navState: NavState,
     showAnnouncementBadge: Boolean,
+    forceAnnouncement: ForceAnnouncementUiModel? = null,
     pageAlpha: Float = 1f,
     videoSpeed: Float = 1f,
     onGameClick: (GameItemUi) -> Unit,
@@ -622,6 +631,7 @@ private fun MainActivityContent(
     onDismissUpdateDialog: () -> Unit = {},
     onIgnoreUpdateClick: () -> Unit = {},
     onUpdateActionClick: () -> Unit = {},
+    onUpdateCloudActionClick: () -> Unit = {},
     onCheckLauncherUpdateClick: () -> Unit = {},
     onDismissUpdateDownloadDialog: () -> Unit = {},
     onInstallDownloadedUpdate: () -> Unit = {},
@@ -630,6 +640,7 @@ private fun MainActivityContent(
     onDismissImportError: () -> Unit = {},
     onImportCompletionHandled: () -> Unit = {},
     onAnnouncementsOpened: () -> Unit = {},
+    onForceAnnouncementConfirm: () -> Unit = {},
     permissionManager: PermissionManager? = null
 ) {
     val context = LocalContext.current
@@ -891,13 +902,16 @@ private fun MainActivityContent(
             )
         }
 
-        availableUpdate?.let { update ->
-            AppUpdateComposeDialog(
-                update = update,
-                onConfirm = onUpdateActionClick,
-                onIgnore = onIgnoreUpdateClick,
-                onDismiss = onDismissUpdateDialog
-            )
+        if (forceAnnouncement == null && updateDownloadState == null) {
+            availableUpdate?.let { update ->
+                AppUpdateComposeDialog(
+                    update = update,
+                    onConfirm = onUpdateActionClick,
+                    onCloudDownload = onUpdateCloudActionClick,
+                    onIgnore = onIgnoreUpdateClick,
+                    onDismiss = onDismissUpdateDialog
+                )
+            }
         }
 
         updateDownloadState?.let { downloadState ->
@@ -907,6 +921,15 @@ private fun MainActivityContent(
                 onInstall = onInstallDownloadedUpdate,
                 onRetry = onRetryUpdateDownload
             )
+        }
+
+        if (updateDownloadState == null) {
+            forceAnnouncement?.let { announcement ->
+                ForceAnnouncementComposeDialog(
+                    announcement = announcement,
+                    onConfirm = onForceAnnouncementConfirm
+                )
+            }
         }
     }
 }
@@ -994,6 +1017,7 @@ private fun DeleteGameComposeDialog(
 private fun AppUpdateComposeDialog(
     update: AppUpdateUiModel,
     onConfirm: () -> Unit,
+    onCloudDownload: () -> Unit,
     onIgnore: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1036,6 +1060,13 @@ private fun AppUpdateComposeDialog(
                     text = update.releaseName,
                     style = MaterialTheme.typography.titleMedium
                 )
+                if (update.publishedAt.isNotBlank()) {
+                    Text(
+                        text = update.publishedAt,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (previewNotes.isNotEmpty()) {
                     Text(
                         text = previewNotes,
@@ -1045,12 +1076,19 @@ private fun AppUpdateComposeDialog(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                if (update.cloudDownloadUrl.isNotBlank()) {
+                    OutlinedButton(onClick = onCloudDownload) {
+                        Text(stringResource(R.string.main_update_action_download_cloud))
+                    }
+                }
             }
         },
         confirmButton = {
             Button(onClick = onConfirm) {
                 Text(
-                    if (update.downloadUrl.isBlank()) {
+                    if (update.githubDownloadUrl.isNotBlank()) {
+                        stringResource(R.string.main_update_action_download_github)
+                    } else if (update.downloadUrl.isBlank()) {
                         stringResource(R.string.main_update_action_open_release)
                     } else {
                         stringResource(R.string.main_update_action_download)
@@ -1063,6 +1101,72 @@ private fun AppUpdateComposeDialog(
                 Text(stringResource(R.string.main_update_action_ignore_version))
             }
         }
+    )
+}
+
+@Composable
+private fun ForceAnnouncementComposeDialog(
+    announcement: ForceAnnouncementUiModel,
+    onConfirm: () -> Unit
+) {
+    val previewMarkdown = remember(announcement.markdown) {
+        announcement.markdown
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { markdown ->
+                if (markdown.length <= 480) markdown else markdown.take(480) + "..."
+            }
+    }
+
+    AlertDialog(
+        onDismissRequest = {},
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = stringResource(R.string.main_announcement_dialog_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = announcement.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = announcement.publishedAt,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (announcement.tags.isNotEmpty()) {
+                    Text(
+                        text = announcement.tags.joinToString("  ·  "),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (!previewMarkdown.isNullOrBlank()) {
+                    MarkdownText(markdown = previewMarkdown)
+                } else {
+                    Text(
+                        text = stringResource(R.string.announcement_no_content),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text(stringResource(R.string.main_announcement_dialog_action_view))
+            }
+        },
+        dismissButton = null
     )
 }
 

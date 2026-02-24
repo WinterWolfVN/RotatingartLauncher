@@ -1671,6 +1671,8 @@
     <string name="main_update_latest_version">最新版本: %1$s</string>
     <string name="main_update_action_open_release">前往更新</string>
     <string name="main_update_action_download">下载更新</string>
+    <string name="main_update_action_download_github">GitHub 下载</string>
+    <string name="main_update_action_download_cloud">网盘下载</string>
     <string name="main_update_action_ignore_version">忽略此版本</string>
     <string name="main_update_status_starting">正在准备下载</string>
     <string name="main_update_status_downloading">正在下载更新</string>
@@ -1692,6 +1694,8 @@
     <string name="announcement_load_failed">加载公告失败</string>
     <string name="announcement_empty">暂无公告</string>
     <string name="announcement_no_content">暂无内容</string>
+    <string name="main_announcement_dialog_title">发现新公告</string>
+    <string name="main_announcement_dialog_action_view">查看公告</string>
     <string name="init_runtime_components_title">运行环境组件</string>
     <string name="init_runtime_components_subtitle">安装游戏所需的运行时组件</string>
     <string name="init_runtime_components_hint">首次运行需要解压运行环境，仅需几分钟</string>

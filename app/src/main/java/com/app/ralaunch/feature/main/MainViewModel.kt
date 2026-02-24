@@ -25,13 +25,13 @@ import com.app.ralaunch.shared.core.data.repository.GameListStorage
 import com.app.ralaunch.shared.core.model.ui.applyFromUiModel
 import com.app.ralaunch.shared.core.model.ui.toUiModels
 import com.app.ralaunch.feature.main.contracts.AppUpdateUiModel
+import com.app.ralaunch.feature.main.contracts.ForceAnnouncementUiModel
 import com.app.ralaunch.feature.main.contracts.ImportUiState
 import com.app.ralaunch.feature.main.contracts.MainUiEffect
 import com.app.ralaunch.feature.main.contracts.MainUiEvent
 import com.app.ralaunch.feature.main.contracts.MainUiState
 import com.app.ralaunch.feature.main.update.LauncherUpdateChecker
 import com.app.ralaunch.feature.main.update.LauncherUpdateInfo
-import com.app.ralaunch.feature.main.update.LauncherUpdatePreferences
 import com.app.ralaunch.shared.core.contract.repository.SettingsRepositoryV2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -90,7 +90,6 @@ class MainViewModel(
             is MainUiEvent.CheckAppUpdate -> checkAppUpdate()
             is MainUiEvent.CheckAppUpdateManually -> checkAppUpdate(
                 force = true,
-                bypassIgnoredVersion = true,
                 fromUserAction = true
             )
             is MainUiEvent.GameSelected -> selectGame(event.game.id)
@@ -102,6 +101,7 @@ class MainViewModel(
             is MainUiEvent.UpdateDialogDismissed -> dismissUpdateDialog()
             is MainUiEvent.UpdateIgnoreClicked -> ignoreCurrentUpdate()
             is MainUiEvent.UpdateActionClicked -> openUpdateUrl()
+            is MainUiEvent.UpdateCloudActionClicked -> openCloudUpdateUrl()
             is MainUiEvent.ImportCompleted -> onGameImportComplete(event.game)
             is MainUiEvent.AppResumed -> {
                 _uiState.update { it.copy(isVideoPlaying = true) }
@@ -109,6 +109,7 @@ class MainViewModel(
             }
             is MainUiEvent.AppPaused -> _uiState.update { it.copy(isVideoPlaying = false) }
             is MainUiEvent.AnnouncementTabOpened -> markAnnouncementsAsRead()
+            is MainUiEvent.AnnouncementPopupConfirmed -> markAnnouncementsAsRead()
         }
     }
 
@@ -116,7 +117,8 @@ class MainViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val result = announcementRepositoryService.fetchAnnouncements(forceRefresh = false)
             result.onSuccess { announcements ->
-                val latestId = announcements.firstOrNull()
+                val latestAnnouncement = announcements.firstOrNull()
+                val latestId = latestAnnouncement
                     ?.id
                     ?.trim()
                     ?.takeIf { it.isNotBlank() }
@@ -139,8 +141,35 @@ class MainViewModel(
                     }
                 }
 
+                val forceAnnouncement = latestAnnouncement
+                    ?.takeIf { shouldShowBadge }
+                    ?.let { latest ->
+                        val announcementId = latest.id.trim()
+                        if (announcementId.isBlank()) {
+                            null
+                        } else {
+                            val markdown = announcementRepositoryService.fetchAnnouncementMarkdown(
+                                announcementId = announcementId,
+                                forceRefresh = false
+                            ).getOrNull()
+
+                            ForceAnnouncementUiModel(
+                                announcementId = announcementId,
+                                title = latest.title,
+                                publishedAt = latest.publishedAt,
+                                tags = latest.tags,
+                                markdown = markdown
+                            )
+                        }
+                    }
+
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(showAnnouncementBadge = shouldShowBadge) }
+                    _uiState.update {
+                        it.copy(
+                            showAnnouncementBadge = shouldShowBadge,
+                            forceAnnouncement = forceAnnouncement
+                        )
+                    }
                 }
             }.onFailure { error ->
                 AppLogger.warn(
@@ -164,7 +193,9 @@ class MainViewModel(
     }
 
     private fun markAnnouncementsAsRead() {
-        if (!_uiState.value.showAnnouncementBadge) return
+        val state = _uiState.value
+        if (!state.showAnnouncementBadge && state.forceAnnouncement == null) return
+
         val latestId = latestAnnouncementId
             ?.trim()
             ?.takeIf { it.isNotBlank() }
@@ -185,7 +216,12 @@ class MainViewModel(
                 )
             }
             withContext(Dispatchers.Main) {
-                _uiState.update { it.copy(showAnnouncementBadge = false) }
+                _uiState.update {
+                    it.copy(
+                        showAnnouncementBadge = false,
+                        forceAnnouncement = null
+                    )
+                }
             }
         }
     }
@@ -451,7 +487,6 @@ class MainViewModel(
 
     private fun checkAppUpdate(
         force: Boolean = true,
-        bypassIgnoredVersion: Boolean = false,
         fromUserAction: Boolean = false
     ) {
         if (isUpdateCheckInProgress) return
@@ -477,13 +512,6 @@ class MainViewModel(
                         }
                         return@onSuccess
                     }
-                    if (!bypassIgnoredVersion) {
-                        val ignoredVersion = LauncherUpdatePreferences.getIgnoredUpdateVersion(appContext)
-                        if (ignoredVersion == info.latestVersion.trim()) {
-                            AppLogger.info("MainViewModel", "Ignored update version=${info.latestVersion}")
-                            return@onSuccess
-                        }
-                    }
                     _uiState.update { state ->
                         state.copy(availableUpdate = info.toAppUpdateUiModel())
                     }
@@ -506,7 +534,6 @@ class MainViewModel(
 
     private fun openUpdateUrl() {
         val updateInfo = _uiState.value.availableUpdate ?: return
-        LauncherUpdatePreferences.clearIgnoredUpdateVersion(appContext)
         _uiState.update { it.copy(availableUpdate = null) }
         if (updateInfo.downloadUrl.isNotBlank()) {
             emitEffect(
@@ -521,9 +548,19 @@ class MainViewModel(
         }
     }
 
-    private fun ignoreCurrentUpdate() {
+    private fun openCloudUpdateUrl() {
         val updateInfo = _uiState.value.availableUpdate ?: return
-        LauncherUpdatePreferences.setIgnoredUpdateVersion(appContext, updateInfo.latestVersion)
+        val cloudUrl = updateInfo.cloudDownloadUrl.trim()
+        if (cloudUrl.isBlank()) {
+            openUpdateUrl()
+            return
+        }
+        _uiState.update { it.copy(availableUpdate = null) }
+        emitEffect(MainUiEffect.OpenUrl(cloudUrl))
+    }
+
+    private fun ignoreCurrentUpdate() {
+        if (_uiState.value.availableUpdate == null) return
         _uiState.update { it.copy(availableUpdate = null) }
     }
 
@@ -534,7 +571,10 @@ class MainViewModel(
             releaseName = releaseName,
             releaseNotes = releaseNotes,
             downloadUrl = downloadUrl,
-            releaseUrl = releaseUrl
+            releaseUrl = releaseUrl,
+            githubDownloadUrl = githubDownloadUrl,
+            cloudDownloadUrl = cloudDownloadUrl,
+            publishedAt = publishedAt
         )
     }
 

@@ -1,32 +1,38 @@
 package com.app.ralaunch.feature.main.screens
 
+import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,224 +42,90 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.app.ralaunch.R
 import com.app.ralaunch.feature.announcement.AnnouncementItem
-import com.app.ralaunch.feature.announcement.AnnouncementRepositoryService
+import com.app.ralaunch.feature.announcement.AnnouncementUiEvent
+import com.app.ralaunch.feature.announcement.AnnouncementUiState
+import com.app.ralaunch.feature.announcement.AnnouncementViewModel
+import com.app.ralaunch.feature.announcement.AnnouncementViewModelFactory
+import com.app.ralaunch.shared.core.component.GlassSurface
+import com.app.ralaunch.shared.core.component.GlassSurfaceRegular
 import dev.jeziellago.compose.markdowntext.MarkdownText
-import kotlinx.coroutines.launch
-import org.koin.java.KoinJavaComponent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnnouncementScreenWrapper() {
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val service: AnnouncementRepositoryService = remember {
-        KoinJavaComponent.get(AnnouncementRepositoryService::class.java)
-    }
+    val activity = context as? ComponentActivity ?: return
 
-    var uiState by remember {
-        mutableStateOf<AnnouncementUiState>(AnnouncementUiState.Loading)
+    val viewModel: AnnouncementViewModel = remember(activity) {
+        ViewModelProvider(
+            activity,
+            AnnouncementViewModelFactory(activity.applicationContext)
+        )[AnnouncementViewModel::class.java]
     }
-    var isRefreshing by remember { mutableStateOf(false) }
-    var markdownReloadToken by remember { mutableIntStateOf(0) }
-    val markdownById = remember { mutableStateMapOf<String, String>() }
-    val markdownErrors = remember { mutableStateMapOf<String, String>() }
-    val loadingMarkdownIds = remember { mutableStateMapOf<String, Boolean>() }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     val pullToRefreshState = rememberPullToRefreshState()
 
-    fun clearMarkdownState() {
-        markdownById.clear()
-        markdownErrors.clear()
-        loadingMarkdownIds.clear()
-    }
-
-    fun syncMarkdownState(announcements: List<AnnouncementItem>) {
-        val validIds = announcements.map { it.id }.toSet()
-        markdownById.keys.filter { it !in validIds }.forEach { markdownById.remove(it) }
-        markdownErrors.keys.filter { it !in validIds }.forEach { markdownErrors.remove(it) }
-        loadingMarkdownIds.keys.filter { it !in validIds }.forEach { loadingMarkdownIds.remove(it) }
-
-        announcements.forEach { announcement ->
-            if (!announcement.markdown.isNullOrBlank()) {
-                markdownById[announcement.id] = announcement.markdown
-            }
-        }
-    }
-
-    fun loadMarkdown(announcementId: String, forceRefresh: Boolean = false) {
-        if (!forceRefresh && (markdownById.containsKey(announcementId) || loadingMarkdownIds[announcementId] == true)) {
-            return
-        }
-
-        scope.launch {
-            loadingMarkdownIds[announcementId] = true
-            if (forceRefresh) {
-                markdownErrors.remove(announcementId)
-            }
-
-            val result = service.fetchAnnouncementMarkdown(
-                announcementId = announcementId,
-                forceRefresh = forceRefresh
-            )
-
-            result.fold(
-                onSuccess = { markdown ->
-                    markdownById[announcementId] = markdown
-                    markdownErrors.remove(announcementId)
-                },
-                onFailure = {
-                    markdownErrors[announcementId] = context.getString(R.string.announcement_load_content_failed)
-                }
-            )
-
-            loadingMarkdownIds.remove(announcementId)
-        }
-    }
-
-    fun loadAnnouncements(forceRefresh: Boolean) {
-        scope.launch {
-            if (forceRefresh) {
-                isRefreshing = true
-                markdownReloadToken += 1
-                clearMarkdownState()
-            } else {
-                uiState = AnnouncementUiState.Loading
-            }
-
-            val result = service.fetchAnnouncements(forceRefresh = forceRefresh)
-            uiState = result.fold(
-                onSuccess = { announcements ->
-                    syncMarkdownState(announcements)
-                    AnnouncementUiState.Success(announcements)
-                },
-                onFailure = {
-                    AnnouncementUiState.Error(context.getString(R.string.announcement_load_failed))
-                }
-            )
-            isRefreshing = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        loadAnnouncements(forceRefresh = false)
+    LaunchedEffect(uiState.selectedAnnouncementId) {
+        val selectedId = uiState.selectedAnnouncementId ?: return@LaunchedEffect
+        viewModel.onEvent(AnnouncementUiEvent.EnsureMarkdown(selectedId))
     }
 
     PullToRefreshBox(
         modifier = Modifier.fillMaxSize(),
         state = pullToRefreshState,
-        isRefreshing = isRefreshing,
-        onRefresh = { loadAnnouncements(forceRefresh = true) }
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.onEvent(AnnouncementUiEvent.Refresh) }
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            AnimatedContent(
-                modifier = Modifier.fillMaxSize(),
-                targetState = uiState,
-                transitionSpec = {
-                    (fadeIn(animationSpec = tween(240)) +
-                        scaleIn(
-                            initialScale = 0.98f,
-                            animationSpec = tween(240)
-                        ))
-                        .togetherWith(
-                            fadeOut(animationSpec = tween(180)) +
-                                scaleOut(
-                                    targetScale = 0.98f,
-                                    animationSpec = tween(180)
-                                )
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AnnouncementListPane(
+                    uiState = uiState,
+                    onRefresh = { viewModel.onEvent(AnnouncementUiEvent.Refresh) },
+                    onRetry = { viewModel.onEvent(AnnouncementUiEvent.Retry) },
+                    onSelect = { announcementId ->
+                        viewModel.onEvent(AnnouncementUiEvent.SelectAnnouncement(announcementId))
+                    },
+                    modifier = Modifier
+                        .weight(0.38f)
+                        .fillMaxHeight()
+                        .padding(vertical = 12.dp)
+                )
+
+                AnnouncementDetailPane(
+                    uiState = uiState,
+                    onRetryMarkdown = { announcementId ->
+                        viewModel.onEvent(
+                            AnnouncementUiEvent.EnsureMarkdown(
+                                announcementId = announcementId,
+                                forceRefresh = true
+                            )
                         )
-                        .using(SizeTransform(clip = false))
-                },
-                label = "announcementStateTransition"
-            ) { currentState ->
-                when (currentState) {
-                    AnnouncementUiState.Loading -> {
-                        Box(modifier = Modifier.fillMaxSize())
-                    }
-
-                    is AnnouncementUiState.Error -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = currentState.message,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Button(onClick = { loadAnnouncements(forceRefresh = true) }) {
-                                    Text(stringResource(R.string.retry))
-                                }
-                            }
-                        }
-                    }
-
-                    is AnnouncementUiState.Success -> {
-                        if (currentState.announcements.isEmpty()) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.announcement_empty),
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                item {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                }
-                                items(
-                                    items = currentState.announcements,
-                                    key = { it.id }
-                                ) { announcement ->
-                                    LaunchedEffect(announcement.id, markdownReloadToken) {
-                                        loadMarkdown(announcementId = announcement.id)
-                                    }
-
-                                    AnnouncementCard(
-                                        announcement = announcement,
-                                        markdown = markdownById[announcement.id] ?: announcement.markdown,
-                                        isMarkdownLoading = loadingMarkdownIds[announcement.id] == true,
-                                        markdownError = markdownErrors[announcement.id],
-                                        onRetryLoadMarkdown = {
-                                            loadMarkdown(
-                                                announcementId = announcement.id,
-                                                forceRefresh = true
-                                            )
-                                        }
-                                    )
-                                }
-                                item {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                }
-                            }
-                        }
-                    }
-                }
+                    },
+                    modifier = Modifier
+                        .weight(0.62f)
+                        .fillMaxHeight()
+                        .padding(vertical = 12.dp)
+                )
             }
 
-            if (uiState is AnnouncementUiState.Loading || isRefreshing) {
+            if (uiState.isInitialLoading || uiState.isRefreshing) {
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -265,121 +137,293 @@ fun AnnouncementScreenWrapper() {
 }
 
 @Composable
-private fun AnnouncementCard(
-    announcement: AnnouncementItem,
-    markdown: String?,
-    isMarkdownLoading: Boolean,
-    markdownError: String?,
-    onRetryLoadMarkdown: () -> Unit
+private fun AnnouncementListPane(
+    uiState: AnnouncementUiState,
+    onRefresh: () -> Unit,
+    onRetry: () -> Unit,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var animateSizeAfterLoading by remember(announcement.id) { mutableStateOf(false) }
-    LaunchedEffect(announcement.id, isMarkdownLoading) {
-        if (isMarkdownLoading) {
-            animateSizeAfterLoading = true
-        }
-    }
-
-    val cardModifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp)
-        .let { base ->
-            if (animateSizeAfterLoading) {
-                base.animateContentSize(
-                    animationSpec = tween(
-                        durationMillis = 320,
-                        easing = FastOutSlowInEasing
-                    ),
-                    finishedListener = { _, _ ->
-                        animateSizeAfterLoading = false
-                    }
-                )
-            } else {
-                base
-            }
-        }
-
-    Card(
-        modifier = cardModifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+    GlassSurfaceRegular(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text(
-                text = announcement.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = announcement.publishedAt,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = stringResource(R.string.main_announcements),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
                 )
-                if (announcement.tags.isNotEmpty()) {
+                if (uiState.announcements.isNotEmpty()) {
                     Text(
-                        text = "  ·  " + announcement.tags.joinToString(" / "),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = uiState.announcements.size.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                FilledTonalIconButton(onClick = onRefresh) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = stringResource(R.string.retry)
                     )
                 }
             }
+
             Spacer(modifier = Modifier.height(12.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
+
             when {
-                !markdown.isNullOrBlank() -> {
-                    MarkdownText(markdown = markdown)
-                }
-
-                isMarkdownLoading -> {
-                    LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                    )
-                }
-
-                !markdownError.isNullOrBlank() -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                uiState.isInitialLoading && uiState.announcements.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            modifier = Modifier.weight(1f),
-                            text = markdownError,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        TextButton(onClick = onRetryLoadMarkdown) {
-                            Text(stringResource(R.string.retry))
-                        }
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                 }
 
-                else -> {
-                    Text(
-                        text = stringResource(R.string.announcement_no_content),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                !uiState.loadErrorMessage.isNullOrBlank() && uiState.announcements.isEmpty() -> {
+                    AnnouncementMessageState(
+                        message = uiState.loadErrorMessage,
+                        actionText = stringResource(R.string.retry),
+                        onAction = onRetry
                     )
+                }
+
+                uiState.announcements.isEmpty() -> {
+                    AnnouncementMessageState(
+                        message = stringResource(R.string.announcement_empty)
+                    )
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(
+                            items = uiState.announcements,
+                            key = { it.id }
+                        ) { announcement ->
+                            AnnouncementListItem(
+                                announcement = announcement,
+                                isSelected = uiState.selectedAnnouncement?.id == announcement.id,
+                                onClick = { onSelect(announcement.id) }
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-private sealed interface AnnouncementUiState {
-    data object Loading : AnnouncementUiState
-    data class Success(val announcements: List<AnnouncementItem>) : AnnouncementUiState
-    data class Error(val message: String) : AnnouncementUiState
+@Composable
+private fun AnnouncementListItem(
+    announcement: AnnouncementItem,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            }
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = announcement.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = announcement.publishedAt,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (announcement.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = announcement.tags.joinToString("  ·  "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnnouncementDetailPane(
+    uiState: AnnouncementUiState,
+    onRetryMarkdown: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    GlassSurface(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        val selectedAnnouncement = uiState.selectedAnnouncement
+        if (selectedAnnouncement == null) {
+            AnnouncementMessageState(
+                modifier = Modifier.fillMaxSize(),
+                message = if (uiState.announcements.isEmpty()) {
+                    stringResource(R.string.announcement_empty)
+                } else {
+                    stringResource(R.string.announcement_no_content)
+                }
+            )
+            return@GlassSurface
+        }
+
+        AnimatedContent(
+            modifier = Modifier.fillMaxSize(),
+            targetState = selectedAnnouncement.id,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(220))
+                    .togetherWith(fadeOut(animationSpec = tween(160)))
+            },
+            label = "announcementDetailTransition"
+        ) { selectedId ->
+            val announcement = uiState.announcements.firstOrNull { it.id == selectedId }
+                ?: selectedAnnouncement
+            val markdown = uiState.markdownById[announcement.id] ?: announcement.markdown
+            val markdownError = uiState.markdownErrors[announcement.id]
+            val isMarkdownLoading = announcement.id in uiState.loadingMarkdownIds
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = announcement.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = announcement.publishedAt,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (announcement.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = announcement.tags.joinToString("  ·  "),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(14.dp))
+
+                val contentScrollState = rememberScrollState()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(contentScrollState)
+                ) {
+                    when {
+                        !markdown.isNullOrBlank() -> {
+                            MarkdownText(markdown = markdown)
+                        }
+
+                        isMarkdownLoading -> {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
+
+                        !markdownError.isNullOrBlank() -> {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = markdownError,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                TextButton(onClick = { onRetryMarkdown(announcement.id) }) {
+                                    Text(text = stringResource(R.string.retry))
+                                }
+                            }
+                        }
+
+                        else -> {
+                            Text(
+                                text = stringResource(R.string.announcement_no_content),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnnouncementMessageState(
+    message: String?,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (!message.isNullOrBlank()) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (!actionText.isNullOrBlank() && onAction != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                TextButton(onClick = onAction) {
+                    Text(actionText)
+                }
+            }
+        }
+    }
 }

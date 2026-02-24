@@ -1,5 +1,6 @@
 package com.app.ralaunch.feature.main.update
 
+import android.content.Context
 import com.app.ralaunch.core.common.JsonHttpRepositoryClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,12 +11,17 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class LauncherUpdateChecker(
+    private val context: Context,
     private val repositoryOwner: String = DEFAULT_REPOSITORY_OWNER,
     private val repositoryName: String = DEFAULT_REPOSITORY_NAME
 ) {
 
     companion object {
         private const val GITHUB_API_BASE_URL = "https://api.github.com"
+        private const val VERSION_CONFIG_GITHUB_URL =
+            "https://raw.githubusercontent.com/RotatingArtDev/RAL-Version/main/version.json"
+        private const val VERSION_CONFIG_GITEE_URL =
+            "https://gitee.com/daohei/RAL-Version/raw/main/version.json"
         private const val DEFAULT_REPOSITORY_OWNER = "FireworkSky"
         private const val DEFAULT_REPOSITORY_NAME = "RotatingartLauncher"
         private const val CONNECT_TIMEOUT_MS = 10_000
@@ -34,25 +40,143 @@ class LauncherUpdateChecker(
                 IllegalArgumentException("Invalid current version: $currentVersionName")
             )
 
+        val configResult = fetchVersionConfigRelease()
+        val configRelease = configResult.getOrNull()
+
+        if (configRelease != null) {
+            val latestVersion = parseVersion(configRelease.version)
+            if (latestVersion != null && isRemoteVersionNewer(currentVersion, latestVersion)) {
+                val githubUrl = configRelease.downloads.github.trim()
+                val cloudUrl = configRelease.downloads.cloud.trim()
+                val releaseUrl = configRelease.releasePage.trim().ifBlank {
+                    "https://github.com/$repositoryOwner/$repositoryName/releases/latest"
+                }
+                val releaseNotes = buildString {
+                    if (configRelease.publishedAt.isNotBlank()) {
+                        append("发布日期：")
+                        append(configRelease.publishedAt.trim())
+                        append('\n')
+                        append('\n')
+                    }
+                    if (configRelease.description.isNotBlank()) {
+                        append(configRelease.description.trim())
+                    }
+                    if (configRelease.changelog.isNotEmpty()) {
+                        if (isNotEmpty()) {
+                            append('\n')
+                            append('\n')
+                        }
+                        append("更新内容：")
+                        append('\n')
+                        configRelease.changelog.forEach { item ->
+                            append("• ")
+                            append(item.trim())
+                            append('\n')
+                        }
+                    }
+                }.trim()
+
+                return Result.success(
+                    LauncherUpdateInfo(
+                        currentVersion = currentVersionName,
+                        latestVersion = configRelease.version.trim(),
+                        releaseName = configRelease.releaseName.ifBlank {
+                            configRelease.version.trim()
+                        },
+                        releaseNotes = releaseNotes,
+                        downloadUrl = githubUrl,
+                        releaseUrl = releaseUrl,
+                        githubDownloadUrl = githubUrl,
+                        cloudDownloadUrl = cloudUrl,
+                        publishedAt = configRelease.publishedAt.trim()
+                    )
+                )
+            }
+            return Result.success(null)
+        }
+
         return fetchLatestStableRelease().mapCatching { release ->
             if (release.tagName.isBlank()) return@mapCatching null
-
             val latestVersion = parseVersion(release.tagName) ?: return@mapCatching null
-            if (!isRemoteVersionNewer(currentVersion, latestVersion)) {
-                return@mapCatching null
-            }
+            if (!isRemoteVersionNewer(currentVersion, latestVersion)) return@mapCatching null
 
+            val githubUrl = release.resolveDownloadUrl()
             LauncherUpdateInfo(
                 currentVersion = currentVersionName,
                 latestVersion = release.tagName.trim(),
                 releaseName = release.name.ifBlank { release.tagName.trim() },
                 releaseNotes = release.body.trim(),
-                downloadUrl = release.resolveDownloadUrl(),
+                downloadUrl = githubUrl,
                 releaseUrl = release.htmlUrl.ifBlank {
                     "https://github.com/$repositoryOwner/$repositoryName/releases/latest"
-                }
+                },
+                githubDownloadUrl = githubUrl,
+                cloudDownloadUrl = "",
+                publishedAt = release.publishedAt.trim()
             )
         }
+    }
+
+    private suspend fun fetchVersionConfigRelease(): Result<VersionReleaseDto?> {
+        val headers = mapOf(
+            "Accept" to "application/json",
+            "User-Agent" to USER_AGENT
+        )
+
+        fun resolveRelease(config: VersionConfigDto): VersionReleaseDto? {
+            val direct = VersionReleaseDto(
+                version = config.version,
+                releaseName = config.releaseName,
+                publishedAt = config.publishedAt,
+                description = config.description,
+                changelog = config.changelog,
+                downloads = config.downloads,
+                releasePage = config.releasePage
+            )
+            if (direct.version.isNotBlank()) return direct
+            return config.latest
+        }
+
+        val primaryUrl = if (isChinese(context)) VERSION_CONFIG_GITEE_URL else VERSION_CONFIG_GITHUB_URL
+        val fallbackUrl = if (primaryUrl == VERSION_CONFIG_GITEE_URL) {
+            VERSION_CONFIG_GITHUB_URL
+        } else {
+            VERSION_CONFIG_GITEE_URL
+        }
+
+        var primaryError: Throwable? = null
+        var fallbackError: Throwable? = null
+
+        val primary = JsonHttpRepositoryClient.getJson<VersionConfigDto>(
+            urlString = primaryUrl,
+            json = json,
+            connectTimeoutMs = CONNECT_TIMEOUT_MS,
+            readTimeoutMs = READ_TIMEOUT_MS,
+            headers = headers
+        ).mapCatching { cfg -> resolveRelease(cfg) }
+        primary.getOrNull()?.let { return Result.success(it) }
+        primaryError = primary.exceptionOrNull()
+
+        val fallback = JsonHttpRepositoryClient.getJson<VersionConfigDto>(
+            urlString = fallbackUrl,
+            json = json,
+            connectTimeoutMs = CONNECT_TIMEOUT_MS,
+            readTimeoutMs = READ_TIMEOUT_MS,
+            headers = headers
+        ).mapCatching { cfg -> resolveRelease(cfg) }
+        fallback.getOrNull()?.let { return Result.success(it) }
+        fallbackError = fallback.exceptionOrNull()
+
+        return Result.failure(
+            primaryError
+                ?: fallbackError
+                ?: IllegalStateException("Unable to load version config")
+        )
+    }
+
+    private fun isChinese(context: Context): Boolean {
+        val locale = context.resources.configuration.locales[0]
+        return locale.language == "zh"
     }
 
     private suspend fun fetchLatestStableRelease(): Result<GitHubReleaseResponse> {
@@ -195,6 +319,8 @@ class LauncherUpdateChecker(
         val tagName: String = "",
         val name: String = "",
         val body: String = "",
+        @SerialName("published_at")
+        val publishedAt: String = "",
         @SerialName("html_url")
         val htmlUrl: String = "",
         val assets: List<GitHubReleaseAssetResponse> = emptyList(),
@@ -210,6 +336,37 @@ class LauncherUpdateChecker(
         @SerialName("content_type")
         val contentType: String = ""
     )
+
+    @Serializable
+    private data class VersionConfigDto(
+        val schemaVersion: Int = 1,
+        val channel: String = "stable",
+        val latest: VersionReleaseDto? = null,
+        val version: String = "",
+        val releaseName: String = "",
+        val publishedAt: String = "",
+        val description: String = "",
+        val changelog: List<String> = emptyList(),
+        val downloads: VersionDownloadsDto = VersionDownloadsDto(),
+        val releasePage: String = ""
+    )
+
+    @Serializable
+    private data class VersionReleaseDto(
+        val version: String = "",
+        val releaseName: String = "",
+        val publishedAt: String = "",
+        val description: String = "",
+        val changelog: List<String> = emptyList(),
+        val downloads: VersionDownloadsDto = VersionDownloadsDto(),
+        val releasePage: String = ""
+    )
+
+    @Serializable
+    private data class VersionDownloadsDto(
+        val github: String = "",
+        val cloud: String = ""
+    )
 }
 
 data class LauncherUpdateInfo(
@@ -218,5 +375,8 @@ data class LauncherUpdateInfo(
     val releaseName: String,
     val releaseNotes: String,
     val downloadUrl: String,
-    val releaseUrl: String
+    val releaseUrl: String,
+    val githubDownloadUrl: String = "",
+    val cloudDownloadUrl: String = "",
+    val publishedAt: String = ""
 )
