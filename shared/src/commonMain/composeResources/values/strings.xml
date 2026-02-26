@@ -131,6 +131,8 @@
     <string name="settings_developer_maintenance_section">Maintenance</string>
     <string name="settings_developer_map_buffer_range_subtitle">Enable OpenGL buffer optimization</string>
     <string name="settings_developer_map_buffer_range_title">MapBufferRange Optimization</string>
+    <string name="settings_developer_gl_perf_diag_title">GL Performance Diagnostics</string>
+    <string name="settings_developer_gl_perf_diag_subtitle">Show draw/upload bottleneck hints near FPS text</string>
     <string name="settings_developer_performance_section">Performance</string>
     <string name="settings_developer_server_gc_subtitle">Use server-mode garbage collection</string>
     <string name="settings_developer_server_gc_title">Server GC</string>

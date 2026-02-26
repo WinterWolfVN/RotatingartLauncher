@@ -93,6 +93,7 @@ data class AppSettings(
     // FNA 设置
     var fnaRenderer: String = "native",
     var fnaMapBufferRangeOptimization: Boolean = true,
+    var fnaGlPerfDiagnosticsEnabled: Boolean = false,
 
     // 画质设置
     var qualityLevel: Int = 0,

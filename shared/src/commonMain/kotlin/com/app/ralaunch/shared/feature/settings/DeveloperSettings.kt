@@ -31,7 +31,8 @@ data class DeveloperState(
     val tieredCompilationEnabled: Boolean = true,
     
     // FNA 优化
-    val fnaMapBufferRangeOptEnabled: Boolean = false
+    val fnaMapBufferRangeOptEnabled: Boolean = false,
+    val fnaGlPerfDiagnosticsEnabled: Boolean = false
 )
 
 /**
@@ -56,6 +57,7 @@ fun DeveloperSettingsContent(
     onTieredCompilationChange: (Boolean) -> Unit,
     // FNA 回调
     onFnaMapBufferRangeOptChange: (Boolean) -> Unit,
+    onFnaGlPerfDiagnosticsChange: (Boolean) -> Unit,
     // 其他
     onForceReinstallPatchesClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -100,7 +102,9 @@ fun DeveloperSettingsContent(
         // FNA 优化设置
         FnaOptimizationSection(
             mapBufferRangeOptEnabled = state.fnaMapBufferRangeOptEnabled,
-            onMapBufferRangeOptChange = onFnaMapBufferRangeOptChange
+            glPerfDiagnosticsEnabled = state.fnaGlPerfDiagnosticsEnabled,
+            onMapBufferRangeOptChange = onFnaMapBufferRangeOptChange,
+            onGlPerfDiagnosticsChange = onFnaGlPerfDiagnosticsChange
         )
 
         // 维护操作
@@ -242,7 +246,9 @@ private fun DotNetRuntimeSection(
 @Composable
 private fun FnaOptimizationSection(
     mapBufferRangeOptEnabled: Boolean,
-    onMapBufferRangeOptChange: (Boolean) -> Unit
+    glPerfDiagnosticsEnabled: Boolean,
+    onMapBufferRangeOptChange: (Boolean) -> Unit,
+    onGlPerfDiagnosticsChange: (Boolean) -> Unit
 ) {
     SettingsSection(title = stringResource(Res.string.settings_developer_fna_section)) {
         SwitchSettingItem(
@@ -251,6 +257,16 @@ private fun FnaOptimizationSection(
             icon = Icons.Default.Speed,
             checked = mapBufferRangeOptEnabled,
             onCheckedChange = onMapBufferRangeOptChange
+        )
+
+        SettingsDivider()
+
+        SwitchSettingItem(
+            title = stringResource(Res.string.settings_developer_gl_perf_diag_title),
+            subtitle = stringResource(Res.string.settings_developer_gl_perf_diag_subtitle),
+            icon = Icons.Default.Timeline,
+            checked = glPerfDiagnosticsEnabled,
+            onCheckedChange = onGlPerfDiagnosticsChange
         )
     }
 }

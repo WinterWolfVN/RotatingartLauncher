@@ -53,6 +53,22 @@ class FPSDisplayView @JvmOverloads constructor(
     private var cpuUsage = -1f   // -1 表示无数据
     private var gpuUsage = -1f   // -1 表示无数据
     private var ramUsage = ""
+    private var glDiagLine = ""
+    private var glPathLine = ""
+    private var glTimingLine = ""
+    private var glCountWindowLine = ""
+    private var glUploadWindowLine = ""
+    private var glCountTotalLine = ""
+    private var glUploadTotalLine = ""
+    private var glUploadPath = ""
+    private var glDrawPerSec = -1f
+    private var glDrawPerFrame = -1f
+    private var glUploadMbPerSec = -1f
+    private var glFrameMs = -1f
+    private var glSwapMs = -1f
+    private var glSleepMs = -1f
+    private var glMapRatio = -1f
+    private var glHintLine = ""
     
     // CPU 频率估算（兼容 Android 8+，无需 root）
     private val numCpuCores = Runtime.getRuntime().availableProcessors()
@@ -143,6 +159,7 @@ class FPSDisplayView @JvmOverloads constructor(
         updateCpuUsage()
         updateGpuUsage()
         updateRamUsage()
+        updateGlDiagnostics()
         updateVisibility()
     }
 
@@ -366,6 +383,82 @@ class FPSDisplayView @JvmOverloads constructor(
         }
     }
 
+    /** 更新 OpenGL/FNA3D 诊断信息（由 native 侧定期写入环境变量） */
+    private fun updateGlDiagnostics() {
+        try {
+            if (Os.getenv("RAL_GL_DIAGNOSTICS") != "1") {
+                clearGlDiagnostics()
+                return
+            }
+            glDiagLine = Os.getenv("RAL_GL_DIAG") ?: ""
+            glPathLine = Os.getenv("RAL_GL_PATH") ?: ""
+            glTimingLine = Os.getenv("RAL_GL_TIMING") ?: ""
+            glCountWindowLine = Os.getenv("RAL_GL_COUNT_W") ?: ""
+            glUploadWindowLine = Os.getenv("RAL_GL_UPLOAD_W") ?: ""
+            glCountTotalLine = Os.getenv("RAL_GL_COUNT_T") ?: ""
+            glUploadTotalLine = Os.getenv("RAL_GL_UPLOAD_T") ?: ""
+            glUploadPath = Os.getenv("RAL_GL_UPLOAD_PATH") ?: ""
+            glDrawPerSec = Os.getenv("RAL_GL_DRAW_S")?.toFloatOrNull() ?: -1f
+            glDrawPerFrame = Os.getenv("RAL_GL_DRAWS_FRAME")?.toFloatOrNull() ?: -1f
+            glUploadMbPerSec = Os.getenv("RAL_GL_UPLOAD_MB_S")?.toFloatOrNull() ?: -1f
+            glFrameMs = Os.getenv("RAL_GL_FRAME_MS")?.toFloatOrNull() ?: -1f
+            glSwapMs = Os.getenv("RAL_GL_SWAP_MS")?.toFloatOrNull() ?: -1f
+            glSleepMs = Os.getenv("RAL_GL_SLEEP_MS")?.toFloatOrNull() ?: -1f
+            glMapRatio = Os.getenv("RAL_GL_MAP_RATIO")?.toFloatOrNull() ?: -1f
+            glHintLine = buildGlHint()
+        } catch (_: Exception) {
+            clearGlDiagnostics()
+        }
+    }
+
+    private fun clearGlDiagnostics() {
+        glDiagLine = ""
+        glPathLine = ""
+        glTimingLine = ""
+        glCountWindowLine = ""
+        glUploadWindowLine = ""
+        glCountTotalLine = ""
+        glUploadTotalLine = ""
+        glUploadPath = ""
+        glDrawPerSec = -1f
+        glDrawPerFrame = -1f
+        glUploadMbPerSec = -1f
+        glFrameMs = -1f
+        glSwapMs = -1f
+        glSleepMs = -1f
+        glMapRatio = -1f
+        glHintLine = ""
+    }
+
+    private fun buildGlHint(): String {
+        val fpsLow = currentFPS in 0.1f..30f
+        if (fpsLow && glSleepMs >= 6f) {
+            return "Hint: FPS limiter sleep is active"
+        }
+        if (fpsLow && glSwapMs >= 25f) {
+            return "Hint: Present wait is high (GPU/VSync bottleneck)"
+        }
+        if (fpsLow && glUploadPath.startsWith("BufferSubData") && glUploadMbPerSec >= 8f) {
+            return "Hint: BufferSubData upload bottleneck suspected"
+        }
+        if (fpsLow && glUploadPath == "Mixed" && glMapRatio in 0f..35f && glUploadMbPerSec >= 8f) {
+            return "Hint: MapBufferRange coverage is low"
+        }
+        if (fpsLow && glDrawPerFrame >= 700f && glDrawPerSec >= 8000f && glSwapMs in 0f..12f) {
+            return "Hint: Draw-call count per frame is too high"
+        }
+        if (fpsLow && glFrameMs >= 50f && glSwapMs in 0f..8f && cpuUsage in 40f..85f) {
+            return "Hint: CPU submit overhead suspected"
+        }
+        if (fpsLow && cpuUsage >= 90f && (gpuUsage < 0f || gpuUsage <= 70f)) {
+            return "Hint: CPU bottleneck suspected"
+        }
+        if (fpsLow && gpuUsage >= 90f) {
+            return "Hint: GPU bottleneck suspected"
+        }
+        return ""
+    }
+
     private fun updateVisibility() {
         visibility = if (settingsManager.isFPSDisplayEnabled) VISIBLE else GONE
     }
@@ -450,6 +543,14 @@ class FPSDisplayView @JvmOverloads constructor(
         val gpuStr = if (gpuUsage >= 0f) String.format("%.0f%%", gpuUsage) else "N/A"
         lines.add("CPU: $cpuStr  GPU: $gpuStr")
         if (ramUsage.isNotEmpty()) lines.add("RAM: $ramUsage")
+        if (glDiagLine.isNotEmpty()) lines.add("GL: $glDiagLine")
+        if (glTimingLine.isNotEmpty()) lines.add(glTimingLine)
+        if (glCountWindowLine.isNotEmpty()) lines.add(glCountWindowLine)
+        if (glUploadWindowLine.isNotEmpty()) lines.add(glUploadWindowLine)
+        if (glCountTotalLine.isNotEmpty()) lines.add(glCountTotalLine)
+        if (glUploadTotalLine.isNotEmpty()) lines.add(glUploadTotalLine)
+        if (glPathLine.isNotEmpty()) lines.add(glPathLine)
+        if (glHintLine.isNotEmpty()) lines.add(glHintLine)
 
         val textBounds = Rect()
         textPaint.getTextBounds(fpsText, 0, fpsText.length, textBounds)

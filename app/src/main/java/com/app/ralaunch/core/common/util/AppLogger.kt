@@ -36,7 +36,8 @@ object AppLogger : Logger {
      * 初始化日志器
      */
     @JvmStatic
-    fun init(logDirectory: File) {
+    @JvmOverloads
+    fun init(logDirectory: File, clearExistingLogs: Boolean = false) {
         if (initialized) {
             Log.w(TAG, "AppLogger already initialized")
             return
@@ -48,6 +49,9 @@ object AppLogger : Logger {
 
         try {
             logDir?.takeIf { !it.exists() }?.mkdirs()
+            if (clearExistingLogs) {
+                clearLogFiles(logDir)
+            }
 
             logcatReader = LogcatReader.getInstance()
             val settingsManager = SettingsAccess
@@ -132,4 +136,13 @@ object AppLogger : Logger {
      */
     @JvmStatic
     fun getLogcatReader(): LogcatReader? = logcatReader
+
+    private fun clearLogFiles(directory: File?) {
+        directory
+            ?.listFiles { file -> file.isFile && file.extension.equals("log", ignoreCase = true) }
+            ?.forEach { file ->
+                runCatching { file.delete() }
+                    .onFailure { Log.w(TAG, "Failed to delete old log file: ${file.absolutePath}", it) }
+            }
+    }
 }

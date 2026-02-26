@@ -140,6 +140,10 @@ object SettingsAccess {
         get() = settings.fnaMapBufferRangeOptimization
         set(value) = update { fnaMapBufferRangeOptimization = value }
 
+    var isFnaGlPerfDiagnosticsEnabled: Boolean
+        get() = settings.fnaGlPerfDiagnosticsEnabled
+        set(value) = update { fnaGlPerfDiagnosticsEnabled = value }
+
     // 画质优化设置
     var fnaQualityLevel: Int
         get() = settings.qualityLevel

@@ -26,6 +26,7 @@ import com.app.ralaunch.core.common.util.AppLogger
 import com.app.ralaunch.core.common.util.DensityAdapter
 import com.app.ralaunch.core.common.util.LocaleManager
 import com.app.ralaunch.core.common.ErrorHandler
+import com.app.ralaunch.shared.core.platform.AppConstants
 import org.libsdl.app.SDLActivity
 
 /**
@@ -194,7 +195,7 @@ class GameActivity : SDLActivity(), GameContract.View {
     
     private fun initializeLogger() {
         try {
-            val logDir = java.io.File(getExternalFilesDir(null), "logs")
+            val logDir = java.io.File(getExternalFilesDir(null), AppConstants.Dirs.LOGS)
             AppLogger.init(logDir)
             AppLogger.info(TAG, "=== GameActivity Process Started ===")
             AppLogger.info(TAG, "Game process PID: ${android.os.Process.myPid()}")

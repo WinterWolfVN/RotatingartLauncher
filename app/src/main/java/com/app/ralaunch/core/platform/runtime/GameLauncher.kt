@@ -89,15 +89,10 @@ object GameLauncher {
      */
     init {
         try {
-            // FMOD 音频库（某些游戏如 Celeste 需要）
-            // FMOD audio libraries (required by some games like Celeste)
             System.loadLibrary("fmodL")
             System.loadLibrary("fmod")
             System.loadLibrary("fmodstudioL")
             System.loadLibrary("fmodstudio")
-
-            // 核心运行时库（必须打包在 APK 中）
-            // Core runtime libraries (must be bundled in APK)
             System.loadLibrary("dotnethost")
             System.loadLibrary("FAudio")
             System.loadLibrary("theorafile")
@@ -105,11 +100,8 @@ object GameLauncher {
             System.loadLibrary("main")
             System.loadLibrary("openal32")
             System.loadLibrary("lwjgl_lz4")
-            // 大型运行时库按需加载:
-            // Large runtime libraries loaded on-demand:
-            // - libSkiaSharp.so (7 MB) - 通过 RuntimeLibraryLoader.loadSkiaSharp() 加载
-            // - libGL_gl4es.so (4 MB) - 通过 RuntimeLibraryLoader.loadRendererLibraries() 加载
-            // - lib7-Zip-JBinding.so (3 MB) - 通过 RuntimeLibraryLoader.load7Zip() 加载
+            System.loadLibrary("SkiaSharp")
+
         } catch (e: UnsatisfiedLinkError) {
             AppLogger.error(TAG, "加载 Native 库失败 / Failed to load native libraries: ${e.message}")
         }
@@ -305,6 +297,30 @@ object GameLauncher {
                 // Audio configuration
                 "SDL_AAUDIO_LOW_LATENCY" to if (settings.isSdlAaudioLowLatency) "1" else "0",
                 "RAL_AUDIO_BUFFERSIZE" to settings.ralAudioBufferSize?.toString(),
+
+                // OpenGL 运行时诊断（用于 FPS 旁性能分析）
+                // OpenGL runtime diagnostics (for FPS-adjacent performance analysis)
+                "RAL_GL_DIAGNOSTICS" to if (
+                    settings.isFnaGlPerfDiagnosticsEnabled && settings.isFPSDisplayEnabled
+                ) "1" else "0",
+                "RAL_GL_DIAG" to null,
+                "RAL_GL_PATH" to null,
+                "RAL_GL_TIMING" to null,
+                "RAL_GL_COUNT_W" to null,
+                "RAL_GL_UPLOAD_W" to null,
+                "RAL_GL_COUNT_T" to null,
+                "RAL_GL_UPLOAD_T" to null,
+                "RAL_GL_UPLOAD_PATH" to null,
+                "RAL_GL_MAP_WRITES_S" to null,
+                "RAL_GL_SUBDATA_WRITES_S" to null,
+                "RAL_GL_DRAW_S" to null,
+                "RAL_GL_UPLOAD_MB_S" to null,
+                "RAL_GL_DRAWS_FRAME" to null,
+                "RAL_GL_FRAME_MS" to null,
+                "RAL_GL_SWAP_MS" to null,
+                "RAL_GL_SLEEP_MS" to null,
+                "RAL_GL_MAP_RATIO" to null,
+                "RAL_GL_MAP_ENABLED" to null,
             )
             AppLogger.debug(TAG, "游戏设置环境变量配置完成 / Game settings environment variables set: OK")
 

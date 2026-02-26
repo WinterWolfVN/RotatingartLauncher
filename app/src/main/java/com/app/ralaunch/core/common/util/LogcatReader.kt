@@ -49,11 +49,14 @@ class LogcatReader private constructor() {
             return
         }
 
+        val pid = android.os.Process.myPid()
+
         try {
             logDir?.takeIf { !it.exists() }?.mkdirs()
-            val fileName = "ralaunch_${SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())}.log"
+            val dateTime = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
+            val fileName = "ralaunch_${dateTime}_pid${pid}.log"
             logFile = File(logDir, fileName)
-            logWriter = PrintWriter(FileWriter(logFile, true), true)
+            logWriter = PrintWriter(FileWriter(logFile, false), true)
             Log.i(TAG, "LogcatReader started, logging to: ${logFile?.absolutePath}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create log file", e)
@@ -64,10 +67,8 @@ class LogcatReader private constructor() {
 
         readerThread = Thread({
             try {
-                Runtime.getRuntime().exec("logcat -c").waitFor()
-
                 val cmd = buildString {
-                    append("logcat -v time")
+                    append("logcat --pid=$pid -v time")
                     if (!filterTags.isNullOrEmpty()) {
                         append(" *:S")
                         filterTags.forEach { append(" $it:V") }
@@ -164,6 +165,7 @@ class LogcatReader private constructor() {
             "TurboSchedMonitor", "MiuiMultiWindowUtils", "MiuiProcessManagerImpl",
             "FramePredict", "FirstFrameSpeedUp", "InsetsController", "ViewRootImpl",
             "Choreographer", "HandWritingStubImpl", "ViewRootImplStubImpl",
+            "MiInputConsumer",
             "CompatChangeReporter", "ContentCatcher", "SecurityManager",
             "ComputilityLevel", "Activity", "libc", "SplineOverScroller",
             "BufferQueueProducer", "BLASTBufferQueue",

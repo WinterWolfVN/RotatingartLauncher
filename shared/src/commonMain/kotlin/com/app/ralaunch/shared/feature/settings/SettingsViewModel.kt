@@ -56,6 +56,7 @@ data class SettingsUiState(
     val concurrentGCEnabled: Boolean = true,
     val tieredCompilationEnabled: Boolean = true,
     val fnaMapBufferRangeOptEnabled: Boolean = false,
+    val fnaGlPerfDiagnosticsEnabled: Boolean = false,
 
     // 关于
     val appVersion: String = "",
@@ -105,6 +106,7 @@ sealed class SettingsEvent {
     data class SetConcurrentGC(val enabled: Boolean) : SettingsEvent()
     data class SetTieredCompilation(val enabled: Boolean) : SettingsEvent()
     data class SetFnaMapBufferRangeOpt(val enabled: Boolean) : SettingsEvent()
+    data class SetFnaGlPerfDiagnostics(val enabled: Boolean) : SettingsEvent()
     data object ForceReinstallPatches : SettingsEvent()
 
     // 操作
@@ -212,6 +214,7 @@ class SettingsViewModel(
             is SettingsEvent.SetConcurrentGC -> setConcurrentGC(event.enabled)
             is SettingsEvent.SetTieredCompilation -> setTieredCompilation(event.enabled)
             is SettingsEvent.SetFnaMapBufferRangeOpt -> setFnaMapBufferRangeOpt(event.enabled)
+            is SettingsEvent.SetFnaGlPerfDiagnostics -> setFnaGlPerfDiagnostics(event.enabled)
             is SettingsEvent.ViewLogs -> sendEffect(SettingsEffect.ViewLogsPage)
             is SettingsEvent.ClearCache -> clearCache()
             is SettingsEvent.ExportLogs -> sendEffect(SettingsEffect.ExportLogsToFile)
@@ -263,6 +266,7 @@ class SettingsViewModel(
                     concurrentGCEnabled = settings.concurrentGC,
                     tieredCompilationEnabled = settings.tieredCompilation,
                     fnaMapBufferRangeOptEnabled = settings.fnaMapBufferRangeOptimization,
+                    fnaGlPerfDiagnosticsEnabled = settings.fnaGlPerfDiagnosticsEnabled,
                     // 关于
                     appVersion = appInfo.versionName,
                     buildInfo = appInfo.versionCode.toString()
@@ -508,6 +512,13 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.update { fnaMapBufferRangeOptimization = enabled }
             _uiState.update { it.copy(fnaMapBufferRangeOptEnabled = enabled) }
+        }
+    }
+
+    private fun setFnaGlPerfDiagnostics(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { fnaGlPerfDiagnosticsEnabled = enabled }
+            _uiState.update { it.copy(fnaGlPerfDiagnosticsEnabled = enabled) }
         }
     }
 

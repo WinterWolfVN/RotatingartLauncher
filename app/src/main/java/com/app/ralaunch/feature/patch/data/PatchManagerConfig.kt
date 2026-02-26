@@ -99,7 +99,7 @@ class PatchManagerConfig {
      * @return true if save succeeds, false otherwise
      */
     fun saveToJson(pathToJson: Path): Boolean {
-        Log.i(TAG, "保存 $CONFIG_FILE_NAME, pathToJson: $pathToJson")
+        Log.i(TAG, "Save $CONFIG_FILE_NAME, pathToJson: $pathToJson")
 
         return try {
             // Ensure parent directory exists
@@ -109,12 +109,12 @@ class PatchManagerConfig {
                 OutputStreamWriter(stream, StandardCharsets.UTF_8).use { writer ->
                     gson.toJson(this, writer)
                     writer.flush()
-                    Log.i(TAG, "配置文件保存成功")
+                    Log.i(TAG, "Configuration file saved successfully")
                     true
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "保存配置文件失败: ${Log.getStackTraceString(e)}")
+            Log.w(TAG, "Save configuration file failed: ${Log.getStackTraceString(e)}")
             false
         }
     }

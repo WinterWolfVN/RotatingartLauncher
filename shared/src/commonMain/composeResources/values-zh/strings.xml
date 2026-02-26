@@ -124,6 +124,8 @@
     <string name="settings_developer_maintenance_section">维护</string>
     <string name="settings_developer_map_buffer_range_subtitle">启用 OpenGL 缓冲区优化</string>
     <string name="settings_developer_map_buffer_range_title">MapBufferRange 优化</string>
+    <string name="settings_developer_gl_perf_diag_title">GL 性能诊断</string>
+    <string name="settings_developer_gl_perf_diag_subtitle">在 FPS 文本附近显示 Draw/上传瓶颈提示</string>
     <string name="settings_developer_performance_section">性能</string>
     <string name="settings_developer_server_gc_subtitle">使用服务器模式垃圾回收</string>
     <string name="settings_developer_server_gc_title">Server GC</string>

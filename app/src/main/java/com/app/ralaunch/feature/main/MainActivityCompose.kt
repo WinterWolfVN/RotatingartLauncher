@@ -301,7 +301,10 @@ class MainActivityCompose : BaseActivity() {
 
     private fun initLogger() {
         try {
-            AppLogger.init(File(getExternalFilesDir(null), "logs"))
+            AppLogger.init(
+                logDirectory = File(getExternalFilesDir(null), AppConstants.Dirs.LOGS),
+                clearExistingLogs = true
+            )
         } catch (e: Exception) {
             Log.e("MainActivityCompose", "Failed to initialize logger", e)
         }

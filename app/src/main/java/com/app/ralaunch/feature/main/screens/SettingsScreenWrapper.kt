@@ -267,7 +267,8 @@ fun SettingsScreenWrapper(
                         serverGCEnabled = uiState.serverGCEnabled,
                         concurrentGCEnabled = uiState.concurrentGCEnabled,
                         tieredCompilationEnabled = uiState.tieredCompilationEnabled,
-                        fnaMapBufferRangeOptEnabled = uiState.fnaMapBufferRangeOptEnabled
+                        fnaMapBufferRangeOptEnabled = uiState.fnaMapBufferRangeOptEnabled,
+                        fnaGlPerfDiagnosticsEnabled = uiState.fnaGlPerfDiagnosticsEnabled
                     ),
                     onLoggingChange = { viewModel.onEvent(SettingsEvent.SetLoggingEnabled(it)) },
                     onVerboseLoggingChange = { viewModel.onEvent(SettingsEvent.SetVerboseLogging(it)) },
@@ -281,6 +282,7 @@ fun SettingsScreenWrapper(
                     onConcurrentGCChange = { viewModel.onEvent(SettingsEvent.SetConcurrentGC(it)) },
                     onTieredCompilationChange = { viewModel.onEvent(SettingsEvent.SetTieredCompilation(it)) },
                     onFnaMapBufferRangeOptChange = { viewModel.onEvent(SettingsEvent.SetFnaMapBufferRangeOpt(it)) },
+                    onFnaGlPerfDiagnosticsChange = { viewModel.onEvent(SettingsEvent.SetFnaGlPerfDiagnostics(it)) },
                     onForceReinstallPatchesClick = { viewModel.onEvent(SettingsEvent.ForceReinstallPatches) }
                 )
             }
