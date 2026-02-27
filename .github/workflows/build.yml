@@ -15,10 +15,12 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           
-      - name: Ép hạ minSdk xuống 25 (Android 7.1)
+      - name: Ép hạ minSdk xuống 25 cho TOÀN BỘ project
         run: |
-          find . -name "build.gradle*" -exec sed -i 's/minSdk.*/minSdk = 25/g' {} +
-          find . -name "build.gradle*" -exec sed -i 's/minSdkVersion.*/minSdkVersion 25/g' {} +
+          # Quét tất cả các file build.gradle và hạ minSdk xuống 25
+          find . -name "build.gradle*" -exec sed -i 's/minSdk 28/minSdk 25/g' {} +
+          find . -name "build.gradle*" -exec sed -i 's/minSdk = 28/minSdk = 25/g' {} +
+          find . -name "build.gradle*" -exec sed -i 's/minSdkVersion 28/minSdkVersion 25/g' {} +
           
       - name: Cấp quyền chạy cho Gradle
         run: chmod +x ./gradlew
@@ -30,4 +32,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Launcher-Android-7.1.1
-          path: app/build/outputs/apk/debug/*.apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
