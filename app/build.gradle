@@ -50,8 +50,8 @@ android {
     }
     compileOptions {
         coreLibraryDesugaringEnabled true  // <--- THÊM DÒNG NÀY: Bắt buộc để Android 7 chạy được Java 21 mà không đổi lõi
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     externalNativeBuild {
         cmake {
@@ -94,7 +94,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = '21'
+        jvmTarget = '17'
     }
 
     lint {
