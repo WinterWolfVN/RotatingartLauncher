@@ -1,7 +1,9 @@
-name: Build RAL APK (Debug Signed)
+name: Build RAL APK (Debug & Release)
 
 on:
   push:
+    branches: [ main, master ]
+  pull_request:
     branches: [ main, master ]
   workflow_dispatch:
 
@@ -20,20 +22,23 @@ jobs:
       actions: write
 
     steps:
+      # ==================== 环境准备 ====================
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           lfs: true
 
-      - uses: actions/setup-java@v4
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
 
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install SDK
+      - name: Install SDK Components
         run: |
           sdkmanager --install \
             "platforms;android-${ANDROID_COMPILE_SDK}" \
@@ -42,7 +47,31 @@ jobs:
             "cmake;${ANDROID_CMAKE_VERSION}"
           yes | sdkmanager --licenses || true
 
-      - name: Generate Debug Keystore
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # ==================== Debug 构建 ====================
+      - name: Build Debug APK
+        run: |
+          echo "🚀 开始构建 Debug 版本..."
+          ./gradlew clean assembleDebug --no-daemon --stacktrace
+
+      - name: Verify Debug APK
+        run: |
+          ls -lh app/build/outputs/apk/debug/
+          echo "Debug APK 信息："
+          ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | head -1 || true
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAL-Debug-${{ github.run_id }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      # ==================== Release 构建 ====================
+      - name: Generate Debug Keystore for Release
         run: |
           keytool -genkey -v \
             -keystore debug.keystore \
@@ -53,20 +82,29 @@ jobs:
             -storepass android \
             -keypass android \
             -dname "CN=Android Debug, O=Android, C=US"
-          echo "Debug密钥生成完成"
 
-      - name: Build APK
+      - name: Build Release APK
         run: |
-          chmod +x ./gradlew
-          ./gradlew clean
-          ./gradlew assembleRelease --no-daemon
+          echo "🚀 开始构建 Release 版本..."
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Sign APK with Debug Key
+      - name: Sign Release APK with Debug Key
         run: |
-          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
-          SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
+          UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           
-          # 签名
+          if [ ! -f "$UNSIGNED_APK" ]; then
+            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
+          fi
+          
+          if [ -z "$UNSIGNED_APK" ] || [ ! -f "$UNSIGNED_APK" ]; then
+            echo "❌ 错误：未找到未签名 APK"
+            ls -la app/build/outputs/apk/release/ || true
+            exit 1
+          fi
+          
+          SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
+          echo "🔑 正在签名: $UNSIGNED_APK"
+          
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
             --ks debug.keystore \
             --ks-key-alias androiddebugkey \
@@ -75,21 +113,35 @@ jobs:
             --out "${SIGNED_APK}" \
             "${UNSIGNED_APK}"
           
-          # 验证签名并清理未签名文件
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner verify -v "${SIGNED_APK}"
-          rm -f "${UNSIGNED_APK}"
+          rm -f "${UNSIGNED_APK}" "${UNSIGNED_APK}.idsig" 2>/dev/null || true
           
-          echo "APK已签名: ${SIGNED_APK}"
-          ls -la app/build/outputs/apk/release/
+          echo "✅ Release APK 已签名: ${SIGNED_APK}"
 
-      - name: Upload Signed APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAL-DebugSigned-${{ github.run_id }}
+          name: RAL-Release-DebugSigned-${{ github.run_id }}
           path: app/build/outputs/apk/release/*-signed.apk
           retention-days: 30
-          if-no-files-found: error  # 找不到文件时让构建失败，避免静默错误
+          if-no-files-found: error
 
-      - run: |
-          echo "✅ 构建完成（Debug签名）"
-          echo "下载: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+      # ==================== 构建摘要 ====================
+      - name: Build Summary
+        run: |
+          echo "========================================"
+          echo "✅ 双版本构建完成"
+          echo "========================================"
+          echo ""
+          echo "📦 Debug APK (开发调试):"
+          echo "   文件名: app-debug.apk"
+          echo "   签名: Android Debug Key (自动)"
+          echo ""
+          echo "📦 Release APK (性能优化):"
+          echo "   文件名: app-release-signed.apk"
+          echo "   签名: Android Debug Key (手动)"
+          echo "   特性: 代码优化、资源压缩"
+          echo ""
+          echo "📥 下载地址:"
+          echo "   ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo "========================================"
