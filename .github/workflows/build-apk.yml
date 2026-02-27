@@ -1,10 +1,19 @@
-# Rotating Art Launcher (RAL) 全自动APK构建工作流 - 带诊断信息
-name: Build RAL APK
+# Rotating Art Launcher (RAL) 官方对齐构建工作流
+name: Build RAL APK (Official Match)
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型（官方通常是 Release）'
+        required: true
+        default: 'release'  # 默认改为 release，与官方一致
+        type: choice
+        options:
+          - release    # 与官方一致
+          - debug      # 仅调试使用
 
 env:
   ANDROID_COMPILE_SDK: "36"
@@ -47,47 +56,42 @@ jobs:
             "cmake;${ANDROID_CMAKE_VERSION}"
           yes | sdkmanager --licenses || true
 
-      # 构建步骤（允许失败继续执行后续诊断）
-      - name: Build Debug APK
+      # 关键：根据输入选择构建类型，默认 Release（与官方一致）
+      - name: Build APK
         id: build_step
-        continue-on-error: true
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-
-      # 捕获错误日志（构建失败时执行）
-      - name: Capture Error Logs
-        if: steps.build_step.outcome == 'failure'
-        run: |
-          echo "::group::❌ 构建错误摘要"
-          echo "失败步骤: Gradle 构建"
-          echo "常见原因:"
-          echo "  1. Java/NDK 版本不匹配"
-          echo "  2. 编译错误（Kotlin/C++）"
-          echo "  3. 依赖下载失败"
-          echo ""
-          echo "查看详细日志:"
-          echo "  1. 点击本页面顶部的 'Build Debug APK' 步骤"
-          echo "  2. 展开后搜索 'error:' 或 'FAILED'"
-          echo "::endgroup::"
           
-          # 尝试定位具体错误行
-          echo "::group::🔍 最后 50 行关键日志"
-          # 这里只是示例，实际错误在步骤日志中查看
-          echo "请查看上方 'Build Debug APK' 步骤的完整日志"
-          echo "::endgroup::"
+          if [ "${{ github.event.inputs.build_type }}" == "debug" ]; then
+            echo "🔨 构建 Debug 版本（仅供调试）"
+            ./gradlew assembleDebug --no-daemon --stacktrace
+            APK_PATH="app/build/outputs/apk/debug"
+            APK_PATTERN="*-debug.apk"
+          else
+            echo "🔨 构建 Release 版本（与官方一致）"
+            # Release 模式会触发 build.gradle 中的优化配置：
+            # - CMAKE_BUILD_TYPE=Release（优化过的 Native 库）
+            # - 无调试符号
+            ./gradlew assembleRelease --no-daemon --stacktrace
+            APK_PATH="app/build/outputs/apk/release"
+            APK_PATTERN="*-release-unsigned.apk"  # 未签名版本
+          fi
+          
+          # 找到 APK 文件
+          APK_FILE=$(find $APK_PATH -name "*.apk" | head -n 1)
+          echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
+          echo "build_type=${{ github.event.inputs.build_type || 'release' }}" >> $GITHUB_OUTPUT
 
-      # 上传产物（仅成功时）
+      # 上传产物
       - name: Upload APK
         if: steps.build_step.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: RAL-APK-${{ github.run_id }}
-          path: app/build/outputs/apk/debug/*.apk
+          name: RAL-${{ github.event.inputs.build_type || 'release' }}-${{ github.run_id }}
+          path: ${{ steps.build_step.outputs.apk_path }}
           retention-days: 30
 
-      # 构建报告（成功或失败都显示）
+      # 构建报告
       - name: Build Report
         if: always()
         run: |
@@ -95,33 +99,32 @@ jobs:
           echo "╔════════════════════════════════════════════════════════╗"
           
           if [ "${{ steps.build_step.outcome }}" == "success" ]; then
-            echo "║              ✅ APK 构建成功！                         ║"
+            BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
+            
+            if [ "$BUILD_TYPE" == "release" ]; then
+              echo "║     ✅ Release 构建成功（与官方一致）                  ║"
+              echo "╠════════════════════════════════════════════════════════╣"
+              echo "║  ⚠️  注意：这是未签名版本，安装前需要签名              ║"
+              echo "║     或使用调试签名：                                   ║"
+              echo "║     keytool -genkey -v ...                             ║"
+              echo "║     apksigner sign --ks debug.jks ...                  ║"
+            else
+              echo "║     ✅ Debug 构建成功（仅供调试）                      ║"
+              echo "╠════════════════════════════════════════════════════════╣"
+              echo "║  💡 提示：Debug 版本可以直接安装调试                   ║"
+            fi
+            
             echo "╠════════════════════════════════════════════════════════╣"
             echo "║  📥 下载地址：                                         ║"
             echo "║  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} ║"
-            echo "╠════════════════════════════════════════════════════════╣"
-            echo "║  📋 使用说明：                                         ║"
-            echo "║  1. 点击上方链接                                       ║"
-            echo "║  2. 在页面底部找到 'Artifacts' 区域                    ║"
-            echo "║  3. 点击 'RAL-APK-xxx' 下载 ZIP 文件                   ║"
-            echo "║  4. 解压 ZIP 得到 APK 文件                             ║"
           else
             echo "║              ❌ 构建失败                               ║"
             echo "╠════════════════════════════════════════════════════════╣"
             echo "║  🔍 查看错误：                                         ║"
             echo "║  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} ║"
-            echo "╠════════════════════════════════════════════════════════╣"
-            echo "║  📋 排查步骤：                                         ║"
-            echo "║  1. 点击上方链接进入构建详情页                         ║"
-            echo "║  2. 找到红色 ❌ 标记的步骤（通常是 Build Debug APK）   ║"
-            echo "║  3. 点击该步骤展开查看详细错误日志                     ║"
-            echo "║  4. 搜索关键词：error、FAILED、Exception                ║"
           fi
           
           echo "╚════════════════════════════════════════════════════════╝"
           echo ""
           
-          # 如果失败，让任务最终状态为失败
-          if [ "${{ steps.build_step.outcome }}" != "success" ]; then
-            exit 1
-          fi
+          [ "${{ steps.build_step.outcome }}" != "success" ] && exit 1
