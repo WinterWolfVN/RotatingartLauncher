@@ -1,19 +1,9 @@
-# Rotating Art Launcher (RAL) 官方对齐构建工作流
-name: Build RAL APK (Official Match)
+name: Build RAL APK
 
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: '构建类型（官方通常是 Release）'
-        required: true
-        default: 'release'  # 默认改为 release，与官方一致
-        type: choice
-        options:
-          - release    # 与官方一致
-          - debug      # 仅调试使用
 
 env:
   ANDROID_COMPILE_SDK: "36"
@@ -30,25 +20,21 @@ jobs:
       actions: write
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: "latest"
 
-      - name: Install SDK & NDK
-        run: |
+      - run: |
           sdkmanager --install \
             "platforms;android-${ANDROID_COMPILE_SDK}" \
             "build-tools;${ANDROID_BUILD_TOOLS}" \
@@ -56,75 +42,16 @@ jobs:
             "cmake;${ANDROID_CMAKE_VERSION}"
           yes | sdkmanager --licenses || true
 
-      # 关键：根据输入选择构建类型，默认 Release（与官方一致）
-      - name: Build APK
-        id: build_step
-        run: |
+      - run: |
           chmod +x ./gradlew
-          
-          if [ "${{ github.event.inputs.build_type }}" == "debug" ]; then
-            echo "🔨 构建 Debug 版本（仅供调试）"
-            ./gradlew assembleDebug --no-daemon --stacktrace
-            APK_PATH="app/build/outputs/apk/debug"
-            APK_PATTERN="*-debug.apk"
-          else
-            echo "🔨 构建 Release 版本（与官方一致）"
-            # Release 模式会触发 build.gradle 中的优化配置：
-            # - CMAKE_BUILD_TYPE=Release（优化过的 Native 库）
-            # - 无调试符号
-            ./gradlew assembleRelease --no-daemon --stacktrace
-            APK_PATH="app/build/outputs/apk/release"
-            APK_PATTERN="*-release-unsigned.apk"  # 未签名版本
-          fi
-          
-          # 找到 APK 文件
-          APK_FILE=$(find $APK_PATH -name "*.apk" | head -n 1)
-          echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
-          echo "build_type=${{ github.event.inputs.build_type || 'release' }}" >> $GITHUB_OUTPUT
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
-      # 上传产物
-      - name: Upload APK
-        if: steps.build_step.outcome == 'success'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: RAL-${{ github.event.inputs.build_type || 'release' }}-${{ github.run_id }}
-          path: ${{ steps.build_step.outputs.apk_path }}
+          name: RAL-Release-${{ github.run_id }}
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 30
 
-      # 构建报告
-      - name: Build Report
-        if: always()
-        run: |
-          echo ""
-          echo "╔════════════════════════════════════════════════════════╗"
-          
-          if [ "${{ steps.build_step.outcome }}" == "success" ]; then
-            BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
-            
-            if [ "$BUILD_TYPE" == "release" ]; then
-              echo "║     ✅ Release 构建成功（与官方一致）                  ║"
-              echo "╠════════════════════════════════════════════════════════╣"
-              echo "║  ⚠️  注意：这是未签名版本，安装前需要签名              ║"
-              echo "║     或使用调试签名：                                   ║"
-              echo "║     keytool -genkey -v ...                             ║"
-              echo "║     apksigner sign --ks debug.jks ...                  ║"
-            else
-              echo "║     ✅ Debug 构建成功（仅供调试）                      ║"
-              echo "╠════════════════════════════════════════════════════════╣"
-              echo "║  💡 提示：Debug 版本可以直接安装调试                   ║"
-            fi
-            
-            echo "╠════════════════════════════════════════════════════════╣"
-            echo "║  📥 下载地址：                                         ║"
-            echo "║  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} ║"
-          else
-            echo "║              ❌ 构建失败                               ║"
-            echo "╠════════════════════════════════════════════════════════╣"
-            echo "║  🔍 查看错误：                                         ║"
-            echo "║  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} ║"
-          fi
-          
-          echo "╚════════════════════════════════════════════════════════╝"
-          echo ""
-          
-          [ "${{ steps.build_step.outcome }}" != "success" ] && exit 1
+      - run: |
+          echo "APK构建完成"
+          echo "下载地址: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
