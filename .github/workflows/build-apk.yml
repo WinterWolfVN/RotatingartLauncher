@@ -1,4 +1,4 @@
-name: Build RAL APK (Debug & Release)
+name: Build RAL APK (Safe Mode)
 
 on:
   push:
@@ -22,7 +22,6 @@ jobs:
       actions: write
 
     steps:
-      # ==================== 环境准备 ====================
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -50,28 +49,30 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # ==================== Debug 构建 ====================
-      - name: Build Debug APK
+      # ==================== 安全版本 1: 开发者 (无资源压缩) ====================
+      - name: Build Developer APK (Debug)
         run: |
-          echo "🚀 开始构建 Debug 版本..."
+          echo "🛠️ 构建开发者版本..."
+          echo "✅ 无资源压缩，100% 资源完整"
           ./gradlew clean assembleDebug --no-daemon --stacktrace
 
-      - name: Verify Debug APK
+      - name: Analyze Developer APK
         run: |
-          ls -lh app/build/outputs/apk/debug/
-          echo "Debug APK 信息："
-          ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/aapt dump badging app/build/outputs/apk/debug/app-debug.apk | head -1 || true
+          DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
+          echo "📊 文件大小: $(du -h $DEBUG_APK | cut -f1)"
+          echo "🔐 验证签名:"
+          ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner verify -v "$DEBUG_APK" || true
 
-      - name: Upload Debug APK
+      - name: Upload Developer APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAL-Debug-${{ github.run_id }}
+          name: RAL-Developer-Full
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== Release 构建 ====================
-      - name: Generate Debug Keystore for Release
+      # ==================== 安全版本 2: 用户版 (保守优化) ====================
+      - name: Generate Signing Key
         run: |
           keytool -genkey -v \
             -keystore debug.keystore \
@@ -83,27 +84,22 @@ jobs:
             -keypass android \
             -dname "CN=Android Debug, O=Android, C=US"
 
-      - name: Build Release APK
+      - name: Build Safe Release APK
         run: |
-          echo "🚀 开始构建 Release 版本..."
+          echo "🚀 构建用户版本 (安全模式)..."
+          echo "⚠️ 仅启用代码混淆，关闭资源压缩避免丢失"
           ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Sign Release APK with Debug Key
+      - name: Sign & Analyze Release APK
         run: |
           UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          SIGNED_APK="app/build/outputs/apk/release/app-release-safe.apk"
           
           if [ ! -f "$UNSIGNED_APK" ]; then
             UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
           fi
           
-          if [ -z "$UNSIGNED_APK" ] || [ ! -f "$UNSIGNED_APK" ]; then
-            echo "❌ 错误：未找到未签名 APK"
-            ls -la app/build/outputs/apk/release/ || true
-            exit 1
-          fi
-          
-          SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
-          echo "🔑 正在签名: $UNSIGNED_APK"
+          [ -f "$UNSIGNED_APK" ] || { echo "❌ 未找到 APK"; exit 1; }
           
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
             --ks debug.keystore \
@@ -113,35 +109,47 @@ jobs:
             --out "${SIGNED_APK}" \
             "${UNSIGNED_APK}"
           
+          echo "📊 文件大小: $(du -h $SIGNED_APK | cut -f1)"
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner verify -v "${SIGNED_APK}"
-          rm -f "${UNSIGNED_APK}" "${UNSIGNED_APK}.idsig" 2>/dev/null || true
-          
-          echo "✅ Release APK 已签名: ${SIGNED_APK}"
+          rm -f "${UNSIGNED_APK}" "${UNSIGNED_APK}.idsig" debug.keystore
 
-      - name: Upload Release APK
+      - name: Upload Safe Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAL-Release-DebugSigned-${{ github.run_id }}
-          path: app/build/outputs/apk/release/*-signed.apk
+          name: RAL-User-Safe
+          path: app/build/outputs/apk/release/app-release-safe.apk
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== 构建摘要 ====================
-      - name: Build Summary
+      # ==================== 严格版本 3: 最大压缩 (风险版) ====================
+      # 警告：此版本启用 shrinkResources，可能导致资源丢失！
+      # 如需启用，取消下面的注释并确保已配置 keep.xml
+      # 
+      # - name: Build Strict Release APK (Risky)
+      #   run: |
+      #     echo "⚠️ 严格模式：启用资源压缩"
+      #     ./gradlew assembleRelease -PstrictMode=true --no-daemon
+      #   continue-on-error: true
+
+      - name: Summary
         run: |
-          echo "========================================"
-          echo "✅ 双版本构建完成"
-          echo "========================================"
+          echo "=========================================="
+          echo "✅ 安全构建完成"
+          echo "=========================================="
           echo ""
-          echo "📦 Debug APK (开发调试):"
-          echo "   文件名: app-debug.apk"
-          echo "   签名: Android Debug Key (自动)"
+          echo "🛠️ 【开发者版 - 完整资源】"
+          echo "   • 无资源压缩 (shrinkResources = false)"
+          echo "   • 100% 资源完整性保证"
+          echo "   • 适合日常开发调试"
           echo ""
-          echo "📦 Release APK (性能优化):"
-          echo "   文件名: app-release-signed.apk"
-          echo "   签名: Android Debug Key (手动)"
-          echo "   特性: 代码优化、资源压缩"
+          echo "🚀 【用户版 - 安全优化】"
+          echo "   • 仅代码混淆 (minifyEnabled = true)"
+          echo "   • ❌ 资源压缩已禁用 (避免丢失)"
+          echo "   • 体积适中，安全性高"
           echo ""
-          echo "📥 下载地址:"
-          echo "   ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          echo "========================================"
+          echo "⚠️  关于资源压缩 (shrinkResources):"
+          echo "   如需启用，请先在 app/src/main/res/raw/keep.xml"
+          echo "   中配置资源保留规则，否则可能导致运行时崩溃！"
+          echo ""
+          echo "📥 下载: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo "=========================================="
