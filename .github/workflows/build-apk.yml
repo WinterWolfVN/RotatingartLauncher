@@ -1,11 +1,20 @@
-name: Build RAL APK (Debug & Safe & Strict)
+name: Build RAL APK (Manual)
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      build_debug:
+        description: '构建开发者版本 (Debug)'
+        type: boolean
+        default: true
+      build_safe:
+        description: '构建安全版本 (仅代码压缩)'
+        type: boolean
+        default: true
+      build_strict:
+        description: '构建严格版本 (资源压缩⚠️)'
+        type: boolean
+        default: false
 
 env:
   ANDROID_COMPILE_SDK: "36"
@@ -49,13 +58,15 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # ==================== 版本 1: Debug (无压缩) ====================
+      # ==================== Debug 版本 ====================
       - name: Build Developer APK (Debug)
+        if: github.event.inputs.build_debug == 'true'
         run: |
           echo "🛠️ 构建开发者版本..."
           ./gradlew clean assembleDebug --no-daemon
 
       - name: Upload Debug APK
+        if: github.event.inputs.build_debug == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: 1-RAL-Developer-Debug
@@ -63,8 +74,9 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== 版本 2: Safe Release (仅代码压缩) ====================
+      # ==================== Safe Release 版本 ====================
       - name: Generate Signing Key
+        if: github.event.inputs.build_safe == 'true' || github.event.inputs.build_strict == 'true'
         run: |
           keytool -genkey -v \
             -keystore debug.keystore \
@@ -77,11 +89,13 @@ jobs:
             -dname "CN=Android Debug, O=Android, C=US"
 
       - name: Build Safe Release APK
+        if: github.event.inputs.build_safe == 'true'
         run: |
-          echo "🚀 构建安全版本..."
+          echo "🚀 构建安全版本 (仅代码压缩)..."
           ./gradlew assembleRelease --no-daemon
 
       - name: Sign & Upload Safe APK
+        if: github.event.inputs.build_safe == 'true'
         run: |
           UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
           [ ! -f "$UNSIGNED" ] && UNSIGNED=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
@@ -97,6 +111,7 @@ jobs:
           rm -f "$UNSIGNED" "$UNSIGNED.idsig"
 
       - name: Upload Safe APK
+        if: github.event.inputs.build_safe == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: 2-RAL-User-Safe
@@ -104,43 +119,27 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== 版本 3: Strict Release (资源压缩) ====================
+      # ==================== Strict Release 版本 (资源压缩) ====================
       - name: Enable Resource Shrinking
+        if: github.event.inputs.build_strict == 'true'
         run: |
           echo "⚠️  启用资源压缩 (shrinkResources)..."
-          
-          # 备份
           cp app/build.gradle app/build.gradle.bak
           
-          # 方法1: 如果已存在 shrinkResources false，改为 true
+          # 尝试启用 shrinkResources
           if grep -q "shrinkResources[[:space:]]*false" app/build.gradle; then
             sed -i 's/shrinkResources[[:space:]]*false/shrinkResources true/' app/build.gradle
-            echo "✅ 已启用 shrinkResources (方法1: 替换false)"
-          
-          # 方法2: 在 release { 块中添加
           elif grep -q "minifyEnabled[[:space:]]*true" app/build.gradle; then
-            # 在 minifyEnabled true 后面添加 shrinkResources true
             sed -i '/minifyEnabled[[:space:]]*true/a\            shrinkResources true' app/build.gradle
-            echo "✅ 已添加 shrinkResources (方法2: 在minifyEnabled后)"
-          
-          # 方法3: 在 release { 后添加（通用）
           else
-            # 找到 release { 并在下一行添加（缩进4空格）
             sed -i '/release[[:space:]]*{/a\            shrinkResources true' app/build.gradle
-            echo "⚠️  已尝试添加 shrinkResources (方法3: 在release后)"
           fi
           
-          # 验证
-          if grep -q "shrinkResources[[:space:]]*true" app/build.gradle; then
-            echo "✅ 验证成功：shrinkResources 已启用"
-            grep -n "shrinkResources" app/build.gradle | head -2
-          else
-            echo "❌ 自动启用失败，请手动在 app/build.gradle 的 release 块中添加："
-            echo "    shrinkResources true"
-            exit 1
-          fi
+          grep -q "shrinkResources[[:space:]]*true" app/build.gradle || exit 1
+          echo "✅ 已启用 shrinkResources"
 
       - name: Build Strict Release APK
+        if: github.event.inputs.build_strict == 'true'
         id: build_strict
         run: |
           echo "🔥 构建严格版本（启用资源压缩）..."
@@ -148,8 +147,8 @@ jobs:
         continue-on-error: true
 
       - name: Sign Strict APK
+        if: github.event.inputs.build_strict == 'true' && steps.build_strict.outcome == 'success'
         id: sign_strict
-        if: steps.build_strict.outcome == 'success'
         run: |
           UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
           [ ! -f "$UNSIGNED" ] && UNSIGNED=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
@@ -165,12 +164,11 @@ jobs:
             rm -f "$UNSIGNED" "$UNSIGNED.idsig"
             echo "success=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ 未找到 APK"
             echo "success=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload Strict APK
-        if: steps.sign_strict.outputs.success == 'true'
+        if: github.event.inputs.build_strict == 'true' && steps.sign_strict.outputs.success == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: 3-RAL-User-Strict-TEST
@@ -178,24 +176,21 @@ jobs:
           retention-days: 30
 
       - name: Restore build.gradle
-        if: always()
+        if: always() && github.event.inputs.build_strict == 'true'
         run: |
           [ -f "app/build.gradle.bak" ] && mv app/build.gradle.bak app/build.gradle
           rm -f debug.keystore
-          echo "✅ 已清理"
 
       - name: Summary
         run: |
           echo "=========================================="
-          echo "✅ 构建完成"
+          echo "✅ 手动构建完成"
           echo "=========================================="
           echo ""
-          echo "📦 1-RAL-Developer-Debug    : 无压缩，可调试"
-          echo "📦 2-RAL-User-Safe          : 仅代码压缩（推荐测试）"
-          echo "📦 3-RAL-User-Strict-TEST   : 代码+资源压缩（需详细测试）"
+          [ "${{ github.event.inputs.build_debug }}" == "true" ] && echo "📦 1-RAL-Developer-Debug    : 已构建"
+          [ "${{ github.event.inputs.build_safe }}" == "true" ] && echo "📦 2-RAL-User-Safe          : 已构建"
+          [ "${{ github.event.inputs.build_strict }}" == "true" ] && echo "📦 3-RAL-User-Strict-TEST   : 已构建 (⚠️ 需测试)"
           echo ""
-          echo "⚠️  Strict 版本必须测试："
-          echo "   - 所有图片是否正常显示"
-          echo "   - 反射加载的资源是否存在"
-          echo "   - 第三方SDK是否工作正常"
+          echo "📥 下载地址:"
+          echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           echo "=========================================="
