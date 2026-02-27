@@ -1,4 +1,4 @@
-name: Build RAL APK (Manual)
+name: Build RAL APK (Debug & Safe)
 
 on:
   workflow_dispatch:
@@ -8,13 +8,9 @@ on:
         type: boolean
         default: true
       build_safe:
-        description: '构建安全版本 (仅代码压缩)'
+        description: '构建用户版本 Safe (推荐✅)'
         type: boolean
         default: true
-      build_strict:
-        description: '构建严格版本 (资源压缩⚠️)'
-        type: boolean
-        default: false
 
 env:
   ANDROID_COMPILE_SDK: "36"
@@ -25,7 +21,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: write
@@ -63,31 +59,16 @@ jobs:
         if: github.event.inputs.build_debug == 'true'
         run: |
           echo "🛠️ 构建开发者版本..."
-          ./gradlew clean assembleDebug --no-daemon --stacktrace
+          ./gradlew clean assembleDebug --no-daemon
 
       - name: Prepare Debug APK (Remove Duplicates)
         if: github.event.inputs.build_debug == 'true'
         run: |
           DEBUG_DIR="app/build/outputs/apk/debug"
-          echo "📂 原始文件列表:"
-          ls -lh "$DEBUG_DIR"/*.apk 2>/dev/null || echo "无APK文件"
-          
-          # 获取第一个APK文件（通常是 app-debug.apk）
           FIRST_APK=$(find "$DEBUG_DIR" -name "*.apk" -type f | head -1)
-          
-          if [ -z "$FIRST_APK" ]; then
-            echo "❌ 错误：未找到APK文件"
-            exit 1
-          fi
-          
-          # 删除其他所有APK，只保留第一个
+          [ -z "$FIRST_APK" ] && exit 1
           find "$DEBUG_DIR" -name "*.apk" ! -path "$FIRST_APK" -type f -exec rm -f {} \;
-          
-          # 重命名为标准名称 app-debug.apk
           mv "$FIRST_APK" "$DEBUG_DIR/app-debug.apk"
-          
-          echo "✅ 已清理多余文件，最终APK:"
-          ls -lh "$DEBUG_DIR/app-debug.apk"
 
       - name: Upload Debug APK
         if: github.event.inputs.build_debug == 'true'
@@ -98,9 +79,9 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== Safe Release 版本 ====================
+      # ==================== Safe Release 版本 (推荐) ====================
       - name: Generate Signing Key
-        if: github.event.inputs.build_safe == 'true' || github.event.inputs.build_strict == 'true'
+        if: github.event.inputs.build_safe == 'true'
         run: |
           keytool -genkey -v \
             -keystore debug.keystore \
@@ -115,15 +96,15 @@ jobs:
       - name: Build Safe Release APK
         if: github.event.inputs.build_safe == 'true'
         run: |
-          echo "🚀 构建安全版本 (仅代码压缩)..."
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          echo "🚀 构建用户版本 (Safe)..."
+          ./gradlew assembleRelease --no-daemon
 
       - name: Sign Safe APK
         if: github.event.inputs.build_safe == 'true'
         run: |
           RELEASE_DIR="app/build/outputs/apk/release"
-          UNSIGNED=$(find "$RELEASE_DIR" -name "*-unsigned.apk" -o -name "app-release.apk" | head -1)
-          [ -z "$UNSIGNED" ] && { echo "❌ 未找到APK"; exit 1; }
+          UNSIGNED=$(find "$RELEASE_DIR" -name "*-unsigned.apk" | head -1)
+          [ -z "$UNSIGNED" ] && exit 1
           
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
             --ks debug.keystore \
@@ -133,91 +114,34 @@ jobs:
             --out "$RELEASE_DIR/app-release-safe.apk" \
             "$UNSIGNED"
           
-          rm -f "$UNSIGNED" "$UNSIGNED.idsig" 2>/dev/null || true
-          echo "✅ Safe APK: $(ls -lh "$RELEASE_DIR/app-release-safe.apk")"
+          rm -f "$UNSIGNED" "$UNSIGNED.idsig" debug.keystore
 
       - name: Upload Safe APK
         if: github.event.inputs.build_safe == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: 2-RAL-User-Safe
+          name: 2-RAL-User-Safe-RECOMMENDED
           path: app/build/outputs/apk/release/app-release-safe.apk
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== Strict Release 版本 (资源压缩) ====================
-      - name: Enable Strict Mode
-        if: github.event.inputs.build_strict == 'true'
-        run: |
-          echo "⚠️ 启用资源压缩..."
-          cp app/build.gradle app/build.gradle.bak
-          
-          # 确保 minifyEnabled true
-          if grep -q "minifyEnabled[[:space:]]*false" app/build.gradle; then
-            sed -i 's/minifyEnabled[[:space:]]*false/minifyEnabled true/' app/build.gradle
-          elif ! grep -q "minifyEnabled" app/build.gradle; then
-            sed -i '/release[[:space:]]*{/a\            minifyEnabled true' app/build.gradle
-          fi
-          
-          # 添加 shrinkResources true
-          if ! grep -q "shrinkResources" app/build.gradle; then
-            sed -i '/minifyEnabled[[:space:]]*true/a\            shrinkResources true' app/build.gradle
-          else
-            sed -i 's/shrinkResources[[:space:]]*false/shrinkResources true/' app/build.gradle
-          fi
-          
-          echo "✅ 已启用代码+资源压缩"
-
-      - name: Build Strict Release APK
-        if: github.event.inputs.build_strict == 'true'
-        id: build_strict
-        run: |
-          echo "🔥 构建严格版本..."
-          ./gradlew clean assembleRelease --no-daemon --stacktrace
-        continue-on-error: true
-
-      - name: Sign Strict APK
-        if: github.event.inputs.build_strict == 'true' && steps.build_strict.outcome == 'success'
-        id: sign_strict
-        run: |
-          RELEASE_DIR="app/build/outputs/apk/release"
-          UNSIGNED=$(find "$RELEASE_DIR" -name "*-unsigned.apk" | head -1)
-          
-          if [ -f "$UNSIGNED" ]; then
-            ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
-              --ks debug.keystore \
-              --ks-key-alias androiddebugkey \
-              --ks-pass pass:android \
-              --key-pass pass:android \
-              --out "$RELEASE_DIR/app-release-strict.apk" \
-              "$UNSIGNED"
-            rm -f "$UNSIGNED" "$UNSIGNED.idsig" 2>/dev/null || true
-            echo "success=true" >> $GITHUB_OUTPUT
-          else
-            echo "success=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload Strict APK
-        if: github.event.inputs.build_strict == 'true' && steps.sign_strict.outputs.success == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: 3-RAL-User-Strict-TEST
-          path: app/build/outputs/apk/release/app-release-strict.apk
-          retention-days: 30
-          if-no-files-found: warn
-
-      - name: Restore build.gradle
-        if: always() && github.event.inputs.build_strict == 'true'
-        run: |
-          [ -f "app/build.gradle.bak" ] && mv app/build.gradle.bak app/build.gradle
-          rm -f debug.keystore
-
-      - name: Summary
+      # ==================== 使用建议 ====================
+      - name: Summary & Recommendations
         run: |
           echo "=========================================="
           echo "✅ 构建完成"
           echo "=========================================="
-          [ "${{ github.event.inputs.build_debug }}" == "true" ] && echo "📦 1-RAL-Developer-Debug"
-          [ "${{ github.event.inputs.build_safe }}" == "true" ] && echo "📦 2-RAL-User-Safe"
-          [ "${{ github.event.inputs.build_strict }}" == "true" ] && [ "${{ steps.sign_strict.outputs.success }}" == "true" ] && echo "📦 3-RAL-User-Strict-TEST"
+          echo ""
+          [ "${{ github.event.inputs.build_debug }}" == "true" ] && echo "📦 1-RAL-Developer-Debug    - 开发者调试版"
+          [ "${{ github.event.inputs.build_safe }}" == "true" ] && echo "📦 2-RAL-User-Safe-RECOMMENDED  ⭐ 推荐"
+          echo ""
+          echo "💡 使用建议："
+          echo "   • 日常用户 → 下载 2-RAL-User-Safe-RECOMMENDED"
+          echo "     已启用代码优化，无资源压缩风险，最稳定"
+          echo ""
+          echo "   • 开发者   → 下载 1-RAL-Developer-Debug"
+          echo "     无优化，可调试，适合问题排查"
+          echo ""
+          echo "📥 下载地址:"
+          echo "   ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           echo "=========================================="
