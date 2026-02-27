@@ -1,4 +1,4 @@
-name: Build Android 7.1.1
+name: Tim Loi Android 7
 
 on:
   workflow_dispatch:
@@ -9,44 +9,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
 
-      - name: Liet ke tat ca file Kotlin
-        run: find . -name "*.kt" | head -50
-          
-      - name: Tim NotificationChannel
-        run: grep -rn "NotificationChannel" . --include="*.kt" || echo "Khong co"
-          
-      - name: Tim startForegroundService
-        run: grep -rn "startForegroundService" . --include="*.kt" || echo "Khong co"
+      - name: 1. TIM LOI NOTIFICATION CHANNEL
+        run: grep -rn "NotificationChannel" . --include="*.kt" --include="*.java" || echo "Khong co"
 
-      - name: Tim VERSION_CODES
-        run: grep -rn "VERSION_CODES" . --include="*.kt" || echo "Khong co"
+      - name: 2. TIM LOI FOREGROUND SERVICE
+        run: grep -rn "startForegroundService" . --include="*.kt" --include="*.java" || echo "Khong co"
 
-      - name: Tim InitializationActivity
-        run: find . -name "InitializationActivity*"
+      - name: 3. TIM LOI DISPLAY CUTOUT (TAI THO)
+        run: grep -rn "DisplayCutout" . --include="*.kt" --include="*.java" || echo "Khong co"
 
-      - name: Doc InitializationActivity
-        run: cat ./app/src/main/java/com/app/ralaunch/feature/init/InitializationActivity.kt || echo "Khong tim thay"
+      - name: 4. DOC FILE INITIALIZATION (NOI GAY CRASH)
+        run: cat ./app/src/main/java/com/app/ralaunch/feature/init/InitializationActivity.kt || echo "Khong tim thay file nay"
 
-      - name: Ep ha minSdk xuong 25
-        run: |
-          find . -name "build.gradle*" -exec sed -i 's/minSdk = 28/minSdk = 25/g' {} +
-          find . -name "build.gradle*" -exec sed -i 's/minSdk 28/minSdk 25/g' {} +
-
-      - name: Cap quyen
-        run: chmod +x ./gradlew
-        
-      - name: Build APK
-        run: ./gradlew assembleRelease --no-daemon
-        
-      - name: Xuat APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Launcher-Android-7.1.1
-          path: app/build/outputs/apk/**/*.apk
+      - name: 5. DOC FILE MAIN ACTIVITY (NOI GAY CRASH)
+        run: cat ./app/src/main/java/com/app/ralaunch/feature/main/MainActivityCompose.kt || echo "Khong tim thay file nay"
