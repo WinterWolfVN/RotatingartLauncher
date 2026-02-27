@@ -42,11 +42,8 @@ jobs:
             "cmake;${ANDROID_CMAKE_VERSION}"
           yes | sdkmanager --licenses || true
 
-      # 生成Debug签名密钥（如果仓库没有配置的话）
       - name: Generate Debug Keystore
         run: |
-          # 生成标准Android Debug密钥
-          # 密码: android，别名: androiddebugkey，组织: Android Debug
           keytool -genkey -v \
             -keystore debug.keystore \
             -alias androiddebugkey \
@@ -56,38 +53,34 @@ jobs:
             -storepass android \
             -keypass android \
             -dname "CN=Android Debug, O=Android, C=US"
-          
           echo "Debug密钥生成完成"
-          keytool -list -keystore debug.keystore -storepass android
 
       - name: Build APK
         run: |
           chmod +x ./gradlew
           ./gradlew clean
-          # 构建Release版本（优化过），但用Debug签名
           ./gradlew assembleRelease --no-daemon
 
       - name: Sign APK with Debug Key
         run: |
-          APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
-          SIGNED_APK="${APK%.apk}-signed.apk"
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
+          SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
           
-          # 使用apksigner签名（推荐，支持v1/v2/v3签名方案）
+          # 签名
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
             --ks debug.keystore \
             --ks-key-alias androiddebugkey \
             --ks-pass pass:android \
             --key-pass pass:android \
             --out "${SIGNED_APK}" \
-            "${APK}"
+            "${UNSIGNED_APK}"
           
-          # 验证签名
-          echo "=== 签名信息 ==="
+          # 验证签名并清理未签名文件
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner verify -v "${SIGNED_APK}"
+          rm -f "${UNSIGNED_APK}"
           
-          # 替换原文件
-          mv "${SIGNED_APK}" "${APK}"
-          echo "APK已签名: ${APK}"
+          echo "APK已签名: ${SIGNED_APK}"
+          ls -la app/build/outputs/apk/release/
 
       - name: Upload Signed APK
         uses: actions/upload-artifact@v4
@@ -95,6 +88,7 @@ jobs:
           name: RAL-DebugSigned-${{ github.run_id }}
           path: app/build/outputs/apk/release/*-signed.apk
           retention-days: 30
+          if-no-files-found: error  # 找不到文件时让构建失败，避免静默错误
 
       - run: |
           echo "✅ 构建完成（Debug签名）"
