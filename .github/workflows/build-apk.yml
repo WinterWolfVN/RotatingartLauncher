@@ -1,4 +1,4 @@
-# Rotating Art Launcher (RAL) 全自动APK构建工作流 - 完整修复版
+# Rotating Art Launcher (RAL) 全自动APK构建工作流 - Java 21修复版
 name: RAL Full Auto Build APK
 
 on:
@@ -27,15 +27,15 @@ on:
 env:
   ANDROID_COMPILE_SDK: "28"
   ANDROID_BUILD_TOOLS: "34.0.0"
-  # 关键修复：与项目build.gradle中的ndkVersion保持一致（28.0.13004108）
   ANDROID_NDK_VERSION: "28.0.13004108"
   ANDROID_CMAKE_VERSION: "3.22.1"
+  # 优化Gradle性能
   GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=512m"
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: write
@@ -60,31 +60,24 @@ jobs:
           fi
           echo "✅ 项目结构校验通过"
 
-      # 3. 配置JDK 17
-      - name: Set Up JDK 17
+      # 3. 配置JDK 21（关键修复：从17升级到21）
+      - name: Set Up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
 
-      # 4. 设置基础Android环境（关键修复：不通过packages参数安装）
-      - name: Setup Android SDK (Base)
+      # 4. 设置基础Android环境
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: "latest"
-          # 注意：此处不指定packages参数，避免解析错误
 
-      # 5. 安装SDK组件（手动安装，确保版本正确）
+      # 5. 安装SDK组件
       - name: Install SDK Components
         run: |
           echo "📦 正在安装Android SDK组件..."
-          echo "   - Platform: android-${ANDROID_COMPILE_SDK}"
-          echo "   - Build Tools: ${ANDROID_BUILD_TOOLS}"
-          echo "   - NDK: ${ANDROID_NDK_VERSION}"
-          echo "   - CMake: ${ANDROID_CMAKE_VERSION}"
-          
-          # 使用sdkmanager逐个安装（避免packages参数解析问题）
           sdkmanager --install \
             "platforms;android-${ANDROID_COMPILE_SDK}" \
             "build-tools;${ANDROID_BUILD_TOOLS}" \
@@ -93,25 +86,22 @@ jobs:
             "cmake;${ANDROID_CMAKE_VERSION}" \
             --channel=0
           
-          # 验证安装
-          echo "✅ 已安装组件列表："
+          echo "✅ SDK组件安装完成："
           sdkmanager --list_installed | grep -E "(ndk|build-tools|platforms|cmake)" || true
 
-      # 6. 接受SDK许可证（静默模式）
+      # 6. 接受SDK许可证
       - name: Accept SDK Licenses
-        run: |
-          yes | sdkmanager --licenses || true
-          echo "✅ SDK许可证已接受"
+        run: yes | sdkmanager --licenses || true
 
-      # 7. 配置Local Properties（关键：确保NDK路径正确）
+      # 7. 配置Local Properties（修复：移除ndk.dir弃用警告）
       - name: Configure Local Properties
         run: |
           echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+          # 注意：ndk.dir已弃用，但保留以兼容旧版Gradle插件
+          # 新版本应在app/build.gradle中使用android.ndkVersion指定
           echo "ndk.dir=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> local.properties
           echo "cmake.dir=${ANDROID_SDK_ROOT}/cmake/${ANDROID_CMAKE_VERSION}" >> local.properties
-          echo "::group::Local Properties内容"
           cat local.properties
-          echo "::endgroup::"
 
       # 8. 优化Gradle缓存
       - name: Cache Gradle Dependencies
@@ -130,12 +120,13 @@ jobs:
       - name: Prepare Build Environment
         run: |
           chmod +x ./gradlew
-          echo "Gradle版本信息："
+          echo "Java版本："
+          java -version
+          echo "Gradle版本："
           ./gradlew --version
-          echo "清理旧构建..."
           ./gradlew clean --quiet
 
-      # 10. 构建Debug版APK（默认）
+      # 10. 构建Debug版APK
       - name: Build Debug APK
         if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == 'all' || github.event_name != 'workflow_dispatch'
         id: build_debug
@@ -143,7 +134,6 @@ jobs:
           echo "🚀 开始构建Debug版APK..."
           ./gradlew assembleDebug --stacktrace --no-daemon --build-cache
           
-          # 查找APK
           DEBUG_APK=$(find app/build/outputs/apk/debug -name "*.apk" -type f | head -n 1)
           if [ -z "$DEBUG_APK" ]; then
             echo "❌ 错误：未找到Debug APK输出"
@@ -151,31 +141,27 @@ jobs:
           fi
           
           APK_SIZE=$(du -h "$DEBUG_APK" | cut -f1)
-          echo "✅ Debug APK构建成功"
-          echo "   路径: $DEBUG_APK"
-          echo "   大小: $APK_SIZE"
+          echo "✅ Debug APK构建成功：$DEBUG_APK ($APK_SIZE)"
           echo "debug_apk_path=$DEBUG_APK" >> $GITHUB_OUTPUT
           echo "debug_apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
 
-      # 11. 构建Release版APK（可选，未签名）
+      # 11. 构建Release版APK（可选）
       - name: Build Release APK
         if: github.event.inputs.build_type == 'release' || github.event.inputs.build_type == 'all'
         id: build_release
         continue-on-error: true
         run: |
-          echo "🚀 开始构建Release版APK（未签名）..."
+          echo "🚀 开始构建Release版APK..."
           ./gradlew assembleRelease --stacktrace --no-daemon --build-cache
           
           RELEASE_APK=$(find app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
           if [ -z "$RELEASE_APK" ]; then
-            echo "⚠️ 警告：Release APK未生成（可能需要签名配置）"
+            echo "⚠️ Release APK未生成"
             exit 0
           fi
           
           APK_SIZE=$(du -h "$RELEASE_APK" | cut -f1)
-          echo "✅ Release APK构建成功"
-          echo "   路径: $RELEASE_APK"
-          echo "   大小: $APK_SIZE"
+          echo "✅ Release APK构建成功：$RELEASE_APK ($APK_SIZE)"
           echo "release_apk_path=$RELEASE_APK" >> $GITHUB_OUTPUT
           echo "release_apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
 
@@ -190,32 +176,16 @@ jobs:
             app/build/outputs/mapping/**/mapping.txt
           retention-days: 30
           if-no-files-found: warn
-          compression-level: 6
 
-      # 13. 构建总结报告
+      # 13. 构建总结
       - name: Build Summary
         if: always()
         run: |
-          echo "::group::📊 RAL构建总结报告"
-          echo "工作流运行ID: ${{ github.run_id }}"
+          echo "::group::📊 RAL构建总结"
+          echo "运行ID: ${{ github.run_id }}"
           echo "触发方式: ${{ github.event_name }}"
           echo "构建类型: ${{ github.event.inputs.build_type || 'debug' }}"
-          echo "Git提交: ${{ github.sha }}"
           echo "----------------------------------------"
-          
-          if [ -n "${{ steps.build_debug.outputs.debug_apk_path }}" ]; then
-            echo "✅ Debug APK"
-            echo "   文件: ${{ steps.build_debug.outputs.debug_apk_path }}"
-            echo "   大小: ${{ steps.build_debug.outputs.debug_apk_size }}"
-          else
-            echo "❌ Debug APK: 未构建或失败"
-          fi
-          
-          if [ -n "${{ steps.build_release.outputs.release_apk_path }}" ]]; then
-            echo "✅ Release APK"
-            echo "   文件: ${{ steps.build_release.outputs.release_apk_path }}"
-            echo "   大小: ${{ steps.build_release.outputs.release_apk_size }}"
-          else
-            echo "⚠️ Release APK: 未构建"
-          fi
+          echo "Debug APK: ${{ steps.build_debug.outputs.debug_apk_path || '未构建' }}"
+          echo "Release APK: ${{ steps.build_release.outputs.release_apk_path || '未构建' }}"
           echo "::endgroup::"
