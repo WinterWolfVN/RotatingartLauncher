@@ -69,21 +69,15 @@ jobs:
         if: github.event.inputs.build_debug == 'true'
         run: |
           DEBUG_DIR="app/build/outputs/apk/debug"
-          echo "📂 检查 Debug 目录内容:"
           ls -la "$DEBUG_DIR" || echo "目录不存在"
-          
-          # 查找任何 .apk 文件
           APK_FILE=$(find "$DEBUG_DIR" -name "*.apk" -type f | head -1)
           
           if [ -z "$APK_FILE" ]; then
-            echo "❌ 错误：在 $DEBUG_DIR 中未找到任何 APK 文件"
+            echo "❌ 错误：未找到 APK 文件"
             exit 1
           fi
           
-          echo "✅ 找到 APK: $APK_FILE"
-          echo "📊 文件大小: $(du -h "$APK_FILE" | cut -f1)"
-          
-          # 复制到标准名称（方便上传）
+          echo "✅ 找到 APK: $APK_FILE ($(du -h "$APK_FILE" | cut -f1))"
           cp "$APK_FILE" "$DEBUG_DIR/app-debug.apk"
 
       - name: Upload Debug APK
@@ -119,16 +113,10 @@ jobs:
         if: github.event.inputs.build_safe == 'true'
         run: |
           RELEASE_DIR="app/build/outputs/apk/release"
-          echo "📂 检查 Release 目录:"
           ls -la "$RELEASE_DIR" || echo "目录不存在"
           
-          # 查找未签名 APK
           UNSIGNED=$(find "$RELEASE_DIR" -name "*-unsigned.apk" -o -name "app-release.apk" | head -1)
-          
-          if [ -z "$UNSIGNED" ]; then
-            echo "❌ 未找到未签名 APK"
-            exit 1
-          fi
+          [ -z "$UNSIGNED" ] && { echo "❌ 未找到 APK"; exit 1; }
           
           echo "🔑 签名: $UNSIGNED"
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
@@ -140,7 +128,7 @@ jobs:
             "$UNSIGNED"
           
           rm -f "$UNSIGNED" "$UNSIGNED.idsig" 2>/dev/null || true
-          echo "✅ Safe APK 已生成"
+          echo "✅ Safe APK 已生成: $(ls -lh "$RELEASE_DIR/app-release-safe.apk")"
 
       - name: Upload Safe APK
         if: github.event.inputs.build_safe == 'true'
@@ -152,33 +140,61 @@ jobs:
           if-no-files-found: error
 
       # ==================== Strict Release 版本 (资源压缩) ====================
-      - name: Enable Resource Shrinking
+      - name: Enable Strict Mode (Resource Shrinking)
         if: github.event.inputs.build_strict == 'true'
         run: |
-          echo "⚠️  启用资源压缩..."
+          echo "⚠️  启用资源压缩 (shrinkResources)..."
           cp app/build.gradle app/build.gradle.bak
           
-          if grep -q "shrinkResources[[:space:]]*false" app/build.gradle; then
-            sed -i 's/shrinkResources[[:space:]]*false/shrinkResources true/' app/build.gradle
-          elif grep -q "minifyEnabled[[:space:]]*true" app/build.gradle; then
-            sed -i '/minifyEnabled[[:space:]]*true/a\            shrinkResources true' app/build.gradle
-          else
-            sed -i '/release[[:space:]]*{/a\            shrinkResources true' app/build.gradle
+          # 显示原始配置
+          echo "📄 原始 release 配置:"
+          grep -A 10 "release {" app/build.gradle | head -15 || true
+          
+          # 方法1: 修改现有的 minifyEnabled false -> true (如果存在)
+          if grep -q "minifyEnabled[[:space:]]*false" app/build.gradle; then
+            echo "🔧 将 minifyEnabled false 改为 true"
+            sed -i 's/minifyEnabled[[:space:]]*false/minifyEnabled true/' app/build.gradle
           fi
           
-          grep -q "shrinkResources[[:space:]]*true" app/build.gradle || exit 1
-          echo "✅ shrinkResources 已启用"
+          # 方法2: 如果不存在 minifyEnabled，在 release { 后添加
+          if ! grep -q "minifyEnabled" app/build.gradle; then
+            echo "🔧 添加 minifyEnabled true"
+            sed -i '/release[[:space:]]*{/a\            minifyEnabled true' app/build.gradle
+          fi
+          
+          # 方法3: 添加 shrinkResources (如果还不存在)
+          if ! grep -q "shrinkResources" app/build.gradle; then
+            echo "🔧 添加 shrinkResources true"
+            sed -i '/minifyEnabled[[:space:]]*true/a\            shrinkResources true' app/build.gradle
+          else
+            # 如果存在，改为 true
+            sed -i 's/shrinkResources[[:space:]]*false/shrinkResources true/' app/build.gradle
+            sed -i 's/shrinkResources[[:space:]]*true/shrinkResources true/' app/build.gradle
+          fi
+          
+          echo "📄 修改后的 release 配置:"
+          grep -A 10 "release {" app/build.gradle | head -15 || true
+          
+          # 验证
+          if grep -q "minifyEnabled[[:space:]]*true" app/build.gradle && \
+             grep -q "shrinkResources[[:space:]]*true" app/build.gradle; then
+            echo "✅ 验证成功: minifyEnabled 和 shrinkResources 都已启用"
+          else
+            echo "❌ 验证失败，请检查 build.gradle"
+            exit 1
+          fi
 
       - name: Build Strict Release APK
         if: github.event.inputs.build_strict == 'true'
         id: build_strict
         run: |
-          echo "🔥 构建严格版本..."
+          echo "🔥 构建严格版本（代码+资源压缩）..."
           ./gradlew clean assembleRelease --no-daemon --stacktrace
         continue-on-error: true
 
       - name: Sign Strict APK
         if: github.event.inputs.build_strict == 'true' && steps.build_strict.outcome == 'success'
+        id: sign_strict
         run: |
           RELEASE_DIR="app/build/outputs/apk/release"
           UNSIGNED=$(find "$RELEASE_DIR" -name "*-unsigned.apk" -o -name "app-release.apk" | head -1)
@@ -193,13 +209,14 @@ jobs:
               "$UNSIGNED"
             rm -f "$UNSIGNED" "$UNSIGNED.idsig" 2>/dev/null || true
             echo "success=true" >> $GITHUB_OUTPUT
+            echo "✅ Strict APK 已生成: $(ls -lh "$RELEASE_DIR/app-release-strict.apk")"
           else
             echo "❌ 未找到 APK"
             echo "success=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload Strict APK
-        if: github.event.inputs.build_strict == 'true' && steps.build_strict.outcome == 'success'
+        if: github.event.inputs.build_strict == 'true' && steps.sign_strict.outputs.success == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: 3-RAL-User-Strict-TEST
@@ -210,7 +227,10 @@ jobs:
       - name: Restore build.gradle
         if: always() && github.event.inputs.build_strict == 'true'
         run: |
-          [ -f "app/build.gradle.bak" ] && mv app/build.gradle.bak app/build.gradle
+          if [ -f "app/build.gradle.bak" ]; then
+            mv app/build.gradle.bak app/build.gradle
+            echo "✅ 已恢复 build.gradle"
+          fi
           rm -f debug.keystore
 
       - name: Summary
@@ -220,5 +240,5 @@ jobs:
           echo "=========================================="
           [ "${{ github.event.inputs.build_debug }}" == "true" ] && echo "📦 1-RAL-Developer-Debug"
           [ "${{ github.event.inputs.build_safe }}" == "true" ] && echo "📦 2-RAL-User-Safe"
-          [ "${{ github.event.inputs.build_strict }}" == "true" ] && echo "📦 3-RAL-User-Strict-TEST"
+          [ "${{ github.event.inputs.build_strict }}" == "true" ] && [ "${{ steps.sign_strict.outputs.success }}" == "true" ] && echo "📦 3-RAL-User-Strict-TEST"
           echo "=========================================="
