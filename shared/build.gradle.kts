@@ -13,7 +13,7 @@ compose.resources {
 kotlin {
     androidTarget()
 
-    jvmToolchain(21)
+    jvmToolchain(17)
 
     sourceSets {
         val commonMain by getting {
