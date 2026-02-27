@@ -1,4 +1,4 @@
-name: Build RAL APK (Safe Mode)
+name: Build RAL APK (Debug & Safe & Strict)
 
 on:
   push:
@@ -16,7 +16,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: read
       actions: write
@@ -49,29 +49,21 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # ==================== 安全版本 1: 开发者 (无资源压缩) ====================
+      # ==================== 版本 1: Debug (无压缩) ====================
       - name: Build Developer APK (Debug)
         run: |
           echo "🛠️ 构建开发者版本..."
-          echo "✅ 无资源压缩，100% 资源完整"
-          ./gradlew clean assembleDebug --no-daemon --stacktrace
+          ./gradlew clean assembleDebug --no-daemon
 
-      - name: Analyze Developer APK
-        run: |
-          DEBUG_APK="app/build/outputs/apk/debug/app-debug.apk"
-          echo "📊 文件大小: $(du -h $DEBUG_APK | cut -f1)"
-          echo "🔐 验证签名:"
-          ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner verify -v "$DEBUG_APK" || true
-
-      - name: Upload Developer APK
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAL-Developer-Full
+          name: 1-RAL-Developer-Debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== 安全版本 2: 用户版 (保守优化) ====================
+      # ==================== 版本 2: Safe Release (仅代码压缩) ====================
       - name: Generate Signing Key
         run: |
           keytool -genkey -v \
@@ -86,70 +78,124 @@ jobs:
 
       - name: Build Safe Release APK
         run: |
-          echo "🚀 构建用户版本 (安全模式)..."
-          echo "⚠️ 仅启用代码混淆，关闭资源压缩避免丢失"
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          echo "🚀 构建安全版本..."
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Sign & Analyze Release APK
+      - name: Sign & Upload Safe APK
         run: |
-          UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          SIGNED_APK="app/build/outputs/apk/release/app-release-safe.apk"
-          
-          if [ ! -f "$UNSIGNED_APK" ]; then
-            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
-          fi
-          
-          [ -f "$UNSIGNED_APK" ] || { echo "❌ 未找到 APK"; exit 1; }
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          [ ! -f "$UNSIGNED" ] && UNSIGNED=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
+          [ -f "$UNSIGNED" ] || exit 1
           
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
             --ks debug.keystore \
             --ks-key-alias androiddebugkey \
             --ks-pass pass:android \
             --key-pass pass:android \
-            --out "${SIGNED_APK}" \
-            "${UNSIGNED_APK}"
-          
-          echo "📊 文件大小: $(du -h $SIGNED_APK | cut -f1)"
-          ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner verify -v "${SIGNED_APK}"
-          rm -f "${UNSIGNED_APK}" "${UNSIGNED_APK}.idsig" debug.keystore
+            --out "app/build/outputs/apk/release/app-release-safe.apk" \
+            "$UNSIGNED"
+          rm -f "$UNSIGNED" "$UNSIGNED.idsig"
 
-      - name: Upload Safe Release APK
+      - name: Upload Safe APK
         uses: actions/upload-artifact@v4
         with:
-          name: RAL-User-Safe
+          name: 2-RAL-User-Safe
           path: app/build/outputs/apk/release/app-release-safe.apk
           retention-days: 30
           if-no-files-found: error
 
-      # ==================== 严格版本 3: 最大压缩 (风险版) ====================
-      # 警告：此版本启用 shrinkResources，可能导致资源丢失！
-      # 如需启用，取消下面的注释并确保已配置 keep.xml
-      # 
-      # - name: Build Strict Release APK (Risky)
-      #   run: |
-      #     echo "⚠️ 严格模式：启用资源压缩"
-      #     ./gradlew assembleRelease -PstrictMode=true --no-daemon
-      #   continue-on-error: true
+      # ==================== 版本 3: Strict Release (资源压缩) ====================
+      - name: Enable Resource Shrinking
+        run: |
+          echo "⚠️  启用资源压缩 (shrinkResources)..."
+          
+          # 备份
+          cp app/build.gradle app/build.gradle.bak
+          
+          # 方法1: 如果已存在 shrinkResources false，改为 true
+          if grep -q "shrinkResources[[:space:]]*false" app/build.gradle; then
+            sed -i 's/shrinkResources[[:space:]]*false/shrinkResources true/' app/build.gradle
+            echo "✅ 已启用 shrinkResources (方法1: 替换false)"
+          
+          # 方法2: 在 release { 块中添加
+          elif grep -q "minifyEnabled[[:space:]]*true" app/build.gradle; then
+            # 在 minifyEnabled true 后面添加 shrinkResources true
+            sed -i '/minifyEnabled[[:space:]]*true/a\            shrinkResources true' app/build.gradle
+            echo "✅ 已添加 shrinkResources (方法2: 在minifyEnabled后)"
+          
+          # 方法3: 在 release { 后添加（通用）
+          else
+            # 找到 release { 并在下一行添加（缩进4空格）
+            sed -i '/release[[:space:]]*{/a\            shrinkResources true' app/build.gradle
+            echo "⚠️  已尝试添加 shrinkResources (方法3: 在release后)"
+          fi
+          
+          # 验证
+          if grep -q "shrinkResources[[:space:]]*true" app/build.gradle; then
+            echo "✅ 验证成功：shrinkResources 已启用"
+            grep -n "shrinkResources" app/build.gradle | head -2
+          else
+            echo "❌ 自动启用失败，请手动在 app/build.gradle 的 release 块中添加："
+            echo "    shrinkResources true"
+            exit 1
+          fi
+
+      - name: Build Strict Release APK
+        id: build_strict
+        run: |
+          echo "🔥 构建严格版本（启用资源压缩）..."
+          ./gradlew clean assembleRelease --no-daemon
+        continue-on-error: true
+
+      - name: Sign Strict APK
+        id: sign_strict
+        if: steps.build_strict.outcome == 'success'
+        run: |
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          [ ! -f "$UNSIGNED" ] && UNSIGNED=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
+          
+          if [ -f "$UNSIGNED" ]; then
+            ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
+              --ks debug.keystore \
+              --ks-key-alias androiddebugkey \
+              --ks-pass pass:android \
+              --key-pass pass:android \
+              --out "app/build/outputs/apk/release/app-release-strict.apk" \
+              "$UNSIGNED"
+            rm -f "$UNSIGNED" "$UNSIGNED.idsig"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ 未找到 APK"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Strict APK
+        if: steps.sign_strict.outputs.success == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3-RAL-User-Strict-TEST
+          path: app/build/outputs/apk/release/app-release-strict.apk
+          retention-days: 30
+
+      - name: Restore build.gradle
+        if: always()
+        run: |
+          [ -f "app/build.gradle.bak" ] && mv app/build.gradle.bak app/build.gradle
+          rm -f debug.keystore
+          echo "✅ 已清理"
 
       - name: Summary
         run: |
           echo "=========================================="
-          echo "✅ 安全构建完成"
+          echo "✅ 构建完成"
           echo "=========================================="
           echo ""
-          echo "🛠️ 【开发者版 - 完整资源】"
-          echo "   • 无资源压缩 (shrinkResources = false)"
-          echo "   • 100% 资源完整性保证"
-          echo "   • 适合日常开发调试"
+          echo "📦 1-RAL-Developer-Debug    : 无压缩，可调试"
+          echo "📦 2-RAL-User-Safe          : 仅代码压缩（推荐测试）"
+          echo "📦 3-RAL-User-Strict-TEST   : 代码+资源压缩（需详细测试）"
           echo ""
-          echo "🚀 【用户版 - 安全优化】"
-          echo "   • 仅代码混淆 (minifyEnabled = true)"
-          echo "   • ❌ 资源压缩已禁用 (避免丢失)"
-          echo "   • 体积适中，安全性高"
-          echo ""
-          echo "⚠️  关于资源压缩 (shrinkResources):"
-          echo "   如需启用，请先在 app/src/main/res/raw/keep.xml"
-          echo "   中配置资源保留规则，否则可能导致运行时崩溃！"
-          echo ""
-          echo "📥 下载: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo "⚠️  Strict 版本必须测试："
+          echo "   - 所有图片是否正常显示"
+          echo "   - 反射加载的资源是否存在"
+          echo "   - 第三方SDK是否工作正常"
           echo "=========================================="
