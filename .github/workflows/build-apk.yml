@@ -1,57 +1,242 @@
-name: Build RAL APK
+# Rotating Art Launcher (RAL) 全自动APK构建工作流
+# 完整学习版 - 详细注释说明每个步骤的作用
+name: RAL Complete Build Workflow
 
+# 触发条件：何时运行此工作流
 on:
+  # 1. 推送到 main/master 分支时自动触发
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - '**.md'      # 忽略文档变更，不触发构建
+      - '**.txt'
+      - 'LICENSE'
+  # 2. 手动触发（可选参数）
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: '选择构建类型'
+        required: true
+        default: 'release'  # 默认构建Release（体积优化）
+        type: choice
+        options:
+          - release    # 与官方一致，优化体积
+          - debug      # 调试版本，带符号表
 
+# 环境变量：与 build.gradle 完全匹配
+# 这些值必须与 app/build.gradle 中的配置一致，否则编译失败
 env:
+  # build.gradle: compileSdk 36
   ANDROID_COMPILE_SDK: "36"
+  # build.gradle: buildToolsVersion 隐式使用与compileSdk匹配的版本
   ANDROID_BUILD_TOOLS: "36.0.0"
+  # build.gradle: ndkVersion "28.0.13004108"
   ANDROID_NDK_VERSION: "28.0.13004108"
+  # build.gradle: externalNativeBuild.cmake.version '3.22.1'
   ANDROID_CMAKE_VERSION: "3.22.1"
+  # Gradle优化参数：禁用守护进程（CI环境不需要），并行编译，内存限制
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx6g"
 
 jobs:
-  build:
+  # 任务定义
+  build-apk:
+    # 运行环境：最新Ubuntu（Linux构建Android最快且稳定）
     runs-on: ubuntu-latest
+    # 超时设置：防止异常任务占用资源
     timeout-minutes: 60
+    # 权限控制：只给必要的权限（安全最佳实践）
     permissions:
-      contents: read
-      actions: write
+      contents: read      # 读取代码
+      actions: write      # 上传构建产物
 
     steps:
-      - uses: actions/checkout@v4
+      # ===================================================================
+      # 步骤1：检出代码
+      # ===================================================================
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
         with:
+          # submodules: true 会拉取子模块（如 external/libs 中的fmod等库）
+          # 这是关键！缺失会导致本地库（fmod.jar等）丢失，APK体积变小
           submodules: recursive
+          # fetch-depth: 0 获取完整历史（用于计算版本号或变更日志）
+          fetch-depth: 0
+          # Git LFS支持：如果库文件（如.so文件）使用Git LFS存储，必须开启
+          lfs: true
 
-      - uses: actions/setup-java@v4
+      # ===================================================================
+      # 步骤2：验证本地库文件（调试用）
+      # ===================================================================
+      - name: 2. Verify Local Libraries
+        run: |
+          echo "=== 检查本地依赖库（这些是导致体积差异的关键）==="
+          
+          # 检查 fmod.jar（音频库，约2-5MB）
+          if [ -f "external/libs/fmod.jar" ]; then
+            echo "✅ fmod.jar 存在 ($(du -h external/libs/fmod.jar | cut -f1))"
+          else
+            echo "❌ fmod.jar 缺失！APK体积将减小"
+          fi
+          
+          # 检查 System.Security.Cryptography（.NET加密库）
+          if [ -f "app/libs/libSystem.Security.Cryptography.Native.Android.jar" ]; then
+            echo "✅ Cryptography 库存在"
+          else
+            echo "❌ Cryptography 库缺失"
+          fi
+          
+          # 检查 fishnet（网络库）
+          if [ -f "app/libs/fishnet-release.aar" ]; then
+            echo "✅ fishnet.aar 存在"
+          else
+            echo "❌ fishnet.aar 缺失"
+          fi
+          
+          # 检查 shared 模块（Kotlin Multiplatform共享代码）
+          if [ -d "shared" ]; then
+            echo "✅ shared 模块存在"
+          else
+            echo "❌ shared 模块缺失（子模块未拉取）"
+          fi
+
+      # ===================================================================
+      # 步骤3：配置Java环境
+      # ===================================================================
+      - name: 3. Setup JDK 21
+        uses: actions/setup-java@v4
         with:
+          # 必须与 build.gradle 中 compileOptions.sourceCompatibility 一致
+          # build.gradle: JavaVersion.VERSION_21
           java-version: '21'
+          # Eclipse Temurin 是Adoptium提供的开源JDK，稳定可靠
           distribution: 'temurin'
+          # 缓存Gradle依赖，加速下次构建
           cache: 'gradle'
 
-      - uses: android-actions/setup-android@v3
+      # ===================================================================
+      # 步骤4：配置Android SDK基础环境
+      # ===================================================================
+      - name: 4. Setup Android SDK
+        uses: android-actions/setup-android@v3
         with:
+          # 安装最新版命令行工具（sdkmanager）
           cmdline-tools-version: "latest"
 
-      - run: |
+      # ===================================================================
+      # 步骤5：安装具体SDK组件（版本与build.gradle严格匹配）
+      # ===================================================================
+      - name: 5. Install SDK Components
+        run: |
+          echo "=== 安装Android SDK组件 ==="
+          echo "Compile SDK: ${ANDROID_COMPILE_SDK} (对应build.gradle compileSdk ${ANDROID_COMPILE_SDK})"
+          echo "NDK Version: ${ANDROID_NDK_VERSION} (对应build.gradle ndkVersion)"
+          echo "CMake: ${ANDROID_CMAKE_VERSION} (对应build.gradle cmake.version)"
+          
+          # sdkmanager 是Google提供的SDK管理工具
+          # --install 安装指定包，--channel=0 使用稳定版
           sdkmanager --install \
             "platforms;android-${ANDROID_COMPILE_SDK}" \
             "build-tools;${ANDROID_BUILD_TOOLS}" \
+            "platform-tools" \
             "ndk;${ANDROID_NDK_VERSION}" \
-            "cmake;${ANDROID_CMAKE_VERSION}"
+            "cmake;${ANDROID_CMAKE_VERSION}" \
+            --channel=0
+          
+          # 自动接受所有许可证（非交互式环境必需）
           yes | sdkmanager --licenses || true
 
-      - run: |
+      # ===================================================================
+      # 步骤6：配置本地属性
+      # ===================================================================
+      - name: 6. Configure Local Properties
+        run: |
+          # local.properties 告诉Gradle SDK和NDK的位置
+          # 注意：ndk.dir已废弃，但保留以兼容旧版Gradle插件
+          echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
+          echo "ndk.dir=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> local.properties
+          echo "cmake.dir=${ANDROID_SDK_ROOT}/cmake/${ANDROID_CMAKE_VERSION}" >> local.properties
+
+      # ===================================================================
+      # 步骤7：构建APK
+      # ===================================================================
+      - name: 7. Build APK
+        id: build_step
+        run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          
+          # 清理旧构建，确保全新编译（避免缓存污染）
+          ./gradlew clean
+          
+          # 根据输入选择构建类型
+          # release: 对应buildTypes.release，启用CMAKE_BUILD_TYPE=Release优化
+          # debug: 对应buildTypes.debug，保留调试符号，体积较大
+          if [ "${{ github.event.inputs.build_type }}" == "debug" ]; then
+            echo "构建 Debug 版本（调试模式，体积较大）"
+            ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          else
+            echo "构建 Release 版本（优化模式，与官方一致）"
+            ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          fi
 
-      - uses: actions/upload-artifact@v4
+      # ===================================================================
+      # 步骤8：验证APK内容（确保库文件正确打包）
+      # ===================================================================
+      - name: 8. Verify APK Contents
+        run: |
+          # 查找生成的APK文件
+          if [ "${{ github.event.inputs.build_type }}" == "debug" ]; then
+            APK_PATH="app/build/outputs/apk/debug"
+          else
+            APK_PATH="app/build/outputs/apk/release"
+          fi
+          
+          APK_FILE=$(find $APK_PATH -name "*.apk" | head -1)
+          echo "APK文件: $APK_FILE"
+          
+          # 验证关键库是否存在（解决体积差异问题）
+          echo "=== 检查APK内部库文件 ==="
+          unzip -l "$APK_FILE" | grep -E "(fmod|cryptography|fishnet)" || echo "警告：本地库可能未打包"
+          
+          # 显示体积统计
+          echo "=== APK体积分析 ==="
+          du -h "$APK_FILE"
+          echo "Native库体积:"
+          unzip -l "$APK_FILE" | grep "\.so$" | awk '{sum+=$1} END {print sum/1024/1024 " MB"}'
+
+      # ===================================================================
+      # 步骤9：上传构建产物
+      # ===================================================================
+      - name: 9. Upload APK
+        uses: actions/upload-artifact@v4
+        if: success()  # 仅成功时上传
         with:
-          name: RAL-Release-${{ github.run_id }}
-          path: app/build/outputs/apk/release/*.apk
-          retention-days: 30
+          # 文件名包含构建类型和ID，便于区分
+          name: RAL-${{ github.event.inputs.build_type || 'release' }}-${{ github.run_id }}
+          path: app/build/outputs/apk/**/*.apk
+          retention-days: 30  # 保留30天
 
-      - run: |
-          echo "APK构建完成"
-          echo "下载地址: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+      # ===================================================================
+      # 步骤10：输出结果
+      # ===================================================================
+      - name: 10. Display Results
+        if: always()  # 无论成败都显示
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════════╗"
+          if [ "${{ steps.build_step.outcome }}" == "success" ]; then
+            echo "║              ✅ 构建成功                               ║"
+            echo "╠════════════════════════════════════════════════════════╣"
+            echo "║  下载地址:                                             ║"
+            echo "║  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} ║"
+            echo "╠════════════════════════════════════════════════════════╣"
+            echo "║  使用说明:                                             ║"
+            echo "║  1. 点击链接进入Actions页面                            ║"
+            echo "║  2. 页面底部找到Artifacts区域                          ║"
+            echo "║  3. 下载ZIP并解压得到APK                               ║"
+          else
+            echo "║              ❌ 构建失败                               ║"
+            echo "╠════════════════════════════════════════════════════════╣"
+            echo "║  查看日志:                                             ║"
+            echo "║  ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} ║"
+          fi
+          echo "╚════════════════════════════════════════════════════════╝"
