@@ -1,55 +1,64 @@
-name: Build RAL APK (Debug & Safe)
+# .github/workflows/release.yml
+
+name: Release APK
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_debug:
-        description: 'Build Debug'
-        type: boolean
-        default: true
-      build_safe:
-        description: 'Build Safe Release'
-        type: boolean
-        default: true
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  build:
+  release:
+    name: Build and Release APK
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v4
-
-      # ✅ Java 17 (quan trọng)
-      - uses: actions/setup-java@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          distribution: temurin
-          java-version: 17
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
           cache: gradle
 
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - run: chmod +x ./gradlew
+      - name: Install NDK
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.0.13004108"
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "cmake;3.22.1"
 
-      # ================= DEBUG =================
-      - name: Build Debug
-        if: github.event.inputs.build_debug == 'true'
-        run: ./gradlew assembleDebug -x lint -x test --no-daemon --parallel
+      - name: Grant execute permission
+        run: chmod +x gradlew
 
-      - name: Upload Debug
-        if: github.event.inputs.build_debug == 'true'
-        uses: actions/upload-artifact@v4
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release-keystore.jks
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --stacktrace
+        env:
+          SIGNING_STORE_FILE: release-keystore.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: RAL-Debug
-          path: app/build/outputs/apk/debug/*.apk
-
-      # ================= SAFE RELEASE =================
-      - name: Build Release
-        if: github.event.inputs.build_safe == 'true'
-        run: ./gradlew assembleRelease -x lint -x test --no-daemon --parallel
-
-      - name: Upload Release
-        if: github.event.inputs.build_safe == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: RAL-Release
-          path: app/build/outputs/apk/release/*.apk
+          name: Release ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
