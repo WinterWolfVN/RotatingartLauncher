@@ -14,98 +14,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repo
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🔍 Get upstream repo URL
+      - name: Get upstream repo URL
         id: upstream
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           UPSTREAM=$(gh api repos/${{ github.repository }} --jq '.parent.full_name')
           if [ -z "$UPSTREAM" ] || [ "$UPSTREAM" = "null" ]; then
-            echo "❌ This repo is not a fork!"
+            echo "This repo is not a fork!"
             exit 1
           fi
           echo "repo=$UPSTREAM" >> $GITHUB_OUTPUT
-          echo "✅ Upstream: $UPSTREAM"
+          echo "Upstream found: $UPSTREAM"
 
-      - name: ⚙️ Config Git
+      - name: Config Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 🔄 Merge upstream (keep my code on conflict)
+      - name: Merge upstream keep my code on conflict
         run: |
-          # Thêm upstream remote
           git remote add upstream https://github.com/${{ steps.upstream.outputs.repo }}.git
           git fetch upstream main
+          git merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit || echo "Nothing to merge"
 
-          # Merge upstream vào main, giữ code của mình khi conflict
-          git merge upstream/main \
-            --strategy-option ours \
-            --allow-unrelated-histories \
-            --no-edit \
-            -m "🔄 Merge upstream changes (keep my code on conflicts)" \
-            || echo "⚠️ Already up to date or nothing to merge"
-
-      - name: 🚀 Push
-        run: git push origin mainname: Sync Fork (Keep My Code)
-
-on:
-  schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  sync:
-    name: Sync with Upstream (Keep My Changes)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 📥 Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🔍 Get upstream repo URL
-        id: upstream
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          UPSTREAM=$(gh api repos/${{ github.repository }} --jq '.parent.full_name')
-          if [ -z "$UPSTREAM" ] || [ "$UPSTREAM" = "null" ]; then
-            echo "❌ This repo is not a fork!"
-            exit 1
-          fi
-          echo "repo=$UPSTREAM" >> $GITHUB_OUTPUT
-          echo "✅ Upstream: $UPSTREAM"
-
-      - name: ⚙️ Config Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: 🔄 Merge upstream (keep my code on conflict)
-        run: |
-          # Thêm upstream remote
-          git remote add upstream https://github.com/${{ steps.upstream.outputs.repo }}.git
-          git fetch upstream main
-
-          # Merge upstream vào main, giữ code của mình khi conflict
-          git merge upstream/main \
-            --strategy-option ours \
-            --allow-unrelated-histories \
-            --no-edit \
-            -m "🔄 Merge upstream changes (keep my code on conflicts)" \
-            || echo "⚠️ Already up to date or nothing to merge"
-
-      - name: 🚀 Push
+      - name: Push
         run: git push origin main
