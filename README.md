@@ -25,6 +25,8 @@
 **Rotating Art Launcher** is an Android application that lets you run .NET-based desktop games on mobile devices.<br/>
 Supports FNA/XNA framework games and mod loaders like tModLoader, SMAPI, and Everest.
 
+⚠️Warning⚠️: This is a modified version for Android 7.1+
+
 </div>
 
 ---
@@ -115,7 +117,7 @@ Supports FNA/XNA framework games and mod loaders like tModLoader, SMAPI, and Eve
 
 ### Requirements
 
-> - 📱 Android 9.0 (API 28) or higher
+> - 📱 Android 7.1(API 25) or higher
 > - 🏗️ ARM64-v8a architecture device
 > - 💾 At least 2GB free storage
 
