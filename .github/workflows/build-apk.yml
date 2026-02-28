@@ -3,7 +3,7 @@ name: Build RAL APK (Debug & Safe)
 on:
   push:
     branches:
-       - main
+      - main
   workflow_dispatch:
     inputs:
       build_debug:
@@ -20,6 +20,8 @@ env:
   ANDROID_BUILD_TOOLS: "36.0.0"
   ANDROID_NDK_VERSION: "28.0.13004108"
   ANDROID_CMAKE_VERSION: "3.22.1"
+  BUILD_DEBUG: ${{ github.event.inputs.build_debug || 'true' }}
+  BUILD_SAFE: ${{ github.event.inputs.build_safe || 'true' }}
 
 jobs:
   build:
@@ -28,78 +30,58 @@ jobs:
     permissions:
       contents: read
       actions: write
-    
+
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: false
 
     steps:
-      # ==================== 初始化与缓存 ====================
       - name: Check Disk Space Before
         run: |
-          echo "📊 初始磁盘空间:"
+          echo "Initial disk space:"
           df -h /
 
-      # === FIX: Checkout với xử lý submodules tốt hơn ===
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history để submodules hoạt động đúng
-          lfs: true
-          # 浅克隆节省时间和空间
           fetch-depth: 1
+          lfs: true
 
-      # === FIX: Convert SSH URLs sang HTTPS (quan trọng!) ===
       - name: Configure Git for submodules
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
 
-      # === FIX: Force init submodules ===
       - name: Initialize and update submodules
         run: |
           echo "=== Syncing submodules ==="
           git submodule sync --recursive
-          
           echo "=== Updating submodules ==="
           git submodule update --init --recursive --force --depth 1
-          
           echo "=== Submodule status ==="
           git submodule status --recursive
 
-      # === FIX: Verify submodules (fail fast nếu thiếu) ===
       - name: Verify native dependencies
         run: |
           echo "=== Checking required directories ==="
-          
           MISSING=0
-          
           for dir in SDL gl4es FAudio FNA3D dotnethost liblinkernsbypass; do
             FULL_PATH="app/src/main/cpp/$dir"
             if [ -d "$FULL_PATH" ] && [ "$(ls -A $FULL_PATH 2>/dev/null)" ]; then
-              echo "✅ $dir: OK ($(ls $FULL_PATH | wc -l) files)"
+              echo "OK $dir: $(ls $FULL_PATH | wc -l) files"
             else
-              echo "❌ $dir: MISSING or EMPTY!"
+              echo "MISSING $dir!"
               MISSING=$((MISSING + 1))
             fi
           done
-          
           if [ $MISSING -gt 0 ]; then
-            echo ""
-            echo "::error::$MISSING submodules are missing! Check .gitmodules configuration."
-            echo ""
-            echo "=== Current .gitmodules content ==="
+            echo "::error::$MISSING submodules are missing!"
             cat .gitmodules || echo "No .gitmodules file found!"
-            echo ""
-            echo "=== Directory listing ==="
             ls -la app/src/main/cpp/
             exit 1
           fi
-          
-          echo ""
-          echo "✅ All native dependencies verified!"
+          echo "All native dependencies verified!"
 
-      # 多级缓存策略：Gradle Wrapper
       - name: Cache Gradle Wrapper
         uses: actions/cache@v4
         with:
@@ -110,7 +92,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-wrapper-
 
-      # 多级缓存策略：Gradle 依赖
       - name: Cache Gradle Dependencies
         uses: actions/cache@v4
         with:
@@ -122,7 +103,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-deps-
 
-      # 多级缓存策略：Android SDK
       - name: Cache Android SDK
         uses: actions/cache@v4
         with:
@@ -135,7 +115,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-android-sdk-
 
-      # Cache CMake/NDK build
       - name: Cache Native Build
         uses: actions/cache@v4
         with:
@@ -146,14 +125,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-native-
 
-      # ==================== 环境设置 ====================
-      # === FIX: Dùng JDK 17 cho Android 7 compatibility ===
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'  # 与上面的缓存互补
+          cache: 'gradle'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -161,71 +138,56 @@ jobs:
       - name: Install SDK Components
         id: install_sdk
         run: |
-          echo "::group::安装 SDK 组件"
           sdkmanager --install \
             "platforms;android-${ANDROID_COMPILE_SDK}" \
             "build-tools;${ANDROID_BUILD_TOOLS}" \
             "ndk;${ANDROID_NDK_VERSION}" \
             "cmake;${ANDROID_CMAKE_VERSION}" \
             2>&1 | tee sdk-install.log
-          echo "::endgroup::"
-          
           yes | sdkmanager --licenses || true
           echo "installed=true" >> $GITHUB_OUTPUT
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # ==================== Debug 版本构建 ====================
+      # ==================== Debug Build ====================
       - name: Build Developer APK (Debug)
         id: build_debug
-        if: github.event.inputs.build_debug == 'true'
+        if: env.BUILD_DEBUG == 'true'
         run: |
-          echo "::group::构建 Debug 版本"
           ./gradlew clean assembleDebug --no-daemon --stacktrace 2>&1 | tee debug-build.log
-          echo "::endgroup::"
         continue-on-error: true
 
       - name: Debug Build Error Report
-        if: steps.build_debug.outcome == 'failure'
+        if: env.BUILD_DEBUG == 'true' && steps.build_debug.outcome == 'failure'
         run: |
-          echo "::error::Debug 构建失败！"
-          echo ""
-          echo "=== Last 150 lines of build log ==="
+          echo "::error::Debug build failed!"
           tail -150 debug-build.log || true
-          echo ""
-          echo "=== CMake errors (if any) ==="
           grep -A 5 "CMake Error" debug-build.log || echo "No CMake errors found"
           exit 1
 
       - name: Prepare Debug APK
         id: prepare_debug
-        if: github.event.inputs.build_debug == 'true' && steps.build_debug.outcome == 'success'
+        if: env.BUILD_DEBUG == 'true' && steps.build_debug.outcome == 'success'
         run: |
           DEBUG_DIR="app/build/outputs/apk/debug"
-          
           if [ ! -d "$DEBUG_DIR" ]; then
-            echo "::error::Debug 输出目录不存在"
+            echo "::error::Debug output directory not found"
             exit 1
           fi
-          
           FIRST_APK=$(find "$DEBUG_DIR" -name "*.apk" -type f | head -1)
-          
           if [ -z "$FIRST_APK" ]; then
-            echo "::error::未找到 Debug APK 文件"
+            echo "::error::No Debug APK found"
             ls -la "$DEBUG_DIR" || true
             exit 1
           fi
-          
           find "$DEBUG_DIR" -name "*.apk" ! -path "$FIRST_APK" -type f -delete
           mv "$FIRST_APK" "$DEBUG_DIR/app-debug.apk"
-          
           echo "file=$DEBUG_DIR/app-debug.apk" >> $GITHUB_OUTPUT
           echo "size=$(du -h "$DEBUG_DIR/app-debug.apk" | cut -f1)" >> $GITHUB_OUTPUT
-          echo "✅ Debug APK 准备完成: $(ls -lh "$DEBUG_DIR/app-debug.apk")"
 
       - name: Upload Debug APK
-        if: github.event.inputs.build_debug == 'true' && steps.prepare_debug.outcome == 'success'
+        if: env.BUILD_DEBUG == 'true' && steps.prepare_debug.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: 1-RAL-Developer-Debug
@@ -234,10 +196,10 @@ jobs:
           if-no-files-found: error
           compression-level: 6
 
-      # ==================== Safe Release 版本构建 ====================
+      # ==================== Safe Release Build ====================
       - name: Generate Signing Key
         id: gen_key
-        if: github.event.inputs.build_safe == 'true'
+        if: env.BUILD_SAFE == 'true'
         run: |
           keytool -genkey -v \
             -keystore debug.keystore \
@@ -247,71 +209,56 @@ jobs:
             -validity 10000 \
             -storepass android \
             -keypass android \
-            -dname "CN=Android Debug, O=Android, C=US" 2>&1 | tee keygen.log
-          
+            -dname "CN=Android Debug, O=Android, C=US"
           if [ ! -f "debug.keystore" ]; then
-            echo "::error::密钥生成失败"
+            echo "::error::Key generation failed"
             exit 1
           fi
-          
           echo "keystore_generated=true" >> $GITHUB_OUTPUT
 
       - name: Build Safe Release APK
         id: build_safe
-        if: github.event.inputs.build_safe == 'true' && steps.gen_key.outcome == 'success'
+        if: env.BUILD_SAFE == 'true' && steps.gen_key.outcome == 'success'
         run: |
-          echo "::group::构建 Safe Release 版本"
           ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee release-build.log
-          echo "::endgroup::"
         continue-on-error: true
 
       - name: Safe Build Error Report
-        if: steps.build_safe.outcome == 'failure'
+        if: env.BUILD_SAFE == 'true' && steps.build_safe.outcome == 'failure'
         run: |
-          echo "::error::Safe Release 构建失败！"
-          echo ""
-          echo "=== Last 150 lines of build log ==="
+          echo "::error::Safe Release build failed!"
           tail -150 release-build.log || true
           exit 1
 
       - name: Sign Safe APK
         id: sign_safe
-        if: github.event.inputs.build_safe == 'true' && steps.build_safe.outcome == 'success'
+        if: env.BUILD_SAFE == 'true' && steps.build_safe.outcome == 'success'
         run: |
           RELEASE_DIR="app/build/outputs/apk/release"
           UNSIGNED=$(find "$RELEASE_DIR" -name "*-unsigned.apk" | head -1)
-          
           if [ -z "$UNSIGNED" ] || [ ! -f "$UNSIGNED" ]; then
-            echo "::error::未找到未签名 APK"
+            echo "::error::Unsigned APK not found"
             ls -la "$RELEASE_DIR" || true
             exit 1
           fi
-          
-          echo "签名文件: $UNSIGNED"
-          
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
             --ks debug.keystore \
             --ks-key-alias androiddebugkey \
             --ks-pass pass:android \
             --key-pass pass:android \
             --out "$RELEASE_DIR/app-release-safe.apk" \
-            "$UNSIGNED" 2>&1 | tee sign.log
-          
+            "$UNSIGNED"
           if [ ! -f "$RELEASE_DIR/app-release-safe.apk" ]; then
-            echo "::error::签名失败"
+            echo "::error::Signing failed"
             exit 1
           fi
-          
           ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner verify -v "$RELEASE_DIR/app-release-safe.apk" | head -5
-          
           rm -f "$UNSIGNED" "$UNSIGNED.idsig" debug.keystore
-          
           echo "file=$RELEASE_DIR/app-release-safe.apk" >> $GITHUB_OUTPUT
           echo "size=$(du -h "$RELEASE_DIR/app-release-safe.apk" | cut -f1)" >> $GITHUB_OUTPUT
-          echo "✅ Safe APK 签名完成"
 
       - name: Upload Safe APK
-        if: github.event.inputs.build_safe == 'true' && steps.sign_safe.outcome == 'success'
+        if: env.BUILD_SAFE == 'true' && steps.sign_safe.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: 2-RAL-User-Safe-RECOMMENDED
@@ -320,7 +267,7 @@ jobs:
           if-no-files-found: error
           compression-level: 6
 
-      # ==================== 清理与通知 ====================
+      # ==================== Cleanup ====================
       - name: Cleanup
         if: always()
         run: |
@@ -328,7 +275,7 @@ jobs:
           rm -rf app/build/intermediates 2>/dev/null || true
           rm -f *.log debug.keystore 2>/dev/null || true
           sudo apt-get clean || true
-          echo "📊 最终磁盘: $(df -h / | tail -1 | awk '{print $4}') 可用"
+          echo "Final disk: $(df -h / | tail -1 | awk '{print $4}') available"
 
       - name: Upload Error Logs
         if: failure()
@@ -345,25 +292,22 @@ jobs:
         if: always()
         run: |
           echo "=========================================="
-          echo "📊 构建报告 (⏱️ $(($SECONDS / 60))分$(($SECONDS % 60))秒)"
+          echo "Build Report ($(($SECONDS / 60))m $(($SECONDS % 60))s)"
           echo "=========================================="
-          
-          if [ "${{ github.event.inputs.build_debug }}" == "true" ]; then
+          if [ "${{ env.BUILD_DEBUG }}" == "true" ]; then
             if [ "${{ steps.prepare_debug.outcome }}" == "success" ]; then
-              echo "✅ Debug: ${{ steps.prepare_debug.outputs.size }}"
+              echo "Debug: ${{ steps.prepare_debug.outputs.size }} OK"
             else
-              echo "❌ Debug: 失败"
+              echo "Debug: FAILED"
             fi
           fi
-          
-          if [ "${{ github.event.inputs.build_safe }}" == "true" ]; then
+          if [ "${{ env.BUILD_SAFE }}" == "true" ]; then
             if [ "${{ steps.sign_safe.outcome }}" == "success" ]; then
-              echo "✅ Safe:  ${{ steps.sign_safe.outputs.size }} ⭐推荐"
+              echo "Safe: ${{ steps.sign_safe.outputs.size }} OK (Recommended)"
             else
-              echo "❌ Safe:  失败"
+              echo "Safe: FAILED"
             fi
           fi
-          
           echo ""
-          echo "📥 ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo "Download: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           echo "=========================================="
