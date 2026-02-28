@@ -22,7 +22,7 @@ import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import java.io.File
 
-class RaLaunchApp : Application(), KoinComponent {
+class RaLaunchApp : androidx.multidex.MultiDexApplication(), KoinComponent {
 
     companion object {
         private const val TAG = "RaLaunchApp"
