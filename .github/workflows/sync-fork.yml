@@ -39,10 +39,21 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Merge upstream keep my code on conflict
+        id: merge
         run: |
           git remote add upstream https://github.com/${{ steps.upstream.outputs.repo }}.git
           git fetch upstream main
+          BEFORE=$(git rev-parse HEAD)
           git merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit || echo "Nothing to merge"
+          AFTER=$(git rev-parse HEAD)
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Code changed, will push and trigger build"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes"
+          fi
 
       - name: Push
+        if: steps.merge.outputs.changed == 'true'
         run: git push origin main
