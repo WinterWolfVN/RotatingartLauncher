@@ -1,8 +1,12 @@
 package com.app.ralaunch
 
 import android.app.Application
+import android.app.AlertDialog
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.system.Os
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
@@ -18,11 +22,6 @@ import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import java.io.File
 
-/**
- * 应用程序 Application 类 (Kotlin 重构版)
- *
- * 使用 Koin DI 框架管理依赖
- */
 class RaLaunchApp : Application(), KoinComponent {
 
     companion object {
@@ -31,21 +30,14 @@ class RaLaunchApp : Application(), KoinComponent {
         @Volatile
         private var instance: RaLaunchApp? = null
 
-        /**
-         * 获取全局 Application 实例
-         */
         @JvmStatic
         fun getInstance(): RaLaunchApp = instance
             ?: throw IllegalStateException("Application not initialized")
 
-        /**
-         * 获取全局 Context（兼容旧代码）
-         */
         @JvmStatic
         fun getAppContext(): Context = getInstance().applicationContext
     }
 
-    // 延迟注入（在 Koin 初始化后才能使用）
     private val _vibrationManager: VibrationManager by inject()
     private val _controlPackManager: ControlPackManager by inject()
     private val _patchManager: PatchManager? by inject()
@@ -54,23 +46,96 @@ class RaLaunchApp : Application(), KoinComponent {
         super.onCreate()
         instance = this
 
-        // 1. 初始化密度适配（必须最先）
-        DensityAdapter.init(this)
+        // === THÊM: Log thông tin thiết bị để debug ===
+        Log.i(TAG, "========================================")
+        Log.i(TAG, "App starting on Android ${Build.VERSION.SDK_INT}")
+        Log.i(TAG, "Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+        Log.i(TAG, "========================================")
 
-        // 2. 初始化 Koin DI（必须在使用 inject 之前）
-        KoinInitializer.init(this)
+        // 1. DensityAdapter
+        try {
+            Log.i(TAG, "Step 1: DensityAdapter.init...")
+            DensityAdapter.init(this)
+            Log.i(TAG, "Step 1: OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "Step 1 FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+        }
 
-        // 3. 应用主题设置
-        applyThemeFromSettings()
+        // 2. Koin DI
+        try {
+            Log.i(TAG, "Step 2: KoinInitializer.init...")
+            KoinInitializer.init(this)
+            Log.i(TAG, "Step 2: OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "Step 2 FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+            showFatalError("Koin DI Failed", e)
+            return
+        }
 
-        // 4. 初始化崩溃捕获
-        initCrashHandler()
+        // 3. Theme
+        try {
+            Log.i(TAG, "Step 3: applyThemeFromSettings...")
+            applyThemeFromSettings()
+            Log.i(TAG, "Step 3: OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "Step 3 FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+        }
 
-        // 5. 后台安装补丁
-        installPatchesInBackground()
+        // 4. Crash Handler
+        try {
+            Log.i(TAG, "Step 4: Fishnet.init...")
+            val logDir = File(filesDir, "crash_logs").apply {
+                if (!exists()) mkdirs()
+            }
+            Fishnet.init(applicationContext, logDir.absolutePath)
+            Log.i(TAG, "Step 4: OK")
+        } catch (e: Exception) {
+            // Fishnet không quan trọng, bỏ qua nếu lỗi
+            Log.w(TAG, "Step 4 FAILED (non-fatal): ${e.javaClass.simpleName}: ${e.message}")
+        }
 
-        // 6. 设置环境变量
-        setupEnvironmentVariables()
+        // 5. Patches
+        try {
+            Log.i(TAG, "Step 5: installPatchesInBackground...")
+            installPatchesInBackground()
+            Log.i(TAG, "Step 5: OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "Step 5 FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+        }
+
+        // 6. Environment Variables
+        try {
+            Log.i(TAG, "Step 6: setupEnvironmentVariables...")
+            setupEnvironmentVariables()
+            Log.i(TAG, "Step 6: OK")
+        } catch (e: Exception) {
+            Log.e(TAG, "Step 6 FAILED: ${e.javaClass.simpleName}: ${e.message}", e)
+        }
+
+        Log.i(TAG, "App init complete!")
+    }
+
+    /**
+     * Hiện dialog lỗi nghiêm trọng thay vì crash âm thầm
+     */
+    private fun showFatalError(title: String, e: Exception) {
+        Handler(Looper.getMainLooper()).post {
+            try {
+                AlertDialog.Builder(this)
+                    .setTitle("❌ $title")
+                    .setMessage(
+                        "Android API: ${Build.VERSION.SDK_INT}\n" +
+                        "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
+                        "Error: ${e.javaClass.simpleName}\n" +
+                        "${e.message}\n\n" +
+                        "Cause: ${e.cause?.message ?: "Unknown"}"
+                    )
+                    .setPositiveButton("OK") { _, _ -> }
+                    .show()
+            } catch (dialogError: Exception) {
+                Log.e(TAG, "Cannot show dialog: ${dialogError.message}")
+            }
+        }
     }
 
     override fun attachBaseContext(base: Context) {
@@ -84,8 +149,7 @@ class RaLaunchApp : Application(), KoinComponent {
 
     private fun applyThemeFromSettings() {
         try {
-            val settingsManager = SettingsAccess
-            val nightMode = when (settingsManager.themeMode) {
+            val nightMode = when (SettingsAccess.themeMode) {
                 0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 1 -> AppCompatDelegate.MODE_NIGHT_YES
                 2 -> AppCompatDelegate.MODE_NIGHT_NO
@@ -98,9 +162,6 @@ class RaLaunchApp : Application(), KoinComponent {
         }
     }
 
-    /**
-     * 初始化崩溃捕获
-     */
     private fun initCrashHandler() {
         val logDir = File(filesDir, "crash_logs").apply {
             if (!exists()) mkdirs()
@@ -108,9 +169,6 @@ class RaLaunchApp : Application(), KoinComponent {
         Fishnet.init(applicationContext, logDir.absolutePath)
     }
 
-    /**
-     * 后台安装补丁
-     */
     private fun installPatchesInBackground() {
         _patchManager?.let { manager ->
             Thread({
@@ -124,13 +182,9 @@ class RaLaunchApp : Application(), KoinComponent {
         }
     }
 
-    /**
-     * 设置环境变量
-     */
     private fun setupEnvironmentVariables() {
         try {
             Os.setenv("PACKAGE_NAME", packageName, true)
-
             val externalStorage = android.os.Environment.getExternalStorageDirectory()
             externalStorage?.let {
                 Os.setenv("EXTERNAL_STORAGE_DIRECTORY", it.absolutePath, true)
@@ -141,20 +195,7 @@ class RaLaunchApp : Application(), KoinComponent {
         }
     }
 
-    // ==================== 兼容旧代码的访问方法 ====================
-
-    /**
-     * 获取 VibrationManager
-     */
     fun getVibrationManager(): VibrationManager = _vibrationManager
-
-    /**
-     * 获取 ControlPackManager
-     */
     fun getControlPackManager(): ControlPackManager = _controlPackManager
-
-    /**
-     * 获取 PatchManager
-     */
     fun getPatchManager(): PatchManager? = _patchManager
 }
