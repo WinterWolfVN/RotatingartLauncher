@@ -43,9 +43,9 @@ jobs:
           for dir in SDL gl4es FAudio FNA3D dotnethost liblinkernsbypass; do
             FULL_PATH="app/src/main/cpp/$dir"
             if [ -d "$FULL_PATH" ] && [ "$(ls -A $FULL_PATH 2>/dev/null)" ]; then
-              echo "✅ $dir OK"
+              echo "OK: $dir"
             else
-              echo "❌ $dir MISSING!"
+              echo "MISSING: $dir"
               MISSING=$((MISSING + 1))
             fi
           done
@@ -136,54 +136,52 @@ jobs:
             -keypass android \
             -dname "CN=Android Debug, O=Android, C=US"
 
-            - name: Sign APK
+      - name: Find and Sign APK
         id: sign
         if: steps.build_release.outcome == 'success'
         run: |
           RELEASE_DIR="app/build/outputs/apk/release"
-          
-          # Debug: Xem tất cả APK được tạo ra
+
           echo "=== All APK files ==="
-          find app/build/outputs/apk/ -name "*.apk" 2>/dev/null || echo "No APK found!"
-          echo "=== Release dir content ==="
-          ls -la "$RELEASE_DIR" 2>/dev/null || echo "Release dir not found!"
+          find app/build/outputs/ -name "*.apk" 2>/dev/null || echo "No APK found!"
 
-          # Tim bat ky APK nao (ca signed lan unsigned)
-          APK=$(find "$RELEASE_DIR" -name "*.apk" | head -1)
+          FOUND_APK=$(find "$RELEASE_DIR" -name "*.apk" 2>/dev/null | head -1)
 
-          if [ -z "$APK" ]; then
-            echo "::error::No APK found in release dir!"
-            echo "=== All build outputs ==="
+          if [ -z "$FOUND_APK" ]; then
+            echo "::error::No APK found!"
             find app/build/outputs/ -type f 2>/dev/null
             exit 1
           fi
 
-          echo "Found APK: $APK"
+          echo "Found APK: $FOUND_APK"
 
-          # Kiem tra da duoc sign chua
-          if echo "$APK" | grep -q "unsigned"; then
-            # Chua sign -> sign no
+          OUTPUT_APK="$RELEASE_DIR/RAL-release.apk"
+
+          IS_UNSIGNED=$(echo "$FOUND_APK" | grep -c "unsigned" || true)
+
+          if [ "$IS_UNSIGNED" -gt 0 ]; then
+            echo "Signing unsigned APK..."
             ${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS}/apksigner sign \
               --ks debug.keystore \
               --ks-key-alias androiddebugkey \
               --ks-pass pass:android \
               --key-pass pass:android \
-              --out "$RELEASE_DIR/RAL-release.apk" \
-              "$APK"
-            rm -f "$APK" "$APK.idsig"
+              --out "$OUTPUT_APK" \
+              "$FOUND_APK"
+            rm -f "$FOUND_APK" "$FOUND_APK.idsig"
           else
-            # Da duoc sign boi Gradle -> doi ten thoi
-            mv "$APK" "$RELEASE_DIR/RAL-release.apk"
+            echo "APK already signed, renaming..."
+            mv "$FOUND_APK" "$OUTPUT_APK"
           fi
 
-          if [ ! -f "$RELEASE_DIR/RAL-release.apk" ]; then
-            echo "::error::Signing failed!"
+          if [ ! -f "$OUTPUT_APK" ]; then
+            echo "::error::Final APK not found!"
             exit 1
           fi
 
-          echo "file=$RELEASE_DIR/RAL-release.apk" >> $GITHUB_OUTPUT
-          echo "size=$(du -h "$RELEASE_DIR/RAL-release.apk" | cut -f1)" >> $GITHUB_OUTPUT
-          echo "Done: $(ls -lh "$RELEASE_DIR/RAL-release.apk")"
+          echo "file=$OUTPUT_APK" >> $GITHUB_OUTPUT
+          echo "size=$(du -h "$OUTPUT_APK" | cut -f1)" >> $GITHUB_OUTPUT
+          echo "Done: $(ls -lh "$OUTPUT_APK")"
 
       # ==================== Upload ====================
       - name: Upload APK
@@ -220,9 +218,9 @@ jobs:
           echo "Build Report ($(($SECONDS / 60))m $(($SECONDS % 60))s)"
           echo "=========================================="
           if [ "${{ steps.sign.outcome }}" == "success" ]; then
-            echo "✅ Release: ${{ steps.sign.outputs.size }}"
+            echo "Release: ${{ steps.sign.outputs.size }} - OK"
           else
-            echo "❌ Release: FAILED"
+            echo "Release: FAILED"
           fi
           echo "Download: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           echo "=========================================="
