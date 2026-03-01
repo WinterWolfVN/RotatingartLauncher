@@ -44,10 +44,6 @@ import org.koin.java.KoinJavaComponent
 import java.io.File
 import java.io.FileOutputStream
 
-/**
- * Patch management dialog - Compose version
- * Landscape dual-pane layout: games list on left, patches on right
- */
 @Composable
 fun PatchManagementDialogCompose(
     onDismiss: () -> Unit
@@ -221,7 +217,7 @@ private fun GameListPanel(
                     itemsIndexed(games) { index, game ->
                         GameSelectableItem(
                             game = game,
-                            isSelected = index == selectedGameIndex,
+                            isSelected = index == selectedIndex, // FIXED
                             onClick = { onGameSelected(game, index) }
                         )
                     }
