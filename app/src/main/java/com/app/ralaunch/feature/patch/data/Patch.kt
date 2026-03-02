@@ -1,14 +1,15 @@
 package com.app.ralaunch.feature.patch.data
 
 import android.util.Log
-import java.io.File  // Thay java.nio.file.*
+import java.io.File
 
 data class Patch(
     val patchDir: File,
     val manifest: PatchManifest
 ) {
     fun getEntryAssemblyAbsolutePath(): File {
-        return File(patchDir, manifest.entryAssemblyFile).canonicalFile
+        // CHANGED: Use absoluteFile instead of canonicalFile
+        return File(patchDir, manifest.entryAssemblyFile).absoluteFile
     }
 
     companion object {
@@ -16,7 +17,9 @@ data class Patch(
 
         @JvmStatic
         fun fromPatchPath(patchDir: File): Patch? {
-            val normalizedDir = patchDir.canonicalFile
+            // CHANGED: Use absoluteFile instead of canonicalFile
+            val normalizedDir = patchDir.absoluteFile
+            
             if (!normalizedDir.exists() || !normalizedDir.isDirectory) {
                 Log.w(TAG, "fromPatchPath: Path does not exist or is not a directory: $normalizedDir")
                 return null
