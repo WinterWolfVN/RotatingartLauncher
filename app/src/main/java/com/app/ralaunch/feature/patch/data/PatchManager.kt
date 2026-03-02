@@ -39,8 +39,6 @@ class PatchManager @JvmOverloads constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "FATAL ERROR during PatchManager initialization: ${e.message}", e)
-            // We swallow the error so the app doesn't crash.
-            // Patch features will just be disabled.
         }
     }
 
@@ -167,7 +165,7 @@ class PatchManager @JvmOverloads constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error loading config: ${e.message}")
-            PatchManagerConfig() // Return default config on crash
+            PatchManagerConfig() 
         }
     }
 
@@ -206,14 +204,13 @@ class PatchManager @JvmOverloads constructor(
         private fun getDefaultPatchStorageDirectories(customStoragePath: String?): File {
             val context: Context = KoinJavaComponent.get(Context::class.java)
             val baseDir = customStoragePath ?: if (IS_DEFAULT_PATCH_STORAGE_DIR_EXTERNAL) {
-                // FIXED: Safely handle null externalFilesDir
                 val extDir = context.getExternalFilesDir(null)
                 extDir?.absolutePath ?: context.filesDir.absolutePath
             } else {
                 context.filesDir.absolutePath
             }
             
-            // FIXED: Removed canonicalFile. If path has symlinks, canonicalFile crashes on some Android 7 devices.
+            // CHANGED: Use absoluteFile instead of canonicalFile to prevent IOException crash on Android 7
             return File(baseDir, PATCH_STORAGE_DIR).absoluteFile
         }
 
@@ -293,7 +290,7 @@ class PatchManager @JvmOverloads constructor(
                 val seenPatchIds = linkedSetOf<String>()
                 patches
                     .filter { seenPatchIds.add(it.manifest.id) }
-                    .map { it.getEntryAssemblyAbsolutePath().absolutePath } // FIXED: toString -> absolutePath
+                    .map { it.getEntryAssemblyAbsolutePath().absolutePath }
                     .distinct()
                     .joinToString(":")
             } catch (e: Exception) {
