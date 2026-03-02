@@ -14,23 +14,33 @@ class PatchManager @JvmOverloads constructor(
     customStoragePath: String? = null,
     installPatchesImmediately: Boolean = false
 ) {
-    private val patchStorageDir: File
-    private val configFile: File
-    private var config: PatchManagerConfig
+    private var patchStorageDir: File? = null
+    private var configFile: File? = null
+    private var config: PatchManagerConfig = PatchManagerConfig()
 
     init {
-        patchStorageDir = getDefaultPatchStorageDirectories(customStoragePath)
-        if (!patchStorageDir.isDirectory || !patchStorageDir.exists()) {
-            patchStorageDir.deleteRecursively()
-            patchStorageDir.mkdirs()
-        }
-        configFile = File(patchStorageDir, PatchManagerConfig.CONFIG_FILE_NAME)
-        config = loadConfig()
+        try {
+            val dir = getDefaultPatchStorageDirectories(customStoragePath)
+            patchStorageDir = dir
+            
+            if (!dir.exists() || !dir.isDirectory) {
+                dir.deleteRecursively()
+                dir.mkdirs()
+            }
+            
+            val cfgFile = File(dir, PatchManagerConfig.CONFIG_FILE_NAME)
+            configFile = cfgFile
+            config = loadConfig(cfgFile)
 
-        cleanLegacySharedDlls()
+            cleanLegacySharedDlls(dir)
 
-        if (installPatchesImmediately) {
-            installBuiltInPatches(this)
+            if (installPatchesImmediately) {
+                installBuiltInPatches(this)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "FATAL ERROR during PatchManager initialization: ${e.message}", e)
+            // We swallow the error so the app doesn't crash.
+            // Patch features will just be disabled.
         }
     }
 
@@ -68,14 +78,16 @@ class PatchManager @JvmOverloads constructor(
 
     val installedPatches: ArrayList<Patch>
         get() {
+            val dir = patchStorageDir ?: return ArrayList()
             return try {
-                patchStorageDir.listFiles()
+                dir.listFiles()
                     ?.filter { it.isDirectory }
                     ?.mapNotNull { Patch.fromPatchPath(it) }
                     ?.toCollection(ArrayList())
                     ?: ArrayList()
-            } catch (e: IOException) {
-                throw RuntimeException(e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading installed patches: ${e.message}")
+                ArrayList()
             }
         }
 
@@ -87,6 +99,8 @@ class PatchManager @JvmOverloads constructor(
     }
 
     fun installPatch(patchZipFile: File): Boolean {
+        val storageDir = patchStorageDir ?: return false
+        
         if (!patchZipFile.exists() || !patchZipFile.isFile) {
             Log.w(TAG, "Patch install failed: file not found: $patchZipFile")
             return false
@@ -98,7 +112,7 @@ class PatchManager @JvmOverloads constructor(
             return false
         }
 
-        val patchDir = File(patchStorageDir, manifest.id)
+        val patchDir = File(storageDir, manifest.id)
 
         if (patchDir.exists()) {
             Log.i(TAG, "Patch exists, reinstalling: ${manifest.id}")
@@ -111,20 +125,23 @@ class PatchManager @JvmOverloads constructor(
         }
 
         Log.i(TAG, "Extracting patch...")
-        BasicSevenZipExtractor(
-            patchZipFile,
-            File(""),
-            patchDir,
-            object : ExtractorCollection.ExtractionListener {
-                override fun onProgress(message: String, progress: Float, state: HashMap<String, Any?>?) {}
-                override fun onComplete(message: String, state: HashMap<String, Any?>?) {}
-                override fun onError(message: String, ex: Exception?, state: HashMap<String, Any?>?) {
-                    throw RuntimeException(message, ex)
+        return try {
+            BasicSevenZipExtractor(
+                patchZipFile,
+                File(""),
+                patchDir,
+                object : ExtractorCollection.ExtractionListener {
+                    override fun onProgress(message: String, progress: Float, state: HashMap<String, Any?>?) {}
+                    override fun onComplete(message: String, state: HashMap<String, Any?>?) {}
+                    override fun onError(message: String, ex: Exception?, state: HashMap<String, Any?>?) {
+                        Log.e(TAG, "Extraction error: $message", ex)
+                    }
                 }
-            }
-        ).extract()
-
-        return true
+            ).extract()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to extract patch", e)
+            false
+        }
     }
 
     fun setPatchEnabled(gameAsmPath: File, patchId: String, enabled: Boolean) {
@@ -136,32 +153,40 @@ class PatchManager @JvmOverloads constructor(
         return config.isPatchEnabled(gameAsmPath, patchId)
     }
 
-    private fun loadConfig(): PatchManagerConfig {
-        val loadedConfig = PatchManagerConfig.fromJson(configFile)
-        return if (loadedConfig == null) {
-            Log.i(TAG, "Config not found, creating new")
-            PatchManagerConfig().also { it.saveToJson(configFile) }
-        } else {
-            Log.i(TAG, "Config loaded")
-            loadedConfig
+    private fun loadConfig(cfgFile: File): PatchManagerConfig {
+        return try {
+            val loadedConfig = PatchManagerConfig.fromJson(cfgFile)
+            if (loadedConfig == null) {
+                Log.i(TAG, "Config not found, creating new")
+                val newCfg = PatchManagerConfig()
+                newCfg.saveToJson(cfgFile)
+                newCfg
+            } else {
+                Log.i(TAG, "Config loaded")
+                loadedConfig
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading config: ${e.message}")
+            PatchManagerConfig() // Return default config on crash
         }
     }
 
     private fun saveConfig() {
-        if (!config.saveToJson(configFile)) {
+        val cfgFile = configFile ?: return
+        if (!config.saveToJson(cfgFile)) {
             Log.w(TAG, "Failed to save config")
         }
     }
 
-    private fun cleanLegacySharedDlls() {
+    private fun cleanLegacySharedDlls(dir: File) {
         for (dllName in LEGACY_SHARED_DLLS) {
-            val dllFile = File(patchStorageDir, dllName)
+            val dllFile = File(dir, dllName)
             try {
                 if (dllFile.exists()) {
                     dllFile.delete()
                     Log.i(TAG, "Cleaned legacy DLL: $dllName")
                 }
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 Log.w(TAG, "Failed to clean $dllName: ${e.message}")
             }
         }
@@ -178,17 +203,18 @@ class PatchManager @JvmOverloads constructor(
             "Mono.Cecil.dll"
         )
 
-        @Throws(IOException::class)
         private fun getDefaultPatchStorageDirectories(customStoragePath: String?): File {
             val context: Context = KoinJavaComponent.get(Context::class.java)
             val baseDir = customStoragePath ?: if (IS_DEFAULT_PATCH_STORAGE_DIR_EXTERNAL) {
-                context.getExternalFilesDir(null)?.absolutePath
-                    ?: context.filesDir.absolutePath
+                // FIXED: Safely handle null externalFilesDir
+                val extDir = context.getExternalFilesDir(null)
+                extDir?.absolutePath ?: context.filesDir.absolutePath
             } else {
                 context.filesDir.absolutePath
             }
-            // Thay Paths.get().normalize() bang File()
-            return File(baseDir, PATCH_STORAGE_DIR).canonicalFile
+            
+            // FIXED: Removed canonicalFile. If path has symlinks, canonicalFile crashes on some Android 7 devices.
+            return File(baseDir, PATCH_STORAGE_DIR).absoluteFile
         }
 
         @JvmStatic
@@ -198,73 +224,83 @@ class PatchManager @JvmOverloads constructor(
 
         @JvmStatic
         fun installBuiltInPatches(patchManager: PatchManager, forceReinstall: Boolean) {
-            val context: Context = KoinJavaComponent.get(Context::class.java)
-            val apkFile = File(context.applicationInfo.sourceDir)
+            try {
+                val context: Context = KoinJavaComponent.get(Context::class.java)
+                val apkFile = File(context.applicationInfo.sourceDir)
 
-            TemporaryFileAcquirer().use { tfa ->
-                val extractedPatches = tfa.acquireTempFilePath("extracted_patches")
+                TemporaryFileAcquirer().use { tfa ->
+                    val extractedPatches = tfa.acquireTempFilePath("extracted_patches")
 
-                BasicSevenZipExtractor(
-                    apkFile,
-                    File("assets/patches"),
-                    extractedPatches,
-                    object : ExtractorCollection.ExtractionListener {
-                        override fun onProgress(message: String, progress: Float, state: HashMap<String, Any?>?) {}
-                        override fun onComplete(message: String, state: HashMap<String, Any?>?) {}
-                        override fun onError(message: String, ex: Exception?, state: HashMap<String, Any?>?) {
-                            throw RuntimeException(message, ex)
+                    BasicSevenZipExtractor(
+                        apkFile,
+                        File("assets/patches"),
+                        extractedPatches,
+                        object : ExtractorCollection.ExtractionListener {
+                            override fun onProgress(message: String, progress: Float, state: HashMap<String, Any?>?) {}
+                            override fun onComplete(message: String, state: HashMap<String, Any?>?) {}
+                            override fun onError(message: String, ex: Exception?, state: HashMap<String, Any?>?) {
+                                Log.e(TAG, "Built-in extraction error: $message", ex)
+                            }
                         }
-                    }
-                ).extract()
+                    ).extract()
 
-                val installedPatchMap = patchManager.installedPatches
-                    .associateBy { it.manifest.id }
+                    val installedPatchMap = patchManager.installedPatches
+                        .associateBy { it.manifest.id }
 
-                try {
                     extractedPatches.listFiles()
                         ?.filter { it.isFile && it.name.endsWith(".zip") }
                         ?.forEach { patchZip ->
-                            val manifest = PatchManifest.fromZip(patchZip)
-                                ?: return@forEach
+                            try {
+                                val manifest = PatchManifest.fromZip(patchZip)
+                                    ?: return@forEach
 
-                            val installedPatch = installedPatchMap[manifest.id]
+                                val installedPatch = installedPatchMap[manifest.id]
 
-                            when {
-                                forceReinstall -> {
-                                    Log.i(TAG, "Force reinstalling: ${patchZip.name}")
-                                    patchManager.installPatch(patchZip)
-                                }
-                                installedPatch == null -> {
-                                    Log.i(TAG, "Installing: ${patchZip.name}")
-                                    patchManager.installPatch(patchZip)
-                                }
-                                else -> {
-                                    val installedVersion = installedPatch.manifest.version
-                                    val bundledVersion = manifest.version
-                                    val cmp = PatchManifest.compareVersions(bundledVersion, installedVersion)
-                                    if (cmp > 0) {
-                                        Log.i(TAG, "Updating patch: ${manifest.id} ($installedVersion -> $bundledVersion)")
+                                when {
+                                    forceReinstall -> {
+                                        Log.i(TAG, "Force reinstalling: ${patchZip.name}")
                                         patchManager.installPatch(patchZip)
-                                    } else {
-                                        Log.d(TAG, "Patch up to date: ${manifest.id}")
+                                    }
+                                    installedPatch == null -> {
+                                        Log.i(TAG, "Installing: ${patchZip.name}")
+                                        patchManager.installPatch(patchZip)
+                                    }
+                                    else -> {
+                                        val installedVersion = installedPatch.manifest.version
+                                        val bundledVersion = manifest.version
+                                        val cmp = PatchManifest.compareVersions(bundledVersion, installedVersion)
+                                        if (cmp > 0) {
+                                            Log.i(TAG, "Updating patch: ${manifest.id} ($installedVersion -> $bundledVersion)")
+                                            patchManager.installPatch(patchZip)
+                                        } else {
+                                            Log.d(TAG, "Patch up to date: ${manifest.id}")
+                                        }
                                     }
                                 }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error installing individual patch: ${patchZip.name}", e)
                             }
                         }
-                } catch (e: IOException) {
-                    throw RuntimeException(e)
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "FATAL ERROR during built-in patch installation: ${e.message}", e)
             }
         }
 
         @JvmStatic
         fun constructStartupHooksEnvVar(patches: List<Patch>): String {
-            val seenPatchIds = linkedSetOf<String>()
-            return patches
-                .filter { seenPatchIds.add(it.manifest.id) }
-                .map { it.getEntryAssemblyAbsolutePath().toString() }
-                .distinct()
-                .joinToString(":")
+            return try {
+                val seenPatchIds = linkedSetOf<String>()
+                patches
+                    .filter { seenPatchIds.add(it.manifest.id) }
+                    .map { it.getEntryAssemblyAbsolutePath().absolutePath } // FIXED: toString -> absolutePath
+                    .distinct()
+                    .joinToString(":")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error constructing startup hooks", e)
+                ""
+            }
         }
     }
 }
+
