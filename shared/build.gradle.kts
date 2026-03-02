@@ -88,7 +88,6 @@ android {
 
 // THAY ĐỔI 4: Thêm thư viện Desugaring cho module Shared
 dependencies {
-    // Bạn có thể thay bằng alias libs.desugar.jdk.libs nếu đã khai báo trong toml
-    // Hoặc dùng trực tiếp chuỗi này:
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
+    // Sử dụng alias từ version catalog để tránh lệch phiên bản giữa các module
+    coreLibraryDesugaring(libs.desugarJdkLibs)
 }
