@@ -12,21 +12,24 @@ compose.resources {
 
 kotlin {
     androidTarget {
-        // Cấu hình compiler options cho Android nếu cần thiết
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        // Safe way to set compiler options for KMP without experimental warnings
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = "17"
+                freeCompilerArgs += listOf(
+                    "-Xexpect-actual-classes",
+                    "-opt-in=kotlin.RequiresOptIn"
+                )
+            }
         }
     }
 
-    // THAY ĐỔI 1: Hạ xuống Java 17
-    // Java 21 có thể chạy được nhưng Java 17 ổn định hơn cho Android 7 khi dùng KMP
     jvmToolchain(17)
 
     sourceSets {
         val commonMain by getting {
             kotlin.srcDir("src/commonMain/kotlin")
             dependencies {
-                // Compose Multiplatform
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
@@ -34,23 +37,17 @@ kotlin {
                 implementation(compose.components.resources)
                 implementation(compose.materialIconsExtended)
 
-                // Kotlinx
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
-                
-                // DateTime: Rất quan trọng cần Desugaring trên Android < 8
                 implementation(libs.kotlinx.datetime)
 
-                // Haze (Glassmorphism blur) - Lưu ý: Sẽ không có blur trên Android 7
                 implementation(libs.haze)
                 implementation(libs.haze.materials)
 
-                // Koin DI
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
                 implementation(libs.koin.compose.viewmodel)
 
-                // DataStore (Common)
                 implementation(libs.datastore.preferences.core)
             }
         }
@@ -73,21 +70,17 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        // THAY ĐỔI 2: Hạ minSdk xuống 25 (Android 7.1.1)
         minSdk = 25
     }
 
-    // THAY ĐỔI 3: Cấu hình Java và Desugaring
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // Bắt buộc bật để dùng kotlinx-datetime và các API hiện đại trên Android 7
         isCoreLibraryDesugaringEnabled = true
     }
 }
 
-// THAY ĐỔI 4: Thêm thư viện Desugaring cho module Shared
 dependencies {
-    // Sử dụng alias từ version catalog để tránh lệch phiên bản giữa các module
-    coreLibraryDesugaring(libs.desugarJdkLibs)
+    // Use dot notation for version catalogs alias instead of camelCase
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
