@@ -24,6 +24,11 @@ import java.io.File
 import java.util.Date
 import kotlin.system.exitProcess
 
+/**
+ * 应用程序 Application 类 (Kotlin 重构版)
+ *
+ * 使用 Koin DI 框架管理依赖
+ */
 class RaLaunchApp : Application(), KoinComponent {
 
     companion object {
@@ -32,62 +37,53 @@ class RaLaunchApp : Application(), KoinComponent {
         @Volatile
         private var instance: RaLaunchApp? = null
 
-        // ... keep track of the last active screen for crash reporting ...
+        // ... Keep track of the last active screen for advanced crash reporting ...
         var lastResumedActivityName: String = "None"
 
+        /**
+         * 获取全局 Application 实例
+         */
         @JvmStatic
         fun getInstance(): RaLaunchApp = instance
             ?: throw IllegalStateException("Application not initialized")
 
+        /**
+         * 获取全局 Context（兼容旧代码）
+         */
         @JvmStatic
         fun getAppContext(): Context = getInstance().applicationContext
     }
 
-    // ... Koin injections ...
+    // 延迟注入（在 Koin 初始化后才能使用）
     private val _vibrationManager: VibrationManager by inject()
     private val _controlPackManager: ControlPackManager by inject()
     private val _patchManager: PatchManager? by inject()
 
     override fun onCreate() {
-        // ... 1. catch fatal Java/Kotlin crashes ...
+        // ... 1. Initialize the ultimate crash catchers BEFORE anything else can crash ...
         setupGlobalCrashCatcher()
-        
-        // ... 2. catch UI, Lifecycle, and Background framework errors ...
         setupComponentErrorTrackers()
 
         super.onCreate()
         instance = this
 
-        val startupLogFile = File(filesDir, "startup_log.txt")
-        startupLogFile.delete()
+        // 1. 初始化密度适配（必须最先）
+        DensityAdapter.init(this)
 
-        fun writeLog(msg: String) {
-            Log.i(TAG, msg)
-            try { startupLogFile.appendText("$msg\n") } catch (e: Exception) { }
-        }
+        // 2. 初始化 Koin DI（必须在使用 inject 之前）
+        KoinInitializer.init(this)
 
-        fun step(name: String, block: () -> Unit) {
-            writeLog("▶ $name...")
-            try {
-                block()
-                writeLog("✅ $name OK")
-            } catch (e: Throwable) {
-                // ... safely catch initialization errors without killing the app ...
-                writeLog("❌ $name FAILED: ${e.javaClass.name} - ${e.message}")
-                Log.e(TAG, "Init step failed: $name", e)
-            }
-        }
+        // 3. 应用主题设置
+        applyThemeFromSettings()
 
-        writeLog("=== App Start: Android ${Build.VERSION.SDK_INT} ===")
-        
-        step("DensityAdapter")  { DensityAdapter.init(this) }
-        step("KoinInitializer") { KoinInitializer.init(this) }
-        step("Theme")           { applyThemeFromSettings() }
-        step("Fishnet")         { initCrashHandler() }
-        step("Patches")         { installPatchesInBackground() }
-        step("EnvVars")         { setupEnvironmentVariables() }
+        // 4. 初始化崩溃捕获
+        initCrashHandler()
 
-        writeLog("=== Init Complete ===")
+        // 5. 后台安装补丁
+        installPatchesInBackground()
+
+        // 6. 设置环境变量
+        setupEnvironmentVariables()
     }
 
     // ... ULTIMATE COMPONENT ERROR TRACKER ...
@@ -110,10 +106,8 @@ class RaLaunchApp : Application(), KoinComponent {
         try {
             val rxPluginsClass = Class.forName("io.reactivex.plugins.RxJavaPlugins")
             val consumerClass = Class.forName("io.reactivex.functions.Consumer")
-            // ... using reflection to avoid compile errors if RxJava is not in the project ...
             val method = rxPluginsClass.getMethod("setErrorHandler", consumerClass)
             
-            // ... dummy proxy just to swallow or log the unhandled RxJava errors ...
             val handler = java.lang.reflect.Proxy.newProxyInstance(
                 consumerClass.classLoader,
                 arrayOf(consumerClass)
@@ -123,20 +117,19 @@ class RaLaunchApp : Application(), KoinComponent {
                 null
             }
             method.invoke(null, handler)
-            Log.i(TAG, "RxJava Error Handler attached successfully")
         } catch (e: Exception) {
-            // ... RxJava not found or setup failed, safe to ignore ...
+            // ... Safe to ignore if RxJava is not in the project ...
         }
 
         // ... 3. Main Thread (UI) lag/block warning (Simple ANR detection) ...
         Looper.getMainLooper().setMessageLogging { logMessage ->
             if (logMessage.startsWith(">>>>> Dispatching to")) {
-                // ... you could start a timer here to measure if frame takes > 16ms or > 5s (ANR) ...
+                // ... ANR timer could be implemented here ...
             }
         }
     }
 
-    // ... robust crash catcher method ...
+    // ... ROBUST GLOBAL CRASH CATCHER ...
     private fun setupGlobalCrashCatcher() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
@@ -145,13 +138,13 @@ class RaLaunchApp : Application(), KoinComponent {
                     packageManager.getPackageInfo(packageName, 0).versionName
                 } catch (e: Exception) { "Unknown" }
 
-                // ... build a highly detailed crash report ...
+                // ... Build a highly detailed crash report ...
                 val crashReport = buildString {
                     appendLine("\n=========================================")
                     appendLine("CRASH TIME: ${Date()}")
                     appendLine("DEVICE: ${Build.MANUFACTURER} ${Build.MODEL} (API ${Build.VERSION.SDK_INT})")
                     appendLine("APP VERSION: $appVersion")
-                    appendLine("LAST ACTIVE SCREEN: $lastResumedActivityName") // ... added UI tracker here ...
+                    appendLine("LAST ACTIVE SCREEN: $lastResumedActivityName")
                     appendLine("THREAD: ${thread.name}")
                     appendLine("ERROR TYPE: ${exception.javaClass.name}")
                     appendLine("MESSAGE: ${exception.message}")
@@ -168,11 +161,11 @@ class RaLaunchApp : Application(), KoinComponent {
                     appendLine("=========================================\n")
                 }
 
-                // ... save to internal storage ...
+                // ... Save to internal storage (always works) ...
                 val internalLogFile = File(filesDir, "FATAL_CRASH.txt")
                 internalLogFile.appendText(crashReport)
 
-                // ... save to external storage ...
+                // ... Save to external storage (Android/data/.../files/) so dev can read via PC without Root ...
                 val externalDir = getExternalFilesDir(null)
                 if (externalDir != null) {
                     val externalLogFile = File(externalDir, "FATAL_CRASH_ACCESSIBLE.txt")
@@ -184,7 +177,7 @@ class RaLaunchApp : Application(), KoinComponent {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to write crash log", e)
             } finally {
-                // ... pass it to Fishnet or System default handler ...
+                // ... Pass it to Fishnet or System default handler ...
                 if (defaultHandler != null) {
                     defaultHandler.uncaughtException(thread, exception)
                 } else {
@@ -204,10 +197,10 @@ class RaLaunchApp : Application(), KoinComponent {
         LocaleManager.applyLanguage(this)
     }
 
-    // ... existing initialization methods ...
     private fun applyThemeFromSettings() {
         try {
-            val nightMode = when (SettingsAccess.themeMode) {
+            val settingsManager = SettingsAccess
+            val nightMode = when (settingsManager.themeMode) {
                 0 -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 1 -> AppCompatDelegate.MODE_NIGHT_YES
                 2 -> AppCompatDelegate.MODE_NIGHT_NO
@@ -215,21 +208,24 @@ class RaLaunchApp : Application(), KoinComponent {
             }
             AppCompatDelegate.setDefaultNightMode(nightMode)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to apply theme", e)
+            Log.e(TAG, "Failed to apply theme: ${e.message}")
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         }
     }
 
+    /**
+     * 初始化崩溃捕获
+     */
     private fun initCrashHandler() {
-        try {
-            val logDir = File(filesDir, "crash_logs").apply {
-                if (!exists()) mkdirs()
-            }
-            Fishnet.init(applicationContext, logDir.absolutePath)
-        } catch (e: Exception) {
-            Log.e(TAG, "Fishnet init failed", e)
+        val logDir = File(filesDir, "crash_logs").apply {
+            if (!exists()) mkdirs()
         }
+        Fishnet.init(applicationContext, logDir.absolutePath)
     }
 
+    /**
+     * 后台安装补丁
+     */
     private fun installPatchesInBackground() {
         _patchManager?.let { manager ->
             Thread({
@@ -237,26 +233,43 @@ class RaLaunchApp : Application(), KoinComponent {
                     com.app.ralaunch.core.common.util.PatchExtractor.extractPatchesIfNeeded(applicationContext)
                     PatchManager.installBuiltInPatches(manager, false)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to install patches", e)
+                    Log.e(TAG, "Failed to install patches: ${e.message}")
                 }
             }, "PatchInstaller").start()
         }
     }
 
+    /**
+     * 设置环境变量
+     */
     private fun setupEnvironmentVariables() {
         try {
             Os.setenv("PACKAGE_NAME", packageName, true)
+
             val externalStorage = android.os.Environment.getExternalStorageDirectory()
             externalStorage?.let {
                 Os.setenv("EXTERNAL_STORAGE_DIRECTORY", it.absolutePath, true)
+                Log.d(TAG, "EXTERNAL_STORAGE_DIRECTORY: ${it.absolutePath}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to set env vars", e)
+            Log.e(TAG, "Failed to set environment variables: ${e.message}")
         }
     }
 
-    // ... existing getters ...
+    // ==================== 兼容旧代码的访问方法 ====================
+
+    /**
+     * 获取 VibrationManager
+     */
     fun getVibrationManager(): VibrationManager = _vibrationManager
+
+    /**
+     * 获取 ControlPackManager
+     */
     fun getControlPackManager(): ControlPackManager = _controlPackManager
+
+    /**
+     * 获取 PatchManager
+     */
     fun getPatchManager(): PatchManager? = _patchManager
 }
