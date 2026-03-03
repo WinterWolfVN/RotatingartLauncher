@@ -125,9 +125,8 @@ android {
 }
 
 dependencies {
-    // --- THAY ĐỔI 4: Thêm thư viện Desugaring ---
     // Điều này bắt buộc để chạy các API Java hiện đại trên Android 7
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.2'
+    coreLibraryDesugaring libs.desugar.jdk.libs
 
     // Các dependency cũ giữ nguyên
     implementation files('../app/libs/libSystem.Security.Cryptography.Native.Android.jar')
