@@ -167,7 +167,7 @@ dependencies {
     // ... Misc tools ...
     implementation libs.glide
     implementation libs.konfetti
-    implementation libs.xz // <--- KEEPT: Our custom ArchiveExtractor needs this to read .xz files!
+    implementation 'org.tukaani:xz:1.9' // <--- KEEPT: Our custom ArchiveExtractor needs this to read .xz files!
     implementation libs.android.svg
     
     // ... NOTE: libs.commons.compress HAS BEEN COMPLETELY PURGED!
