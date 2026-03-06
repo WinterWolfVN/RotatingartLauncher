@@ -28,25 +28,22 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
 
             try {
                 System.loadLibrary("7-Zip-JBinding")
-                // ... CRITICAL FIX: Initialize SevenZip engine after loading the library ...
-                SevenZip.initSevenZipFromPlatformNative()
+                // ... ABSOLUTELY NO INIT CALLS HERE, LET 7-ZIP AUTO-INITIALIZE ...
                 libraryLoaded = true
-                Log.i(TAG, "7-Zip native library loaded and initialized successfully")
+                Log.i(TAG, "7-Zip native library loaded successfully via System.loadLibrary")
             } catch (e: UnsatisfiedLinkError) {
                 Log.e(TAG, "Failed to load 7-Zip native library: ${e.message}")
                 try {
                     val context = RaLaunchApp.getInstance()
                     libraryLoaded = RuntimeLibraryLoader.load7Zip(context)
                     if (libraryLoaded) {
-                        // ... Also initialize if loaded from runtime_libs ...
-                        SevenZip.initSevenZipFromPlatformNative()
                         Log.i(TAG, "7-Zip native library loaded from runtime_libs")
                     }
                 } catch (e2: Exception) {
                     Log.e(TAG, "Cannot load 7-Zip library from runtime_libs: ${e2.message}")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Cannot initialize 7-Zip engine: ${e.message}")
+                Log.e(TAG, "Cannot load 7-Zip library: ${e.message}")
             }
             return libraryLoaded
         }
@@ -147,7 +144,7 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
         return false
     }
 
-    // ... Standard Android Zip Extractor (Bulletproof on Android 7) ...
+    // ... Standard Android Zip Extractor (Bulletproof on all Android versions) ...
     private fun fallbackExtractZip(): Boolean {
         return try {
             FileInputStream(sourceFile).use { fis ->
@@ -233,10 +230,11 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
             try {
                 closeOutputStream()
 
-                val filePath = archive.getStringProperty(index, PropID.PATH)
-                val isFolder = archive.getProperty(index, PropID.IS_FOLDER) as Boolean
+                // ... Handle potentially null filePath safely ...
+                val filePath = archive.getStringProperty(index, PropID.PATH) ?: ""
+                val isFolder = archive.getProperty(index, PropID.IS_FOLDER) as? Boolean ?: false
 
-                // ... Replace Path.relativize with String manipulation to support older Android versions ...
+                // ... Replace Path.relativize with String manipulation ...
                 val prefix = sourceExtractionPrefix.path
                 val relativeFilePath = if (prefix.isEmpty() || prefix == ".") {
                     filePath
