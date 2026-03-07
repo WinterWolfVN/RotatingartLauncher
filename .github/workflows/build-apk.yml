@@ -109,6 +109,9 @@ jobs:
         run: chmod +x ./gradlew
 
       # ==================== Build Release ====================
+      - name: Generate Dummy Keystore
+        run: keytool -genkey -v -keystore app/dummy.keystore -alias ralaunch -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Hacker, OU=Dev, O=RaLaunch, C=VN"
+
       - name: Build Release APK
         id: build_release
         run: |
