@@ -28,7 +28,7 @@ import com.app.ralaunch.core.common.util.DensityAdapter
 import com.app.ralaunch.core.common.util.LocaleManager
 import com.app.ralaunch.core.common.ErrorHandler
 import com.app.ralaunch.shared.core.platform.AppConstants
-import com.app.ralaunch.core.platform.game.SDLOptimizer
+import com.app.ralaunch.core.platform.runtime.SDLOptimizer
 
 /**
  * 游戏运行界面
