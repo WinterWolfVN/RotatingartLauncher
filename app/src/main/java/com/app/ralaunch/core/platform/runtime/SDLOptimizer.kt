@@ -70,24 +70,17 @@ object SDLOptimizer {
             Os.setenv("ALSOFT_REQCHANNELS", "2", true) 
             Os.setenv("ALSOFT_REQSAMPLERATE", "44100", true)
 
+            Os.setenv("SDL_AUDIO_FORMAT", "s16", true)
+            Os.setenv("FNA_AUDIO_DISABLE_FLOAT", "1", true)
+
             // --- 2. SDL GRAPHICS FIXES (Prevent Stretched rendering) ---
             Os.setenv("SDL_VIDEO_ALLOW_SCREENSAVER", "0", true)
             Os.setenv("SDL_HINT_RENDER_LOGICAL_SIZE_MODE", "letterbox", true)
             Os.setenv("FNA_GRAPHICS_ENABLE_HIGHDPI", "1", true)
-            
-            // --- 3. RENDERER COMPATIBILITY HACKS (Fix Black Screen / Crash) ---
-            // ... When users select GL4ES or other renderers instead of Native GLES3,
-            // ... these variables force the translator to use safe, older API calls
-            // ... that won't crash older Android 7 GPUs.
-            Os.setenv("LIBGL_ES", "2", true) 
-            Os.setenv("LIBGL_NOHASH", "1", true)
-            Os.setenv("LIBGL_HARDWARE_TL", "1", true)
-            Os.setenv("LIBGL_SOFTWARE", "0", true) 
-            Os.setenv("LIBGL_BATCH", "1", true)
 
-            Log.i(TAG, "✅ Audio, SDL, and GL4ES environment variables injected successfully!")
+            Log.i(TAG, "✅ Injected all environment variables successfully!")
+            
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to inject environment variables: ${e.message}")
-        }
+            Log.e(TAG, "❌ Failed to inject variables: ${e.message}")
     }
 } 
