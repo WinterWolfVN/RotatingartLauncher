@@ -29,8 +29,6 @@ import com.app.ralaunch.core.common.ErrorHandler
 import com.app.ralaunch.shared.core.platform.AppConstants
 import org.libsdl.app.SDLActivity
 import com.app.ralaunch.core.platform.runtime.SDLOptimizer
-import com.app.ralaunch.core.platform.runtime.GameBoost
-import com.app.ralaunch.core.platform.runtime.RendererFramework
 import com.app.ralaunch.core.platform.runtime.TurboPatchLoader
 
 /**
@@ -188,12 +186,7 @@ class GameActivity : SDLActivity(), GameContract.View {
 
         SDLOptimizer.applyAudioFixes(this)
 
-        val selectedRenderer = intent.getStringExtra(EXTRA_GAME_RENDERER_OVERRIDE) ?: "native"
-        RendererFramework.injectCustomDriverPaths(this, selectedRenderer)
-
         TurboPatchLoader.injectTurboWrapper()
-
-        GameBoost.applyMaxPerformance()
 
         // 初始化日志系统 (游戏进程独立于主进程)
         initializeLogger()
