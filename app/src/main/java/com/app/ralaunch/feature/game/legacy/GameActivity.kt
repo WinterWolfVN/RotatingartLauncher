@@ -28,8 +28,9 @@ import com.app.ralaunch.core.common.util.LocaleManager
 import com.app.ralaunch.core.common.ErrorHandler
 import com.app.ralaunch.shared.core.platform.AppConstants
 import org.libsdl.app.SDLActivity
-// ... Import our custom SDL Audio Optimizer ...
 import com.app.ralaunch.core.platform.runtime.SDLOptimizer
+import com.app.ralaunch.core.platform.runtime.GameBoost
+import com.app.ralaunch.core.platform.runtime.RendererFramework
 
 /**
  * 游戏运行界面
@@ -185,6 +186,9 @@ class GameActivity : SDLActivity(), GameContract.View {
         presenter.attach(this)
 
         SDLOptimizer.applyAudioFixes(this)
+
+        val selectedRenderer = intent.getStringExtra(EXTRA_GAME_RENDERER_OVERRIDE) ?: "native"
+        RendererFramework.injectCustomDriverPaths(this, selectedRenderer)
 
         GameBoost.applyMaxPerformance()
 
