@@ -276,22 +276,27 @@ class GameActivity : SDLActivity(), GameContract.View {
         finish()
     }
 
-    // ... Re-apply Immersive Mode when user switches back to the game ...
+    private fun hideNavigationBarDefinitively() {
+        try {
+            val flags = (
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+                or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+            window.decorView.systemUiVisibility = flags
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to hide navigation bar: ${e.message}")
+        }
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         fullscreenManager?.onWindowFocusChanged(hasFocus)
-        
         if (hasFocus) {
-            try {
-                window.decorView.systemUiVisibility = (
-                    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-                )
-            } catch (e: Exception) {}
+            hideNavigationBarDefinitively()
         }
     }
 
