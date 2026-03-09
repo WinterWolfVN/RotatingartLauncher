@@ -149,10 +149,25 @@ class GameActivity : SDLActivity(), GameContract.View {
         AppLogger.info(TAG, "GameActivity onCreate completed")
     }
 
+    @Suppress("DEPRECATION")
     private fun hideNavigationBarDefinitively() {
         try {
             window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
+            // --- MODERN ANDROID (API 30 / Android 11+) ---
+            // Use the modern, efficient WindowInsetsController.
+            // No loops needed, it locks the UI permanently!
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(false)
+                window.insetsController?.let { controller ->
+                    controller.hide(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.navigationBars())
+                    controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+                return // Exit early, modern Android handles it perfectly.
+            }
+
+            // --- LEGACY ANDROID (API 29 and below) ---
+            // Fallback to the aggressive 300ms loop for older devices where SDL overrides UI
             val flags = (
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -164,13 +179,14 @@ class GameActivity : SDLActivity(), GameContract.View {
             
             window.decorView.systemUiVisibility = flags
 
+            // Aggressively re-hide the UI every 300ms to fight SDL
             uiHandler.removeCallbacks(hideUiRunnable)
             uiHandler.postDelayed(hideUiRunnable, 300)
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to hide navigation bar: ${e.message}")
         }
-    }
+    } 
 
     override fun onResume() {
         super.onResume()
@@ -242,9 +258,12 @@ class GameActivity : SDLActivity(), GameContract.View {
     override fun onBackPressed() {}
 
     override fun onDestroy() {
-        Log.d(TAG, "GameActivity.onDestroy() called")
+            Log.d(TAG, "GameActivity.onDestroy() called")
         
-        uiHandler.removeCallbacks(hideUiRunnable)
+        // Only clean up the runnable if we actually used it (Legacy devices)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            uiHandler.removeCallbacks(hideUiRunnable)
+        }
 
         virtualControlsManager.stop()
         presenter.detach()
