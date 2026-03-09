@@ -141,6 +141,8 @@ class GameActivity : SDLActivity(), GameContract.View {
         // ===================================================================
         DeviceOptimizationEngine.prepareGameEnvironment(this)
 
+        TurboPatchLoader.injectTurboWrapper(this)
+
         initializeLogger()
         initializeErrorHandler()
         forceLandscapeOrientation()
