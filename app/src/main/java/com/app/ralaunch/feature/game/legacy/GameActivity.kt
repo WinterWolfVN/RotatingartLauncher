@@ -31,9 +31,6 @@ import org.libsdl.app.SDLActivity
 import com.app.ralaunch.core.platform.runtime.DeviceOptimizationEngine
 import com.app.ralaunch.core.platform.runtime.TurboPatchLoader
 
-/**
- * 游戏运行界面
- */
 class GameActivity : SDLActivity(), GameContract.View {
 
     companion object {
@@ -125,6 +122,9 @@ class GameActivity : SDLActivity(), GameContract.View {
     private val virtualControlsManager = GameVirtualControlsManager()
     private val touchBridge = GameTouchBridge()
 
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private val hideUiRunnable = Runnable { hideNavigationBarDefinitively() }
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleManager.applyLanguage(newBase))
     }
@@ -137,11 +137,7 @@ class GameActivity : SDLActivity(), GameContract.View {
         instance = this
         presenter.attach(this)
 
-        // ===================================================================
-        // ... THE SINGLE LINE THAT KICKS OFF ALL FIXES ...
-        // ===================================================================
         DeviceOptimizationEngine.prepareGameEnvironment(this)
-
         TurboPatchLoader.injectTurboWrapper(this)
 
         initializeLogger()
@@ -153,12 +149,8 @@ class GameActivity : SDLActivity(), GameContract.View {
         AppLogger.info(TAG, "GameActivity onCreate completed")
     }
 
-    // ===================================================================
-    // ... BULLETPROOF IMMERSIVE MODE & KEYBOARD FIX ...
-    // ===================================================================
     private fun hideNavigationBarDefinitively() {
         try {
-            // ... Prevent keyboard from covering the game screen ...
             window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
             val flags = (
@@ -172,14 +164,9 @@ class GameActivity : SDLActivity(), GameContract.View {
             
             window.decorView.systemUiVisibility = flags
 
-            // ... Re-hide navigation bar when keyboard closes ...
-            window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
-                if ((visibility and android.view.View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        window.decorView.systemUiVisibility = flags
-                    }, 300)
-                }
-            }
+            uiHandler.removeCallbacks(hideUiRunnable)
+            uiHandler.postDelayed(hideUiRunnable, 300)
+
         } catch (e: Exception) {
             Log.e(TAG, "Failed to hide navigation bar: ${e.message}")
         }
@@ -221,7 +208,6 @@ class GameActivity : SDLActivity(), GameContract.View {
             enableFullscreen()
             configureIME()
         }
-        // ... Hide nav bar at launch ...
         hideNavigationBarDefinitively()
     }
 
@@ -257,6 +243,9 @@ class GameActivity : SDLActivity(), GameContract.View {
 
     override fun onDestroy() {
         Log.d(TAG, "GameActivity.onDestroy() called")
+        
+        uiHandler.removeCallbacks(hideUiRunnable)
+
         virtualControlsManager.stop()
         presenter.detach()
         super.onDestroy()
@@ -285,6 +274,11 @@ class GameActivity : SDLActivity(), GameContract.View {
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         val result = super.dispatchTouchEvent(event)
         touchBridge.handleMotionEvent(event, resources)
+        
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            hideNavigationBarDefinitively()
+        }
+        
         return result
     }
 
