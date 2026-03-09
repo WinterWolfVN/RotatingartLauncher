@@ -29,6 +29,7 @@ import com.app.ralaunch.core.common.ErrorHandler
 import com.app.ralaunch.shared.core.platform.AppConstants
 import org.libsdl.app.SDLActivity
 import com.app.ralaunch.core.platform.runtime.DeviceOptimizationEngine
+import com.app.ralaunch.core.platform.runtime.TurboPatchLoader
 
 /**
  * 游戏运行界面
