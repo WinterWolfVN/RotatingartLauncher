@@ -44,61 +44,29 @@ class RaLaunchApp : Application(), KoinComponent {
     private val _patchManager: PatchManager? by inject()
 
         override fun onCreate() {
-        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
-                try {
-                    val appVersion = packageManager.getPackageInfo(packageName, 0).versionName
-                    val rootCauseElement = exception.stackTrace.firstOrNull()
-                    val errorFile = rootCauseElement?.fileName ?: "Unknown File"
-                    val errorLine = rootCauseElement?.lineNumber?.toString() ?: "Unknown Line"
-                    
-                    val crashDir = File(getExternalFilesDir(null), "crashreport")
-                    if (!crashDir.exists()) crashDir.mkdirs()
-                    
-                    val vipLogFile = File(crashDir, "APP_CRASH_${System.currentTimeMillis()}.txt")
-                    
-                    val vipReport = buildString {
-                        appendLine("=========================================")
-                        appendLine("🚨 RALAUNCHER VIP CRASH REPORT 🚨")
-                        appendLine("=========================================")
-                        appendLine("🕒 CRASH TIME   : ${java.util.Date()}")
-                        appendLine("📱 DEVICE       : ${Build.MODEL} (API ${Build.VERSION.SDK_INT})")
-                        appendLine("📦 APP VERSION  : $appVersion")
-                        appendLine("-----------------------------------------")
-                        appendLine("📁 ERROR FILE   : $errorFile")
-                        appendLine("🔢 ERROR LINE   : Line $errorLine")
-                        appendLine("-----------------------------------------")
-                        appendLine("💀 ERROR TYPE   : ${exception.javaClass.name}")
-                        appendLine("💬 MESSAGE      : ${exception.message}")
-                        appendLine("=========================================")
-                        exception.stackTrace.forEach { appendLine("  at $it") }
-                        
-                        var cause = exception.cause
-                        while (cause != null) {
-                            appendLine("\n🔄 CAUSED BY: ${cause.javaClass.name}: ${cause.message}")
-                            cause.stackTrace.forEach { appendLine("  at $it") }
-                            cause = cause.cause
-                        }
-                    }
-                    vipLogFile.writeText(vipReport)
-                } catch (vipException: Exception) {
-                    // If VIP report fails, do nothing, let the original report survive!
-                }
-
-            } catch (e: Exception) {
-                // Ignore if we can't write
-            }
-            // Let the app crash normally after saving the logs
-            defaultHandler?.uncaughtException(thread, exception)
-        }
-
         super.onCreate()
         instance = this
 
-        com.app.ralaunch.core.platform.runtime.BlackBoxLogger.startRecording(this)
+        // 1. 初始化密度适配（必须最先）
+        DensityAdapter.init(this)
 
-        val startupLogFile = File(filesDir, "startup_log.txt")
-        startupLogFile.delete()
+        // 2. 初始化 Koin DI（必须在使用 inject 之前）
+        KoinInitializer.init(this)
+
+        // 3. 应用主题设置
+        applyThemeFromSettings()
+
+        // 4. 初始化崩溃捕获
+        initCrashHandler()
+
+        // 5. 后台安装补丁
+        installPatchesInBackground()
+
+        // 6. 设置环境变量
+        setupEnvironmentVariables()
+        }
+
+        com.app.ralaunch.core.platform.runtime.BlackBoxLogger.startRecording(this)
         
 
     override fun attachBaseContext(base: Context) {
