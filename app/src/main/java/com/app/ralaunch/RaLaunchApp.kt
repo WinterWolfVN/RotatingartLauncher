@@ -4,8 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.system.Os
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
@@ -20,8 +18,6 @@ import com.kyant.fishnet.Fishnet
 import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import java.io.File
-import java.util.Date
-import com.app.ralaunch.core.platform.runtime.BlackBoxLogger
 
 class RaLaunchApp : Application(), KoinComponent {
 
@@ -43,31 +39,42 @@ class RaLaunchApp : Application(), KoinComponent {
     private val _controlPackManager: ControlPackManager by inject()
     private val _patchManager: PatchManager? by inject()
 
-        override fun onCreate() {
+    override fun onCreate() {
         super.onCreate()
         instance = this
 
-        // 1. 初始化密度适配（必须最先）
-        DensityAdapter.init(this)
+        com.app.ralaunch.core.platform.runtime.BlackBoxLogger.startRecording(this)
 
-        // 2. 初始化 Koin DI（必须在使用 inject 之前）
-        KoinInitializer.init(this)
+        val startupLogFile = File(filesDir, "startup_log.txt")
+        startupLogFile.delete()
 
-        // 3. 应用主题设置
-        applyThemeFromSettings()
-
-        // 4. 初始化崩溃捕获
-        initCrashHandler()
-
-        // 5. 后台安装补丁
-        installPatchesInBackground()
-
-        // 6. 设置环境变量
-        setupEnvironmentVariables()
+        fun writeLog(msg: String) {
+            Log.i(TAG, msg)
+            try { startupLogFile.appendText("$msg\n") } catch (e: Exception) { }
         }
 
-        com.app.ralaunch.core.platform.runtime.BlackBoxLogger.startRecording(this)
+        fun step(name: String, block: () -> Unit) {
+            writeLog("▶ $name...")
+            try {
+                block()
+                writeLog("✅ $name OK")
+            } catch (e: Throwable) {
+                writeLog("❌ $name FAILED: ${e.javaClass.name} - ${e.message}")
+                Log.e(TAG, "Init step failed: $name", e)
+            }
+        }
+
+        writeLog("=== App Start: Android ${Build.VERSION.SDK_INT} ===")
         
+        step("DensityAdapter")  { DensityAdapter.init(this) }
+        step("KoinInitializer") { KoinInitializer.init(this) }
+        step("Theme")           { applyThemeFromSettings() }
+        step("Fishnet")         { initCrashHandler() }
+        step("Patches")         { installPatchesInBackground() }
+        step("EnvVars")         { setupEnvironmentVariables() }
+
+        writeLog("=== Init Complete ===")
+    }
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(LocaleManager.applyLanguage(base))
@@ -93,10 +100,14 @@ class RaLaunchApp : Application(), KoinComponent {
     }
 
     private fun initCrashHandler() {
-        val logDir = File(filesDir, "crash_logs").apply {
-            if (!exists()) mkdirs()
+        try {
+            val logDir = File(filesDir, "crash_logs").apply {
+                if (!exists()) mkdirs()
+            }
+            Fishnet.init(applicationContext, logDir.absolutePath)
+        } catch (e: Exception) {
+            Log.e(TAG, "Fishnet init failed: ${e.message}")
         }
-        Fishnet.init(applicationContext, logDir.absolutePath)
     }
 
     private fun installPatchesInBackground() {
