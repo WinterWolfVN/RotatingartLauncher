@@ -21,6 +21,7 @@ import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import java.io.File
 import java.util.Date
+import com.app.ralaunch.core.platform.runtime.CrashSentinel
 
 class RaLaunchApp : Application(), KoinComponent {
 
@@ -66,6 +67,8 @@ class RaLaunchApp : Application(), KoinComponent {
 
         super.onCreate()
         instance = this
+
+        CrashSentinel.armDefenses(this)
 
         val startupLogFile = File(filesDir, "startup_log.txt")
         startupLogFile.delete()
