@@ -17,7 +17,7 @@ object DeviceOptimizationEngine {
     // ===================================================================
     // ... MAIN TRIGGER: Call this ONCE before game launch ...
     // ===================================================================
-    fun prepareGameEnvironment(context: Context) {
+    fun prepareGameEnvironment(context: Context, gameDirString: String?)) {
         Log.i(TAG, "⚙️ Initializing Device Optimization Engine for API ${Build.VERSION.SDK_INT}...")
 
         try {
@@ -37,5 +37,39 @@ object DeviceOptimizationEngine {
         } catch (e: Exception) {
             Log.e(TAG, "❌ Critical failure in Optimization Engine: ${e.message}")
         }
-    }
-}
+
+            if (!gameDirString.isNullOrEmpty()) {
+                val gameDir = java.io.File(gameDirString)
+                if (gameDir.exists()) {
+                    // Try to guess the game name from the directory (e.g. Celeste_a00f)
+                    val dirName = gameDir.name
+                    val gameName = dirName.substringBefore("_") 
+                    
+                    val configFile = java.io.File(gameDir, "$gameName.runtimeconfig.json")
+                    if (!configFile.exists()) {
+                        Log.i(TAG, "Injecting missing .NET config file for: $gameName")
+                        val jsonContent = """
+                        {
+                          "runtimeOptions": {
+                            "tfm": "net6.0",
+                            "framework": {
+                              "name": "Microsoft.NETCore.App",
+                              "version": "6.0.0"
+                            },
+                            "configProperties": {
+                              "System.GC.Server": false
+                            }
+                          }
+                        }
+                        """.trimIndent()
+                        configFile.writeText(jsonContent)
+                    }
+                }
+            }
+
+            TurboPatchLoader.injectTurboWrapper(context)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Critical failure in Optimization Engine: ${e.message}")
+        }
+    } 
