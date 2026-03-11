@@ -11,7 +11,6 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.RandomAccessFile
-// ... Added standard Java Zip imports for the fallback lifeboat ...
 import java.util.zip.ZipInputStream
 
 class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
@@ -28,7 +27,6 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
 
             try {
                 System.loadLibrary("7-Zip-JBinding")
-                // ... ABSOLUTELY NO INIT CALLS HERE, LET 7-ZIP AUTO-INITIALIZE ...
                 libraryLoaded = true
                 Log.i(TAG, "7-Zip native library loaded successfully via System.loadLibrary")
             } catch (e: UnsatisfiedLinkError) {
@@ -99,7 +97,7 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
             destinationFile.mkdirs()
         }
 
-        // ... Try 7-Zip first ...
+        // ... Try 7-Zip engine first ...
         if (ensureLibraryLoaded()) {
             try {
                 RandomAccessFile(sourceFile, "r").use { raf ->
@@ -144,7 +142,9 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
         return false
     }
 
-    // ... Standard Android Zip Extractor (Bulletproof on all Android versions) ...
+    // =====================================================================
+    // ... PURE JAVA ZIP EXTRACTOR (With Strict Zip Slip Protection) ...
+    // =====================================================================
     private fun fallbackExtractZip(): Boolean {
         return try {
             FileInputStream(sourceFile).use { fis ->
@@ -165,10 +165,19 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
                             continue
                         }
 
-                        // ... Calculate target file and prevent path traversal attacks ...
+                        // ... Calculate target file and enforce STRICT Zip Slip protection ...
                         val targetFile = File(destinationFile, relativeFilePath).canonicalFile
-                        if (!targetFile.path.startsWith(destinationFile.canonicalPath)) {
-                            throw IOException("Path traversal detected: $targetFile")
+                        val destCanonicalPath = destinationFile.canonicalPath
+                        
+                        // ... Append separator to ensure strict directory boundary ...
+                        val safeDestPath = if (destCanonicalPath.endsWith(File.separator)) {
+                            destCanonicalPath
+                        } else {
+                            "$destCanonicalPath${File.separator}"
+                        }
+
+                        if (!targetFile.canonicalPath.startsWith(safeDestPath)) {
+                            throw IOException("Zip Slip / Path traversal detected: $targetFile")
                         }
 
                         if (entry.isDirectory) {
@@ -179,7 +188,7 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
 
                             extractionListener?.onProgress(
                                 RaLaunchApp.getInstance().getString(R.string.extract_in_progress, filePath),
-                                0.5f, // Fake progress for fallback
+                                0.5f, 
                                 state
                             )
 
@@ -207,15 +216,14 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
             true
         } catch (ex: Exception) {
             Log.e(TAG, "Fallback ZIP extraction also failed", ex)
-            extractionListener?.onError(
-                "Zip Fallback Extraction Failed",
-                ex,
-                state
-            )
+            extractionListener?.onError("Zip Fallback Extraction Failed", ex, state)
             false
         }
     }
 
+    // =====================================================================
+    // ... 7-ZIP CALLBACK HANDLER (With Strict Zip Slip Protection) ...
+    // =====================================================================
     private inner class ArchiveExtractCallback(
         private val archive: IInArchive
     ) : IArchiveExtractCallback {
@@ -230,11 +238,9 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
             try {
                 closeOutputStream()
 
-                // ... Handle potentially null filePath safely ...
                 val filePath = archive.getStringProperty(index, PropID.PATH) ?: ""
                 val isFolder = archive.getProperty(index, PropID.IS_FOLDER) as? Boolean ?: false
 
-                // ... Replace Path.relativize with String manipulation ...
                 val prefix = sourceExtractionPrefix.path
                 val relativeFilePath = if (prefix.isEmpty() || prefix == ".") {
                     filePath
@@ -244,10 +250,19 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
                     return null
                 }
 
-                // ... Calculate target file and prevent path traversal attacks ...
+                // ... Calculate target file and enforce STRICT Zip Slip protection ...
                 val targetFile = File(destinationFile, relativeFilePath).canonicalFile
-                if (!targetFile.path.startsWith(destinationFile.canonicalPath)) {
-                    throw SevenZipException("Path traversal detected: $targetFile")
+                val destCanonicalPath = destinationFile.canonicalPath
+                
+                // ... Append separator to ensure strict directory boundary ...
+                val safeDestPath = if (destCanonicalPath.endsWith(File.separator)) {
+                    destCanonicalPath
+                } else {
+                    "$destCanonicalPath${File.separator}"
+                }
+
+                if (!targetFile.canonicalPath.startsWith(safeDestPath)) {
+                    throw SevenZipException("Zip Slip / Path traversal detected: $targetFile")
                 }
 
                 if (isFolder) {
@@ -256,8 +271,6 @@ class BasicSevenZipExtractor : ExtractorCollection.IExtractor {
                 }
 
                 currentProcessingFile = targetFile
-
-                // ... Create parent directories ...
                 targetFile.parentFile?.mkdirs()
 
                 val progress = if (totalBytes > 0) totalBytesExtracted.toFloat() / totalBytes else 0f
