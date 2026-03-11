@@ -15,7 +15,7 @@ object TurboPatchLoader {
     fun injectTurboWrapper(context: Context) {
         Log.i(TAG, "🔥 IGNITING TURBO PATCH LOADER (COOL RUNNING MODE)...")
 
-        // ... 1. AGGRESSIVE RAM CLEANUP (Safely isolated to prevent SecurityExceptions) ...
+        // ... 1. AGGRESSIVE RAM CLEANUP ...
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -30,12 +30,19 @@ object TurboPatchLoader {
             Log.w(TAG, "⚠️ RAM purge skipped: ${e.message}")
         }
 
-        // ... 2. THE MAIN OPTIMIZATIONS (Will run even if step 1 fails!) ...
+        // ... 2. THE MAIN OPTIMIZATIONS ...
         try {
             Runtime.getRuntime().gc()
             Runtime.getRuntime().runFinalization()
 
-            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+            Thread {
+                try {
+                    Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
+                    Log.i(TAG, "❄️ Background Thread Priority boosted to URGENT_AUDIO safely.")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not set background thread priority.")
+                }
+            }.start()
 
             Os.setenv("SDL_JOYSTICK_DISABLE", "1", true)
             Os.setenv("SDL_HAPTIC_DISABLE", "1", true)
@@ -51,7 +58,7 @@ object TurboPatchLoader {
                 Os.setenv("DOTNET_EnableWriteXorExecute", "0", true)
             }
 
-            Log.i(TAG, "🥇 Turbo Patch injected successfully!")
+            Log.i(TAG, "🥇 Turbo Patch injected successfully without choking the UI!")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to inject main Turbo Patch: ${e.message}")
         }
