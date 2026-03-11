@@ -4,30 +4,31 @@
 workflows:
   android-release-workflow:
     name: RotatingartLauncher Release Build
-    # Use Linux machine for faster Android builds
-    instance_type: linux_x2 
+    
+    # 🚨 FIX: Removed 'linux_x2' which requires a paid plan.
+    # Use the default mac_mini_m1 which is FREE and blazing fast for Android!
+    instance_type: mac_mini_m1 
+    
     environment:
       java: 17
     
     scripts:
-      - name: 🥷 Bypass GitHub LFS Quota (The Great Heist)
+      - name: 🥷 Bypass GitHub LFS Quota (Wget Brute Force)
         script: |
-          echo "Intercepting Git LFS configuration..."
-          # Remove current LFS config linked to the blocked repo
-          git config --remove-section lfs || true
+          echo "Bypassing Git LFS restrictions..."
           
-          # Point to the original dev's repo to download the heavy files
-          git config lfs.url "https://github.com/WinterWolfVN/RotatingartLauncher.git/info/lfs"
+          # Remove dummy 130-byte LFS pointer file
+          rm -f app/src/main/assets/MonoMod.zip
           
-          echo "Pulling LFS objects from upstream..."
-          git lfs pull
-          echo "✅ LFS files downloaded successfully!"
+          # Force download the REAL 10MB+ zip file directly from Github's raw media server
+          wget -O app/src/main/assets/MonoMod.zip "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/MonoMod.zip"
+          
+          echo "✅ MonoMod.zip successfully injected into assets!"
 
-      - name: 🔑 Generate Dummy Keystore (For seamless APK updates)
+      - name: 🔑 Generate Dummy Keystore
         script: |
           echo "Forging a dummy keystore to sign the APK..."
-          # This creates 'dummy.keystore' inside the 'app' folder with password '123456'
-          # Matches the configuration we set in app/build.gradle
+          # Creates 'dummy.keystore' with password '123456'
           keytool -genkeypair -v -keystore app/dummy.keystore -alias ralaunch -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=MobileHacker, OU=Dev, O=RaLaunch, C=VN"
           echo "✅ Dummy Keystore forged successfully!"
 
@@ -38,6 +39,6 @@ workflows:
           ./gradlew assembleRelease
           echo "✅ APK Built Successfully!"
 
-    # Tell Codemagic where to find the finished APK so it can give you a download link
+    # Tell Codemagic where to find the finished APK
     artifacts:
       - app/build/outputs/apk/release/*.apk
