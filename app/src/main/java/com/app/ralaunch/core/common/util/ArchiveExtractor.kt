@@ -176,7 +176,7 @@ object ArchiveExtractor {
         private var bytesReadForEntry: Long = 0
         private val headerBuffer = ByteArray(512)
 
-        class TarEntry(
+                class TarEntry(
             val name: String,
             val size: Long,
             val typeFlag: Char,
@@ -184,8 +184,8 @@ object ArchiveExtractor {
             val mode: Int
         ) {
             val isDirectory: Boolean get() = typeFlag == '5' || name.endsWith("/")
-            val isSymbolicLink: Boolean get() = typeFlag == '2' || typeFlag == '1'
-        }
+            val isSymbolicLink: Boolean get() = typeFlag == '2'
+                }
 
         fun nextEntry(): TarEntry? {
             // ... Skip padding from previous entry (TAR blocks are 512 bytes) ...
