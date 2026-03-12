@@ -2,7 +2,7 @@ workflows:
   android-release-workflow:
     name: Build RAL Release APK
     # Use standard Linux machine (faster for Android builds)
-    instance_type: linux_x2 
+    instance_type: mac_mini_m2
     
     environment:
       java: 17
