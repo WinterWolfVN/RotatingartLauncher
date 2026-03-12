@@ -88,7 +88,3 @@ workflows:
     artifacts:
       - app/build/outputs/apk/release/RAL-release.apk
       - app/build/outputs/mapping/**/mapping.txt # Upload Proguard/R8 mapping if exists
-
-        notify:
-          success: true
-          failure: true
