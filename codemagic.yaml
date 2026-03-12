@@ -89,11 +89,6 @@ workflows:
       - app/build/outputs/apk/release/RAL-release.apk
       - app/build/outputs/mapping/**/mapping.txt # Upload Proguard/R8 mapping if exists
 
-    publishing:
-      email:
-        recipients:
-          # Thêm email của bạn vào đây nếu muốn Codemagic gửi mail khi build xong
-          # - your_email@example.com 
         notify:
           success: true
           failure: true
