@@ -5,47 +5,44 @@ workflows:
   android-release-workflow:
     name: RotatingartLauncher Release Build
     
-    instance_type: mac_mini_m2
+    instance_type: mac_mini_m1 
     
     environment:
       java: 17
     
-    # 🚨 CRITICAL FIX: Tell Codemagic NOT to fetch submodules automatically!
-    # If it tries to fetch submodules automatically, it triggers the LFS block.
-    # We will fetch them manually in the script below.
-    triggering:
-      events:
-        - push
-    
     scripts:
-      - name: 🥷 Fetch Submodules & Bypass LFS (The Ultimate Hack)
+      - name: 🥷 Submodule & LFS Total Bypass (The Iron Shield)
         script: |
-          echo "Step 1: Removing LFS traces to unblock the Git network..."
-          git config --remove-section lfs || true
-          rm -f .gitattributes || true
+          echo "Step 1: Blocking Git LFS at the system level..."
+          # This environment variable forces Git to IGNORE ALL LFS files
+          # during any clone or checkout operation. No budget checks will occur!
+          export GIT_LFS_SKIP_SMUDGE=1
           
-          echo "Step 2: Manually cloning Submodules (MojoShader, etc.)..."
-          # We manually init and update submodules HERE, where LFS is already stripped!
+          # Just to be extra safe, remove global LFS hooks
+          git config --global --remove-section lfs || true
+          
+          echo "Step 2: Fetching Submodules (MojoShader, etc.) without LFS..."
+          # Now, when we fetch submodules, they will only download code, NO LFS FILES!
           git submodule sync
-          # The --depth 1 flag prevents it from downloading the entire history of the submodule
           git submodule update --init --recursive --depth 1
-          echo "✅ Submodules (MojoShader) fetched successfully!"
+          echo "✅ Submodules fetched successfully!"
 
-          echo "Step 3: Bypassing Git LFS for heavy zip/tar files..."
+          echo "Step 3: Manually downloading our REQUIRED heavy files via direct web link..."
           cd app/src/main/assets/
           
+          # Delete the fake 130-byte text files that Git created
           rm -f MonoMod.zip
           rm -f runtime_libs.tar.xz
           rm -f dotnet.tar.xz
           
           echo "Downloading MonoMod..."
-          wget -O MonoMod.zip "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/MonoMod.zip"
+          wget -q -O MonoMod.zip "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/MonoMod.zip"
           
           echo "Downloading Runtime Libraries..."
-          wget -O runtime_libs.tar.xz "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/runtime_libs.tar.xz"
+          wget -q -O runtime_libs.tar.xz "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/runtime_libs.tar.xz"
           
           echo "Downloading .NET Core Engine..."
-          wget -O dotnet.tar.xz "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/dotnet.tar.xz"
+          wget -q -O dotnet.tar.xz "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/dotnet.tar.xz"
           
           echo "✅ All heavy LFS files successfully injected into assets!"
           cd ../../../../
