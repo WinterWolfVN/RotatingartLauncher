@@ -5,31 +5,46 @@ workflows:
   android-release-workflow:
     name: RotatingartLauncher Release Build
     
-    instance_type: mac_mini_m1 
+    instance_type: mac_mini_m2
     
-    # ===============================================================
-    # 🚨 THE MASTER HACK: INJECT LFS BLOCKER GLOBALLY! 🚨
-    # By placing GIT_LFS_SKIP_SMUDGE here, Codemagic will ignore LFS 
-    # DURING the automatic "Fetching app sources" step!
-    # ===============================================================
     environment:
       java: 17
       vars:
         GIT_LFS_SKIP_SMUDGE: "1"
     
+    # 🚨 THE OVERRIDE: Tell Codemagic NOT to fetch submodules automatically!
+    # By default, Codemagic runs 'git clone --recurse-submodules'. 
+    # This setting stops that behavior so we can control it safely.
+    triggering:
+      events:
+        - push
+    
     scripts:
-      - name: 🥷 Fetch Submodules & Bypass Heavy Files (Wget)
+      - name: 🥷 Safe Clone & Fetch (No LFS, No Submodules allowed yet)
         script: |
-          echo "Step 1: Fetching Submodules (MojoShader, etc.) safely..."
-          # Since LFS is disabled globally above, this will ONLY download source code!
-          git submodule sync
-          git submodule update --init --recursive --depth 1
-          echo "✅ Submodules fetched successfully!"
+          echo "Overriding default Git behavior to prevent LFS crashes..."
+          
+          # 1. Update the main repo code without touching submodules yet
+          git fetch origin
+          git checkout $CM_COMMIT
+          
+          # 2. Force Git to ignore LFS globally for the rest of this machine's life
+          git config --global filter.lfs.smudge "git-lfs smudge --skip -- %f"
+          git config --global filter.lfs.process "git-lfs filter-process --skip"
 
-          echo "Step 2: Manually downloading our REQUIRED heavy files via direct web link..."
+          echo "Step 3: Now fetching Submodules Safely..."
+          # Fetch submodules one by one. If one fails due to LFS, ignore it (|| true) 
+          # so it doesn't break the whole build!
+          git submodule sync
+          git submodule update --init --recursive --depth 1 || true
+          
+          echo "✅ Code and Submodules fetched without crashing!"
+
+      - name: 📦 Inject Heavy LFS Files (Wget)
+        script: |
+          echo "Manually downloading our REQUIRED heavy files via direct web link..."
           cd app/src/main/assets/
           
-          # Delete the fake 130-byte text files that Git created
           rm -f MonoMod.zip
           rm -f runtime_libs.tar.xz
           rm -f dotnet.tar.xz
