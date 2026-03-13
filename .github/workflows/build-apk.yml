@@ -37,16 +37,29 @@ jobs:
 
       - name: Inject Heavy LFS Files via Wget
         run: |
-          # Create the directory if it doesn't exist, then enter it
+          echo "Setting up assets directory..."
           mkdir -p app/src/main/assets/
           cd app/src/main/assets/
           
+          echo "Purging corrupted/locked LFS pointers..."
           rm -f MonoMod.zip runtime_libs.tar.xz dotnet.tar.xz
           
-          wget -q -O MonoMod.zip "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/MonoMod.zip"
-          wget -q -O runtime_libs.tar.xz "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/runtime_libs.tar.xz"
-          wget -q -O dotnet.tar.xz "https://media.githubusercontent.com/media/WinterWolfVN/RotatingartLauncher/main/app/src/main/assets/dotnet.tar.xz"
-
+          echo "📥 Initiating direct download from Upstream (WinterWolfVN)..."
+          
+          echo "Downloading MonoMod.zip..."
+          wget -q -O MonoMod.zip "https://github.com/WinterWolfVN/RotatingartLauncher/raw/refs/heads/main/app/src/main/assets/MonoMod.zip"
+          
+          echo "Downloading runtime_libs.tar.xz..."
+          wget -q -O runtime_libs.tar.xz "https://github.com/WinterWolfVN/RotatingartLauncher/raw/refs/heads/main/app/src/main/assets/runtime_libs.tar.xz"
+          
+          echo "Downloading dotnet.tar.xz..."
+          wget -q -O dotnet.tar.xz "https://github.com/WinterWolfVN/RotatingartLauncher/raw/refs/heads/main/app/src/main/assets/dotnet.tar.xz"
+          
+          echo "🔍 Verifying payload integrity..."
+          ls -lh
+          
+          echo "✅ All required payloads successfully acquired!"
+          
       - name: Forge Dummy Keystore
         run: |
           keytool -genkeypair -v -keystore app/dummy.keystore -alias ralaunch -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=MobileHacker, OU=Dev, O=RaLaunch, C=VN"
