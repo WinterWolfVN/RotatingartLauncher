@@ -54,8 +54,12 @@ jobs:
       - name: Build APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
-
+          
+          rm -rf app/.cxx/
+          rm -rf app/build/
+          
+          ./gradlew assembleRelease --no-daemon --no-build-cache --rerun-tasks
+          
       - name: Sign APK
         run: |
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
