@@ -31,10 +31,6 @@ android {
             }
         }
     }
-        // ===================================================================
-    // ... Hacky way: Use a hardcoded dummy keystore for CI/CD ...
-    // ... This ensures the signature is identical every time! ...
-    // ===================================================================
     signingConfigs {
         release {
             storeFile file("dummy.keystore")
@@ -93,7 +89,7 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging = true
-            pickFirsts += ['lib/arm64-v8a/libc++_shared.so', 'lib/arm64-v8a/libdotnethost.so']
+            pickFirsts += ['**/*.so']
         }
     }
 
