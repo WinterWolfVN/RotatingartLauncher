@@ -3,7 +3,6 @@ package com.app.ralaunch.core.platform.runtime
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import java.io.File
 
 object DeviceOptimizationEngine {
 
