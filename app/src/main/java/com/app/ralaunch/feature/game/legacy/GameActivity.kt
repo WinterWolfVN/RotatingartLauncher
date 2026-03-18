@@ -147,7 +147,7 @@ class GameActivity : SDLActivity(), GameContract.View {
 
         val selectedRenderer = "angle" 
 
-        DeviceOptimizationEngine.prepareGameEnvironment(context, gameDir, selectedRenderer)
+        DeviceOptimizationEngine.prepareGameEnvironment(this, gameDir, selectedRenderer)
         TurboPatchLoader.injectTurboWrapper(this)
 
         initializeLogger()
