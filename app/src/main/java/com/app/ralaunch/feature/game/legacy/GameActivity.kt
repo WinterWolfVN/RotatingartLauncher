@@ -145,7 +145,9 @@ class GameActivity : SDLActivity(), GameContract.View {
         val gameExePath = intent.getStringExtra(EXTRA_GAME_EXE_PATH)
         val gameDir = gameExePath?.let { java.io.File(it).parent }
 
-        DeviceOptimizationEngine.prepareGameEnvironment(this, gameDir)
+        val selectedRenderer = "angle" 
+
+        DeviceOptimizationEngine.prepareGameEnvironment(context, gameDir, selectedRenderer)
         TurboPatchLoader.injectTurboWrapper(this)
 
         initializeLogger()
