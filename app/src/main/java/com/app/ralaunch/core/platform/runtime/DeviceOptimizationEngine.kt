@@ -8,7 +8,7 @@ object DeviceOptimizationEngine {
 
     private const val TAG = "OptimizationEngine"
 
-    fun prepareGameEnvironment(context: Context, gameDirString: String?, rendererId: String) {
+    fun prepareGameEnvironment(context: Context, rendererId: String) {
         Log.i(TAG, "Initializing Device Optimization Engine for API ${Build.VERSION.SDK_INT}...")
 
         try {
