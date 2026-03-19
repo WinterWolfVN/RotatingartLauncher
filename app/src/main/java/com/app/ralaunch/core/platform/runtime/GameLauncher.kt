@@ -2,17 +2,18 @@ package com.app.ralaunch.core.platform.runtime
 
 import android.content.Context
 import android.os.Environment
+import android.system.Os
 import com.app.ralaunch.core.common.SettingsAccess
-import org.koin.java.KoinJavaComponent
-import com.app.ralaunch.core.platform.runtime.dotnet.DotNetLauncher
 import com.app.ralaunch.core.common.util.AppLogger
 import com.app.ralaunch.core.common.util.NativeMethods
+import com.app.ralaunch.core.platform.android.ProcessLauncherService
+import com.app.ralaunch.core.platform.runtime.dotnet.DotNetLauncher
 import com.app.ralaunch.core.platform.runtime.renderer.RendererEnvironmentConfigurator
 import com.app.ralaunch.feature.patch.data.Patch
 import com.app.ralaunch.feature.patch.data.PatchManager
-import com.app.ralaunch.core.platform.android.ProcessLauncherService
+import org.koin.java.KoinJavaComponent
 import org.libsdl.app.SDL
-import java.io.File  // Thay kotlin.io.path.*
+import java.io.File
 
 object GameLauncher {
 
@@ -39,8 +40,9 @@ object GameLauncher {
             System.loadLibrary("openal32")
             System.loadLibrary("lwjgl_lz4")
             System.loadLibrary("SkiaSharp")
-        } catch (e: UnsatisfiedLinkError) {
-            AppLogger.error(TAG, "加载 Native 库失败 / Failed to load native libraries: ${e.message}")
+            AppLogger.info(TAG, "Native libraries loaded successfully")
+        } catch (t: Throwable) {
+            AppLogger.error(TAG, "加载 Native 库失败 / Failed to load native libraries: ${t.message}", t)
         }
     }
 
@@ -56,8 +58,8 @@ object GameLauncher {
             SDL.setContext(context)
             isSDLJNIInitialized = true
             AppLogger.info(TAG, "SDL JNI 初始化成功 / SDL JNI initialized successfully")
-        } catch (e: Exception) {
-            AppLogger.warn(TAG, "SDL JNI 初始化失败 / Failed to initialize SDL JNI: ${e.message}")
+        } catch (t: Throwable) {
+            AppLogger.warn(TAG, "SDL JNI 初始化失败 / Failed to initialize SDL JNI: ${t.message}", t)
         }
     }
 
@@ -71,27 +73,35 @@ object GameLauncher {
         try {
             AppLogger.info(TAG, "=== 开始启动 .NET 程序集 / Starting .NET Assembly Launch ===")
             AppLogger.info(TAG, "程序集路径 / Assembly path: $assemblyPath")
+            AppLogger.info(TAG, "参数 / Args: ${if (args.isNotEmpty()) args.joinToString(" ") else "<none>"}")
+            AppLogger.info(TAG, "渲染器覆盖 / Renderer override: ${rendererOverride ?: "<none>"}")
 
-            // Thay Path(assemblyPath).exists() bằng File(assemblyPath).exists()
-            if (!File(assemblyPath).exists()) {
+            val assemblyFile = File(assemblyPath)
+            if (!assemblyFile.exists()) {
                 AppLogger.error(TAG, "程序集文件不存在 / Assembly file does not exist: $assemblyPath")
                 return -1
             }
 
+            AppLogger.info(TAG, "程序集存在 / Assembly exists: ${assemblyFile.exists()}")
+            AppLogger.info(TAG, "程序集大小 / Assembly size: ${assemblyFile.length()} bytes")
+            AppLogger.info(TAG, "程序集父目录 / Assembly parent: ${assemblyFile.parent ?: "<none>"}")
+
             val appContext: Context = KoinJavaComponent.get(Context::class.java)
+            initializeSDLJNI(appContext)
+
             EnvVarsManager.quickSetEnvVars(
                 "PACKAGE_NAME" to appContext.packageName,
                 "EXTERNAL_STORAGE_DIRECTORY" to Environment.getExternalStorageDirectory().path
             )
 
-            // Thay Path(assemblyPath).parent.toString() bằng File(assemblyPath).parent
-            val workingDir = File(assemblyPath).parent ?: ""
+            val workingDir = assemblyFile.parent ?: ""
             AppLogger.debug(TAG, "切换工作目录 / Changing working directory to: $workingDir")
             NativeMethods.chdir(workingDir)
 
             val dataDir = prepareDataDirectory(assemblyPath)
             val cacheDir = appContext.cacheDir.absolutePath
             AppLogger.info(TAG, "数据目录 / Data directory: $dataDir")
+            AppLogger.info(TAG, "缓存目录 / Cache directory: $cacheDir")
 
             EnvVarsManager.quickSetEnvVars(
                 "HOME" to dataDir,
@@ -102,8 +112,11 @@ object GameLauncher {
             )
 
             val settings = SettingsAccess
-            val startupHooks = if (enabledPatches != null && enabledPatches.isNotEmpty())
-                PatchManager.constructStartupHooksEnvVar(enabledPatches) else null
+            val startupHooks = if (!enabledPatches.isNullOrEmpty()) {
+                PatchManager.constructStartupHooksEnvVar(enabledPatches)
+            } else {
+                null
+            }
 
             val monoModPath = AssemblyPatcher.getMonoModInstallPath().toString()
 
@@ -144,6 +157,7 @@ object GameLauncher {
             )
 
             if (settings.setThreadAffinityToBigCoreEnabled) {
+                AppLogger.info(TAG, "设置线程亲和性 / Setting thread affinity to big cores")
                 ThreadAffinityManager.setThreadAffinityToBigCores()
             }
 
@@ -160,19 +174,38 @@ object GameLauncher {
                 ).apply {
                     startupHooks?.let { put("DOTNET_STARTUP_HOOKS", it) }
                 }
+
                 val resolvedGameEnvVars = EnvVarsManager.interpolateEnvVars(
                     envVars = gameEnvVars,
                     availableInterpolations = availableInterpolations
                 )
+
                 EnvVarsManager.quickSetEnvVars(resolvedGameEnvVars)
+                AppLogger.info(TAG, "附加游戏环境变量 / Additional game env vars applied: ${resolvedGameEnvVars.size}")
             }
 
+            AppLogger.info(TAG, "当前渲染器 / Renderer: ${safeEnv("RALCORE_RENDERER", "native")}")
+            AppLogger.info(TAG, "当前 EGL / EGL: ${safeEnv("RALCORE_EGL", "system")}")
+            AppLogger.info(TAG, "当前 GLES / GLES: ${safeEnv("LIBGL_GLES", "system")}")
+            AppLogger.info(TAG, "当前 FNA3D 库 / FNA3D library: ${safeEnv("FNA3D_OPENGL_LIBRARY", "default")}")
+            AppLogger.info(TAG, "当前 HOME / HOME: ${safeEnv("HOME", dataDir)}")
+            AppLogger.info(TAG, "当前 XDG_DATA_HOME / XDG_DATA_HOME: ${safeEnv("XDG_DATA_HOME", dataDir)}")
+            AppLogger.info(TAG, "当前 XDG_CONFIG_HOME / XDG_CONFIG_HOME: ${safeEnv("XDG_CONFIG_HOME", dataDir)}")
+            AppLogger.info(TAG, "当前 XDG_CACHE_HOME / XDG_CACHE_HOME: ${safeEnv("XDG_CACHE_HOME", cacheDir)}")
+            AppLogger.info(TAG, "当前 TMPDIR / TMPDIR: ${safeEnv("TMPDIR", cacheDir)}")
+            AppLogger.info(TAG, "当前 MONOMOD_PATH / MONOMOD_PATH: ${safeEnv("MONOMOD_PATH", monoModPath)}")
+            AppLogger.info(TAG, "当前 DOTNET_STARTUP_HOOKS / DOTNET_STARTUP_HOOKS: ${safeEnv("DOTNET_STARTUP_HOOKS", "<none>")}")
+            AppLogger.info(TAG, "hostfxr 启动前错误 / hostfxr last error before launch: ${DotNetLauncher.hostfxrLastErrorMsg}")
+
             val result = DotNetLauncher.hostfxrLaunch(assemblyPath, args)
+
             AppLogger.info(TAG, "退出代码 / Exit code: $result")
+            AppLogger.info(TAG, "hostfxr 启动后错误 / hostfxr last error after launch: ${DotNetLauncher.hostfxrLastErrorMsg}")
             return result
 
-        } catch (e: Exception) {
-            AppLogger.error(TAG, "启动程序集失败 / Failed to launch assembly: $assemblyPath", e)
+        } catch (t: Throwable) {
+            AppLogger.error(TAG, "启动程序集失败 / Failed to launch assembly: $assemblyPath", t)
+            AppLogger.error(TAG, "hostfxr 最后错误 / hostfxr last error: ${DotNetLauncher.hostfxrLastErrorMsg}")
             return -1
         }
     }
@@ -180,31 +213,31 @@ object GameLauncher {
     @JvmStatic
     fun launchNewDotNetProcess(assemblyPath: String, args: Array<String>, title: String, gameId: String): Int {
         return try {
+            AppLogger.info(TAG, "启动新进程 / Launching new process")
+            AppLogger.info(TAG, "程序集路径 / Assembly path: $assemblyPath")
+            AppLogger.info(TAG, "标题 / Title: $title")
+            AppLogger.info(TAG, "游戏 ID / Game ID: $gameId")
             ProcessLauncherService.launch(assemblyPath, args, title, gameId)
             0
-        } catch (e: Exception) {
-            AppLogger.error(TAG, "启动新 .NET 进程失败 / Failed to launch new .NET process", e)
+        } catch (t: Throwable) {
+            AppLogger.error(TAG, "启动新 .NET 进程失败 / Failed to launch new .NET process", t)
             -1
         }
     }
 
     private fun prepareDataDirectory(assemblyPath: String): String {
-        // Thay Path(assemblyPath).parent bằng File(assemblyPath).parentFile
         var finalDataDir = File(assemblyPath).parentFile?.absolutePath ?: ""
 
         try {
-            // Thay .resolve().toPath() bằng File()
             val defaultDataDir = File(
                 Environment.getExternalStorageDirectory(),
                 DEFAULT_DATA_DIR_NAME
             )
 
-            // Thay .exists() và .createDirectories()
             if (!defaultDataDir.exists()) {
                 defaultDataDir.mkdirs()
             }
 
-            // Thay .resolve(".nomedia") và .createFile()
             val nomediaFile = File(defaultDataDir, ".nomedia")
             if (!nomediaFile.exists()) {
                 nomediaFile.createNewFile()
@@ -212,11 +245,22 @@ object GameLauncher {
 
             finalDataDir = defaultDataDir.absolutePath
             AppLogger.info(TAG, "使用默认数据目录 / Using default data directory: $finalDataDir")
-
-        } catch (e: Exception) {
-            AppLogger.warn(TAG, "无法访问默认数据目录 / Failed to access default data directory, using fallback: $finalDataDir", e)
+        } catch (t: Throwable) {
+            AppLogger.warn(
+                TAG,
+                "无法访问默认数据目录 / Failed to access default data directory, using fallback: $finalDataDir",
+                t
+            )
         }
 
         return finalDataDir
+    }
+
+    private fun safeEnv(key: String, fallback: String): String {
+        return try {
+            Os.getenv(key) ?: fallback
+        } catch (_: Throwable) {
+            fallback
+        }
     }
 }
