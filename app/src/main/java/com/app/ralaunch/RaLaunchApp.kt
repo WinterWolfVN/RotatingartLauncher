@@ -18,6 +18,7 @@ import com.kyant.fishnet.Fishnet
 import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import java.io.File
+import com.app.ralaunch.core.platform.runtime.BlackBoxLogger
 
 class RaLaunchApp : Application(), KoinComponent {
 
@@ -43,7 +44,7 @@ class RaLaunchApp : Application(), KoinComponent {
         super.onCreate()
         instance = this
 
-        com.app.ralaunch.core.platform.runtime.BlackBoxLogger.startRecording(this)
+        BlackBoxLogger.startRecording(this)
 
         val startupLogFile = File(filesDir, "startup_log.txt")
         startupLogFile.delete()
