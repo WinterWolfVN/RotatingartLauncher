@@ -40,7 +40,6 @@ object BlackBoxLogger {
             }
         }
         runCatching { File(context.filesDir, "FATAL_CRASH.txt").delete() }
-        Log.i(TAG, "Old log files cleared.")
     }
 
     private fun catchJavaCrashes(context: Context, crashDir: File) {
@@ -57,8 +56,6 @@ object BlackBoxLogger {
                 defaultHandler?.uncaughtException(thread, throwable)
             }
         }
-
-        Log.i(TAG, "VIP Java Crash Catcher Armed")
     }
 
     private fun catchNativeCrashes(context: Context, crashDir: File) {
@@ -67,31 +64,24 @@ object BlackBoxLogger {
         Thread {
             try {
                 isRecording = true
-                val logFile = File(crashDir, "GAME_NATIVE_CRASH.txt")
+                val logFile = File(crashDir, "GAME_FULL_LOG.txt")
                 val timeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
-                Log.i(TAG, "Black Box activated! Recording to: ${logFile.absolutePath}")
-
                 runCatching { Runtime.getRuntime().exec("logcat -c").waitFor() }
-                val process = Runtime.getRuntime().exec("logcat -v threadtime")
+                val process = Runtime.getRuntime().exec("logcat -b all -v threadtime")
 
                 process.inputStream.bufferedReader().use { reader ->
                     logFile.printWriter().use { writer ->
                         writer.println("=========================================")
-                        writer.println("✈️ BLACK BOX FLIGHT RECORDER")
+                        writer.println("✈️ BLACK BOX FULL RECORDER")
                         writer.println("🕒 TIME            : ${timeFormat.format(Date())}")
                         writer.println("📱 DEVICE          : ${Build.MANUFACTURER} ${Build.MODEL} (API ${Build.VERSION.SDK_INT})")
-                        writer.println("🏗️ ABI             : ${getAbiSummary()}")
-                        writer.println("🎮 RENDERER        : ${safeEnv("RALCORE_RENDERER", "native")}")
-                        writer.println("📚 FNA3D LIB       : ${safeEnv("FNA3D_OPENGL_LIBRARY", "default")}")
                         writer.println("=========================================")
 
                         while (isRecording) {
                             val line = reader.readLine() ?: break
-                            if (shouldRecordLine(line)) {
-                                writer.println(line)
-                                writer.flush()
-                            }
+                            writer.println(line)
+                            writer.flush()
                         }
                     }
                 }
@@ -101,37 +91,6 @@ object BlackBoxLogger {
                 isRecording = false
             }
         }.start()
-    }
-
-    private fun shouldRecordLine(line: String): Boolean {
-        val lower = line.lowercase(Locale.ROOT)
-        return lower.contains("fatal") ||
-            lower.contains("f libc") ||
-            lower.contains("abort") ||
-            lower.contains("sigsegv") ||
-            lower.contains("sigabrt") ||
-            lower.contains("crash") ||
-            lower.contains("exception") ||
-            lower.contains("androidruntime") ||
-            lower.contains("unsatisfiedlinkerror") ||
-            lower.contains("dlopen") ||
-            lower.contains("oom") ||
-            lower.contains("out of memory") ||
-            lower.contains("lowmemory") ||
-            lower.contains("kmemleak") ||
-            lower.contains("kill") ||
-            lower.contains("activitymanager: process") ||
-            lower.contains("died") ||
-            lower.contains("egl") ||
-            lower.contains("gles") ||
-            lower.contains("opengl") ||
-            lower.contains("mali") ||
-            lower.contains("sdl") ||
-            lower.contains("fna") ||
-            lower.contains("mono") ||
-            lower.contains("dotnet") ||
-            lower.contains("tmodloader") ||
-            lower.contains("terraria")
     }
 
     private fun writeThrowableReport(
