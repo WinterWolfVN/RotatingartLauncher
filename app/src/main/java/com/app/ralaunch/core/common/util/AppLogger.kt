@@ -3,12 +3,11 @@ package com.app.ralaunch.core.common.util
 import android.util.Log
 import com.app.ralaunch.core.common.SettingsAccess
 import com.app.ralaunch.shared.core.util.Logger
-import com.app.ralaunch.BuildConfig
 import java.io.File
 
 object AppLogger : Logger {
     private const val TAG = "RALaunch"
-    private val ENABLE_DEBUG = BuildConfig.DEBUG
+    private val ENABLE_DEBUG = true
 
     private var logcatReader: LogcatReader? = null
     private var logDir: File? = null
