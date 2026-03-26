@@ -18,8 +18,6 @@ object GameBoost {
         val totalRamGB = memInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
         val isLowRamDevice = totalRamGB <= 4.5
 
-        Log.i(TAG, "Hardware Check: Total RAM = ${String.format("%.1f", totalRamGB)} GB")
-
         if (isLowRamDevice) {
             tweakDotNetGarbageCollector(isLowRam = true)
             tweakSdlSurvival()
@@ -36,11 +34,12 @@ object GameBoost {
                 Os.setenv("DOTNET_gcServer", "0", true)
                 Os.setenv("DOTNET_GCConcurrent", "1", true)
                 Os.setenv("DOTNET_GCRetainVM", "0", true)
-                Os.setenv("MONO_GC_PARAMS", "nursery-size=16m,soft-heap-limit=512m", true)
+                Os.setenv("MONO_GC_PARAMS", "nursery-size=32m,soft-heap-limit=1800m", true)
                 Os.setenv("MONO_DISABLE_SHARED_AREA", "1", true)
+                Os.setenv("MONO_DEBUG", "no-gdb-cmp", true)
             } else {
                 Os.setenv("DOTNET_gcServer", "1", true)
-                Os.setenv("MONO_GC_PARAMS", "nursery-size=32m,soft-heap-limit=1024m", true)
+                Os.setenv("MONO_GC_PARAMS", "nursery-size=64m,soft-heap-limit=3000m", true)
             }
         } catch (t: Throwable) {
             Log.e(TAG, "Failed to tweak .NET GC", t)
@@ -60,8 +59,6 @@ object GameBoost {
     private fun boostThreadPriority() {
         try {
             Process.setThreadPriority(Process.THREAD_PRIORITY_DISPLAY)
-        } catch (t: Throwable) {
-            Log.w(TAG, "Could not boost thread priority")
-        }
+        } catch (t: Throwable) {}
     }
 }
