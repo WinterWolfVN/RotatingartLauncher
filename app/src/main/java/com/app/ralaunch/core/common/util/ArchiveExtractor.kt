@@ -1,17 +1,13 @@
 package com.app.ralaunch.core.common.util
 
 import android.content.Context
+import org.tukaani.xz.XZInputStream
 import java.io.*
 import java.util.zip.GZIPInputStream
-// ... Using pure Java XZ library directly, bypassing Apache entirely ...
-import org.tukaani.xz.XZInputStream
 
-/**
- * 通用归档文件解压工具 (Pure Kotlin Version - No Apache Commons Dependency)
- */
 object ArchiveExtractor {
     private const val TAG = "ArchiveExtractor"
-    private const val BUFFER_SIZE = 8192
+    private const val BUFFER_SIZE = 65536 
 
     fun interface ProgressCallback {
         fun onProgress(processedFiles: Int, currentFile: String)
@@ -20,11 +16,10 @@ object ArchiveExtractor {
     @JvmStatic
     @JvmOverloads
     fun extractTarGz(archiveFile: File, targetDir: File, stripPrefix: String?, callback: ProgressCallback? = null): Int {
-        FileInputStream(archiveFile).use { fis ->
-            BufferedInputStream(fis).use { bis ->
-                GZIPInputStream(bis).use { gzipIn ->
-                    // ... Pass the pure input stream to our custom Tar Reader ...
-                    return extractTarEntries(gzipIn, targetDir, stripPrefix, callback)
+        return FileInputStream(archiveFile).use { fis ->
+            BufferedInputStream(fis, BUFFER_SIZE).use { bis ->
+                GZIPInputStream(bis, BUFFER_SIZE).use { gzipIn ->
+                    extractTarEntries(gzipIn, targetDir, stripPrefix, callback)
                 }
             }
         }
@@ -33,11 +28,10 @@ object ArchiveExtractor {
     @JvmStatic
     @JvmOverloads
     fun extractTarXz(archiveFile: File, targetDir: File, stripPrefix: String?, callback: ProgressCallback? = null): Int {
-        FileInputStream(archiveFile).use { fis ->
-            BufferedInputStream(fis).use { bis ->
-                // ... XZInputStream is safe for all Android versions ...
+        return FileInputStream(archiveFile).use { fis ->
+            BufferedInputStream(fis, BUFFER_SIZE).use { bis ->
                 XZInputStream(bis).use { xzIn ->
-                    return extractTarEntries(xzIn, targetDir, stripPrefix, callback)
+                    extractTarEntries(xzIn, targetDir, stripPrefix, callback)
                 }
             }
         }
@@ -46,9 +40,9 @@ object ArchiveExtractor {
     @JvmStatic
     @JvmOverloads
     fun extractTar(archiveFile: File, targetDir: File, stripPrefix: String?, callback: ProgressCallback? = null): Int {
-        FileInputStream(archiveFile).use { fis ->
-            BufferedInputStream(fis).use { bis ->
-                return extractTarEntries(bis, targetDir, stripPrefix, callback)
+        return FileInputStream(archiveFile).use { fis ->
+            BufferedInputStream(fis, BUFFER_SIZE).use { bis ->
+                extractTarEntries(bis, targetDir, stripPrefix, callback)
             }
         }
     }
@@ -58,12 +52,11 @@ object ArchiveExtractor {
         stripPrefix: String?, callback: ProgressCallback?
     ): Int {
         var processedFiles = 0
-        // ... Initialize our custom pure Kotlin Tar parser ...
+        var lastCallbackTime = 0L 
         val tarReader = MiniTarReader(inStream)
 
         while (true) {
             val entry = tarReader.nextEntry() ?: break
-
             val entryName = normalizeEntryName(entry.name, stripPrefix) ?: continue
             val targetFile = File(targetDir, entryName)
 
@@ -76,8 +69,13 @@ object ArchiveExtractor {
             }
 
             processedFiles++
-            if (callback != null && processedFiles % 10 == 0) {
-                callback.onProgress(processedFiles, entryName)
+            
+            if (callback != null) {
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastCallbackTime > 100) {
+                    callback.onProgress(processedFiles, entryName)
+                    lastCallbackTime = currentTime
+                }
             }
         }
 
@@ -129,11 +127,8 @@ object ArchiveExtractor {
                 val linkTargetFile = File(parent, linkTarget)
                 if (linkTargetFile.exists()) {
                     try {
-                        // ... Pure Kotlin copy, absolutely NO java.nio.file used ...
                         linkTargetFile.copyTo(targetFile, overwrite = true)
-                    } catch (copyEx: Exception) {
-                        // Ignore
-                    }
+                    } catch (copyEx: Exception) {}
                 }
             }
         }
@@ -143,7 +138,7 @@ object ArchiveExtractor {
         targetFile.parentFile?.takeIf { !it.exists() }?.mkdirs()
 
         FileOutputStream(targetFile).use { fos ->
-            BufferedOutputStream(fos).use { bos ->
+            BufferedOutputStream(fos, BUFFER_SIZE).use { bos ->
                 val buffer = ByteArray(BUFFER_SIZE)
                 while (true) {
                     val read = tarReader.readData(buffer)
@@ -161,22 +156,23 @@ object ArchiveExtractor {
     fun copyAssetToFile(context: Context, assetFileName: String, targetFile: File) {
         context.assets.open(assetFileName).use { inputStream ->
             FileOutputStream(targetFile).use { fos ->
-                BufferedOutputStream(fos).use { bos ->
-                    inputStream.copyTo(bos, BUFFER_SIZE)
+                BufferedOutputStream(fos, BUFFER_SIZE).use { bos ->
+                    val buffer = ByteArray(BUFFER_SIZE)
+                    var read: Int
+                    while (inputStream.read(buffer).also { read = it } != -1) {
+                        bos.write(buffer, 0, read)
+                    }
                 }
             }
         }
     }
 
-    // =========================================================================
-    // ... PURE KOTLIN MINI TAR READER (Bypasses Apache Compress Entirely) ...
-    // =========================================================================
     class MiniTarReader(private val inStream: InputStream) {
         private var currentEntrySize: Long = 0
         private var bytesReadForEntry: Long = 0
         private val headerBuffer = ByteArray(512)
 
-                class TarEntry(
+        class TarEntry(
             val name: String,
             val size: Long,
             val typeFlag: Char,
@@ -185,23 +181,19 @@ object ArchiveExtractor {
         ) {
             val isDirectory: Boolean get() = typeFlag == '5' || name.endsWith("/")
             val isSymbolicLink: Boolean get() = typeFlag == '2'
-                }
+        }
 
         fun nextEntry(): TarEntry? {
-            // ... Skip padding from previous entry (TAR blocks are 512 bytes) ...
             val padding = (512 - (bytesReadForEntry % 512)) % 512
             if (padding > 0L) skipFully(padding)
 
-            var read = readFully(headerBuffer)
+            val read = readFully(headerBuffer)
             if (read < 512) return null
-            
-            // ... Two consecutive empty blocks mean End Of Archive ...
             if (headerBuffer.all { it == 0.toByte() }) return null
 
             var parsedName = parseString(0, 100)
             var realName: String? = null
 
-            // ... Handle GNU LongLink extension for long file paths ...
             if (parsedName == "././@LongLink") {
                 val nameSize = parseOctal(124, 12).toInt()
                 val nameBytes = ByteArray(nameSize)
@@ -211,7 +203,6 @@ object ArchiveExtractor {
                 val namePadding = (512 - (nameSize % 512)) % 512
                 if (namePadding > 0) skipFully(namePadding.toLong())
 
-                // ... Read the actual file header ...
                 readFully(headerBuffer)
                 parsedName = parseString(0, 100)
             }
