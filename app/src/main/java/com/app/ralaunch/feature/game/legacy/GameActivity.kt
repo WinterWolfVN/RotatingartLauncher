@@ -33,7 +33,7 @@ import com.app.ralaunch.core.common.ErrorHandler
 import com.app.ralaunch.shared.core.platform.AppConstants
 import org.libsdl.app.SDLActivity
 import com.app.ralaunch.core.platform.runtime.BlackBoxLogger
-import com.app.ralaunch.core.platform.runtime.GameBoost
+import com.app.ralaunch.feature.game.legacy.GameBoost
 
 class GameActivity : SDLActivity(), GameContract.View {
 
