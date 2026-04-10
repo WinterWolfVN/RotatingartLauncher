@@ -5,7 +5,7 @@ import com.app.ralaunch.shared.core.model.domain.AppSettings
 import com.app.ralaunch.shared.core.model.domain.KeyboardType
 import com.app.ralaunch.shared.core.model.domain.ThemeMode
 import com.app.ralaunch.shared.core.contract.repository.SettingsRepositoryV2
-import com.app.ralaunch.core.platform.runtime.renderer.RendererRegistry
+import com.app.ralaunch.shared.core.platform.runtime.renderer.RendererRegistry
 import kotlinx.coroutines.runBlocking
 import org.koin.java.KoinJavaComponent
 
@@ -32,17 +32,17 @@ object SettingsAccess {
     // ==================== 便捷方法 ====================
 
     // 主题设置
-    var themeMode: Int
-        get() = settings.themeMode.value
-        set(value) = update { themeMode = ThemeMode.fromValue(value) }
+    var themeMode: ThemeMode
+        get() = settings.themeMode
+        set(value) = update { themeMode = value }
 
     var themeColor: Int
         get() = settings.themeColor
         set(value) = update { themeColor = value }
 
-    var backgroundType: String
-        get() = settings.backgroundType.value
-        set(value) = update { backgroundType = BackgroundType.fromValue(value) }
+    var backgroundType: BackgroundType
+        get() = settings.backgroundType
+        set(value) = update { backgroundType = value }
 
     val backgroundColor: Int
         get() = settings.backgroundColor

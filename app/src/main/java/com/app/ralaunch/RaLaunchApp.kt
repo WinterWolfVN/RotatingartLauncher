@@ -13,6 +13,7 @@ import com.app.ralaunch.core.di.KoinInitializer
 import com.app.ralaunch.core.common.VibrationManager
 import com.app.ralaunch.core.common.util.DensityAdapter
 import com.app.ralaunch.core.common.util.LocaleManager
+import com.app.ralaunch.shared.core.model.domain.ThemeMode
 import com.app.ralaunch.feature.patch.data.PatchManager
 import com.kyant.fishnet.Fishnet
 import org.koin.android.ext.android.inject

@@ -13,7 +13,7 @@ object RendererLoader {
     fun loadRenderer(context: Context, renderer: String): Boolean {
         return try {
             val normalizedRenderer = RendererRegistry.normalizeRendererId(renderer)
-            val rendererInfo = RendererRegistry.getRendererInfo(normalizedRenderer)
+            val rendererInfo = AndroidRendererRegistry.getRendererInfo(normalizedRenderer)
             if (rendererInfo == null) {
                 AppLogger.error(TAG, "Unknown renderer: $renderer")
                 return false

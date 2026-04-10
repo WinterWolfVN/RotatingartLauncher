@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.app.ralaunch.core.common.SettingsAccess
 import com.app.ralaunch.core.platform.runtime.EnvVarsManager
+import com.app.ralaunch.shared.core.platform.runtime.renderer.AndroidRendererRegistry
+import com.app.ralaunch.shared.core.platform.runtime.renderer.RendererRegistry
 
 object RendererEnvironmentConfigurator {
     private const val TAG = "RendererEnvironmentConfigurator"
@@ -20,11 +22,11 @@ object RendererEnvironmentConfigurator {
     ): String {
         val rawOverride = rendererOverride?.trim()
         if (rawOverride.isNullOrEmpty()) return globalEffectiveRenderer
-        if (!RendererRegistry.isKnownRendererId(rawOverride)) return globalEffectiveRenderer
+        if (!AndroidRendererRegistry.isKnownRendererId(rawOverride)) return globalEffectiveRenderer
 
         val normalizedOverride = RendererRegistry.normalizeRendererId(rawOverride)
         return when {
-            RendererRegistry.getRendererInfo(normalizedOverride) == null -> globalEffectiveRenderer
+            AndroidRendererRegistry.getRendererInfo(normalizedOverride) == null -> globalEffectiveRenderer
             !isOverrideCompatible -> globalEffectiveRenderer
             else -> normalizedOverride
         }
@@ -35,7 +37,7 @@ object RendererEnvironmentConfigurator {
         val globalRenderer = getEffectiveRenderer()
         val normalizedOverride = rendererOverride?.let { RendererRegistry.normalizeRendererId(it) }
         val overrideCompatible = normalizedOverride?.let { renderer ->
-            context == null || RendererRegistry.isRendererCompatible(renderer)
+            context == null || AndroidRendererRegistry.isRendererCompatible(renderer)
         } ?: true
 
         val renderer = resolveRendererForLaunch(
@@ -146,8 +148,8 @@ object RendererEnvironmentConfigurator {
 
     private fun getOpenGlVersionConfig(renderer: String): Map<String, String?> {
         return when (renderer) {
-            RendererRegistry.ID_GL4ES,
-            RendererRegistry.ID_ZINK -> {
+            AndroidRendererRegistry.ID_GL4ES,
+            AndroidRendererRegistry.ID_ZINK -> {
                 buildMap {
                     put("FNA3D_OPENGL_FORCE_ES3", null)
                     put("FNA3D_OPENGL_FORCE_VER_MAJOR", null)
@@ -166,9 +168,9 @@ object RendererEnvironmentConfigurator {
 
     private fun getMapBufferRangeValue(renderer: String): String? {
         val vulkanTranslatedRenderers = setOf(
-            RendererRegistry.ID_ANGLE,
-            RendererRegistry.ID_GL4ES_ANGLE,
-            RendererRegistry.ID_ZINK
+            AndroidRendererRegistry.ID_ANGLE,
+            AndroidRendererRegistry.ID_GL4ES_ANGLE,
+            AndroidRendererRegistry.ID_ZINK
         )
 
         return when {
@@ -187,9 +189,9 @@ object RendererEnvironmentConfigurator {
         Log.i(TAG, "FNA3D_FORCE_DRIVER = ${envVars["FNA3D_FORCE_DRIVER"]}")
 
         when (renderer) {
-            RendererRegistry.ID_GL4ES ->
+            AndroidRendererRegistry.ID_GL4ES ->
                 Log.i(TAG, "OpenGL Profile: Desktop OpenGL 2.1 Compatibility Profile")
-            RendererRegistry.ID_ZINK ->
+            AndroidRendererRegistry.ID_ZINK ->
                 Log.i(TAG, "OpenGL Profile: Desktop OpenGL 4.3 (Mesa Zink over Vulkan)")
             RendererRegistry.ID_ANGLE,
             RendererRegistry.ID_GL4ES_ANGLE,

@@ -182,6 +182,8 @@
     <string name="settings_fps_limit_applied_toast">帧率限制已设置为%1$s，重启游戏后生效</string>
     <string name="settings_checking_update">正在检查更新...</string>
     <string name="common_auto">自动</string>
+    <string name="common_on">开启</string>
+    <string name="common_off">关闭</string>
     <string name="settings_game_audio_buffer_title">音频缓冲区大小</string>
     <string name="settings_game_audio_buffer_subtitle">设置 FAudio 和 FMOD 的缓冲区大小，较小的值可降低音频延迟但可能增加断音风险</string>
     <string name="settings_game_quality_section">画质</string>
@@ -1750,6 +1752,10 @@
     <string name="settings_developer_fna_section">FNA 优化</string>
     <string name="settings_developer_map_buffer_range_title">MapBufferRange 优化</string>
     <string name="settings_developer_map_buffer_range_subtitle">启用 OpenGL 缓冲区优化</string>
+    <string name="settings_developer_gl_perf_diag_title">GL 性能诊断</string>
+    <string name="settings_developer_gl_perf_diag_subtitle">在 FPS 文本附近显示 Draw/上传瓶颈提示</string>
+    <string name="settings_developer_coreclr_compat_title">CoreCLR 小米兼容模式</string>
+    <string name="settings_developer_coreclr_compat_subtitle">当受影响的小米设备上 CoreCLR 初始化失败时，启用面向小米的兼容 hooks 和更稳妥的启动设置</string>
     <string name="settings_developer_maintenance_section">维护</string>
     <string name="settings_developer_clear_cache_title">清除缓存</string>
     <string name="settings_developer_clear_cache_subtitle">清理应用缓存文件</string>

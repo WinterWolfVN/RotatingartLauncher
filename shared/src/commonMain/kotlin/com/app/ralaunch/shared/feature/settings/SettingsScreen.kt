@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.app.ralaunch.shared.core.component.GlassSurface
 import com.app.ralaunch.shared.generated.resources.*
@@ -257,7 +258,9 @@ private fun GlassSettingsCategoryItem(
                 Text(
                     text = stringResource(category.description),
                     style = MaterialTheme.typography.bodySmall,
-                    color = contentColor.copy(alpha = 0.6f)
+                    color = contentColor.copy(alpha = 0.55f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -437,10 +440,7 @@ fun SwitchSettingItem(
                 }
             }
 
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
-            )
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }

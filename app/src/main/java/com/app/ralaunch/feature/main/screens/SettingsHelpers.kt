@@ -8,7 +8,7 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.app.ralaunch.R
 import com.app.ralaunch.feature.patch.data.PatchManager
-import com.app.ralaunch.core.platform.runtime.renderer.RendererRegistry
+import com.app.ralaunch.shared.core.platform.runtime.renderer.AndroidRendererRegistry
 import com.app.ralaunch.core.common.util.LogExportHelper
 import com.app.ralaunch.core.platform.android.provider.RaLaunchFileProvider
 import com.app.ralaunch.shared.core.component.dialogs.RendererOption
@@ -64,12 +64,12 @@ internal suspend fun handleImageSelection(context: Context, uri: Uri, viewModel:
             }
 
             withContext(Dispatchers.Main) {
-                AppThemeState.updateBackgroundType(1)
+                AppThemeState.updateBackgroundType(BackgroundType.IMAGE)
                 AppThemeState.updateBackgroundImagePath(newPath)
                 AppThemeState.updateBackgroundVideoPath("")
                 AppThemeState.updateBackgroundOpacity(90)
 
-                viewModel.onEvent(SettingsEvent.SetBackgroundType(1))
+                viewModel.onEvent(SettingsEvent.SetBackgroundType(BackgroundType.IMAGE))
                 viewModel.onEvent(SettingsEvent.SetBackgroundOpacity(90))
                 Toast.makeText(context, context.getString(R.string.appearance_background_image_set), Toast.LENGTH_SHORT).show()
             }
@@ -106,12 +106,12 @@ internal suspend fun handleVideoSelection(context: Context, uri: Uri, viewModel:
             }
 
             withContext(Dispatchers.Main) {
-                AppThemeState.updateBackgroundType(2)
+                AppThemeState.updateBackgroundType(BackgroundType.VIDEO)
                 AppThemeState.updateBackgroundVideoPath(newPath)
                 AppThemeState.updateBackgroundImagePath("")
                 AppThemeState.updateBackgroundOpacity(90)
 
-                viewModel.onEvent(SettingsEvent.SetBackgroundType(2))
+                viewModel.onEvent(SettingsEvent.SetBackgroundType(BackgroundType.VIDEO))
                 viewModel.onEvent(SettingsEvent.SetBackgroundOpacity(90))
                 Toast.makeText(context, context.getString(R.string.appearance_background_video_set), Toast.LENGTH_SHORT).show()
             }
@@ -343,12 +343,12 @@ internal fun isChineseLanguage(context: Context): Boolean {
 
 internal fun buildRendererOptions(): List<RendererOption> {
     return buildList {
-        RendererRegistry.getCompatibleRenderers().forEach { info ->
+        AndroidRendererRegistry.getCompatibleRenderers().forEach { info ->
             add(
                 RendererOption(
                     renderer = info.id,
-                    name = RendererRegistry.getRendererDisplayName(info.id),
-                    description = RendererRegistry.getRendererDescription(info.id)
+                    name = AndroidRendererRegistry.getRendererDisplayName(info.id),
+                    description = AndroidRendererRegistry.getRendererDescription(info.id)
                 )
             )
         }

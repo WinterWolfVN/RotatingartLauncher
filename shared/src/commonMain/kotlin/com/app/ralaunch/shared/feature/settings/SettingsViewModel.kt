@@ -2,8 +2,10 @@ package com.app.ralaunch.shared.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.app.ralaunch.core.platform.runtime.renderer.RendererRegistry
+import com.app.ralaunch.shared.core.platform.runtime.renderer.RendererRegistry
 import com.app.ralaunch.shared.core.model.domain.BackgroundType
+import com.app.ralaunch.shared.core.model.domain.FpsLimit
+import com.app.ralaunch.shared.core.model.domain.QualityLevel
 import com.app.ralaunch.shared.core.model.domain.ThemeMode
 import com.app.ralaunch.shared.core.contract.repository.SettingsRepositoryV2
 import com.app.ralaunch.shared.generated.resources.*
@@ -24,9 +26,9 @@ data class SettingsUiState(
     val currentCategory: SettingsCategory? = SettingsCategory.APPEARANCE,
 
     // 外观设置
-    val themeMode: Int = 0,
+    val themeMode: ThemeMode = ThemeMode.FOLLOW_SYSTEM,
     val themeColor: Int = 0xFF6750A4.toInt(),
-    val backgroundType: Int = 0,
+    val backgroundType: BackgroundType = BackgroundType.DEFAULT,
     val backgroundOpacity: Int = 0,
     val videoPlaybackSpeed: Float = 1.0f,
     val language: String = "auto",
@@ -44,10 +46,14 @@ data class SettingsUiState(
     val ralAudioBufferSize: Int? = null,
     val rendererType: String = DEFAULT_RENDERER_ID,
 
+    // 启动器设置
+    val multiplayerEnabled: Boolean = false,
+    val multiplayerDisclaimerAccepted: Boolean = false,
+
     // 画质设置
-    val qualityLevel: Int = 0, // 0=高, 1=中, 2=低
+    val qualityLevel: QualityLevel = QualityLevel.HIGH,
     val shaderLowPrecision: Boolean = false,
-    val targetFps: Int = 0, // 0=无限制, 30, 45, 60
+    val targetFps: FpsLimit = FpsLimit.UNLIMITED,
 
     // 开发者设置
     val loggingEnabled: Boolean = false,
@@ -72,9 +78,9 @@ sealed class SettingsEvent {
     data class SelectCategory(val category: SettingsCategory) : SettingsEvent()
 
     // 外观
-    data class SetThemeMode(val mode: Int) : SettingsEvent()
+    data class SetThemeMode(val mode: ThemeMode) : SettingsEvent()
     data class SetThemeColor(val color: Int) : SettingsEvent()
-    data class SetBackgroundType(val type: Int) : SettingsEvent()
+    data class SetBackgroundType(val type: BackgroundType) : SettingsEvent()
     data class SetBackgroundOpacity(val opacity: Int) : SettingsEvent()
     data class SetVideoPlaybackSpeed(val speed: Float) : SettingsEvent()
     data class SetLanguage(val language: String) : SettingsEvent()
@@ -92,14 +98,15 @@ sealed class SettingsEvent {
     data class SetLowLatencyAudio(val enabled: Boolean) : SettingsEvent()
     data class SetRalAudioBufferSize(val size: Int?) : SettingsEvent()
     data class SetRenderer(val renderer: String) : SettingsEvent()
-    
-    // 画质
-    data class SetQualityLevel(val level: Int) : SettingsEvent()
-    data class SetShaderLowPrecision(val enabled: Boolean) : SettingsEvent()
-    data class SetTargetFps(val fps: Int) : SettingsEvent()
 
     // 启动器
-    data object OpenPatchManagement : SettingsEvent()
+    data class SetMultiplayerEnabled(val enabled: Boolean) : SettingsEvent()
+    data object AcceptMultiplayerDisclaimer : SettingsEvent()
+
+    // 画质
+    data class SetQualityLevel(val level: QualityLevel) : SettingsEvent()
+    data class SetShaderLowPrecision(val enabled: Boolean) : SettingsEvent()
+    data class SetTargetFps(val fps: FpsLimit) : SettingsEvent()
 
     // 开发者
     data class SetLoggingEnabled(val enabled: Boolean) : SettingsEvent()
@@ -111,22 +118,6 @@ sealed class SettingsEvent {
     data class SetCoreClrXiaomiCompat(val enabled: Boolean) : SettingsEvent()
     data class SetFnaMapBufferRangeOpt(val enabled: Boolean) : SettingsEvent()
     data class SetFnaGlPerfDiagnostics(val enabled: Boolean) : SettingsEvent()
-    data object ForceReinstallPatches : SettingsEvent()
-
-    // 操作
-    data object ViewLogs : SettingsEvent()
-    data object ClearCache : SettingsEvent()
-    data object ExportLogs : SettingsEvent()
-    data object ShareLogs : SettingsEvent()
-    data object OpenLicense : SettingsEvent()
-    data object CheckUpdate : SettingsEvent()
-    data object SelectBackgroundImage : SettingsEvent()
-    data object SelectBackgroundVideo : SettingsEvent()
-    data object OpenLanguageSelector : SettingsEvent()
-    data object OpenThemeColorSelector : SettingsEvent()
-    data object OpenRendererSelector : SettingsEvent()
-    data object OpenSponsors : SettingsEvent()
-    data class OpenUrl(val url: String) : SettingsEvent()
 }
 
 /**
@@ -134,23 +125,6 @@ sealed class SettingsEvent {
  */
 sealed class SettingsEffect {
     data class ShowToast(val message: String) : SettingsEffect()
-    data object OpenImagePicker : SettingsEffect()
-    data object OpenVideoPicker : SettingsEffect()
-    data object OpenLanguageDialog : SettingsEffect()
-    data object OpenThemeColorDialog : SettingsEffect()
-    data object OpenRendererDialog : SettingsEffect()
-    data class OpenUrl(val url: String) : SettingsEffect()
-    data object OpenLicensePage : SettingsEffect()
-    data object OpenSponsorsPage : SettingsEffect()
-    data object ExportLogsToFile : SettingsEffect()
-    data object ShareLogs : SettingsEffect()
-    data object ViewLogsPage : SettingsEffect()
-    data object ClearCacheComplete : SettingsEffect()
-    data object ForceReinstallPatchesComplete : SettingsEffect()
-    data class BackgroundOpacityChanged(val opacity: Int) : SettingsEffect()
-    data class VideoSpeedChanged(val speed: Float) : SettingsEffect()
-    data object RestoreDefaultBackgroundComplete : SettingsEffect()
-    data object OpenPatchManagementDialog : SettingsEffect()
 }
 
 /**
@@ -186,10 +160,6 @@ class SettingsViewModel(
             is SettingsEvent.SetVideoPlaybackSpeed -> setVideoPlaybackSpeed(event.speed)
             is SettingsEvent.SetLanguage -> setLanguage(event.language)
             is SettingsEvent.RestoreDefaultBackground -> restoreDefaultBackground()
-            is SettingsEvent.SelectBackgroundImage -> sendEffect(SettingsEffect.OpenImagePicker)
-            is SettingsEvent.SelectBackgroundVideo -> sendEffect(SettingsEffect.OpenVideoPicker)
-            is SettingsEvent.OpenLanguageSelector -> sendEffect(SettingsEffect.OpenLanguageDialog)
-            is SettingsEvent.OpenThemeColorSelector -> sendEffect(SettingsEffect.OpenThemeColorDialog)
 
             // 控制
             is SettingsEvent.SetTouchMultitouch -> setTouchMultitouch(event.enabled)
@@ -203,15 +173,15 @@ class SettingsViewModel(
             is SettingsEvent.SetLowLatencyAudio -> setLowLatencyAudio(event.enabled)
             is SettingsEvent.SetRalAudioBufferSize -> setRalAudioBufferSize(event.size)
             is SettingsEvent.SetRenderer -> setRenderer(event.renderer)
-            is SettingsEvent.OpenRendererSelector -> sendEffect(SettingsEffect.OpenRendererDialog)
-            
+
+            // 启动器
+            is SettingsEvent.SetMultiplayerEnabled -> setMultiplayerEnabled(event.enabled)
+            is SettingsEvent.AcceptMultiplayerDisclaimer -> acceptMultiplayerDisclaimer()
+
             // 画质
             is SettingsEvent.SetQualityLevel -> setQualityLevel(event.level)
             is SettingsEvent.SetShaderLowPrecision -> setShaderLowPrecision(event.enabled)
             is SettingsEvent.SetTargetFps -> setTargetFps(event.fps)
-
-            // 启动器
-            is SettingsEvent.OpenPatchManagement -> sendEffect(SettingsEffect.OpenPatchManagementDialog)
 
             // 开发者
             is SettingsEvent.SetLoggingEnabled -> setLoggingEnabled(event.enabled)
@@ -223,17 +193,6 @@ class SettingsViewModel(
             is SettingsEvent.SetCoreClrXiaomiCompat -> setCoreClrXiaomiCompat(event.enabled)
             is SettingsEvent.SetFnaMapBufferRangeOpt -> setFnaMapBufferRangeOpt(event.enabled)
             is SettingsEvent.SetFnaGlPerfDiagnostics -> setFnaGlPerfDiagnostics(event.enabled)
-            is SettingsEvent.ViewLogs -> sendEffect(SettingsEffect.ViewLogsPage)
-            is SettingsEvent.ClearCache -> clearCache()
-            is SettingsEvent.ExportLogs -> sendEffect(SettingsEffect.ExportLogsToFile)
-            is SettingsEvent.ShareLogs -> sendEffect(SettingsEffect.ShareLogs)
-            is SettingsEvent.ForceReinstallPatches -> forceReinstallPatches()
-
-            // 关于
-            is SettingsEvent.OpenLicense -> sendEffect(SettingsEffect.OpenLicensePage)
-            is SettingsEvent.OpenSponsors -> sendEffect(SettingsEffect.OpenSponsorsPage)
-            is SettingsEvent.OpenUrl -> sendEffect(SettingsEffect.OpenUrl(event.url))
-            is SettingsEvent.CheckUpdate -> checkUpdate()
         }
     }
 
@@ -247,9 +206,9 @@ class SettingsViewModel(
             _uiState.update { state ->
                 state.copy(
                     // 外观
-                    themeMode = settings.themeMode.value,
+                    themeMode = settings.themeMode,
                     themeColor = settings.themeColor,
-                    backgroundType = backgroundTypeToInt(settings.backgroundType),
+                    backgroundType = settings.backgroundType,
                     backgroundOpacity = settings.backgroundOpacity,
                     videoPlaybackSpeed = settings.videoPlaybackSpeed,
                     language = settings.language,
@@ -264,10 +223,13 @@ class SettingsViewModel(
                     lowLatencyAudioEnabled = settings.sdlAaudioLowLatency,
                     ralAudioBufferSize = normalizeRalAudioBufferSize(settings.ralAudioBufferSize),
                     rendererType = RendererRegistry.normalizeRendererId(settings.fnaRenderer),
+                    // 启动器
+                    multiplayerEnabled = settings.multiplayerEnabled,
+                    multiplayerDisclaimerAccepted = settings.multiplayerDisclaimerAccepted,
                     // 画质
-                    qualityLevel = settings.qualityLevel,
+                    qualityLevel = QualityLevel.fromValue(settings.qualityLevel),
                     shaderLowPrecision = settings.shaderLowPrecision,
-                    targetFps = settings.targetFps,
+                    targetFps = FpsLimit.fromValue(settings.targetFps),
                     // 开发者
                     loggingEnabled = settings.logSystemEnabled,
                     verboseLogging = settings.verboseLogging,
@@ -294,9 +256,9 @@ class SettingsViewModel(
 
     // ==================== 外观设置 ====================
 
-    private fun setThemeMode(mode: Int) {
+    private fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
-            settingsRepository.update { themeMode = ThemeMode.fromValue(mode) }
+            settingsRepository.update { themeMode = mode }
             _uiState.update { it.copy(themeMode = mode) }
         }
     }
@@ -308,9 +270,9 @@ class SettingsViewModel(
         }
     }
 
-    private fun setBackgroundType(type: Int) {
+    private fun setBackgroundType(type: BackgroundType) {
         viewModelScope.launch {
-            settingsRepository.update { backgroundType = intToBackgroundType(type) }
+            settingsRepository.update { backgroundType = type }
             _uiState.update { it.copy(backgroundType = type) }
         }
     }
@@ -326,7 +288,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.update { backgroundOpacity = opacity }
             _uiState.update { it.copy(backgroundOpacity = opacity) }
-            sendEffect(SettingsEffect.BackgroundOpacityChanged(opacity))
         }
     }
 
@@ -334,7 +295,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.update { videoPlaybackSpeed = speed }
             _uiState.update { it.copy(videoPlaybackSpeed = speed) }
-            sendEffect(SettingsEffect.VideoSpeedChanged(speed))
         }
     }
 
@@ -348,12 +308,10 @@ class SettingsViewModel(
                 videoPlaybackSpeed = 1.0f
             }
             _uiState.update { it.copy(
-                backgroundType = 0,
+                backgroundType = BackgroundType.DEFAULT,
                 backgroundOpacity = 0,
                 videoPlaybackSpeed = 1.0f
             ) }
-            sendEffect(SettingsEffect.RestoreDefaultBackgroundComplete)
-            sendEffect(SettingsEffect.ShowToast(getString(Res.string.appearance_background_restored)))
         }
     }
 
@@ -432,17 +390,40 @@ class SettingsViewModel(
         }
     }
 
+    // ==================== 启动器设置 ====================
+
+    private fun setMultiplayerEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { multiplayerEnabled = enabled }
+            _uiState.update { it.copy(multiplayerEnabled = enabled) }
+        }
+    }
+
+    private fun acceptMultiplayerDisclaimer() {
+        viewModelScope.launch {
+            settingsRepository.update {
+                multiplayerDisclaimerAccepted = true
+                multiplayerEnabled = true
+            }
+            _uiState.update {
+                it.copy(
+                    multiplayerDisclaimerAccepted = true,
+                    multiplayerEnabled = true
+                )
+            }
+        }
+    }
+
     // ==================== 画质设置 ====================
 
-    private fun setQualityLevel(level: Int) {
+    private fun setQualityLevel(level: QualityLevel) {
         viewModelScope.launch {
-            settingsRepository.update { qualityLevel = level }
+            settingsRepository.update { qualityLevel = level.value }
             _uiState.update { it.copy(qualityLevel = level) }
             val qualityName = when (level) {
-                0 -> getString(Res.string.settings_quality_high)
-                1 -> getString(Res.string.settings_quality_medium)
-                2 -> getString(Res.string.settings_quality_low)
-                else -> getString(Res.string.settings_quality_high)
+                QualityLevel.HIGH -> getString(Res.string.settings_quality_high)
+                QualityLevel.MEDIUM -> getString(Res.string.settings_quality_medium)
+                QualityLevel.LOW -> getString(Res.string.settings_quality_low)
             }
             sendEffect(
                 SettingsEffect.ShowToast(
@@ -460,16 +441,15 @@ class SettingsViewModel(
         }
     }
 
-    private fun setTargetFps(fps: Int) {
+    private fun setTargetFps(fps: FpsLimit) {
         viewModelScope.launch {
-            settingsRepository.update { targetFps = fps }
+            settingsRepository.update { targetFps = fps.value }
             _uiState.update { it.copy(targetFps = fps) }
             val fpsName = when (fps) {
-                0 -> getString(Res.string.settings_fps_unlimited)
-                30 -> getString(Res.string.settings_fps_30)
-                45 -> getString(Res.string.settings_fps_45)
-                60 -> getString(Res.string.settings_fps_60)
-                else -> getString(Res.string.settings_fps_unlimited)
+                FpsLimit.UNLIMITED -> getString(Res.string.settings_fps_unlimited)
+                FpsLimit.FPS_30 -> getString(Res.string.settings_fps_30)
+                FpsLimit.FPS_45 -> getString(Res.string.settings_fps_45)
+                FpsLimit.FPS_60 -> getString(Res.string.settings_fps_60)
             }
             sendEffect(
                 SettingsEffect.ShowToast(
@@ -547,38 +527,6 @@ class SettingsViewModel(
         }
     }
 
-    private fun clearCache() {
-        viewModelScope.launch {
-            sendEffect(SettingsEffect.ClearCacheComplete)
-            sendEffect(SettingsEffect.ShowToast(getString(Res.string.settings_cache_cleared)))
-        }
-    }
-
-    private fun forceReinstallPatches() {
-        viewModelScope.launch {
-            sendEffect(SettingsEffect.ForceReinstallPatchesComplete)
-        }
-    }
-
-    private fun checkUpdate() {
-        viewModelScope.launch {
-            sendEffect(SettingsEffect.ShowToast(getString(Res.string.settings_checking_update)))
-        }
-    }
-
-    private fun backgroundTypeToInt(type: BackgroundType): Int = when (type) {
-        BackgroundType.DEFAULT -> 0
-        BackgroundType.IMAGE -> 1
-        BackgroundType.VIDEO -> 2
-        BackgroundType.COLOR -> 3
-    }
-
-    private fun intToBackgroundType(value: Int): BackgroundType = when (value) {
-        1 -> BackgroundType.IMAGE
-        2 -> BackgroundType.VIDEO
-        3 -> BackgroundType.COLOR
-        else -> BackgroundType.DEFAULT
-    }
 }
 
 private const val DEFAULT_RENDERER_ID = "native"
