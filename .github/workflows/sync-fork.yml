@@ -2,7 +2,7 @@ name: Sync Fork (Keep My Code)
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */23 * * *'
   workflow_dispatch:
 
 permissions:
@@ -38,20 +38,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge upstream keep my code on conflict
+      - name: Merge upstream
         id: merge
         run: |
           git remote add upstream https://github.com/${{ steps.upstream.outputs.repo }}.git
           git fetch upstream main
           BEFORE=$(git rev-parse HEAD)
-          git merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit || echo "Nothing to merge"
+          if ! git merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit; then
+            git diff --name-only --diff-filter=U | xargs -I {} git checkout --ours {}
+            git diff --name-only --diff-filter=U | xargs -I {} git add {}
+            git commit --no-edit
+          fi
           AFTER=$(git rev-parse HEAD)
           if [ "$BEFORE" != "$AFTER" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Code changed, will push and trigger build"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No changes"
           fi
 
       - name: Push
