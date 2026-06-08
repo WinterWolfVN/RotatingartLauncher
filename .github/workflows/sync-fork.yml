@@ -41,6 +41,7 @@ jobs:
       - name: Merge upstream
         id: merge
         run: |
+          rm -f .git/index.lock
           git remote add upstream https://github.com/${{ steps.upstream.outputs.repo }}.git
           git fetch upstream main
           BEFORE=$(git rev-parse HEAD)
