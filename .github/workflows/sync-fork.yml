@@ -46,10 +46,12 @@ jobs:
           git fetch upstream main
           BEFORE=$(git rev-parse HEAD)
           if ! git merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit; then
+            sudo fuser -k .git/index.lock || true
+            rm -f .git/index.lock
             git diff --name-only --diff-filter=U | xargs -I {} git checkout --ours {}
+            sudo fuser -k .git/index.lock || true
             rm -f .git/index.lock
-            git diff --name-only --diff-filter=U | xargs -I {} git add {}
-            rm -f .git/index.lock
+            git diff --name-only --diff-filter=U | xargs -I {} git add {}            
             git commit --no-edit
           fi
           AFTER=$(git rev-parse HEAD)
