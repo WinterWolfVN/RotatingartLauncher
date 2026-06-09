@@ -38,22 +38,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge upstream (Giữ code của mình khi có xung đột)
+      - name: Force Merge Upstream
         id: merge
         run: |
-          git config --global core.fsmonitor false
-          rm -f .git/index.lock
-          git remote add upstream https://github.com/${{ steps.upstream.outputs.repo }}.git
-          git fetch upstream main
-          BEFORE=$(git rev-parse HEAD)
-          if ! git -c core.fsmonitor=false merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit; then
-            rm -f .git/index.lock
-            git -c core.fsmonitor=false checkout --ours shared/build.gradle.kts shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonControlLayoutStorage.kt shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonGameListStorage.kt
-            rm -f .git/index.lock
-            git -c core.fsmonitor=false add shared/build.gradle.kts shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonControlLayoutStorage.kt shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonGameListStorage.kt
-            rm -f .git/index.lock
-            git -c core.fsmonitor=false commit --no-edit
-          fi
+          git remote add upstream https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ steps.upstream.outputs.repo }}.git
+          git fetch upstream open-source          
+          BEFORE=$(git rev-parse HEAD)                    
+          if ! git merge upstream/open-source --allow-unrelated-histories -X ours --no-edit; then
+            echo "Conflicts detected, forcing our versions..."            
+            git checkout --ours .
+            git add .      
+            git commit -m "Sync: Force resolve conflicts using master branch code"
+          fi          
           AFTER=$(git rev-parse HEAD)
           if [ "$BEFORE" != "$AFTER" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
