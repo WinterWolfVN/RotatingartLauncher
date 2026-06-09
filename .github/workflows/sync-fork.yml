@@ -42,9 +42,9 @@ jobs:
         id: merge
         run: |
           git remote add upstream https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ steps.upstream.outputs.repo }}.git
-          git fetch upstream open-source          
+          git fetch upstream main          
           BEFORE=$(git rev-parse HEAD)                    
-          if ! git merge upstream/open-source --allow-unrelated-histories -X ours --no-edit; then
+          if ! git merge upstream/main --allow-unrelated-histories -X ours --no-edit; then
             echo "Conflicts detected, forcing our versions..."            
             git checkout --ours .
             git add .      
