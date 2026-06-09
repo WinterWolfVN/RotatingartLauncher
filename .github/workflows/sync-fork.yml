@@ -38,21 +38,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge upstream
+      - name: Merge upstream (Giữ code của mình khi có xung đột)
         id: merge
         run: |
+          git config --global core.fsmonitor false
           rm -f .git/index.lock
           git remote add upstream https://github.com/${{ steps.upstream.outputs.repo }}.git
           git fetch upstream main
           BEFORE=$(git rev-parse HEAD)
-          if ! git merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit; then
-            sudo fuser -k .git/index.lock || true
+          if ! git -c core.fsmonitor=false merge upstream/main --strategy-option ours --allow-unrelated-histories --no-edit; then
             rm -f .git/index.lock
-            git diff --name-only --diff-filter=U | xargs -I {} git checkout --ours {}
-            sudo fuser -k .git/index.lock || true
+            git -c core.fsmonitor=false checkout --ours shared/build.gradle.kts shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonControlLayoutStorage.kt shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonGameListStorage.kt
             rm -f .git/index.lock
-            git diff --name-only --diff-filter=U | xargs -I {} git add {}            
-            git commit --no-edit
+            git -c core.fsmonitor=false add shared/build.gradle.kts shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonControlLayoutStorage.kt shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/data/local/CommonGameListStorage.kt
+            rm -f .git/index.lock
+            git -c core.fsmonitor=false commit --no-edit
           fi
           AFTER=$(git rev-parse HEAD)
           if [ "$BEFORE" != "$AFTER" ]; then
