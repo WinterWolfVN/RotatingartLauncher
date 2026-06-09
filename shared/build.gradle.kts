@@ -81,6 +81,5 @@ android {
 }
 
 dependencies {
-    // Use dot notation for version catalogs alias instead of camelCase
-    coreLibraryDesugaring(libs.desugar.jdk.libs)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
 }
