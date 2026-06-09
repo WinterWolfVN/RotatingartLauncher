@@ -11,7 +11,7 @@ plugins {
 android {
     namespace = "com.app.ralaunch"
     compileSdk = 37
-    ndkVersion = "30.0.14518594-beta1"
+    ndkVersion = "28.0.13004108"
 
     defaultConfig {
         applicationId = "com.app.ralaunch"
