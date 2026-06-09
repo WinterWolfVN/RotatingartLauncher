@@ -2,8 +2,9 @@ package com.app.ralaunch.feature.controls.bridges
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.app.ralaunch.core.logging.AppLog
 import android.view.KeyEvent
+import android.view.MotionEvent
 import com.app.ralaunch.feature.controls.ControlData
 import org.libsdl.app.SDLActivity
 import org.libsdl.app.SDLControllerManager
@@ -138,7 +139,7 @@ class SDLInputBridge : ControlInputBridge {
             231 -> return KeyEvent.KEYCODE_META_RIGHT // 118
 
             else -> {
-                Log.w(TAG, "Unknown scancode: " + scancode + ", passing through")
+                AppLog.w(TAG, "Unknown scancode: " + scancode + ", passing through")
                 return scancode // 未知的直接传递
             }
         }
@@ -150,7 +151,7 @@ class SDLInputBridge : ControlInputBridge {
             val keycode = scancodeToKeycode(scancode.code)
 
 
-//            Log.d(TAG, "sendKey: scancode=" + scancode + " -> keycode=" + keycode +
+//            AppLog.d(TAG, "sendKey: scancode=" + scancode + " -> keycode=" + keycode +
 //                  ", isDown=" + isDown + ", calling SDLActivity.onNativeKey" + (isDown ? "Down" : "Up"));
 
             // 确保在主线程上调用SDL方法（SDL的native方法需要在主线程调用）
@@ -163,65 +164,17 @@ class SDLInputBridge : ControlInputBridge {
                     // 调用SDLActivity的静态native方法
                     if (finalIsDown) {
                         SDLActivity.onNativeKeyDown(finalKeycode)
-                        //                        Log.d(TAG, "SDLActivity.onNativeKeyDown(" + finalKeycode + ") called successfully");
+                        //                        AppLog.d(TAG, "SDLActivity.onNativeKeyDown(" + finalKeycode + ") called successfully");
                     } else {
                         SDLActivity.onNativeKeyUp(finalKeycode)
-                        //                        Log.d(TAG, "SDLActivity.onNativeKeyUp(" + finalKeycode + ") called successfully");
+                        //                        AppLog.d(TAG, "SDLActivity.onNativeKeyUp(" + finalKeycode + ") called successfully");
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error in SDL native key method: keycode=" + finalKeycode, e)
-                    e.printStackTrace()
+                    AppLog.e(TAG, "Error in SDL native key method: keycode=" + finalKeycode, e)
                 }
             })
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending key: scancode=" + scancode, e)
-            e.printStackTrace()
-        }
-    }
-
-    override fun sendMouseButton(button: ControlData.KeyCode, isDown: Boolean, x: Float, y: Float) {
-        try {
-            // 使用 SDL 按钮常量（1=左键, 2=中键, 3=右键）
-            // 使用新的 onNativeMouseButtonOnly 方法
-            val sdlButton: Int = when (button) {
-                ControlData.KeyCode.MOUSE_LEFT -> 1 // SDL_BUTTON_LEFT
-                ControlData.KeyCode.MOUSE_RIGHT -> 3 // SDL_BUTTON_RIGHT
-                ControlData.KeyCode.MOUSE_MIDDLE -> 2 // SDL_BUTTON_MIDDLE
-                else -> {
-                    Log.w(TAG, "Unknown mouse button: $button")
-                    return
-                }
-            }
-
-
-            // 添加日志查看发送的值
-//            Log.d(TAG, "Sending mouse button (no cursor move): button=" + button + " -> sdlButton=" + sdlButton +
-//                  ", isDown=" + isDown);
-
-            // 使用新的 onNativeMouseButtonOnly 方法，只发送按钮状态，不移动光标
-            // pressed: 1=按下, 0=释放
-            SDLActivity.onNativeMouseButtonOnly(sdlButton, if (isDown) 1 else 0)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sending mouse button: $button", e)
-        }
-    }
-
-    override fun sendMouseMove(deltaX: Float, deltaY: Float) {
-        try {
-            // 更新虚拟鼠标位置（会应用范围限制，并在必要时重置到中心点）
-            nativeUpdateVirtualMouseDeltaSDL(deltaX, deltaY)
-
-
-            // 获取限制后的虚拟鼠标位置
-            val newX: Float = nativeGetVirtualMouseXSDL()
-            val newY: Float = nativeGetVirtualMouseYSDL()
-
-
-            // 直接发送绝对位置到SDL，确保SDL的鼠标位置与虚拟鼠标位置同步
-            // 这样SDL的鼠标位置就不会超出范围
-            SDLActivity.onNativeMouse(0, ACTION_MOVE, newX, newY, false)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sending mouse move", e)
+            AppLog.e(TAG, "Error sending key: scancode=" + scancode, e)
         }
     }
 
@@ -237,189 +190,59 @@ class SDLInputBridge : ControlInputBridge {
         return SDLActivity.nativeGetMouseStateY()
     }
 
+    override fun sendMouseButton(button: ControlData.KeyCode, isDown: Boolean) {
+        try {
+            // 使用 SDL 按钮常量（1=左键, 2=中键, 3=右键）
+            // 使用新的 onNativeMouseButtonOnly 方法
+            val sdlButton: Int = when (button) {
+                ControlData.KeyCode.MOUSE_LEFT -> MotionEvent.BUTTON_PRIMARY
+                ControlData.KeyCode.MOUSE_RIGHT -> MotionEvent.BUTTON_SECONDARY
+                ControlData.KeyCode.MOUSE_MIDDLE -> MotionEvent.BUTTON_TERTIARY
+                else -> {
+                    AppLog.w(TAG, "Unknown mouse button: $button")
+                    return
+                }
+            }
+
+
+            // 添加日志查看发送的值
+//            AppLog.d(TAG, "Sending mouse button (no cursor move): button=" + button + " -> sdlButton=" + sdlButton +
+//                  ", isDown=" + isDown);
+
+            sdlOnNativeMouseDirect(
+                sdlButton,
+                if (isDown) MotionEvent.ACTION_DOWN else MotionEvent.ACTION_UP,
+                0f, 0f,
+                true)
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Error sending mouse button: $button", e)
+        }
+    }
+
+    override fun sendMousePosition(x: Float, y: Float) {
+        try {
+            // 调用SDLActivity的静态native方法，使用绝对位置（relative = false）
+            SDLActivity.onNativeMouseDirect(0, MotionEvent.ACTION_MOVE, x, y, false)
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Error sending mouse position", e)
+        }
+    }
+
+    override fun sendMouseMove(deltaX: Float, deltaY: Float) {
+        try {
+            SDLActivity.onNativeMouseDirect(0, MotionEvent.ACTION_MOVE, deltaX, deltaY, true)
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Error sending mouse move", e)
+        }
+    }
+
     override fun sendMouseWheel(scrollY: Float) {
         try {
             // 调用native方法发送鼠标滚轮事件
             nativeSendMouseWheelSDL(scrollY)
-            //            Log.d(TAG, "Sending mouse wheel: scrollY=" + scrollY);
+            //            AppLog.d(TAG, "Sending mouse wheel: scrollY=" + scrollY);
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending mouse wheel", e)
-        }
-    }
-
-    /**
-     * 初始化虚拟鼠标（使用实际屏幕尺寸）
-     * @param screenWidth 实际屏幕宽度（像素）
-     * @param screenHeight 实际屏幕高度（像素）
-     */
-    fun initVirtualMouse(screenWidth: Int, screenHeight: Int) {
-        try {
-            nativeInitVirtualMouseSDL(screenWidth, screenHeight)
-            Log.i(TAG, "Virtual mouse initialized with screen: " + screenWidth + "x" + screenHeight)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error initializing virtual mouse", e)
-        }
-    }
-
-    val virtualMousePosition: FloatArray?
-        /**
-         * 获取虚拟鼠标当前位置
-         * @return float数组，[0]=x, [1]=y，如果未初始化则返回屏幕中心
-         */
-        get() {
-            try {
-                val pos: FloatArray? =
-                    nativeGetVirtualMousePositionSDL()
-                if (pos != null && pos.size >= 2) {
-                    return pos
-                }
-            } catch (e: Exception) {
-                Log.w(
-                    TAG,
-                    "Error getting virtual mouse position, using screen center",
-                    e
-                )
-            }
-            // 如果获取失败，返回屏幕中心
-            return floatArrayOf(960.0f, 540.0f) // 默认 1920x1080 的中心
-        }
-
-    /**
-     * 设置虚拟鼠标移动范围
-     * @param left 左边距（屏幕百分比 0.0-1.0）
-     * @param top 上边距（屏幕百分比 0.0-1.0）
-     * @param right 右边界（屏幕百分比 0.0-1.0）
-     * @param bottom 下边界（屏幕百分比 0.0-1.0）
-     */
-    fun setVirtualMouseRange(left: Float, top: Float, right: Float, bottom: Float) {
-        try {
-            nativeSetVirtualMouseRangeSDL(left, top, right, bottom)
-            Log.i(
-                TAG,
-                "Virtual mouse range set: left=" + left + ", top=" + top + ", right=" + right + ", bottom=" + bottom
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting virtual mouse range", e)
-        }
-    }
-
-    /**
-     * 更新虚拟鼠标位置（相对移动，用于右摇杆）
-     * @param deltaX X轴相对移动量
-     * @param deltaY Y轴相对移动量
-     * @return 返回实际移动的量（经过范围限制后的）作为 float[2] {actualDeltaX, actualDeltaY}
-     */
-    fun updateVirtualMouseDelta(deltaX: Float, deltaY: Float): FloatArray? {
-        try {
-            // 获取移动前的位置
-            val oldX: Float = nativeGetVirtualMouseXSDL()
-            val oldY: Float = nativeGetVirtualMouseYSDL()
-
-
-            // 更新位置（native 代码会应用范围限制）
-            nativeUpdateVirtualMouseDeltaSDL(deltaX, deltaY)
-
-
-            // 获取移动后的位置
-            val newX: Float = nativeGetVirtualMouseXSDL()
-            val newY: Float = nativeGetVirtualMouseYSDL()
-
-
-            // 计算实际移动的量（可能因范围限制而小于请求的移动量）
-            val actualDeltaX = newX - oldX
-            val actualDeltaY = newY - oldY
-
-            return floatArrayOf(actualDeltaX, actualDeltaY)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating virtual mouse delta", e)
-            // 出错时返回原始 delta
-            return floatArrayOf(deltaX, deltaY)
-        }
-    }
-
-    /**
-     * 设置虚拟鼠标绝对位置
-     * @param x 绝对X坐标
-     * @param y 绝对Y坐标
-     */
-    fun setVirtualMousePosition(x: Float, y: Float) {
-        try {
-            nativeSetVirtualMousePositionSDL(x, y)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting virtual mouse position", e)
-        }
-    }
-
-    val virtualMouseX: Float
-        /**
-         * 获取当前虚拟鼠标X位置
-         */
-        get() {
-            try {
-                return nativeGetVirtualMouseXSDL()
-            } catch (e: Exception) {
-                return screenWidth / 2.0f
-            }
-        }
-
-    val virtualMouseY: Float
-        /**
-         * 获取当前虚拟鼠标Y位置
-         */
-        get() {
-            try {
-                return nativeGetVirtualMouseYSDL()
-            } catch (e: Exception) {
-                return screenHeight / 2.0f
-            }
-        }
-
-    /**
-     * 发送绝对鼠标位置（用于右摇杆八方向攻击）
-     * @param x 绝对X坐标（屏幕坐标）
-     * @param y 绝对Y坐标（屏幕坐标）
-     */
-    override fun sendMousePosition(x: Float, y: Float) {
-        try {
-            // 调用SDLActivity的静态native方法，使用绝对位置（relative = false）
-            SDLActivity.onNativeMouse(0, ACTION_MOVE, x, y, false)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sending mouse position", e)
-        }
-    }
-
-    /**
-     * 发送虚拟触屏点击（用于右摇杆八方向攻击）
-     * 使用虚拟触屏点而不是鼠标，不会干扰真实触屏
-     * @param index 虚拟触屏点索引
-     * @param x 屏幕X坐标
-     * @param y 屏幕Y坐标
-     * @param isDown true=按下，false=释放
-     */
-    fun sendVirtualTouch(index: Int, x: Float, y: Float, isDown: Boolean) {
-        try {
-            if (isDown) {
-                nativeSetVirtualTouch(index, x, y, screenWidth, screenHeight)
-                //                Log.d(TAG, "Virtual touch DOWN: index=" + index + ", pos=(" + x + "," + y + ")");
-            } else {
-                nativeClearVirtualTouch(index)
-                //                Log.d(TAG, "Virtual touch UP: index=" + index);
-            }
-        } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "Native library not loaded for sendVirtualTouch", e)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sending virtual touch", e)
-        }
-    }
-
-    /**
-     * 清除右摇杆虚拟触屏点
-     */
-    fun clearRightStickTouch() {
-        try {
-            nativeClearVirtualTouch(VIRTUAL_TOUCH_RIGHT_STICK)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error clearing right stick virtual touch", e)
+            AppLog.e(TAG, "Error sending mouse wheel", e)
         }
     }
 
@@ -430,10 +253,10 @@ class SDLInputBridge : ControlInputBridge {
             if (controller != null) {
                 controller.setLeftStick(x, y)
             } else {
-                Log.w(TAG, "Virtual Xbox controller not available")
+                AppLog.w(TAG, "Virtual Xbox controller not available")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending Xbox left stick", e)
+            AppLog.e(TAG, "Error sending Xbox left stick", e)
         }
     }
 
@@ -444,10 +267,10 @@ class SDLInputBridge : ControlInputBridge {
             if (controller != null) {
                 controller.setRightStick(x, y)
             } else {
-                Log.w(TAG, "Virtual Xbox controller not available")
+                AppLog.w(TAG, "Virtual Xbox controller not available")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending Xbox right stick", e)
+            AppLog.e(TAG, "Error sending Xbox right stick", e)
         }
     }
 
@@ -456,7 +279,7 @@ class SDLInputBridge : ControlInputBridge {
             val controller =
                 SDLControllerManager.getVirtualController()
             if (controller == null) {
-                Log.w(TAG, "Virtual Xbox controller not available")
+                AppLog.w(TAG, "Virtual Xbox controller not available")
                 return
             }
 
@@ -465,10 +288,10 @@ class SDLInputBridge : ControlInputBridge {
             if (buttonIndex >= 0) {
                 controller.setButton(buttonIndex, isDown)
             } else {
-                Log.w(TAG, "Unknown Xbox button code: " + xboxButton)
+                AppLog.w(TAG, "Unknown Xbox button code: " + xboxButton)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending Xbox button", e)
+            AppLog.e(TAG, "Error sending Xbox button", e)
         }
     }
 
@@ -477,7 +300,7 @@ class SDLInputBridge : ControlInputBridge {
             val controller =
                 SDLControllerManager.getVirtualController()
             if (controller == null) {
-                Log.w(TAG, "Virtual Xbox controller not available")
+                AppLog.w(TAG, "Virtual Xbox controller not available")
                 return
             }
 
@@ -489,27 +312,27 @@ class SDLInputBridge : ControlInputBridge {
                     controller.setAxis(VirtualXboxController.AXIS_RIGHT_TRIGGER, value)
                 }
                 else -> {
-                    Log.w(TAG, "Unknown Xbox trigger code: " + xboxTrigger)
+                    AppLog.w(TAG, "Unknown Xbox trigger code: " + xboxTrigger)
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending Xbox trigger", e)
+            AppLog.e(TAG, "Error sending Xbox trigger", e)
         }
     }
 
-    fun startTextInput() {
+    override fun startTextInput() {
         try {
             nativeStartTextInput()
         } catch (e: Exception) {
-            Log.e(TAG, "Error starting text input", e)
+            AppLog.e(TAG, "Error starting text input", e)
         }
     }
 
-    fun stopTextInput() {
+    override fun stopTextInput() {
         try {
             nativeStopTextInput()
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping text input", e)
+            AppLog.e(TAG, "Error stopping text input", e)
         }
     }
 
@@ -540,59 +363,7 @@ class SDLInputBridge : ControlInputBridge {
     companion object {
         private const val TAG = "SDLInputBridge"
 
-        // Mouse actions
-        private const val ACTION_DOWN = 0
-        private const val ACTION_UP = 1
-        private const val ACTION_MOVE = 2
-
-        // 虚拟触屏点索引（用于右摇杆八方向攻击和虚拟鼠标点击）
-        // 索引 0-2 保留给普通鼠标按键，索引 3+ 用于右摇杆和虚拟鼠标
-        const val VIRTUAL_TOUCH_LEFT_CLICK: Int = 0
-        const val VIRTUAL_TOUCH_RIGHT_CLICK: Int = 1
-        const val VIRTUAL_TOUCH_MIDDLE_CLICK: Int = 2
-        const val VIRTUAL_TOUCH_RIGHT_STICK: Int = 3 // 右摇杆八方向攻击
-        const val VIRTUAL_TOUCH_VIRTUAL_MOUSE: Int = 4 // 虚拟鼠标点击
-
-        // 屏幕尺寸（用于虚拟触屏）
-        private var screenWidth = 1920
-        private var screenHeight = 1080
-
-        // 虚拟触屏 Native 方法（在 touch_bridge.c 中实现，用于虚拟摇杆发送触屏事件）
-        @JvmStatic
-        private external fun nativeSetVirtualTouch(
-            index: Int,
-            x: Float,
-            y: Float,
-            screenWidth: Int,
-            screenHeight: Int
-        )
-
-        @JvmStatic
-        private external fun nativeClearVirtualTouch(index: Int)
-
-        // SDL 原生虚拟鼠标方法（在 virtual_mouse_sdl.c 中实现）
-        @JvmStatic
-        private external fun nativeInitVirtualMouseSDL(screenWidth: Int, screenHeight: Int)
-        @JvmStatic
-        private external fun nativeUpdateVirtualMouseDeltaSDL(deltaX: Float, deltaY: Float)
-        @JvmStatic
-        private external fun nativeSetVirtualMousePositionSDL(x: Float, y: Float)
-        @JvmStatic
-        private external fun nativeGetVirtualMouseXSDL(): Float
-        @JvmStatic
-        private external fun nativeGetVirtualMouseYSDL(): Float
-        @JvmStatic
-        private external fun nativeGetVirtualMousePositionSDL(): FloatArray? // 获取虚拟鼠标位置 {x, y}
-        @JvmStatic
-        private external fun nativeSetVirtualMouseRangeSDL(
-            left: Float,
-            top: Float,
-            right: Float,
-            bottom: Float
-        )
-
-        @JvmStatic
-        private external fun nativeIsVirtualMouseActiveSDL(): Boolean
+        // SDL 原生方法（在 sdl_input_bridge_extend.c 中实现）
         @JvmStatic
         private external fun nativeSendMouseWheelSDL(scrollY: Float)
 
@@ -608,24 +379,8 @@ class SDLInputBridge : ControlInputBridge {
             try {
                 System.loadLibrary("main")
             } catch (e: UnsatisfiedLinkError) {
-                Log.w(TAG, "Native library not loaded yet")
+                AppLog.w(TAG, "Native library not loaded yet")
             }
         }
-
-        /**
-         * 设置屏幕尺寸（用于虚拟触屏坐标转换）
-         */
-        @JvmStatic
-        fun setScreenSize(width: Int, height: Int) {
-            screenWidth = width
-            screenHeight = height
-            Log.i(TAG, "Screen size set: " + width + "x" + height)
-        }
-
-        // Android mouse button states (bit masks, not SDL button values!)
-        // See Android's MotionEvent class for constants
-        private const val BUTTON_PRIMARY = 1 // Left button
-        private const val BUTTON_SECONDARY = 2 // Right button
-        private const val BUTTON_TERTIARY = 4 // Middle button
     }
 }

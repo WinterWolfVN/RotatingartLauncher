@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.app.ralaunch.R
-import com.app.ralaunch.shared.core.model.ui.GogGameUi
+import com.app.ralaunch.feature.gog.model.GogGameUi
 
 /**
  * GOG 游戏网格组件

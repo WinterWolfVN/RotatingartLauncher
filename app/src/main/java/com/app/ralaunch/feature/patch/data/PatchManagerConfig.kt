@@ -1,6 +1,6 @@
 package com.app.ralaunch.feature.patch.data
 
-import android.util.Log
+import com.app.ralaunch.core.logging.AppLog
 import com.google.gson.FieldNamingPolicy
 import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
@@ -67,7 +67,7 @@ class PatchManagerConfig {
                 OutputStreamWriter(stream, StandardCharsets.UTF_8).use { writer ->
                     gson.toJson(this, writer)
                     writer.flush()
-                    Log.i(TAG, "Configuration file saved successfully")
+                    AppLog.i(TAG, "Configuration file saved successfully")
                     true
                 }
             }

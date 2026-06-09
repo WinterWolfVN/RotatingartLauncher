@@ -1,7 +1,7 @@
 package com.app.ralaunch.core.common.util
 
 import android.content.Context
-import android.util.Log
+import com.app.ralaunch.core.logging.AppLog
 import org.koin.java.KoinJavaComponent
 import java.io.Closeable
 import java.io.File

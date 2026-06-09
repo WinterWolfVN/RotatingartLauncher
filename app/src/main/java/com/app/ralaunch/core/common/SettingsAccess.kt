@@ -1,23 +1,23 @@
 package com.app.ralaunch.core.common
 
-import com.app.ralaunch.shared.core.model.domain.BackgroundType
-import com.app.ralaunch.shared.core.model.domain.AppSettings
-import com.app.ralaunch.shared.core.model.domain.KeyboardType
-import com.app.ralaunch.shared.core.model.domain.ThemeMode
-import com.app.ralaunch.shared.core.contract.repository.SettingsRepositoryV2
-import com.app.ralaunch.shared.core.platform.runtime.renderer.RendererRegistry
+import com.app.ralaunch.core.model.BackgroundType
+import com.app.ralaunch.core.model.AppSettings
+import com.app.ralaunch.core.model.KeyboardType
+import com.app.ralaunch.core.model.ThemeMode
+import com.app.ralaunch.core.di.contract.ISettingsRepositoryServiceV2
+import com.app.ralaunch.core.platform.runtime.RendererRegistry
 import kotlinx.coroutines.runBlocking
 import org.koin.java.KoinJavaComponent
 
 /**
  * 设置访问入口
  *
- * 统一转发到 SettingsRepositoryV2，避免各调用方直接操作 Koin/协程。
+ * 统一转发到 ISettingsRepositoryServiceV2，避免各调用方直接操作 Koin/协程。
  */
 object SettingsAccess {
 
-    private val settingsRepository: SettingsRepositoryV2 by lazy {
-        KoinJavaComponent.get(SettingsRepositoryV2::class.java)
+    private val settingsRepository: ISettingsRepositoryServiceV2 by lazy {
+        KoinJavaComponent.get(ISettingsRepositoryServiceV2::class.java)
     }
 
     private val settings
@@ -92,13 +92,6 @@ object SettingsAccess {
         get() = settings.touchMultitouchEnabled
 
     // FNA 触屏设置
-    val isMouseRightStickEnabled: Boolean
-        get() = settings.mouseRightStickEnabled
-
-    var mouseRightStickAttackMode: Int
-        get() = settings.mouseRightStickAttackMode
-        set(value) = update { mouseRightStickAttackMode = value }
-
     var mouseRightStickSpeed: Int
         get() = settings.mouseRightStickSpeed
         set(value) = update { mouseRightStickSpeed = value }

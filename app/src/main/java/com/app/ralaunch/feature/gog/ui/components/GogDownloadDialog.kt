@@ -53,6 +53,8 @@ fun GogDownloadDialog(
     gameName: String,
     gameFiles: List<GogGameFile>,
     modLoaderRule: ModLoaderRule?,
+    selectedGameFile: GogGameFile?,
+    selectedModLoaderVersion: ModLoaderVersion?,
     downloadStatus: DownloadStatus,
     onSelectGameVersion: (GogGameFile) -> Unit,
     onSelectModLoaderVersion: (ModLoaderVersion) -> Unit,
@@ -60,16 +62,7 @@ fun GogDownloadDialog(
     onInstall: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedGameFile by remember { mutableStateOf<GogGameFile?>(null) }
-    var selectedModLoaderVersion by remember { mutableStateOf<ModLoaderVersion?>(null) }
     var showModLoaderVersions by remember { mutableStateOf(false) }
-
-    LaunchedEffect(modLoaderRule) {
-        if (modLoaderRule != null && selectedModLoaderVersion == null) {
-            selectedModLoaderVersion = modLoaderRule.versions.firstOrNull { it.stable }
-                ?: modLoaderRule.versions.firstOrNull()
-        }
-    }
 
     Dialog(
         onDismissRequest = {
@@ -115,7 +108,6 @@ fun GogDownloadDialog(
                                 gameFiles = gameFiles,
                                 selectedGameFile = selectedGameFile,
                                 onSelectGameFile = {
-                                    selectedGameFile = it
                                     onSelectGameVersion(it)
                                 },
                                 modifier = Modifier
@@ -130,7 +122,6 @@ fun GogDownloadDialog(
                                 showModLoaderVersions = showModLoaderVersions,
                                 onToggleModLoaderVersions = { showModLoaderVersions = !showModLoaderVersions },
                                 onSelectModLoaderVersion = {
-                                    selectedModLoaderVersion = it
                                     onSelectModLoaderVersion(it)
                                     showModLoaderVersions = false
                                 },

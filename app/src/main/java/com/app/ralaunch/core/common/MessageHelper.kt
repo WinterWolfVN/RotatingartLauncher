@@ -2,7 +2,6 @@ package com.app.ralaunch.core.common
 
 import android.app.Activity
 import android.widget.Toast
-import com.app.ralaunch.core.ui.SnackbarHelper
 
 /**
  * 消息提示辅助类

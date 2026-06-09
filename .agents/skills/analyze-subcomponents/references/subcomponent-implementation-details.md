@@ -2,345 +2,217 @@
 
 Load this file before editing any subcomponent.
 
-## App Module (`app/src/main/java/com/app/ralaunch`)
+## App Core (`app/src/main/java/com/app/ralaunch/core`)
 
 ### `core/common`
 
 - Responsibility:
-  app-wide managers and utilities (theme, permissions, launch/deletion helpers, logging, archive/file helpers, dialogs).
+  app-wide managers and utilities used across features.
 - Key files:
-  `ThemeManager.kt`, `PermissionManager.kt`, `GameLaunchManager.kt`, `GameDeletionManager.kt`, `SettingsAccess.kt`, `ErrorHandler.kt`.
+  `SettingsAccess.kt`, `GameLaunchManager.kt`, `ErrorHandler.kt`, `MessageHelper.kt`, `util/PatchExtractor.kt`, `util/AppLogger.kt`.
 - Implementation details:
-  contains operational managers used by feature layers; many features call these directly.
+  convenience layer for settings reads, launch helpers, logging, dialogs, and utility functions that many features call directly.
 - Change coupling:
-  changes propagate broadly to `feature/main`, `feature/game`, and settings flows.
+  changes often propagate into `feature/main`, `feature/game`, settings flows, and startup/bootstrap logic.
 
 ### `core/di`
 
 - Responsibility:
-  initialize Koin and register app-level dependencies.
+  initialize Koin and define repository/service/viewmodel ownership.
 - Key files:
-  `KoinInitializer.kt`, `AppModule.kt`.
+  `KoinInitializer.kt`, `AppModule.kt`, `contract/GameRepositoryV2.kt`, `contract/SettingsRepositoryV2.kt`, `service/GameRepositoryImpl.kt`, `service/SettingsRepositoryImpl.kt`.
 - Implementation details:
-  merges `shared` DI modules with app-specific managers; wrong bindings break app startup.
+  this is the canonical dependency graph for the app process; repository contracts and concrete services now live here.
 - Change coupling:
-  affects construction of services/managers across the entire app process.
+  high; bad bindings break startup and feature construction across the launcher.
+
+### `core/navigation`
+
+- Responsibility:
+  route model, nav state, destination mapping, and shared back-navigation helpers.
+- Key files:
+  `NavRoutes.kt`, `AppNavHost.kt`, `NavigationExtensions.kt`.
+- Implementation details:
+  `Screen`, `NavDestination`, and `NavState` drive the main Compose shell, settings/file-browser wrappers, and back behavior.
+- Change coupling:
+  high; route or helper changes affect `feature/main`, wrapper composition, and tab/sub-screen behavior.
 
 ### `core/platform/android`
 
 - Responsibility:
-  Android platform service/provider integration.
+  Android service and provider integration.
 - Key files:
-  `ProcessLauncherService.kt`, `provider/RaLaunchDocumentsProvider.kt`, `provider/RaLaunchFileProvider.kt`.
+  `ProcessLauncherService.kt`, `provider/RaLaunchDocumentsProvider.kt`, `provider/RaLaunchFileProvider.kt`, `provider/RaLaunchWakeUpActivity.kt`.
 - Implementation details:
-  `ProcessLauncherService` launches .NET assemblies in `:launcher`, sets stdin pipe, applies patches, and delegates launch to runtime layer.
+  bridges launcher UI flows to platform services, file/document providers, and the `:launcher` process.
 - Change coupling:
-  service/authority/action changes require manifest updates and inter-process call updates.
-
-### `core/platform/install`
-
-- Responsibility:
-  game import/install pipeline using plugin selection.
-- Key files:
-  `GameInstaller.kt`, plugin files under `install/plugins`, extractor files under `install/extractors`.
-- Implementation details:
-  detects game/mod loader type, creates storage roots via `GameListStorage`, delegates extraction/install to selected plugin.
-- Change coupling:
-  impacts import UX, storage layout, and game metadata persistence.
+  service/authority changes require matching manifest and caller updates.
 
 ### `core/platform/network/easytier`
 
 - Responsibility:
-  EasyTier multiplayer and VPN/TUN orchestration.
+  EasyTier multiplayer, VPN/TUN lifecycle, diagnostics, and JNI coordination.
 - Key files:
-  `EasyTierVpnService.kt`, `EasyTierManager.kt`, `EasyTierConfigBuilder.kt`.
+  `EasyTierVpnService.kt`, `EasyTierManager.kt`, `EasyTierConfigBuilder.kt`, `EasyTierJNI.kt`.
 - Implementation details:
-  `EasyTierVpnService` creates TUN fd, runs as foreground service, broadcasts readiness/errors, and coordinates JNI calls.
+  handles foreground VPN service setup in the `:game` process and marshals configuration/state between Kotlin and native code.
 - Change coupling:
-  touches permissions, process boundaries (`:game`), notification behavior, and JNI interop.
+  touches permissions, notifications, process boundaries, and interop.
 
 ### `core/platform/runtime`
 
 - Responsibility:
   runtime preparation and .NET game launch execution.
 - Key files:
-  `GameLauncher.kt`, `RuntimeLibraryLoader.kt`, `AssemblyPatcher.kt`, `EnvVarsManager.kt`, `dotnet/DotNetLauncher.kt`, `renderer/RendererLoader.kt`.
+  `GameLauncher.kt`, `AssemblyPatcher.kt`, `EnvVarsManager.kt`, `RendererLoader.kt`, `RendererRegistry.kt`, `ThreadAffinityManager.kt`, `dotnet/DotNetLauncher.kt`.
 - Implementation details:
-  `GameLauncher` sets env vars, data dirs, startup hooks, renderer/thread settings, then calls `DotNetLauncher.hostfxrLaunch`.
-  `DotNetLauncher` sets `DOTNET_ROOT`, applies CoreCLR config/hooking, loads native libs, and invokes native hostfxr launch bridge.
+  central launch path that assembles env vars, renderer/runtime config, patch hooks, and native host startup.
 - Change coupling:
-  highest-risk area; can break all game launch paths if env/native ordering changes.
+  highest-risk area; ordering or config regressions can break all game launch paths.
 
-### `core/ui`
+### `core/theme` and `core/ui`
 
 - Responsibility:
-  app-level UI base classes and shared dialogs.
+  app-wide Compose theme, haze/glass primitives, base activities, presenters, and dialogs.
 - Key files:
-  `base/BaseActivity.kt`, `base/BasePresenter.kt`, dialog compose files.
+  `theme/Theme.kt`, `theme/Color.kt`, `theme/Shape.kt`, `theme/Typography.kt`, `ui/BaseActivity.kt`, `ui/component/GlassComponents.kt`, `ui/dialog/SettingsDialogs.kt`.
 - Implementation details:
-  shared foundations used by multiple activities.
+  provides the launcher’s MD3 theme tokens, Haze state, fullscreen base activity behavior, and reusable dialog/component primitives.
 - Change coupling:
-  cross-feature visual or lifecycle behavior impact.
+  cross-feature visual, accessibility, and lifecycle impact.
 
-## Feature Module (`app/src/main/java/com/app/ralaunch/feature`)
+## App Features (`app/src/main/java/com/app/ralaunch/feature`)
 
 ### `feature/init`
 
 - Responsibility:
-  first-run initialization/extraction screen and flow.
+  first-run initialization and extraction flow.
 - Key files:
-  `InitializationActivity.kt`, `InitializationScreen.kt`.
+  `ui/InitializationActivity.kt`, `ui/InitializationScreen.kt`.
 - Implementation details:
-  checks extracted flags, requests permissions, extracts component archives and runtime libs, then routes to main activity.
+  validates runtime readiness, requests permissions, extracts packaged assets, and routes into the main launcher.
 - Change coupling:
-  affects first-launch reliability and runtime readiness.
+  affects first-launch reliability and app bootstrap.
 
 ### `feature/main`
 
 - Responsibility:
-  launcher home orchestration and state management.
+  launcher home orchestration, primary navigation shell, and main-state composition.
 - Key files:
-  `MainActivityCompose.kt`, `MainViewModel.kt`, `MainUseCases.kt`, `MainContracts.kt`, screen wrappers under `screens/`.
+  `ui/MainActivityCompose.kt`, `ui/MainApp.kt`, `vm/MainViewModel.kt`, `contracts/MainContracts.kt`, `MainUseCases.kt`, `ui/AppNavigationRail.kt`, `ui/GameListContent.kt`.
 - Implementation details:
-  central state holder for game list, selection, import/deletion/launch events; wraps shared screens and app-specific dialogs/background systems.
+  central state holder for game list, selection, launch/import/delete flows, background handling, and screen wrapper wiring.
 - Change coupling:
-  high; navigation, import, deletion, launch, and settings entry points converge here.
+  high; navigation, import, settings, downloads, and announcements converge here.
 
 ### `feature/game`
 
 - Responsibility:
-  in-game activity integration with SDL runtime.
+  in-game activity integration with SDL runtime and input bridges.
 - Key files:
-  `legacy/GameActivity.kt`, `legacy/GamePresenter.kt`, `GameVirtualControlsManager.kt`, input helpers.
+  `ui/legacy/GameActivity.kt`, `legacy/GamePresenter.kt`, `GameVirtualControlsManager.kt`, `input/GameTouchBridge.kt`, `input/GameImeHelper.kt`.
 - Implementation details:
-  `GameActivity` extends `SDLActivity`, handles fullscreen/IME/touch bridges, and terminates process on destroy to avoid multi-init runtime issues.
+  owns the `:game` process activity, overlay controls, IME handling, and SDL runtime integration.
 - Change coupling:
-  affects game process lifecycle, controls overlay, and crash reporting behavior.
+  affects game lifecycle, input, overlays, and crash surfaces.
 
 ### `feature/controls`
 
 - Responsibility:
-  virtual control data model, runtime overlays, pack management, and editor tooling.
+  virtual control models, pack management, editor tooling, rendering, and runtime overlays.
 - Key files:
-  `ControlData.kt`, `ControlEditorViewModel.kt`, editor UI/manager/helper folders, `packs/ControlPackManager.kt`, view bridge files.
+  `packs/ControlPackManager.kt`, editor viewmodels/helpers/managers, `ui/ControlLayoutScreenWrapper.kt`, texture and input bridge files.
 - Implementation details:
-  `ControlEditorViewModel` manages control editing state via flows, supports add/update/delete/duplicate, tracks unsaved changes, and persists layout through `ControlPackManager`.
+  large, high-churn feature spanning storage, editing UX, rendering assets, and game-time input behavior.
 - Change coupling:
-  large surface; touches in-game input bridge, editor UI, pack storage, and rendering assets.
+  broad; touches settings, gameplay overlays, imported packs, and asset loading.
 
 ### `feature/gog`
 
 - Responsibility:
-  GOG auth, catalog display, and download workflow.
+  GOG authentication, catalog browsing, and download/import workflow.
 - Key files:
-  API/auth clients in `data/api`, models in `data/model`, `GogDownloader.kt`, and UI in `ui/`.
+  `data/GogDownloader.kt`, API/model files under `data` and `model`, `ui/DownloadScreenWrapper.kt`, `ui/GogScreen.kt`.
 - Implementation details:
-  screen toggles between embedded web login and logged-in dual-pane catalog.
-  downloader supports auth headers, retries, progress, and resume semantics.
+  mixes account/session handling, downloads with progress/resume semantics, and launcher-side import entry points.
 - Change coupling:
-  affects network/auth behavior, file download correctness, and import entry flow.
+  affects network/auth behavior, file download correctness, and main-screen integrations.
+
+### `feature/installer`
+
+- Responsibility:
+  game import/install pipeline and plugin selection.
+- Key files:
+  `GameInstaller.kt`, `InstallPluginRegistry.kt`, `GameDefinition.kt`, plugins under `plugins`, `ui/ImportScreenWrapper.kt`.
+- Implementation details:
+  detects game or loader type, coordinates extraction/installation, and produces launcher-readable game entries.
+- Change coupling:
+  impacts import UX, storage layout, and persisted metadata.
 
 ### `feature/patch`
 
 - Responsibility:
-  patch discovery/install/enable pipeline.
+  patch discovery, installation, configuration, and launch-time activation data.
 - Key files:
-  `data/PatchManager.kt`, `PatchManifest.kt`, `PatchManagerConfig.kt`.
+  `data/PatchManager.kt`, `data/PatchManifest.kt`, `data/PatchManagerConfig.kt`, `ui/PatchManagementDialogCompose.kt`.
 - Implementation details:
-  stores patch configs by game assembly path, installs patch archives, and prepares startup-hook data consumed during launch.
+  stores patch configs by game path and prepares the patch metadata consumed by runtime launch.
 - Change coupling:
-  tightly coupled with runtime launch (`GameLauncher`) and patch assets under `patches`.
+  tightly coupled with `core/platform/runtime` and assets under `patches`.
 
-### `feature/crash`
+### `feature/settings` and `feature/filebrowser`
 
 - Responsibility:
-  crash report activity/screen.
+  reusable settings and file-browser UI/state flows used by main-screen wrappers.
 - Key files:
-  `CrashReportActivity.kt`, `CrashReportScreen.kt`.
+  `feature/settings/vm/SettingsViewModel.kt`, `feature/settings/ui/SettingsScreen.kt`, `feature/settings/ui/SettingsScreenWrapper.kt`, `feature/filebrowser/FileBrowserModels.kt`, `feature/filebrowser/ui/FileBrowserScreen.kt`, `feature/filebrowser/ui/FileBrowserScreenWrapper.kt`.
 - Implementation details:
-  dedicated UI flow for rendering runtime error/crash diagnostics.
+  settings and file-browser contracts now live entirely in `app`, with wrapper composables bridging Android pickers, permissions, and dialogs.
 - Change coupling:
-  interacts with error handler and game/main activity exception paths.
+  affects repository contracts, navigation, wrapper side effects, and persisted settings keys.
 
-### `feature/sponsor`
+### `feature/announcement`, `feature/crash`, `feature/sponsor`, and `feature/script`
 
 - Responsibility:
-  sponsors wall data + UI.
+  supporting product features for announcements, crash diagnostics, sponsor UI, and JavaScript tooling.
 - Key files:
-  `SponsorRepository.kt`, `SponsorsActivity.kt`, `SponsorsScreen.kt`, `SponsorWallView.kt`.
+  `feature/announcement/AnnouncementRepositoryService.kt`, `feature/announcement/ui/AnnouncementScreenWrapper.kt`, `feature/crash/ui/CrashReportActivity.kt`, `feature/sponsor/ui/SponsorsActivity.kt`, `feature/script/JavaScriptExecutor.kt`.
 - Implementation details:
-  isolated presentation feature with low runtime coupling.
+  lower-volume features, but they still plug into the main shell, manifest, or diagnostics flows.
 - Change coupling:
-  mostly local unless routing/manifest changes.
+  usually local unless routing, manifest components, or shared utility contracts change.
 
-## Shared Common Module (`shared/src/commonMain/kotlin/com/app/ralaunch/shared`)
+## Native and Asset Surfaces
 
-### `core/contract`
+### `app/src/main/cpp`
 
 - Responsibility:
-  repository/service interfaces used across platforms.
+  first-party native bridges plus vendored runtime/render/input libraries.
 - Key files:
-  `contract/repository/*.kt`, `contract/service/*.kt`.
+  first-party code under `main` and `dotnethost`; large external trees under `SDL`, `FNA3D`, `gl4es`, `FAudio`.
 - Implementation details:
-  defines boundaries consumed by viewmodels/use cases and implemented by common/android layers.
+  keep first-party bridge changes isolated and avoid touching vendored trees unless native dependency work is intentional.
 - Change coupling:
-  interface changes require updates in both implementations and consumers.
+  very high when JNI signatures, runtime bootstrap, or renderer loading changes.
 
-### `core/data`
+### `patches` and `app/src/main/assets`
 
 - Responsibility:
-  common repositories, storage abstractions, and data models.
+  bundled patch assets, control defaults, and runtime support files shipped with the app.
 - Key files:
-  `data/repository/GameRepositoryImpl.kt`, `SettingsRepositoryImpl.kt`, `ControlLayoutRepositoryImpl.kt`, `data/local/*.kt`.
+  patch manifests/projects under `patches`, bundled control/patch assets under `app/src/main/assets`.
 - Implementation details:
-  repository layer wraps storage adapters and exposes state flows/mutation methods.
+  these files are consumed by initialization, patch installation, and runtime setup flows.
 - Change coupling:
-  affects persistence semantics and feature state behavior.
-
-### `core/model`
-
-- Responsibility:
-  domain and UI models.
-- Key files:
-  `model/domain/*.kt`, `model/ui/*.kt`.
-- Implementation details:
-  shared types used by app and shared feature UIs/viewmodels.
-- Change coupling:
-  broad compile-time impact due to model usage breadth.
-
-### `core/navigation`
-
-- Responsibility:
-  shared navigation state and route model.
-- Key files:
-  `AppNavHost.kt`, `NavRoutes.kt`, `NavigationExtensions.kt`.
-- Implementation details:
-  `NavState` stores current screen and back stack; main app composes this state into screen wrappers.
-- Change coupling:
-  affects screen transitions and route contracts.
-
-### `core/theme` and `core/config`
-
-- Responsibility:
-  shared theming state and config constants/interfaces.
-- Key files:
-  `theme/AppThemeState.kt`, `theme/Theme.kt`, `config/*.kt`.
-- Implementation details:
-  central theme/background config states consumed by compose screens.
-- Change coupling:
-  UI-wide visual/state side effects.
-
-### `core/component`
-
-- Responsibility:
-  reusable compose components and dialogs.
-- Key files:
-  `component/game/*.kt`, `component/dialogs/*.kt`, `AppNavigationRail.kt`.
-- Implementation details:
-  presentational units used by wrappers and feature screens.
-- Change coupling:
-  shared UI behavior impact.
-
-### `feature/settings`
-
-- Responsibility:
-  shared settings screen/viewmodel/state/effects.
-- Key files:
-  `SettingsViewModel.kt`, `SettingsScreen.kt`, category files.
-- Implementation details:
-  event-driven state updates through `SettingsRepositoryV2`, emits effects for host app actions (dialogs, pickers, patch management).
-- Change coupling:
-  touches repositories plus app-side wrappers/effect handling.
-
-### `feature/filebrowser`
-
-- Responsibility:
-  shared file browser UI models and screen.
-- Key files:
-  `FileBrowserScreen.kt`, `FileBrowserModels.kt`.
-- Implementation details:
-  reusable file browsing primitives consumed by app wrappers.
-- Change coupling:
-  mostly UI and data-source integration points.
-
-### `feature/controls`
-
-- Responsibility:
-  shared control-layout viewmodel.
-- Key files:
-  `ControlLayoutViewModel.kt`.
-- Implementation details:
-  bridges shared contract repository to UI-level control layout state.
-- Change coupling:
-  links app control features to shared contracts/repository implementations.
-
-## Shared Android Module (`shared/src/androidMain/kotlin/com/app/ralaunch/shared/core`)
-
-### `data/local`
-
-- Responsibility:
-  Android storage implementations for shared abstractions.
-- Key files:
-  `AndroidGameListStorage.kt`, `AndroidControlLayoutStorage.kt`, `StoragePathsProvider.android.kt`.
-- Implementation details:
-  binds filesystem and DataStore paths to shared repository/storage contracts.
-- Change coupling:
-  affects persistence location and migration assumptions.
-
-### `data/service`
-
-- Responsibility:
-  Android service implementations for shared service contracts.
-- Key files:
-  `AndroidGameLaunchService.kt`, `AndroidControlLayoutService.kt`, `AndroidPatchService.kt`.
-- Implementation details:
-  adapter layer from shared service interfaces to app/runtime operations.
-- Change coupling:
-  service behavior changes bubble into settings/main/control workflows.
-
-### `di`
-
-- Responsibility:
-  Android shared-module bindings.
-- Key files:
-  `AndroidModule.kt`.
-- Implementation details:
-  registers storage/service implementations and combines shared/common modules.
-- Change coupling:
-  boot failures or missing dependency injections when altered incorrectly.
-
-## Native and Patch Assets
-
-### `app/src/main/cpp/main` and `app/src/main/cpp/dotnethost`
-
-- Responsibility:
-  first-party native bridge and .NET host support.
-- Change coupling:
-  impacts runtime launch and JNI boundary behavior.
-
-### `app/src/main/cpp/SDL`, `FNA3D`, `gl4es`, `FAudio`
-
-- Responsibility:
-  vendored third-party source trees.
-- Change coupling:
-  avoid direct modifications unless task explicitly requires vendor-level changes.
-
-### `patches`
-
-- Responsibility:
-  C# patch projects and manifests bundled as built-in patches.
-- Key structure:
-  each patch folder includes `.csproj`, `Patcher.cs`, `StartupHook.cs`, and `patch.json`.
-- Change coupling:
-  patch identifier/schema changes must stay aligned with patch manager logic and runtime startup-hook wiring.
+  changes can silently break extraction, compatibility patches, or first-run setup if code and assets diverge.
 
 ## Mandatory Before-Edit Checklist
 
-1. Confirm target section in this file and list exact touched paths.
+1. Confirm the target section in this file and list exact touched paths.
 2. Run:
-   `skills/analyze-subcomponents/scripts/component_profile.sh <target> .`
-3. Check DI registration files if dependencies are added/removed.
-4. Check manifest for component/process/permission implications.
-5. Check shared contract/data model impacts if public types/signatures change.
-6. For runtime/patch changes, verify launch-path coupling:
+   `scripts/component_profile.sh <target> .`
+3. Check DI registration files if dependencies are added or removed.
+4. Check manifest for component, process, or permission implications.
+5. Check repository/storage impacts if public types, keys, or persisted formats change.
+6. For runtime or patch changes, verify launch-path coupling:
    `feature/main` -> `core/platform/runtime` -> `feature/game` -> `patches`.

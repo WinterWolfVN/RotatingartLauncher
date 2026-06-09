@@ -33,18 +33,9 @@
     <string name="confirm">Confirmar</string>
     <string name="close">Cerrar</string>
 
-    <!-- Diálogo de Error -->
-    <string name="error_title_default">Error</string>
+    <!-- Errores -->
     <string name="error_message_default">Ocurrió un error</string>
     <string name="error_operation_failed">Operación fallida</string>
-    <string name="error_details_title">Detalles del error</string>
-    <string name="error_show_details">Mostrar detalles</string>
-    <string name="error_hide_details">Ocultar detalles</string>
-    <string name="error_copy">Copiar</string>
-    <string name="error_copy_success">Copiado al portapapeles</string>
-    <string name="error_icon_desc">Icono de error</string>
-    <string name="error_crash_title">Fallo de la aplicación</string>
-    <string name="error_fatal_title">Error fatal</string>
 
     <!-- Importar Juego -->
     <string name="import_select_game_file">Seleccionar archivo de juego</string>
@@ -333,6 +324,8 @@
     <string name="main_shortcut_removed">Acceso directo eliminado de la lista</string>
     <string name="main_game_deleted">Juego y archivos eliminados</string>
     <string name="main_game_deleted_partial">Juego eliminado de la lista, pero algunos archivos pueden permanecer</string>
+    <string name="main_permission_required_title">Permiso requerido</string>
+    <string name="main_permission_required_message">No se ha concedido acceso suficiente a los archivos. Activa el permiso de almacenamiento requerido para que el lanzador pueda leer y gestionar archivos de juegos.</string>
 
     <!-- Mensajes de MainImportDelegate -->
     <string name="import_added_to_list">Añadido a la lista de juegos</string>
@@ -915,6 +908,7 @@
     <string name="runtime_selector_title_text">Versión de .NET Runtime</string>
     <string name="runtime_current_version">Versión actual</string>
     <string name="runtime_select_version">Seleccionar versión</string>
+    <string name="runtime_not_installed">No instalado</string>
     
     <!-- Diálogo de Dos Factores -->
     <string name="two_factor_email_title">Verificación de correo electrónico</string>
@@ -1783,6 +1777,8 @@ Invitado: resultado=%3$d%4$s</string>
     <string name="settings_controls_vibration_strength_title">Intensidad de vibración</string>
     <string name="settings_game_performance_section">Rendimiento</string>
     <string name="settings_game_low_latency_audio_subtitle">Reduce la latencia de audio. Puede aumentar el consumo de energía</string>
+    <string name="settings_game_runtime_section">Runtime</string>
+    <string name="settings_game_runtime_subtitle">Establece la versión predeterminada de .NET Runtime para los juegos</string>
     <string name="settings_game_renderer_section">Renderizado</string>
     <string name="download_enter">Entrar</string>
     <string name="gog_no_linux_version">Este juego no tiene versión para Linux</string>
@@ -1808,6 +1804,8 @@ Invitado: resultado=%3$d%4$s</string>
     <string name="main_edit_display_info">Actualizar información de visualización</string>
     <string name="main_renderer_optional">Renderizador (opcional)</string>
     <string name="main_renderer_override">Sobrescribir renderizador</string>
+    <string name="main_dotnet_runtime_optional">.NET Runtime (Opcional)</string>
+    <string name="main_dotnet_runtime_override">Sobrescribir .NET Runtime</string>
     <string name="main_control_editor_placeholder">Editor de diseño</string>
     <string name="main_download">Descargar</string>
     <string name="main_announcements">Anuncios</string>
@@ -1831,6 +1829,8 @@ Invitado: resultado=%3$d%4$s</string>
     <string name="main_update_latest_version">Última versión: %1$s</string>
     <string name="main_update_action_open_release">Abrir actualización</string>
     <string name="main_update_action_download">Descargar actualización</string>
+    <string name="main_update_action_download_github">Descargar vía GitHub</string>
+    <string name="main_update_action_download_cloud">Descargar vía enlace en la nube</string>
     <string name="main_update_action_ignore_version">Ignorar esta versión</string>
     <string name="main_update_status_starting">Preparando descarga</string>
     <string name="main_update_status_downloading">Descargando actualización</string>
@@ -1851,10 +1851,15 @@ Invitado: resultado=%3$d%4$s</string>
     <string name="renderer_select">Seleccionar renderizador</string>
     <string name="renderer_follow_global_settings">Seguir configuración global</string>
     <string name="renderer_follow_global">Seguir global</string>
+    <string name="runtime_follow_global_settings">Seguir configuración global</string>
+    <string name="runtime_follow_global">Seguir global</string>
     <string name="announcement_load_content_failed">No se pudo cargar el contenido</string>
     <string name="announcement_load_failed">No se pudieron cargar los anuncios</string>
     <string name="announcement_empty">No hay anuncios</string>
     <string name="announcement_no_content">Sin contenido</string>
+    <string name="main_announcement_dialog_title">Nuevo anuncio</string>
+    <string name="main_announcement_dialog_action_learn_more">Más información</string>
+    <string name="main_announcement_dialog_action_view">Ver anuncio</string>
     <string name="init_runtime_components_title">Componentes de runtime</string>
     <string name="init_runtime_components_subtitle">Instalar los componentes de runtime necesarios para los juegos</string>
     <string name="init_runtime_components_hint">El primer inicio requiere extraer el runtime. Normalmente solo toma unos minutos.</string>

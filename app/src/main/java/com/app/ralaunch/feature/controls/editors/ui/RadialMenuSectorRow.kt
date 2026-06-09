@@ -16,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.app.ralaunch.R
 import com.app.ralaunch.feature.controls.ControlData
-import com.app.ralaunch.core.ui.dialog.KeyBindingDialog
 
 /**
  * 轮盘扇区配置行 - 按键绑定（复用 KeyBindingDialog）+ 标签编辑

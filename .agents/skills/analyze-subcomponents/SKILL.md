@@ -1,6 +1,6 @@
 ---
 name: analyze-subcomponents
-description: Deep-dive into a selected subcomponent (feature folder, package, module, or file) to identify responsibilities, dependencies, integration points, and change impact. Use when asked to understand a subsystem, plan refactors, estimate blast radius, investigate regressions, or document ownership boundaries inside this launcher codebase.
+description: Deep-dive into a selected subcomponent (feature folder, package, native tree, or file) to identify responsibilities, dependencies, integration points, and change impact. Use when asked to understand a subsystem, plan refactors, estimate blast radius, investigate regressions, or document ownership boundaries inside this launcher codebase.
 ---
 
 # Analyze Subcomponents
@@ -10,7 +10,7 @@ description: Deep-dive into a selected subcomponent (feature folder, package, mo
 1. Run `scripts/component_profile.sh <component-path-or-token> [repo-root]`.
 2. Load `references/subcomponent-implementation-details.md` for direct per-subcomponent implementation context.
 3. Load `references/component-analysis-checklist.md` for this repo's coupling/change checkpoints.
-4. Validate script output by reading the top affected files directly.
+4. Validate script output by reading the highest-coupling files directly.
 
 ## Mandatory Pre-Modification Context
 
@@ -18,18 +18,17 @@ Before editing any subcomponent:
 
 1. Read the matching section in `references/subcomponent-implementation-details.md`.
 2. Identify DI, navigation, manifest, storage, process, and runtime coupling using `references/component-analysis-checklist.md`.
-3. Run `scripts/component_profile.sh` for the target and at least one adjacent dependency folder.
+3. Run `scripts/component_profile.sh` for the target and at least one adjacent dependency folder or companion package.
 4. Describe expected blast radius before applying code changes.
 
 ## Workflow
 
 1. Resolve the target component to a concrete path.
 2. Classify the target:
-   - Android feature (`app/.../feature/...`)
-   - Android core infrastructure (`app/.../core/...`)
-   - Shared KMP common layer (`shared/src/commonMain/...`)
-   - Shared Android implementation (`shared/src/androidMain/...`)
+   - App feature (`app/.../feature/...`)
+   - App core infrastructure (`app/.../core/...`)
    - Native runtime/vendor code (`app/src/main/cpp/...`)
+   - Patch/config/assets/build support (`patches/...`, `app/src/main/assets/...`, Gradle files, manifest)
 3. Profile internals:
    - File/type inventory.
    - Primary declarations.
@@ -46,7 +45,7 @@ Before editing any subcomponent:
 
 - Return a concise component brief with concrete paths and ownership hints.
 - Include a change-impact checklist tailored to the current request.
-- List high-risk interfaces first (runtime bootstrap, storage, navigation, process boundaries, JNI/native bridges).
+- List high-risk interfaces first (runtime bootstrap, repositories/storage, navigation, process boundaries, JNI/native bridges).
 
 ## Resources
 

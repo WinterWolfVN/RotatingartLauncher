@@ -77,7 +77,7 @@ class ProcessLauncherService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent == null) {
-            AppLogger.error(TAG, "Intent is null")
+            AppLog.e(TAG, "Intent is null")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -99,7 +99,7 @@ class ProcessLauncherService : Service() {
         val gameId = intent.getStringExtra(EXTRA_GAME_ID)
 
         if (assemblyPath == null) {
-            AppLogger.error(TAG, "Assembly path is null")
+            AppLog.e(TAG, "Assembly path is null")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -119,7 +119,7 @@ class ProcessLauncherService : Service() {
                     updateNotification(getString(R.string.process_launcher_status_running, title))
                     doLaunch(assemblyPath, args, title, gameId)
                 } catch (e: Exception) {
-                    AppLogger.error(TAG, "Launch error: ${e.message}", e)
+                    AppLog.e(TAG, "Launch error: ${e.message}", e)
                 } finally {
                     running = false
                     stopSelf()
@@ -147,8 +147,8 @@ class ProcessLauncherService : Service() {
             AppLogger.info(TAG, "Game: $gameId, Applicable patches: ${patches.size}")
             GameLauncher.launchDotNetAssembly(assemblyPath, args ?: emptyArray(), patches)
         } catch (e: Exception) {
-            AppLogger.error(TAG, "Launch failed: ${e.message}", e)
-            AppLogger.error(TAG, "Last Error Msg: ${GameLauncher.getLastErrorMessage()}")
+            AppLog.e(TAG, "Launch failed: ${e.message}", e)
+            AppLog.e(TAG, "Last Error Msg: ${GameLauncher.getLastErrorMessage()}")
             -1
         } finally {
             cleanupStdinPipe()
@@ -179,7 +179,7 @@ class ProcessLauncherService : Service() {
         }
         val result = NativeMethods.writeStdin(input)
         if (result >= 0) {
-            AppLogger.info(TAG, "stdin << $input ($result bytes)")
+            AppLog.i(TAG, "stdin << $input ($result bytes)")
         } else {
             AppLogger.error(TAG, "stdin write failed: $input")
         }

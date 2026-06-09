@@ -11,22 +11,22 @@ Concise project snapshot for landscape UI, routing, and MVVM.
   - `ControlEditorActivity`
   - `CrashReportActivity`
   - `SponsorsActivity`
-- `BaseActivity` also enforces `SCREEN_ORIENTATION_SENSOR_LANDSCAPE` in `app/src/main/java/com/app/ralaunch/core/ui/base/BaseActivity.kt`.
+- `BaseActivity` also enforces `SCREEN_ORIENTATION_SENSOR_LANDSCAPE` in `app/src/main/java/com/app/ralaunch/core/ui/BaseActivity.kt`.
 - Compose screens are implemented as landscape-first split panes (rail + content, list + detail).
 
 ## 2) Routing Snapshot
 
-- Route model: `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/navigation/NavRoutes.kt`
+- Route model: `app/src/main/java/com/app/ralaunch/core/navigation/NavRoutes.kt`
   - `Screen` sealed class defines route strings and parameterized screens.
   - `NavDestination` enum defines main rail tabs.
-- Route state: `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/navigation/AppNavHost.kt`
+- Route state: `app/src/main/java/com/app/ralaunch/core/navigation/AppNavHost.kt`
   - `NavState` stores `currentScreen`, back stack, and navigation direction.
-- Route helpers: `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/navigation/NavigationExtensions.kt`
+- Route helpers: `app/src/main/java/com/app/ralaunch/core/navigation/NavigationExtensions.kt`
   - typed helpers (`navigateToGames`, `navigateToSettings`, etc.)
   - `handleBackPress()` fallback policy.
 - Route rendering:
-  - `app/src/main/java/com/app/ralaunch/feature/main/MainApp.kt` (`PageContent`)
-  - `app/src/main/java/com/app/ralaunch/feature/main/MainActivityCompose.kt` (slot wiring + wrapper logic).
+  - `app/src/main/java/com/app/ralaunch/feature/main/ui/MainApp.kt`
+  - `app/src/main/java/com/app/ralaunch/feature/main/ui/MainActivityCompose.kt`
 
 ## 3) MVVM Snapshot
 
@@ -34,37 +34,43 @@ Concise project snapshot for landscape UI, routing, and MVVM.
   - `app/src/main/java/com/app/ralaunch/feature/main/contracts/MainContracts.kt`
   - `MainUiState`, `MainUiEvent`, `MainUiEffect`.
 - Main orchestration VM:
-  - `app/src/main/java/com/app/ralaunch/feature/main/MainViewModel.kt`
+  - `app/src/main/java/com/app/ralaunch/feature/main/vm/MainViewModel.kt`
   - state via `MutableStateFlow`, effects via `MutableSharedFlow`, event reducer via `onEvent`.
-- Shared reusable VM example:
-  - `shared/src/commonMain/kotlin/com/app/ralaunch/shared/feature/settings/SettingsViewModel.kt`
-  - same state/event/effect pattern in KMP shared layer.
+- Reusable feature VM example:
+  - `app/src/main/java/com/app/ralaunch/feature/settings/vm/SettingsViewModel.kt`
+  - same state/event/effect pattern drives settings flows inside the app module.
 - Android-specific side effects stay in wrapper composables (for example `SettingsScreenWrapper` using activity result APIs and file pickers).
 
 ## 4) Practical Placement Rules
 
-- Put reusable UI logic in `shared`.
-- Put Android/runtime integration in `app` wrappers.
-- Route contract changes happen in shared navigation files first; main page rendering and dependency wiring happen in app layer.
+- Put reusable UI logic in existing `core` or `feature` packages inside `app`.
+- Put Android/runtime integration in wrapper/activity/platform files.
+- Route contract changes happen in `core/navigation` first; main page rendering and dependency wiring happen in `feature/main`.
+- Keep role-based subpackages consistent:
+  - `.../ui` for Compose screens, wrappers, and UI helpers
+  - `.../vm` for ViewModels and state coordinators
+  - `.../model` for feature-owned models and DTO-style data shapes
+  - `.../contract` for contracts and interfaces
+  - `.../service` for concrete services, managers, and repository implementations
 - Prefer existing component families before adding new top-level UI patterns.
 
 ## 5) MD3 + Glass Design Baseline
 
 - Theme root:
-  - `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/theme/Theme.kt` (`RaLaunchTheme`)
+  - `app/src/main/java/com/app/ralaunch/core/theme/Theme.kt` (`RaLaunchTheme`)
   - dynamic light/dark color scheme generated from seed color.
 - Tokens:
   - colors: `MaterialTheme.colorScheme.*` and `RaLaunchTheme.extendedColors`
-  - typography: `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/theme/Typography.kt`
-  - shape system: `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/theme/Shape.kt`
+  - typography: `app/src/main/java/com/app/ralaunch/core/theme/Typography.kt`
+  - shape system: `app/src/main/java/com/app/ralaunch/core/theme/Shape.kt`
 - Glass primitives:
-  - `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/component/GlassComponents.kt`
+  - `app/src/main/java/com/app/ralaunch/core/ui/component/GlassComponents.kt`
   - prefer `GlassSurface` / `GlassSurfaceRegular` for blur-backed panels.
 - Existing visual language references:
-  - `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/component/AppNavigationRail.kt`
-  - `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/component/game/GameCard.kt`
-  - `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/component/game/GameDetailPanel.kt`
-  - `app/src/main/java/com/app/ralaunch/feature/main/SplashOverlay.kt`
+  - `app/src/main/java/com/app/ralaunch/feature/main/ui/AppNavigationRail.kt`
+  - `app/src/main/java/com/app/ralaunch/feature/main/ui/GameCard.kt`
+  - `app/src/main/java/com/app/ralaunch/feature/main/ui/GameDetailPanel.kt`
+  - `app/src/main/java/com/app/ralaunch/feature/main/ui/SplashOverlay.kt`
 
 ## 6) Good UI Checklist (Landscape Launcher)
 

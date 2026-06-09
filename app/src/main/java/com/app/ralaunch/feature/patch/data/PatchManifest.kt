@@ -1,6 +1,6 @@
 package com.app.ralaunch.feature.patch.data
 
-import android.util.Log
+import com.app.ralaunch.core.logging.AppLog
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
@@ -72,12 +72,12 @@ data class PatchManifest(
         // Xoa ham nhan Path, chi giu ham nhan File
         @JvmStatic
         fun fromZip(file: File): PatchManifest? {
-            Log.i(TAG, "load Patch zip, file: ${file.absolutePath}")
+            AppLog.i(TAG, "load Patch zip, file: ${file.absolutePath}")
             return try {
                 ZipFile(file).use { zip ->
                     val manifestEntry = zip.getEntry(MANIFEST_FILE_NAME)
                     if (manifestEntry == null) {
-                        Log.w(TAG, "Not found in the compressed file $MANIFEST_FILE_NAME")
+                        AppLog.w(TAG, "Not found in the compressed file $MANIFEST_FILE_NAME")
                         return null
                     }
                     zip.getInputStream(manifestEntry).use { stream ->
@@ -87,7 +87,7 @@ data class PatchManifest(
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, Log.getStackTraceString(e))
+                AppLog.w(TAG, AppLog.getStackTraceString(e))
                 null
             }
         }
@@ -122,7 +122,7 @@ data class PatchManifest(
                     }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, Log.getStackTraceString(e))
+                AppLog.w(TAG, AppLog.getStackTraceString(e))
                 null
             }
         }

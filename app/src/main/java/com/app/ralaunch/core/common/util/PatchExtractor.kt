@@ -1,6 +1,8 @@
 package com.app.ralaunch.core.common.util
 
 import android.content.Context
+import com.app.ralaunch.core.di.contract.IGameRepositoryServiceV3
+import com.app.ralaunch.core.logging.AppLog
 import com.app.ralaunch.core.platform.runtime.AssemblyPatcher
 import com.app.ralaunch.shared.core.contract.repository.GameRepositoryV2
 import org.koin.java.KoinJavaComponent
@@ -37,14 +39,14 @@ object PatchExtractor {
                 extractAndApplyMonoMod(context)
                 prefs.edit().putBoolean(KEY_MONOMOD_EXTRACTED, true).apply()
             } catch (e: Exception) {
-                AppLogger.error(TAG, "提取失败", e)
+                AppLog.e(TAG, "提取失败", e)
             }
         }.start()
     }
 
     private fun extractAndApplyMonoMod(context: Context) {
         val monoModDir = File(context.filesDir, "MonoMod")
-        if (monoModDir.exists()) FileUtils.deleteDirectoryRecursively(monoModDir)
+        if (monoModDir.exists()) FileUtils.deleteDirectoryRecursivelyWithinRoot(monoModDir, context.filesDir)
         monoModDir.mkdirs()
 
         // ... use standard Android ZipInputStream ...
@@ -95,8 +97,8 @@ object PatchExtractor {
 
     private fun applyMonoModToAllGames(context: Context, monoModDir: File) {
         try {
-            val gameRepository: GameRepositoryV2? = try {
-                KoinJavaComponent.getOrNull(GameRepositoryV2::class.java)
+            val gameRepository: IGameRepositoryServiceV3? = try {
+                KoinJavaComponent.getOrNull(IGameRepositoryServiceV3::class.java)
             } catch (e: Exception) { null }
             if (gameRepository == null) return
             val games = gameRepository.games.value
@@ -107,7 +109,7 @@ object PatchExtractor {
                 AssemblyPatcher.applyMonoModPatches(context, gameDir, false)
             }
         } catch (e: Exception) {
-            AppLogger.error(TAG, "应用 MonoMod 补丁失败", e)
+            AppLog.e(TAG, "应用 MonoMod 补丁失败", e)
         }
     }
 

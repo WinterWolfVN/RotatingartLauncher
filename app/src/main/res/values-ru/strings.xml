@@ -33,18 +33,9 @@
     <string name="confirm">Подтвердить</string>
     <string name="close">Закрыть</string>
 
-    <!-- Error Dialog -->
-    <string name="error_title_default">Ошибка</string>
+    <!-- Errors -->
     <string name="error_message_default">Произошла ошибка</string>
     <string name="error_operation_failed">Операция не удалась</string>
-    <string name="error_details_title">Детали ошибки</string>
-    <string name="error_show_details">Показать детали</string>
-    <string name="error_hide_details">Скрыть детали</string>
-    <string name="error_copy">Копировать</string>
-    <string name="error_copy_success">Скопировано в буфер обмена</string>
-    <string name="error_icon_desc">Иконка ошибки</string>
-    <string name="error_crash_title">Сбой приложения</string>
-    <string name="error_fatal_title">Критическая ошибка</string>
 
     <!-- Import Game -->
     <string name="import_select_game_file">Выбрать файл игры</string>
@@ -356,6 +347,8 @@
     <string name="main_shortcut_removed">Ярлык удален из списка</string>
     <string name="main_game_deleted">Игра и файлы удалены</string>
     <string name="main_game_deleted_partial">Игра удалена из списка, но некоторые файлы могут остаться</string>
+    <string name="main_permission_required_title">Требуется разрешение</string>
+    <string name="main_permission_required_message">Достаточный доступ к файлам не предоставлен. Включите требуемое разрешение на хранение, чтобы лаунчер мог читать и управлять файлами игр.</string>
 
     <!-- MainImportDelegate Messages -->
     <string name="import_added_to_list">Добавлено в список игр</string>
@@ -918,6 +911,7 @@
     <string name="runtime_selector_title_text">Версия .NET Runtime</string>
     <string name="runtime_current_version">Текущая версия</string>
     <string name="runtime_select_version">Выбрать версию</string>
+    <string name="runtime_not_installed">Не установлено</string>
     
     <!-- Two Factor Dialog -->
     <string name="two_factor_email_title">Проверка электронной почты</string>
@@ -1777,6 +1771,8 @@
     <string name="settings_controls_vibration_strength_title">Сила вибрации</string>
     <string name="settings_game_performance_section">Производительность</string>
     <string name="settings_game_low_latency_audio_subtitle">Уменьшите задержку звука. Может увеличить энергопотребление</string>
+    <string name="settings_game_runtime_section">Среда выполнения</string>
+    <string name="settings_game_runtime_subtitle">Выберите версию .NET Runtime по умолчанию для игр</string>
     <string name="settings_game_renderer_section">Рендеринг</string>
     <string name="download_enter">Входить</string>
     <string name="gog_no_linux_version">У этой игры нет версии для Linux.</string>
@@ -1802,6 +1798,8 @@
     <string name="main_edit_display_info">Обновить отображаемую информацию</string>
     <string name="main_renderer_optional">Средство рендеринга (необязательно)</string>
     <string name="main_renderer_override">Переопределение рендерера</string>
+    <string name="main_dotnet_runtime_optional">Среда выполнения .NET (необязательно)</string>
+    <string name="main_dotnet_runtime_override">Переопределение среды выполнения .NET</string>
     <string name="main_control_editor_placeholder">Редактор макетов</string>
     <string name="main_download">Скачать</string>
     <string name="main_announcements">Объявления</string>
@@ -1825,6 +1823,8 @@
     <string name="main_update_latest_version">Последняя версия: %1$s</string>
     <string name="main_update_action_open_release">Открыть обновление</string>
     <string name="main_update_action_download">Скачать обновление</string>
+    <string name="main_update_action_download_github">Скачать через GitHub</string>
+    <string name="main_update_action_download_cloud">Скачать по облачной ссылке</string>
     <string name="main_update_action_ignore_version">Игнорировать эту версию</string>
     <string name="main_update_status_starting">Подготовка загрузки</string>
     <string name="main_update_status_downloading">Загрузка обновления</string>
@@ -1845,10 +1845,15 @@
     <string name="renderer_select">Выберите рендерер</string>
     <string name="renderer_follow_global_settings">Следуйте глобальным настройкам</string>
     <string name="renderer_follow_global">Следуйте за глобальным</string>
+    <string name="runtime_follow_global_settings">Следовать глобальным настройкам</string>
+    <string name="runtime_follow_global">Следовать глобальным</string>
     <string name="announcement_load_content_failed">Не удалось загрузить контент</string>
     <string name="announcement_load_failed">Не удалось загрузить объявления.</string>
     <string name="announcement_empty">Нет объявлений</string>
     <string name="announcement_no_content">Нет контента</string>
+    <string name="main_announcement_dialog_title">Новое объявление</string>
+    <string name="main_announcement_dialog_action_learn_more">Подробнее</string>
+    <string name="main_announcement_dialog_action_view">Открыть объявление</string>
     <string name="init_runtime_components_title">Компоненты среды выполнения</string>
     <string name="init_runtime_components_subtitle">Установите компоненты среды выполнения, необходимые для игр.</string>
     <string name="init_runtime_components_hint">Для первого запуска требуется извлечение времени выполнения. Обычно это занимает всего несколько минут.</string>

@@ -5,15 +5,13 @@ Load this file before planning or modifying code in this repository.
 ## Project Identity
 
 - Type: Android launcher for .NET/FNA-style games.
-- Primary modules: `:app` and `:shared`.
+- Primary module: `:app`.
 - Root name: `Rotating-art-Launcher`.
 - Main package namespace: `com.app.ralaunch`.
-- Shared package namespace: `com.app.ralaunch.shared`.
 
 ## Tech and Build Stack
 
 - Android app module with Kotlin + Compose + CMake native integration.
-- Kotlin Multiplatform shared module for common contracts, data, navigation, and UI state.
 - DI framework: Koin.
 - Coroutines + Flow for async/state.
 - Native runtime integrations under `app/src/main/cpp`.
@@ -29,7 +27,7 @@ Load this file before planning or modifying code in this repository.
 
 ## Startup and Runtime Flow
 
-1. Launcher activity from manifest: `.feature.init.InitializationActivity`.
+1. Launcher activity from manifest: `.feature.init.ui.InitializationActivity`.
 2. App process bootstrap in `RaLaunchApp`:
    - density adapter
    - Koin startup
@@ -37,7 +35,7 @@ Load this file before planning or modifying code in this repository.
    - crash capture init
    - patch extraction/install background work
 3. Initialization flow extracts required runtime/game components.
-4. Main compose UI hosted by `.feature.main.MainActivityCompose`.
+4. Main Compose UI hosted by `.feature.main.MainActivityCompose`.
 5. Game execution hosted by `.feature.game.legacy.GameActivity` in `:game` process.
 
 ## Process Model
@@ -50,28 +48,28 @@ Load this file before planning or modifying code in this repository.
 ## Module Responsibilities
 
 - `app`:
-  Android-specific app shell, platform services, runtime launchers, feature UIs, native bridge usage.
-- `shared`:
-  KMP contracts/repositories/models/theme/navigation and shared settings/file-browser/control logic.
+  Android app shell, repositories, navigation, feature UIs, platform services, runtime launchers, and native bridge usage.
 - `patches`:
   Patch projects and manifests used by patch installation/activation.
 
 ## Directory Landmarks
 
 - `app/src/main/java/com/app/ralaunch/core`:
-  infrastructure and platform integration.
+  infrastructure and platform integration, including repositories, DI, navigation, theme, and runtime services.
 - `app/src/main/java/com/app/ralaunch/feature`:
-  feature verticals (`init`, `main`, `game`, `controls`, `gog`, `patch`, `crash`, `sponsor`).
-- `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core`:
-  shared core architecture.
-- `shared/src/commonMain/kotlin/com/app/ralaunch/shared/feature`:
-  shared feature-level viewmodels/screens.
-- `shared/src/androidMain/kotlin/com/app/ralaunch/shared/core`:
-  Android implementations for shared contracts.
+  feature verticals (`init`, `main`, `game`, `controls`, `gog`, `installer`, `patch`, `settings`, `filebrowser`, `announcement`, `crash`, `sponsor`).
+- Common subpackage convention inside `core` and `feature` trees:
+  - `.../ui` for Compose screens, wrappers, and UI helpers
+  - `.../vm` for ViewModels and state coordinators
+  - `.../model` for feature-owned models, DTOs, and state/data shapes
+  - `.../contract` for contracts and interfaces
+  - `.../service` for concrete services, managers, and repository implementations
 - `app/src/main/cpp/main`, `app/src/main/cpp/dotnethost`:
   first-party native runtime bridges.
 - `app/src/main/cpp/SDL`, `FNA3D`, `gl4es`, `FAudio`:
   large vendored native source trees.
+- `app/src/main/assets`:
+  bundled control defaults and patch/runtime support assets.
 
 ## Dependency Injection Map
 
@@ -79,10 +77,10 @@ Load this file before planning or modifying code in this repository.
   `app/src/main/java/com/app/ralaunch/core/di/KoinInitializer.kt`.
 - App Android module registrations:
   `app/src/main/java/com/app/ralaunch/core/di/AppModule.kt`.
-- Shared/common registrations:
-  `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/di/SharedModule.kt`.
-- Shared Android bindings:
-  `shared/src/androidMain/kotlin/com/app/ralaunch/shared/core/di/AndroidModule.kt`.
+- Contracts:
+  `app/src/main/java/com/app/ralaunch/core/di/contract`.
+- Implementations:
+  `app/src/main/java/com/app/ralaunch/core/di/service`.
 
 ## High-Coupling Areas
 
@@ -91,15 +89,15 @@ Load this file before planning or modifying code in this repository.
 - `feature/game` + SDL integration.
 - `feature/controls` editor/render/input paths.
 - `feature/patch` + `patches` synchronization.
-- shared contracts/repositories consumed by app-side features.
+- repository contracts and implementations under `core/di`.
 
 ## Pre-Modification Read Order
 
 1. Confirm module and package boundaries with:
-   `skills/map-project-structure/scripts/project_map.sh .`
+   `scripts/project_map.sh .`
 2. Load architecture notes:
-   `skills/map-project-structure/references/rotatingart-architecture.md`
+   `references/rotatingart-architecture.md`
 3. For any specific target folder, load:
-   `skills/analyze-subcomponents/references/subcomponent-implementation-details.md`
+   `../analyze-subcomponents/references/subcomponent-implementation-details.md`
 4. Run component profiling:
-   `skills/analyze-subcomponents/scripts/component_profile.sh <target> .`
+   `../analyze-subcomponents/scripts/component_profile.sh <target> .`

@@ -1,6 +1,6 @@
 ---
 name: ui-architecture
-description: Project-specific UI implementation guideline for RotatingartLauncher. Use when adding, refactoring, or reviewing launcher UI so changes stay aligned with the app's landscape-first design, custom NavState/Screen routing, and MVVM state-event-effect patterns across app and shared modules.
+description: Project-specific UI implementation guideline for RotatingartLauncher. Use when adding, refactoring, or reviewing launcher UI so changes stay aligned with the app's landscape-first design, custom NavState/Screen routing, and MVVM state-event-effect patterns across the current app-only codebase.
 ---
 
 # UI Architecture
@@ -8,8 +8,9 @@ description: Project-specific UI implementation guideline for RotatingartLaunche
 ## Quick Start
 
 1. Confirm where the UI belongs:
-   - `shared/src/commonMain/...` for reusable/domain UI and ViewModel logic.
-   - `app/src/main/java/...` for Android runtime integration (permissions, intents, activity launchers, file system APIs).
+   - `app/src/main/java/com/app/ralaunch/core/...` for app-wide navigation, theme, reusable components, dialogs, and infrastructure.
+   - `app/src/main/java/com/app/ralaunch/feature/...` for feature-specific UI, viewmodels, wrappers, and user flows.
+   - Within those trees, place Compose code under `.../ui`, ViewModels under `.../vm`, feature-owned models under `.../model`, contracts/interfaces under `.../contract`, and concrete implementations under `.../service` where applicable.
 2. Confirm landscape constraints before layout work (manifest + base activity).
 3. Follow existing routing contracts (`Screen`, `NavDestination`, `NavState`) instead of introducing a parallel navigation stack.
 4. Follow state/event/effect MVVM flow before adding mutable local state.
@@ -20,21 +21,23 @@ description: Project-specific UI implementation guideline for RotatingartLaunche
 Before proposing UI changes, read these files first:
 
 1. `app/src/main/AndroidManifest.xml`
-2. `app/src/main/java/com/app/ralaunch/core/ui/base/BaseActivity.kt`
-3. `app/src/main/java/com/app/ralaunch/feature/main/MainActivityCompose.kt`
-4. `app/src/main/java/com/app/ralaunch/feature/main/MainApp.kt`
-5. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/navigation/NavRoutes.kt`
-6. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/navigation/AppNavHost.kt`
-7. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/navigation/NavigationExtensions.kt`
+2. `app/src/main/java/com/app/ralaunch/core/ui/BaseActivity.kt`
+3. `app/src/main/java/com/app/ralaunch/feature/main/ui/MainActivityCompose.kt`
+4. `app/src/main/java/com/app/ralaunch/feature/main/ui/MainApp.kt`
+5. `app/src/main/java/com/app/ralaunch/core/navigation/NavRoutes.kt`
+6. `app/src/main/java/com/app/ralaunch/core/navigation/AppNavHost.kt`
+7. `app/src/main/java/com/app/ralaunch/core/navigation/NavigationExtensions.kt`
 8. `app/src/main/java/com/app/ralaunch/feature/main/contracts/MainContracts.kt`
-9. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/feature/settings/SettingsViewModel.kt`
-10. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/component/game/GameListContent.kt`
-11. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/theme/Theme.kt`
-12. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/theme/Color.kt`
-13. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/theme/Shape.kt`
-14. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/theme/Typography.kt`
-15. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/component/GlassComponents.kt`
-16. `shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/component/AppNavigationRail.kt`
+9. `app/src/main/java/com/app/ralaunch/feature/settings/vm/SettingsViewModel.kt`
+10. `app/src/main/java/com/app/ralaunch/feature/main/ui/GameListContent.kt`
+11. `app/src/main/java/com/app/ralaunch/core/theme/Theme.kt`
+12. `app/src/main/java/com/app/ralaunch/core/theme/Color.kt`
+13. `app/src/main/java/com/app/ralaunch/core/theme/Shape.kt`
+14. `app/src/main/java/com/app/ralaunch/core/theme/Typography.kt`
+15. `app/src/main/java/com/app/ralaunch/core/ui/component/GlassComponents.kt`
+16. `app/src/main/java/com/app/ralaunch/feature/main/ui/AppNavigationRail.kt`
+17. `app/src/main/java/com/app/ralaunch/feature/settings/ui/SettingsScreenWrapper.kt`
+18. `app/src/main/java/com/app/ralaunch/feature/filebrowser/ui/FileBrowserScreenWrapper.kt`
 
 For deeper project context, load:
 - `../map-project-structure/references/rotatingart-architecture.md`
@@ -52,7 +55,7 @@ For deeper project context, load:
 1. Routing is custom and state-driven (`NavState`), not Navigation Compose `NavController`.
 2. Add new routes to `Screen` first (`NavRoutes.kt`).
 3. If the screen is a primary rail tab, add/update `NavDestination` too.
-4. Render route content in `MainApp` page routing (`PageContent`) and wire Android-specific dependencies in `MainActivityCompose` wrapper slots.
+4. Render route content in `MainApp` page routing and wire Android-specific dependencies in `MainActivityCompose` wrapper slots.
 5. Keep back behavior consistent with `handleBackPress()`:
    - Pop sub-screen stack first.
    - If on a non-games root destination, return to games before exiting.
@@ -64,12 +67,18 @@ For deeper project context, load:
    - `UiEvent` input to ViewModel
    - `UiEffect` for one-time side effects
 2. Keep domain/business logic in repository/use-case layers, not Composables.
-3. Keep Android integration in app wrappers:
+3. Keep Android integration in wrapper/activity/platform files:
    - activity result launchers
    - permission flows
    - intents/toasts/navigation side effects
-4. Use shared ViewModels for cross-platform reusable features; use app ViewModels for Android-only orchestration.
+4. Reuse existing feature viewmodels and app-level contracts before adding new state holders.
 5. Avoid new legacy MVP-style code for new UI work; align with existing Compose + ViewModel paths.
+6. Keep package placement predictable:
+   - Compose screens, wrappers, and UI helpers in `.../ui`
+   - ViewModels and state reducers in `.../vm`
+   - feature-owned models, DTOs, and state/data shapes in `.../model`
+   - contracts and interfaces in `.../contract`
+   - concrete services, managers, and repository implementations in `.../service`
 
 ## MD3 Design Rules
 
@@ -117,11 +126,12 @@ For deeper project context, load:
    - Main tab (`NavDestination`)
    - Sub-screen (`Screen` with back stack)
    - Dialog/overlay in current screen
-2. Reuse existing composables/components before creating new ones (`AppNavigationRail`, `GameListContent`, settings/file-browser shared UI).
+2. Reuse existing composables/components before creating new ones (`AppNavigationRail`, `GameListContent`, `SettingsScreen`, `FileBrowserScreen`).
 3. Add/extend `UiState`, `UiEvent`, `UiEffect` contracts before wiring UI interactions.
 4. Apply MD3 token decisions (color/type/shape/surface hierarchy) before finalizing visuals.
-5. Keep platform-specific code in app wrappers and shared logic in `shared` module.
-6. Validate behavior:
+5. Keep platform-specific code in wrappers/activities/platform packages and reusable UI/state in existing `core` or `feature` packages inside `app`.
+6. Place new files by role: Compose code in `.../ui`, ViewModels in `.../vm`, models in `.../model`, contracts in `.../contract`, and concrete implementations in `.../service` unless the surrounding feature already has a stricter established layout.
+7. Validate behavior:
    - route transitions
    - back behavior
    - state restoration after resume/config changes
@@ -133,7 +143,7 @@ For deeper project context, load:
 
 When using this skill for implementation guidance, provide:
 
-1. Target files and module boundaries (`app` vs `shared`).
+1. Target files and package boundaries (`core` vs `feature`, plus any wrapper/activity/platform splits).
 2. Routing impact (`Screen`/`NavDestination`/`PageContent` changes).
 3. MVVM contract impact (`UiState`/`UiEvent`/`UiEffect` + ViewModel updates).
 4. Landscape layout impact (pane structure, width ratios, overflow handling).

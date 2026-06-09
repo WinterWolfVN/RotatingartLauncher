@@ -1,6 +1,6 @@
 package com.app.ralaunch.core.common.util
 
-import android.util.Log
+import com.app.ralaunch.core.logging.AppLog
 import java.io.File
 import java.io.IOException
 
@@ -132,4 +132,8 @@ object FileUtils {
             false
         }
     }
+
+    private fun normalizePath(path: Path?): Path? = path?.absolute()?.normalize()
+
+    private fun isStrictChildOf(path: Path, root: Path): Boolean = path != root && path.startsWith(root)
 }

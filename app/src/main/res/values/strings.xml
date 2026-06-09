@@ -34,18 +34,9 @@
     <string name="confirm">Confirm</string>
     <string name="close">Close</string>
 
-    <!-- Error Dialog -->
-    <string name="error_title_default">Error</string>
+    <!-- Errors -->
     <string name="error_message_default">An error occurred</string>
     <string name="error_operation_failed">Operation failed</string>
-    <string name="error_details_title">Error Details</string>
-    <string name="error_show_details">Show Details</string>
-    <string name="error_hide_details">Hide Details</string>
-    <string name="error_copy">Copy</string>
-    <string name="error_copy_success">Copied to clipboard</string>
-    <string name="error_icon_desc">Error icon</string>
-    <string name="error_crash_title">Application Crash</string>
-    <string name="error_fatal_title">Fatal Error</string>
 
     <!-- Import Game -->
     <string name="import_select_game_file">Select Game File</string>
@@ -375,6 +366,8 @@
     <string name="main_shortcut_removed">Shortcut removed from list</string>
     <string name="main_game_deleted">Game and files deleted</string>
     <string name="main_game_deleted_partial">Game removed from list, but some files may remain</string>
+    <string name="main_permission_required_title">Permission required</string>
+    <string name="main_permission_required_message">Sufficient file access has not been granted. Please turn on the required storage permission so the launcher can read and manage game files.</string>
 
     <!-- MainImportDelegate Messages -->
     <string name="import_added_to_list">Added to game list</string>
@@ -976,6 +969,7 @@
     <string name="runtime_selector_title_text">.NET Runtime Version</string>
     <string name="runtime_current_version">Current Version</string>
     <string name="runtime_select_version">Select Version</string>
+    <string name="runtime_not_installed">Not installed</string>
     
     <!-- Two Factor Dialog -->
     <string name="two_factor_email_title">Email Verification</string>
@@ -1801,6 +1795,8 @@
     <string name="settings_controls_vibration_strength_title">Vibration Strength</string>
     <string name="settings_game_performance_section">Performance</string>
     <string name="settings_game_low_latency_audio_subtitle">Reduce audio latency. May increase power usage</string>
+    <string name="settings_game_runtime_section">Runtime</string>
+    <string name="settings_game_runtime_subtitle">Set the default .NET runtime version for games</string>
     <string name="settings_game_renderer_section">Rendering</string>
 
     <string name="download_enter">Enter</string>
@@ -1828,6 +1824,8 @@
     <string name="main_edit_display_info">Update display info</string>
     <string name="main_renderer_optional">Renderer (Optional)</string>
     <string name="main_renderer_override">Renderer Override</string>
+    <string name="main_dotnet_runtime_optional">.NET Runtime (Optional)</string>
+    <string name="main_dotnet_runtime_override">.NET Runtime Override</string>
     <string name="main_control_editor_placeholder">Layout Editor</string>
     <string name="main_download">Download</string>
     <string name="main_announcements">Announcements</string>
@@ -1873,6 +1871,8 @@
     <string name="renderer_select">Select Renderer</string>
     <string name="renderer_follow_global_settings">Follow global settings</string>
     <string name="renderer_follow_global">Follow Global</string>
+    <string name="runtime_follow_global_settings">Follow global settings</string>
+    <string name="runtime_follow_global">Follow Global</string>
 
     <string name="announcement_load_content_failed">Failed to load content</string>
     <string name="announcement_load_failed">Failed to load announcements</string>

@@ -1,6 +1,6 @@
 package com.app.ralaunch.feature.main
 
-import com.app.ralaunch.shared.core.model.domain.GameItem
+import com.app.ralaunch.core.model.GameItem
 
 /**
  * 主界面 MVP 契约

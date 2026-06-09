@@ -19,14 +19,15 @@ cd "$ROOT"
 
 SEARCH_BASES=(
   "app/src/main/java/com/app/ralaunch"
-  "shared/src/commonMain/kotlin/com/app/ralaunch/shared"
-  "shared/src/androidMain/kotlin/com/app/ralaunch/shared"
   "app/src/main/cpp"
+  "patches"
+  "app/src/main/assets"
 )
 
 resolve_target() {
   local input="$1"
   local -a candidates=()
+  local -a exact_candidates=()
   local base
 
   if [ -e "$input" ]; then
@@ -36,12 +37,28 @@ resolve_target() {
 
   for base in "${SEARCH_BASES[@]}"; do
     [ -d "$base" ] || continue
+    if [ -e "$base/$input" ]; then
+      exact_candidates+=("${base}/${input}")
+    fi
     while IFS= read -r path; do
       [ -n "$path" ] && candidates+=("${path#./}")
     done < <(
       find "$base" \( -type d -o -type f \) -path "*${input}*" | sort || true
     )
   done
+
+  mapfile -t exact_candidates < <(printf '%s\n' "${exact_candidates[@]}" | awk '!seen[$0]++' || true)
+
+  if [ "${#exact_candidates[@]}" -eq 1 ]; then
+    printf '%s\n' "${exact_candidates[0]#./}"
+    return 0
+  fi
+
+  if [ "${#exact_candidates[@]}" -gt 1 ]; then
+    echo "error: ambiguous component '$input'; refine the selector" >&2
+    printf '  %s\n' "${exact_candidates[@]}" >&2
+    exit 2
+  fi
 
   if [ "${#candidates[@]}" -eq 0 ]; then
     echo "error: no component matched '$input'" >&2
@@ -61,11 +78,11 @@ resolve_target() {
 
 classify_target() {
   case "$1" in
-    app/src/main/java/com/app/ralaunch/feature/*) echo "android-feature" ;;
-    app/src/main/java/com/app/ralaunch/core/*) echo "android-core" ;;
-    shared/src/commonMain/*) echo "shared-common" ;;
-    shared/src/androidMain/*) echo "shared-android" ;;
+    app/src/main/java/com/app/ralaunch/feature/*) echo "app-feature" ;;
+    app/src/main/java/com/app/ralaunch/core/*) echo "app-core" ;;
     app/src/main/cpp/*) echo "native-cpp" ;;
+    patches/*) echo "patch-assets" ;;
+    app/src/main/assets/*) echo "bundled-assets" ;;
     *) echo "other" ;;
   esac
 }
@@ -186,7 +203,7 @@ if [ "${#SOURCE_FILES[@]}" -gt 0 ]; then
   else
     SEARCH_INPUTS=()
     [ -d app/src/main/java ] && SEARCH_INPUTS+=("app/src/main/java")
-    [ -d shared/src ] && SEARCH_INPUTS+=("shared/src")
+    [ -d patches ] && SEARCH_INPUTS+=("patches")
 
     if [ "${#SEARCH_INPUTS[@]}" -eq 0 ]; then
       echo "(no search roots found)"

@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.app.ralaunch.R
-import com.app.ralaunch.shared.core.model.ui.GogGameUi
+import com.app.ralaunch.feature.gog.model.GogGameUi
 
 /**
  * GOG 游戏详情面板组件

@@ -11,16 +11,16 @@ import com.app.ralaunch.R
 import com.app.ralaunch.feature.controls.bridges.SDLInputBridge
 import com.app.ralaunch.feature.controls.editors.ui.GameControlsOverlay
 import com.app.ralaunch.feature.controls.packs.ControlPackManager
-import com.app.ralaunch.feature.controls.views.ControlLayout
+import com.app.ralaunch.feature.controls.ui.ControlLayout
 import com.app.ralaunch.core.common.SettingsAccess
-import com.app.ralaunch.core.common.util.AppLogger
-import com.app.ralaunch.feature.main.background.view.FPSDisplayView
+import com.app.ralaunch.core.logging.AppLog
+import com.app.ralaunch.feature.main.ui.background.FPSDisplayView
 import org.koin.java.KoinJavaComponent
 import org.libsdl.app.SDLSurface
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.MaterialTheme
 import com.app.ralaunch.core.common.DynamicColorManager
-import com.app.ralaunch.shared.core.theme.RaLaunchTheme
+import com.app.ralaunch.core.theme.RaLaunchTheme
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
@@ -54,16 +54,12 @@ class GameVirtualControlsManager {
         activity: Activity,
         sdlLayout: ViewGroup?,
         sdlSurface: SDLSurface?,
-        disableSDLTextInput: Runnable,
         onExitGame: () -> Unit = {}
     ) {
         try {
             settingsManager = SettingsAccess
             inputBridge = SDLInputBridge()
             onExitGameCallback = onExitGame
-
-            val metrics = activity.resources.displayMetrics
-            SDLInputBridge.setScreenSize(metrics.widthPixels, metrics.heightPixels)
 
             controlLayout = ControlLayout(activity).apply {
                 this.inputBridge = this@GameVirtualControlsManager.inputBridge
@@ -82,7 +78,6 @@ class GameVirtualControlsManager {
 
                 sdlSurface?.let { surface ->
                     controlLayout?.setSDLSurface(surface)
-                    surface.setVirtualControlsManager(this)
                 }
 
                 // 添加 FPS 显示
@@ -94,11 +89,9 @@ class GameVirtualControlsManager {
 
                 // 添加 Compose 悬浮菜单
                 setupComposeOverlay(activity, layout)
-
-                layout.postDelayed(disableSDLTextInput, 2000)
             }
         } catch (e: Exception) {
-            AppLogger.error("GameVirtualControls", "Failed to initialize virtual controls", e)
+            AppLog.e("GameVirtualControls", "Failed to initialize virtual controls", e)
         }
     }
 
@@ -234,7 +227,7 @@ class GameVirtualControlsManager {
 
     fun stop() {
         fpsDisplayView?.stop()
-        com.app.ralaunch.core.common.console.ConsoleManager.stop()
+        com.app.ralaunch.core.common.ConsoleManager.stop()
     }
 
     private fun disableClippingRecursive(view: View) {

@@ -31,7 +31,7 @@
         path="games/" />
     
     <!-- 运行时目录 -->
-    <external-files-path
+    <files-path
         name="runtimes"
         path="runtimes/" />
     
@@ -50,4 +50,3 @@
         name="downloads"
         path="downloads/" />
 </paths>
-

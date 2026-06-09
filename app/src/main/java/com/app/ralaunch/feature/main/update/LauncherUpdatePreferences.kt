@@ -1,7 +1,7 @@
 package com.app.ralaunch.feature.main.update
 
 import android.content.Context
-import com.app.ralaunch.shared.core.platform.AppConstants
+import com.app.ralaunch.core.platform.AppConstants
 
 object LauncherUpdatePreferences {
     private const val KEY_IGNORED_UPDATE_VERSION = "ignored_update_version"

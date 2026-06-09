@@ -1,9 +1,10 @@
 package com.app.ralaunch.core.platform.runtime.dotnet
 
 import com.app.ralaunch.core.common.SettingsAccess
+import com.app.ralaunch.core.logging.AppLog
+import com.app.ralaunch.core.di.contract.IRuntimeManagerServiceV2
 import com.app.ralaunch.core.platform.runtime.EnvVarsManager
-import com.app.ralaunch.core.common.util.AppLogger
-import com.app.ralaunch.core.common.util.RuntimePreference
+import org.koin.java.KoinJavaComponent
 
 object DotNetLauncher {
     const val TAG = "DotNetLauncher"
@@ -28,15 +29,26 @@ object DotNetLauncher {
      * @param args 传递给程序集的参数
      * @return 程序集退出代码
      */
-    fun hostfxrLaunch(assemblyPath: String, args: Array<String>): Int {
-        val dotnetRoot = RuntimePreference.getDotnetRootPath() ?: run {
-            AppLogger.error(TAG, "Failed to get dotnet root path")
+    fun hostfxrLaunch(
+        assemblyPath: String,
+        args: Array<String>,
+        dotNetRuntimeVersionOverride: String? = null
+    ): Int {
+        val runtimeManager: IRuntimeManagerServiceV2 =
+            KoinJavaComponent.get(IRuntimeManagerServiceV2::class.java)
+        val dotnetRuntime = resolveDotNetRuntime(
+            runtimeManager = runtimeManager,
+            versionOverride = dotNetRuntimeVersionOverride
+        ) ?: run {
+            AppLog.e(TAG, "Failed to resolve selected dotnet runtime")
             return -1
         }
+        val dotnetRoot = dotnetRuntime.rootPath.toString()
 
         // Implementation to launch .NET assembly
-        AppLogger.info(TAG, "Launching .NET assembly at $assemblyPath with arguments: ${args.joinToString(", ")}")
-        AppLogger.info(TAG, "Using .NET root path: $dotnetRoot")
+        AppLog.i(TAG, "Launching .NET assembly at $assemblyPath with arguments: ${args.joinToString(", ")}")
+        AppLog.i(TAG, "Using .NET root path: $dotnetRoot")
+        AppLog.i(TAG, "Using .NET runtime version: ${dotnetRuntime.version}")
 
         EnvVarsManager.quickSetEnvVar("DOTNET_ROOT", dotnetRoot)
         CoreCLRConfig.applyConfigAndInitHooking()
@@ -46,7 +58,7 @@ object DotNetLauncher {
         }
 
         val compatEnvSnapshot = if (compatEnabled) {
-            AppLogger.warn(
+            AppLog.w(
                 TAG,
                 "Applying Xiaomi CoreCLR compatibility env before first hostfxr initialization"
             )
@@ -61,15 +73,15 @@ object DotNetLauncher {
             EnvVarsManager.quickSetEnvVar("RAL_CORECLR_XIAOMI_COMPAT", null)
         }
 
-        DotNetNativeLibraryLoader.loadAllLibraries(dotnetRoot)
+        DotNetNativeLibraryLoader.loadAllLibraries(dotnetRoot, dotnetRuntime.version)
 
         try {
             val exitCode = nativeDotNetLauncherHostfxrLaunch(assemblyPath, args, dotnetRoot)
             if (exitCode == 0) {
-                AppLogger.info(TAG, "Successfully launched .NET assembly.")
+                AppLog.i(TAG, "Successfully launched .NET assembly.")
             } else {
                 val errorMsg = getNativeDotNetLauncherHostfxrLastErrorMsg()
-                AppLogger.error(
+                AppLog.e(
                     TAG,
                     "Failed to launch .NET assembly. Exit code: $exitCode, Error: $errorMsg"
                 )
@@ -103,6 +115,27 @@ object DotNetLauncher {
 
     private fun restoreXiaomiCoreClrCompatEnv(snapshot: Map<String, String?>) {
         EnvVarsManager.quickSetEnvVars(snapshot)
+    }
+
+    private fun resolveDotNetRuntime(
+        runtimeManager: IRuntimeManagerServiceV2,
+        versionOverride: String?
+    ): IRuntimeManagerServiceV2.InstalledRuntime? {
+        val normalizedOverride = versionOverride?.trim()?.takeIf { it.isNotEmpty() }
+        if (normalizedOverride != null) {
+            val overriddenRuntime = runtimeManager
+                .getInstalledRuntimes(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
+                .firstOrNull { it.version == normalizedOverride }
+            if (overriddenRuntime != null) {
+                AppLog.i(TAG, "Using per-game .NET runtime override: $normalizedOverride")
+                return overriddenRuntime
+            }
+            AppLog.w(
+                TAG,
+                "Requested .NET runtime override is not installed: $normalizedOverride, falling back to selected runtime"
+            )
+        }
+        return runtimeManager.getSelectedRuntime(IRuntimeManagerServiceV2.RuntimeType.DOTNET)
     }
 
     private external fun getNativeDotNetLauncherHostfxrLastErrorMsg(): String

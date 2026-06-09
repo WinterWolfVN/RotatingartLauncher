@@ -1,9 +1,9 @@
 package com.app.ralaunch.core.platform.runtime
 
 import android.content.Context
-import com.app.ralaunch.core.common.util.AppLogger
-import com.app.ralaunch.core.platform.install.extractors.BasicSevenZipExtractor
-import com.app.ralaunch.core.platform.install.extractors.ExtractorCollection
+import com.app.ralaunch.core.logging.AppLog
+import com.app.ralaunch.core.extractor.BasicSevenZipExtractor
+import com.app.ralaunch.core.extractor.ExtractorCollection
 import com.app.ralaunch.core.common.util.TemporaryFileAcquirer
 import org.koin.java.KoinJavaComponent
 import java.io.File

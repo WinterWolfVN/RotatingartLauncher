@@ -1,6 +1,6 @@
 package com.app.ralaunch.core.platform.runtime.dotnet
 
-import android.util.Log
+import com.app.ralaunch.core.logging.AppLog
 import java.io.File
 // ... REMOVED: import java.nio.file.Paths to prevent Android 7 crash ...
 
@@ -18,18 +18,18 @@ object DotNetNativeLibraryLoader {
     @Synchronized
     fun loadAllLibraries(dotnetRoot: String): Boolean {
         if (isLoaded) {
-            Log.i(TAG, "Native libraries already loaded")
+            AppLog.i(TAG, "Native libraries already loaded")
             return true
         }
         return try {
             val runtimePath = findRuntimePath(dotnetRoot)
             if (runtimePath == null) {
-                Log.e(TAG, "❌ 无法找到 .NET Runtime 路径")
+                AppLog.e(TAG, "❌ 无法找到 .NET Runtime 路径")
                 return false
             }
             loadAllLibrariesInternal(runtimePath)
         } catch (e: Exception) {
-            Log.e(TAG, "❌ 加载 .NET Native 库失败", e)
+            AppLog.e(TAG, "❌ 加载 .NET Native 库失败", e)
             false
         }
     }
@@ -38,7 +38,7 @@ object DotNetNativeLibraryLoader {
     @Synchronized
     fun loadAllLibraries(dotnetRoot: String, runtimeVersion: String): Boolean {
         if (isLoaded) {
-            Log.i(TAG, "Native libraries already loaded")
+            AppLog.i(TAG, "Native libraries already loaded")
             return true
         }
         return try {
@@ -46,16 +46,16 @@ object DotNetNativeLibraryLoader {
             val runtimePath = File(File(dotnetRoot, "shared/Microsoft.NETCore.App"), runtimeVersion).absolutePath
             loadAllLibrariesInternal(runtimePath)
         } catch (e: Exception) {
-            Log.e(TAG, "❌ 加载 .NET Native 库失败", e)
+            AppLog.e(TAG, "❌ 加载 .NET Native 库失败", e)
             false
         }
     }
 
     private fun loadAllLibrariesInternal(runtimePath: String): Boolean {
-        Log.i(TAG, "========================================")
-        Log.i(TAG, "开始加载 .NET Native 库...")
-        Log.i(TAG, "Runtime 路径: $runtimePath")
-        Log.i(TAG, "========================================")
+        AppLog.i(TAG, "========================================")
+        AppLog.i(TAG, "开始加载 .NET Native 库...")
+        AppLog.i(TAG, "Runtime 路径: $runtimePath")
+        AppLog.i(TAG, "========================================")
 
         // 加载顺序非常重要
         loadLibrary(runtimePath, "libSystem.Native.so", true)
@@ -63,9 +63,9 @@ object DotNetNativeLibraryLoader {
         loadLibrary(runtimePath, "libSystem.IO.Compression.Native.so", false)
         loadLibrary(runtimePath, "libSystem.Security.Cryptography.Native.Android.so", true)
 
-        Log.i(TAG, "========================================")
-        Log.i(TAG, "✅ .NET Native 库加载完成")
-        Log.i(TAG, "========================================")
+        AppLog.i(TAG, "========================================")
+        AppLog.i(TAG, "✅ .NET Native 库加载完成")
+        AppLog.i(TAG, "========================================")
 
         isLoaded = true
         return true
@@ -77,13 +77,13 @@ object DotNetNativeLibraryLoader {
             val fullPath = File(basePath, libName).absolutePath
             Log.i(TAG, "正在加载: $libName")
             System.load(fullPath)
-            Log.i(TAG, "  ✓ $libName 加载成功")
+            AppLog.i(TAG, "  ✓ $libName 加载成功")
         } catch (e: UnsatisfiedLinkError) {
             if (required) {
-                Log.e(TAG, "  ✗ $libName 加载失败 (必需库)", e)
+                AppLog.e(TAG, "  ✗ $libName 加载失败 (必需库)", e)
                 throw e
             } else {
-                Log.w(TAG, "  ⚠ $libName 加载失败 (可选库): ${e.message}")
+                AppLog.w(TAG, "  ⚠ $libName 加载失败 (可选库): ${e.message}")
             }
         }
     }
@@ -92,13 +92,15 @@ object DotNetNativeLibraryLoader {
         return try {
             val runtimeDir = File(dotnetRoot, "shared/Microsoft.NETCore.App")
             if (!runtimeDir.exists() || !runtimeDir.isDirectory) {
-                Log.e(TAG, "Runtime directory not found: ${runtimeDir.absolutePath}")
+                AppLog.e(TAG, "Runtime directory not found: ${runtimeDir.absolutePath}")
                 return null
             }
 
-            val versions = runtimeDir.list()
+            val versions = runtimeDir.list()?.sortedWith { left, right ->
+                compareVersions(right, left)
+            }
             if (versions.isNullOrEmpty()) {
-                Log.e(TAG, "No runtime versions found in: ${runtimeDir.absolutePath}")
+                AppLog.e(TAG, "No runtime versions found in: ${runtimeDir.absolutePath}")
                 return null
             }
 
@@ -108,8 +110,22 @@ object DotNetNativeLibraryLoader {
             // ... REPLACED: Paths.get(...) with standard File constructors ...
             File(runtimeDir, version).absolutePath
         } catch (e: Exception) {
-            Log.e(TAG, "查找运行时路径失败", e)
+            AppLog.e(TAG, "查找运行时路径失败", e)
             null
         }
+    }
+
+    private fun compareVersions(left: String, right: String): Int {
+        val leftParts = left.split(".").map { it.toIntOrNull() ?: 0 }
+        val rightParts = right.split(".").map { it.toIntOrNull() ?: 0 }
+        val maxLength = maxOf(leftParts.size, rightParts.size)
+        for (index in 0 until maxLength) {
+            val leftPart = leftParts.getOrElse(index) { 0 }
+            val rightPart = rightParts.getOrElse(index) { 0 }
+            if (leftPart != rightPart) {
+                return leftPart.compareTo(rightPart)
+            }
+        }
+        return 0
     }
 }

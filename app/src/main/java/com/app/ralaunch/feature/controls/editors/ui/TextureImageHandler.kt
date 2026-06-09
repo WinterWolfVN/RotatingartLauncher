@@ -2,11 +2,12 @@ package com.app.ralaunch.feature.controls.editors.ui
 
 import android.content.Context
 import android.net.Uri
+import com.app.ralaunch.core.logging.AppLog
 import com.app.ralaunch.feature.controls.ControlData
 import com.app.ralaunch.feature.controls.packs.ControlPackManager
 import com.app.ralaunch.feature.controls.textures.TextureConfig
 import com.app.ralaunch.feature.controls.textures.TextureLoader
-import com.app.ralaunch.feature.controls.views.ControlLayout as ControlLayoutView
+import com.app.ralaunch.feature.controls.ui.ControlLayout as ControlLayoutView
 import java.io.File
 import java.io.FileOutputStream
 
@@ -96,6 +97,6 @@ internal fun handleImagePicked(
             onControlUpdated(updated)
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        AppLog.e("TextureImageHandler", "Failed to apply imported texture", e)
     }
 }

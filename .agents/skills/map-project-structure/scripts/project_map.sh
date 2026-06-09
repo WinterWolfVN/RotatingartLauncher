@@ -71,10 +71,10 @@ ENTRY_FILES=(
   "app/src/main/java/com/app/ralaunch/RaLaunchApp.kt"
   "app/src/main/java/com/app/ralaunch/core/di/KoinInitializer.kt"
   "app/src/main/java/com/app/ralaunch/core/di/AppModule.kt"
-  "app/src/main/java/com/app/ralaunch/feature/init/InitializationActivity.kt"
-  "app/src/main/java/com/app/ralaunch/feature/main/MainActivityCompose.kt"
-  "shared/src/commonMain/kotlin/com/app/ralaunch/shared/core/di/SharedModule.kt"
-  "shared/src/androidMain/kotlin/com/app/ralaunch/shared/core/di/AndroidModule.kt"
+  "app/src/main/java/com/app/ralaunch/feature/init/ui/InitializationActivity.kt"
+  "app/src/main/java/com/app/ralaunch/feature/main/ui/MainActivityCompose.kt"
+  "app/src/main/java/com/app/ralaunch/feature/game/ui/legacy/GameActivity.kt"
+  "app/src/main/java/com/app/ralaunch/core/navigation/NavRoutes.kt"
 )
 for path in "${ENTRY_FILES[@]}"; do
   if [ -e "$path" ]; then
@@ -149,30 +149,22 @@ if [ -d "$APP_ROOT" ]; then
 fi
 echo
 
-print_section "Shared KMP Layout"
-SHARED_COMMON="shared/src/commonMain/kotlin/com/app/ralaunch/shared"
-SHARED_ANDROID="shared/src/androidMain/kotlin/com/app/ralaunch/shared"
-
-if [ -d "$SHARED_COMMON" ]; then
-  echo "commonMain:"
-  find "$SHARED_COMMON" -mindepth 1 -maxdepth 1 -type d \
-    | sed 's#.*/##' \
-    | sort \
-    || true
+print_section "App Core Layout"
+CORE_ROOT="app/src/main/java/com/app/ralaunch/core"
+if [ -d "$CORE_ROOT" ]; then
+  CORE_DIRS="$(
+    find "$CORE_ROOT" -mindepth 1 -maxdepth 1 -type d \
+      | sed 's#.*/##' \
+      | sort \
+      || true
+  )"
+  if [ -n "$CORE_DIRS" ]; then
+    echo "$CORE_DIRS"
+  else
+    echo "(no core subpackages)"
+  fi
 else
-  echo "commonMain: (missing)"
-fi
-
-if [ -d "$SHARED_ANDROID" ]; then
-  echo
-  echo "androidMain:"
-  find "$SHARED_ANDROID" -mindepth 1 -maxdepth 1 -type d \
-    | sed 's#.*/##' \
-    | sort \
-    || true
-else
-  echo
-  echo "androidMain: (missing)"
+  echo "(core tree missing)"
 fi
 echo
 
@@ -192,4 +184,28 @@ if [ -d "$CPP_ROOT" ]; then
   fi
 else
   echo "(native tree missing)"
+fi
+echo
+
+print_section "Patch and Asset Surface"
+if [ -d patches ]; then
+  echo "patches:"
+  find patches -mindepth 1 -maxdepth 1 -type d \
+    | sed 's#^patches/##' \
+    | sort \
+    || true
+else
+  echo "patches: (missing)"
+fi
+
+if [ -d app/src/main/assets ]; then
+  echo
+  echo "assets:"
+  find app/src/main/assets -mindepth 1 -maxdepth 1 \
+    | sed 's#^app/src/main/assets/##' \
+    | sort \
+    || true
+else
+  echo
+  echo "assets: (missing)"
 fi

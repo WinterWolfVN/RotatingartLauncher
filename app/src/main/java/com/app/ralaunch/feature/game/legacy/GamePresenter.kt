@@ -7,9 +7,10 @@ import com.app.ralaunch.R
 import com.app.ralaunch.core.platform.runtime.GameLauncher
 import com.app.ralaunch.feature.patch.data.Patch
 import com.app.ralaunch.feature.patch.data.PatchManager
-import com.app.ralaunch.shared.core.contract.repository.GameRepositoryV2
+import com.app.ralaunch.core.di.contract.IGameRepositoryServiceV3
 import org.koin.java.KoinJavaComponent
-import com.app.ralaunch.core.common.util.AppLogger
+import com.app.ralaunch.core.logging.AppLog
+import com.app.ralaunch.feature.game.ui.legacy.GameActivity
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -49,7 +50,7 @@ class GamePresenter : GameContract.Presenter {
 
             when {
                 gameStorageId != null && gameExePath != null -> {
-                    AppLogger.error(TAG, "Invalid launch intent: both storage ID and direct launch params are provided")
+                    AppLog.e(TAG, "Invalid launch intent: both storage ID and direct launch params are provided")
                     showLaunchError(view, view.getStringRes(R.string.game_launch_invalid_params_conflict))
                     -1
                 }
@@ -69,44 +70,44 @@ class GamePresenter : GameContract.Presenter {
                     )
                 }
                 else -> {
-                    AppLogger.error(TAG, "No supported launch parameters found in intent")
+                    AppLog.e(TAG, "No supported launch parameters found in intent")
                     showLaunchError(view, view.getStringRes(R.string.game_launch_no_params))
                     -1
                 }
             }
         } catch (e: Exception) {
-            AppLogger.error(TAG, "Exception in launchGame: ${e.message}", e)
+            AppLog.e(TAG, "Exception in launchGame: ${e.message}", e)
             showLaunchError(view, e.message ?: view.getStringRes(R.string.common_unknown_error))
             -6
         }
     }
 
     private fun launchFromStorageId(view: GameContract.View, gameStorageId: String): Int {
-        val gameRepository: GameRepositoryV2 = try {
-            KoinJavaComponent.get(GameRepositoryV2::class.java)
+        val gameRepository: IGameRepositoryServiceV3 = try {
+            KoinJavaComponent.get(IGameRepositoryServiceV3::class.java)
         } catch (e: Exception) {
-            AppLogger.error(TAG, "Failed to resolve GameRepositoryV2", e)
+            AppLog.e(TAG, "Failed to resolve IGameRepositoryServiceV3", e)
             showLaunchError(view, view.getStringRes(R.string.game_launch_repository_load_failed))
             return -2
         }
 
         val game = gameRepository.games.value.find { it.id == gameStorageId }
         if (game == null) {
-            AppLogger.error(TAG, "Game not found for storage ID: $gameStorageId")
+            AppLog.e(TAG, "Game not found for storage ID: $gameStorageId")
             showLaunchError(view, view.getStringRes(R.string.main_game_not_found, gameStorageId))
             return -3
         }
 
         val assemblyPath = game.gameExePathFull
         if (assemblyPath.isNullOrEmpty()) {
-            AppLogger.error(TAG, "Assembly path is null or empty")
+            AppLog.e(TAG, "Assembly path is null or empty")
             showLaunchError(view, view.getStringRes(R.string.game_launch_assembly_path_empty))
             return -4
         }
 
         val assemblyFile = File(assemblyPath)
         if (!assemblyFile.exists() || !assemblyFile.isFile) {
-            AppLogger.error(TAG, "Assembly file not found: $assemblyPath")
+            AppLog.e(TAG, "Assembly file not found: $assemblyPath")
             showLaunchError(view, view.getStringRes(R.string.game_launch_assembly_not_exist, assemblyPath))
             return -5
         }
@@ -126,6 +127,7 @@ class GamePresenter : GameContract.Presenter {
             args = emptyArray(),
             enabledPatches = enabledPatches,
             rendererOverride = normalizeOptional(game.rendererOverride),
+            dotNetRuntimeVersionOverride = normalizeOptional(game.dotNetRuntimeVersionOverride),
             gameEnvVars = game.gameEnvVars
         )
     }
@@ -139,14 +141,14 @@ class GamePresenter : GameContract.Presenter {
         gameEnvVars: Map<String, String?>
     ): Int {
         if (gameExePath.isBlank()) {
-            AppLogger.error(TAG, "Direct launch assembly path is blank")
+            AppLog.e(TAG, "Direct launch assembly path is blank")
             showLaunchError(view, view.getStringRes(R.string.game_launch_assembly_path_empty))
             return -4
         }
 
         val assemblyFile = File(gameExePath)
         if (!assemblyFile.exists() || !assemblyFile.isFile) {
-            AppLogger.error(TAG, "Direct launch assembly file not found: $gameExePath")
+            AppLog.e(TAG, "Direct launch assembly file not found: $gameExePath")
             showLaunchError(view, view.getStringRes(R.string.game_launch_assembly_not_exist, gameExePath))
             return -5
         }
@@ -168,6 +170,7 @@ class GamePresenter : GameContract.Presenter {
             args = gameArgs,
             enabledPatches = enabledPatches,
             rendererOverride = gameRendererOverride,
+            dotNetRuntimeVersionOverride = null,
             gameEnvVars = gameEnvVars
         )
     }
@@ -177,6 +180,7 @@ class GamePresenter : GameContract.Presenter {
         args: Array<String>,
         enabledPatches: List<Patch>,
         rendererOverride: String?,
+        dotNetRuntimeVersionOverride: String?,
         gameEnvVars: Map<String, String?>
     ): Int {
         val exitCode = GameLauncher.launchDotNetAssembly(
@@ -184,15 +188,16 @@ class GamePresenter : GameContract.Presenter {
             args = args,
             enabledPatches = enabledPatches,
             rendererOverride = rendererOverride,
+            dotNetRuntimeVersionOverride = dotNetRuntimeVersionOverride,
             gameEnvVars = gameEnvVars
         ).also { code ->
             onGameExit(code, GameLauncher.getLastErrorMessage())
         }
 
         if (exitCode == 0) {
-            AppLogger.info(TAG, "Game exited successfully.")
+            AppLog.i(TAG, "Game exited successfully.")
         } else {
-            AppLogger.error(TAG, "Failed to launch game: $exitCode")
+            AppLog.e(TAG, "Failed to launch game: $exitCode")
         }
         return exitCode
     }
@@ -245,7 +250,7 @@ class GamePresenter : GameContract.Presenter {
             val nativeError = try {
                 GameLauncher.getLastErrorMessage()
             } catch (e: Exception) {
-                AppLogger.warn(TAG, "Failed to get native error", e)
+                AppLog.w(TAG, "Failed to get native error", e)
                 null
             }
 
@@ -261,7 +266,7 @@ class GamePresenter : GameContract.Presenter {
                 exceptionMessage = message
             )
         } catch (e: Exception) {
-            AppLogger.error(TAG, "Failed to show crash report", e)
+            AppLog.e(TAG, "Failed to show crash report", e)
             val message = buildExitMessage(view, exitCode, errorMessage)
             view.showError(view.getStringRes(R.string.game_run_failed), message)
             view.finishActivity()
@@ -372,7 +377,7 @@ class GamePresenter : GameContract.Presenter {
 
             result.takeIf { it.isNotEmpty() }
         } catch (e: Exception) {
-            AppLogger.warn(TAG, "Failed to get logcat logs", e)
+            AppLog.w(TAG, "Failed to get logcat logs", e)
             getErrorLevelLogs()
         }
     }

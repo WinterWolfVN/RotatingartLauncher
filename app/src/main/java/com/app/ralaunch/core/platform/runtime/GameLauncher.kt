@@ -5,9 +5,9 @@ import android.os.Environment
 import com.app.ralaunch.core.common.SettingsAccess
 import org.koin.java.KoinJavaComponent
 import com.app.ralaunch.core.platform.runtime.dotnet.DotNetLauncher
-import com.app.ralaunch.core.common.util.AppLogger
+import com.app.ralaunch.core.logging.AppLog
 import com.app.ralaunch.core.common.util.NativeMethods
-import com.app.ralaunch.core.platform.runtime.renderer.RendererEnvironmentConfigurator
+import com.app.ralaunch.core.platform.runtime.RendererEnvironmentConfigurator
 import com.app.ralaunch.feature.patch.data.Patch
 import com.app.ralaunch.feature.patch.data.PatchManager
 import com.app.ralaunch.core.platform.android.ProcessLauncherService
@@ -22,7 +22,7 @@ object GameLauncher {
 
     fun resetInitializationState() {
         isSDLJNIInitialized = false
-        AppLogger.info(TAG, "初始化状态已重置 / Initialization state reset")
+        AppLog.i(TAG, "初始化状态已重置 / Initialization state reset")
     }
 
     init {
@@ -40,7 +40,7 @@ object GameLauncher {
             System.loadLibrary("lwjgl_lz4")
             System.loadLibrary("SkiaSharp")
         } catch (e: UnsatisfiedLinkError) {
-            AppLogger.error(TAG, "加载 Native 库失败 / Failed to load native libraries: ${e.message}")
+            AppLog.e(TAG, "加载 Native 库失败 / Failed to load native libraries: ${e.message}")
         }
     }
 
@@ -66,6 +66,7 @@ object GameLauncher {
         args: Array<String>,
         enabledPatches: List<Patch>? = null,
         rendererOverride: String? = null,
+        dotNetRuntimeVersionOverride: String? = null,
         gameEnvVars: Map<String, String?> = emptyMap()
     ): Int {
         try {
@@ -89,7 +90,7 @@ object GameLauncher {
 
             val dataDir = prepareDataDirectory(assemblyPath)
             val cacheDir = appContext.cacheDir.absolutePath
-            AppLogger.info(TAG, "数据目录 / Data directory: $dataDir")
+            AppLog.i(TAG, "数据目录 / Data directory: $dataDir")
 
             EnvVarsManager.quickSetEnvVars(
                 "HOME" to dataDir,
